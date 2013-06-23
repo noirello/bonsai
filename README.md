@@ -1,7 +1,13 @@
 pyLDAP
 ======
 
-Python 3.x wrapper for libldap2.
+This is a Python module for wrapping libldap2. *Heavily* under development. <br/>
+Support only Python 3.x, and LDAPv3. <br/>
+Written completely in C. Uses only synchronous LDAP operations at the moment. <br/>
+<br/>
+This is my first public Python module, and very first time for me to use the Python/C API.
+Contributions and advices are welcome. :) (Just tell me the whats and whys.)  
+
 
 Requirements for building
 =========================
@@ -12,6 +18,7 @@ Requirements for building
 
 Examples
 ========
+Add a new attribute (mail) for an existing entry:
 ```python
     import pyLDAP
     client = pyLDAP.LDAPClient("ldap://example.com/")
@@ -19,5 +26,43 @@ Examples
     entry = client.get_entry("cn=test,dc=example,dc=com")
     entry['mail'] = "test@example.com"
     entry.modify()
+    client.close()
+```
+Add a new entry:
+```python
+    import pyLDAP
+    client = pyLDAP.LDAPClient("ldap://example.com/")
+    client.connect("cn=admin,dc=example,dc=com", "secret")
+    entry = pyLDAP.LDAPEntry("cn=test,dc=example,dc=com", client)
+    entry['objectClass'] = ["top", "organizationalPerson", "inetOrgPerson"]
+    # Case-insenstitve dict.
+    entry['ObjEctClaSS'].append("person")
+    entry['sn'] = "Smith"
+    entry['gn'] = "John"
+    entry.add()
+    client.close()
+```
+Search:
+```python
+    import pyLDAP
+    client = pyLDAP.LDAPClient("ldap://example.com/")
+    client.connect()
+    client.search(base="dc=example.dc=com", scope=2)
+```
+Delete:
+```python
+    import pyLDAP
+    client = pyLDAP.LDAPClient("ldap://example.com/")
+    client.connect("cn=admin,dc=example,dc=com", "secret")
+    client.del_entry("cn=test,dc=example.dc=com")
+    client.close()
+```
+or (keeping the data on the local machine):
+```python
+    import pyLDAP
+    client = pyLDAP.LDAPClient("ldap://example.com/")
+    client.connect("cn=admin,dc=example,dc=com", "secret")
+    entry = client.get_entry("cn=test,dc=example.dc=com")
+    entry.delete()
     client.close()
 ```
