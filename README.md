@@ -12,11 +12,12 @@ Requirements for building
 
 Examples
 ======
-import pyLDAP
+.. code-block:: pycon
+ >>> import pyLDAP
 
-client = pyLDAP.LDAPClient("ldap://example.com/")
-client.connect("cn=admin,dc=example,dc=com", "secret")
-entry = client.get_entry("cn=test,dc=example,dc=com")
-entry['mail'] = "test@example.com"
-entry.modify()
-client.close()
+ >>> client = pyLDAP.LDAPClient("ldap://example.com/")
+ >>> client.connect("cn=admin,dc=example,dc=com", "secret")
+ >>> entry = client.get_entry("cn=test,dc=example,dc=com")
+ >>> entry['mail'] = "test@example.com"
+ >>> entry.modify()
+ >>> client.close()
