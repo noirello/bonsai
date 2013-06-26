@@ -223,9 +223,13 @@ searching(LDAPClient *self, char *basestr, int scope, char *filterstr, char **at
 						NULL, timelimit, sizelimit, &res);
 
 	if (rc == LDAP_NO_SUCH_OBJECT) {
-		Py_DECREF(entrylist);
 		free(timelimit);
-		return NULL;
+		if (firstonly) {
+			Py_DECREF(entrylist);
+			return NULL;
+		} else {
+			return entrylist;
+		}
 	}
 	if (rc != LDAP_SUCCESS) {
 		Py_DECREF(entrylist);
