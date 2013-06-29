@@ -247,7 +247,7 @@ searching(LDAPClient *self, char *basestr, int scope, char *filterstr, char **at
 			case LDAP_RES_SEARCH_ENTRY:
 				entryobj = LDAPEntry_FromLDAPMessage(entry, self);
 				/* Remove useless LDAPEntry. */
-				if (PyList_Size(entryobj->attributes) == 0) {
+				if (PyList_Size((PyObject *)entryobj->attributes) == 0) {
 					Py_DECREF(entryobj);
 					continue;
 				}
@@ -292,7 +292,10 @@ LDAPClient_GetEntry(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	}
 
 	entry = searching(self, dnstr, LDAP_SCOPE_BASE, NULL, NULL, 0, 1, 0, 0);
-	if (entry == NULL) return Py_None;
+	if (entry == NULL) {
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
 	return entry;
 }
 

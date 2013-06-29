@@ -6,10 +6,12 @@
 
 #include <ldap.h>
 
+#include "uniquelist.h"
+
 typedef struct {
-	PyListObject list;
-	PyObject *added;
-	PyObject *deleted;
+	UniqueList list;
+	UniqueList *added;
+	UniqueList *deleted;
 	int status;
 } LDAPValueList;
 

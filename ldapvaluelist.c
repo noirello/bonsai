@@ -1,12 +1,35 @@
 #include "ldapvaluelist.h"
 #include "utils.h"
 
+static int
+LDAPValueList_clear(LDAPValueList *self) {
+    PyObject *tmp;
+
+    tmp = (PyObject *)self->added;
+    self->added = NULL;
+    Py_XDECREF(tmp);
+
+    tmp = (PyObject *)self->deleted;
+    self->deleted = NULL;
+    Py_XDECREF(tmp);
+
+    Py_TYPE(self)->tp_base->tp_clear((PyObject *)self);
+
+    return 0;
+}
+
 /*	Deallocate the LDAPValueList. */
 static void
 LDAPValueList_dealloc(LDAPValueList *self) {
-	Py_XDECREF(self->added);
-	Py_XDECREF(self->deleted);
+	LDAPValueList_clear(self);
 	Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static int
+LDAPValueList_traverse(LDAPValueList *self, visitproc visit, void *arg) {
+    Py_VISIT(self->deleted);
+	Py_VISIT(self->added);
+    return 0;
 }
 
 /*	Create a new LDAPValueList object. For tracking changes uses two other Python list,
@@ -16,13 +39,13 @@ static PyObject *
 LDAPValueList_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	LDAPValueList *self;
 
-	self = (LDAPValueList *)PyList_Type.tp_new(type, args, kwds);
+	self = (LDAPValueList *)UniqueListType.tp_new(type, args, kwds);
 	if (self == NULL) return NULL;
 
-	self->added = PyList_New(0);
+	self->added = UniqueList_New();
 	if (self->added == NULL) return NULL;
 
-	self->deleted = PyList_New(0);
+	self->deleted = UniqueList_New();
 	if (self->deleted == NULL) return NULL;
 
 	self->status = -1;
@@ -30,59 +53,10 @@ LDAPValueList_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	return (PyObject *)self;
 }
 
-/*	Convert `list` object to a tuple, which contains only lowercase Python string elements. */
-static PyObject *
-get_lowercase_tuple(PyObject *list) {
-	char *str;
-	Py_ssize_t i, n;
-	PyObject *tup = NULL;
-	PyObject *seq, *item;
-
-	if (list == NULL) return NULL;
-
-	seq = PySequence_Fast(list, "Argument is not iterable.");
-	n = PySequence_Fast_GET_SIZE(seq);
-	tup = PyTuple_New(n);
-	if (tup == NULL) return PyErr_NoMemory();
-
-	for (i = 0; i < n; i++) {
-		item = PySequence_Fast_GET_ITEM(seq, i);
-		str = lowercase(PyObject2char(item));
-		if (PyTuple_SetItem(tup, i, PyUnicode_FromString(str)) != 0) {
-			PyErr_BadInternalCall();
-			return NULL;
-		}
-		free(str);
-	}
-
-	Py_XDECREF(seq);
-	return tup;
-}
-
 /*	Initializing LDAPValueList. */
 static int
 LDAPValueList_init(LDAPValueList *self, PyObject *args, PyObject *kwds) {
-	Py_ssize_t i;
-	PyObject *tmp;
-	PyObject *item, *obj = NULL;
-
-	if (!PyArg_ParseTuple(args, "|O", &obj))
-	        return -1;
-
-	/* Checking, that the argument is containing unique values. */
-	if (obj != NULL) {
-	    tmp = get_lowercase_tuple(obj);
-		for (i = 0; i < Py_SIZE(tmp); i++) {
-			item = PyTuple_GetItem(tmp, i);
-			if (PySequence_Count(tmp, item) > 1) {
-				Py_DECREF(tmp);
-				PyErr_SetString(PyExc_AttributeError, "LDAPListValue's argument is containing non-unique values. (Bool types converted to number)");
-				return -1;
-			}
-		}
-		Py_DECREF(tmp);
-	}
-	if (PyList_Type.tp_init((PyObject *)self, args, kwds) < 0)
+	if (UniqueListType.tp_init((PyObject *)self, args, kwds) < 0)
 		return -1;
 	return 0;
 }
@@ -94,38 +68,6 @@ LDAPValueList_New(void) {
 	return self;
 }
 
-/*	Returns 1 if the `newitem` is not in the list, 0 otherwise.
-	The function uses the lowerCaseMatch() to compare the list's items and the `newitem`
-	to lower-case C string.
-*/
-static int
-isLowerCaseUnique(LDAPValueList *list, PyObject *newitem) {
-	Py_ssize_t i;
-
-	for (i = 0; i < Py_SIZE(list); i++) {
-		if (lowerCaseMatch(list->list.ob_item[i], newitem) == 1) {
-			return 0;
-		}
-	}
-	return 1;
-}
-
-/*	Removes case-insensitive `item` from the `list` object.
-	Returns 1 if `item` is foun, and removed, 0 otherwise.
-*/
-static int
-removeItemFromList(PyObject *list, PyObject *item) {
-	Py_ssize_t i;
-
-	for (i = 0; i < Py_SIZE(list); i++) {
-		if (lowerCaseMatch(((PyListObject *)list)->ob_item[i], item) == 1) {
-			if (PyList_SetSlice(list, i, i+1, (PyObject *)NULL) != 0) return -1;
-			return 1;
-		}
-	}
-	return 0;
-}
-
 /*	Append new unique item to the LDAPValueList. Case-insensitive,
   	the `newitem` is also appended to the added list, or remove from the deleted list.
 */
@@ -133,20 +75,18 @@ int
 LDAPValueList_Append(LDAPValueList *self, PyObject *newitem) {
 	int rc = -1;
 
-	if (isLowerCaseUnique(self, newitem) == 0) {
-		PyErr_Format(PyExc_ValueError, "%R is already in the list.", newitem);
-		return -1;
-	}
+	rc = UniqueList_Append((UniqueList *)self, newitem);
+	if (rc == -1) return -1;
 
-	rc = removeItemFromList(self->deleted, newitem);
+	rc = UniqueList_Remove_wFlg(self->deleted, newitem);
 	if (rc == -1) return -1;
 	if (rc == 0) {
-		if (PyList_Append(self->added, newitem) == -1) {
+		if (UniqueList_Append(self->added, newitem) == -1) {
 			PyErr_BadInternalCall();
 			return -1;
 		}
 	}
-	return PyList_Append((PyObject *)self, newitem);
+	return 0;
 }
 
 /*	Returns 1 if obj is an instance of LDAPEntry, or 0 if not.
@@ -160,14 +100,14 @@ LDAPValueList_Check(PyObject *obj) {
 
 /*	Removes the same items from both list. */
 static int
-balancing(PyObject *l1, PyObject *l2) {
+balancing(PyObject *l1, UniqueList *l2) {
 	int rc;
 	Py_ssize_t i;
 
 	for (i = 0; i < Py_SIZE(l2); i++) {
-		rc = removeItemFromList(l1, ((PyListObject *)l2)->ob_item[i]);
+		rc = UniqueList_Remove_wFlg((UniqueList *)l1, l2->list.ob_item[i]);
 		if (rc == 1) {
-			PyList_SetSlice(l2, i, i+1, (PyObject *)NULL);
+			UniqueList_SetSlice(l2, i, i+1, (PyObject *)NULL);
 		} else if (rc == -1) return -1;
 	}
 	return 0;
@@ -175,30 +115,9 @@ balancing(PyObject *l1, PyObject *l2) {
 
 int
 LDAPValueList_Extend(LDAPValueList *self, PyObject *b) {
-	PyObject *iter = NULL, *newitem;
-	PyObject *concat, *tmp, *ret;
-
-	if (b != NULL) iter = PyObject_GetIter(b);
-
-	if (iter != NULL) {
-		for (newitem = PyIter_Next(iter); newitem != NULL; newitem = PyIter_Next(iter)) {
-			if (isLowerCaseUnique(self, newitem) == 0){
-				PyErr_SetString(PyExc_TypeError, "List is containing non-unique values.");
-				return -1;
-			}
-		}
-	}
-
 	if (balancing(b, self->deleted) != 0) return -1;
-	concat = PySequence_Concat(self->added, b);
-	if (concat) {
-		tmp = self->added;
-		Py_INCREF(concat);
-		self->added = concat;
-		Py_XDECREF(tmp);
-	}
-	ret = _PyList_Extend((PyListObject *)self, b);
-	if (ret != Py_None) return -1;
+	if (UniqueList_Extend(self->added, b) != 0) return -1;
+	if (UniqueList_Extend((UniqueList *)self, b) != 0) return -1;
 	return 0;
 }
 
@@ -209,21 +128,15 @@ int
 LDAPValueList_Insert(LDAPValueList *self, Py_ssize_t where, PyObject *newitem) {
 	int rc = -1;
 
-	if (isLowerCaseUnique(self, newitem) == 0) {
-		PyErr_Format(PyExc_ValueError, "%R is already in the list.", newitem);
-		return -1;
-	}
-
-	rc = removeItemFromList(self->deleted, newitem);
+	rc = UniqueList_Remove_wFlg(self->deleted, newitem);
 	if (rc == -1) return -1;
 	if (rc == 0) {
-		if (PyList_Append(self->added, newitem) == -1) {
+		if (UniqueList_Append(self->added, newitem) == -1) {
 			PyErr_BadInternalCall();
 			return -1;
 		}
 	}
-	if (PyList_Append(self->added, newitem) == -1) return -1;
-    return PyList_Insert((PyObject *)self, where, newitem);
+    return UniqueList_Insert((UniqueList *)self, where, newitem);
 }
 
 int
@@ -232,7 +145,7 @@ LDAPValueList_Remove(LDAPValueList *self, PyObject *value) {
 	Py_ssize_t i;
 
 	for (i = 0; i < Py_SIZE(self); i++) {
-		cmp = lowerCaseMatch(self->list.ob_item[i], value);
+		cmp = lowerCaseMatch(((PyListObject *)self)->ob_item[i], value);
 		if (cmp > 0) {
 			if (LDAPValueList_SetSlice(self, i, i+1, (PyObject *)NULL) == 0) return 0;
 			return -1;
@@ -251,31 +164,28 @@ LDAPValueList_SetItem(LDAPValueList *self, Py_ssize_t i, PyObject *newitem) {
 	int rc = -1;
 	PyObject *olditem;
 
-	if (isLowerCaseUnique(self, newitem) == 0) {
-		PyErr_Format(PyExc_ValueError, "%R is already in the list.", newitem);
-		return -1;
-	}
+	if (UniqueList_SetItem((UniqueList *)self, i, newitem) != 0) return -1;
 
 	olditem = PyList_GetItem((PyObject *)self, i);
 	if (olditem == NULL) return -1;
-	rc = removeItemFromList(self->added, olditem);
+	rc = UniqueList_Remove_wFlg(self->added, olditem);
 	if (rc == -1) return -1;
 	if (rc == 0) {
-		if (PyList_Append(self->deleted, olditem) == -1) {
+		if (UniqueList_Append(self->deleted, olditem) == -1) {
 			PyErr_BadInternalCall();
 			return -1;
 		}
 	}
 
-	rc = removeItemFromList(self->deleted, newitem);
+	rc = UniqueList_Remove_wFlg(self->deleted, newitem);
 	if (rc == -1) return -1;
 	if (rc == 0) {
-		if (PyList_Append(self->added, newitem) == -1) {
+		if (UniqueList_Append(self->added, newitem) == -1) {
 			PyErr_BadInternalCall();
 			return -1;
 		}
 	}
-	return PyList_SetItem((PyObject *)self, i, newitem);
+	return 0;
 }
 
 /*	Set the slice of LDAPValueList between `ilow` and `ihigh` to the contents of `itemlist`.
@@ -285,53 +195,28 @@ LDAPValueList_SetItem(LDAPValueList *self, Py_ssize_t i, PyObject *newitem) {
 */
 int
 LDAPValueList_SetSlice(LDAPValueList *self, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *itemlist) {
-	PyObject *remove, *tmp = NULL, *concat;
-	PyObject *iter = NULL;
-	PyObject *newitem;
-
-	if (itemlist != NULL) iter = PyObject_GetIter(itemlist);
-
-	if (iter != NULL) {
-		for (newitem = PyIter_Next(iter); newitem != NULL; newitem = PyIter_Next(iter)) {
-			if (isLowerCaseUnique(self, newitem) == 0) {
-				PyErr_Format(PyExc_ValueError, "%R is already in the list.", newitem);
-				return -1;
-			}
-		}
-	}
+	PyObject *remove;
 
 	/* Copying the removable items from LDAPValueList to deleted list.*/
 	remove = PyList_GetSlice((PyObject *)self, ilow, ihigh);
 	if (remove == NULL) return -1;
-	if (balancing(remove, self->added) != 0) return -1;
-	concat = PySequence_Concat(self->deleted, remove);
-	if (concat) {
-		tmp = self->deleted;
-		Py_INCREF(concat);
-		self->deleted = concat;
-		Py_XDECREF(tmp);
-	} else {
-		Py_XDECREF(remove);
+	if (balancing(remove, self->added) != 0) {
+		Py_DECREF(remove);
 		return -1;
 	}
-	Py_XDECREF(remove);
+	if (UniqueList_Extend(self->deleted, remove) != 0) {
+		Py_DECREF(remove);
+		return -1;
+	}
+	Py_DECREF(remove);
 
 	/* Copying new items to the added list.*/
 	if (itemlist != NULL) {
 		if (balancing(itemlist, self->deleted) != 0) return -1;
-		concat = PySequence_Concat(self->added, itemlist);
-		if (concat) {
-			tmp = self->added;
-			Py_INCREF(concat);
-			self->added = concat;
-			Py_XDECREF(tmp);
-		} else {
-			Py_XDECREF(remove);
-			return -1;
-		}
+		if (UniqueList_Extend(self->added, itemlist) != 0) return -1;
 	}
 
-    return PyList_SetSlice((PyObject *)self, ilow, ihigh, itemlist);
+    return UniqueList_SetSlice((UniqueList *)self, ilow, ihigh, itemlist);
 }
 
 static PyObject *
@@ -383,7 +268,7 @@ LVL_pop(LDAPValueList *self, PyObject *args) {
 		PyErr_SetString(PyExc_IndexError, "pop index out of range");
 		return NULL;
 	}
-	value = self->list.ob_item[i];
+	value = ((PyListObject *)self)->ob_item[i];
 	Py_INCREF(value);
 
 	status = LDAPValueList_SetSlice(self, i, i+1, (PyObject *)NULL);
@@ -411,18 +296,6 @@ static PyMethodDef LDAPValueList_methods[] = {
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
-static PyObject *
-LVL_concat(LDAPValueList *self, PyObject *bb) {
-	LDAPValueList *np = LDAPValueList_New();
-
-	if (np == NULL) return PyErr_NoMemory();
-
-	if (LVL_extend(np, (PyObject *)self) == NULL) return NULL;
-	if (LVL_extend(np, bb) == NULL) return NULL;
-
-	return (PyObject *)np;
-}
-
 static int
 LVL_ass_item(LDAPValueList *self, Py_ssize_t i, PyObject *v) {
     if (i < 0 || i >= Py_SIZE(self)) {
@@ -434,50 +307,17 @@ LVL_ass_item(LDAPValueList *self, Py_ssize_t i, PyObject *v) {
     return LDAPValueList_SetItem(self, i, v);
 }
 
-static int
-LVL_contains(LDAPValueList *self, PyObject *el) {
-    int cmp;
-	Py_ssize_t i;
-	PyObject *tup;
-
-	tup = get_lowercase_tuple((PyObject *)self);
-	if (tup == NULL) return -1;
-
-    for (i = 0, cmp = 0 ; cmp == 0 && i < Py_SIZE(tup); ++i) {
-    	cmp = lowerCaseMatch(PyTuple_GetItem(tup, i), el);
-    }
-    return cmp;
-}
-
-static PyObject *
-LVL_inplace_concat(LDAPValueList *self, PyObject *other) {
-    PyObject *result;
-
-    result = LVL_extend(self, other);
-    if (result == NULL)
-        return result;
-    Py_DECREF(result);
-    Py_INCREF(self);
-    return (PyObject *)self;
-}
-
-static PyObject *
-LVL_dummy(LDAPValueList *self, Py_ssize_t n) {
-	PyErr_SetString(PyExc_TypeError, "unsupported operand.");
-	return NULL;
-}
-
 static PySequenceMethods LVL_as_sequence = {
     0,                      		/* sq_length */
-    (binaryfunc)LVL_concat,			/* sq_concat */
-    (ssizeargfunc)LVL_dummy,        /* sq_repeat */
+    0,			/* sq_concat */
+    0,        /* sq_repeat */
     0,                    			/* sq_item */
     0,                             	/* sq_slice */
     (ssizeobjargproc)LVL_ass_item,	/* sq_ass_item */
     0,                              /* sq_ass_slice */
-    (objobjproc)LVL_contains,       /* sq_contains */
-    (binaryfunc)LVL_inplace_concat,	/* sq_inplace_concat */
-    (ssizeargfunc)LVL_dummy,        /* sq_inplace_repeat */
+    0,       /* sq_contains */
+    0,	/* sq_inplace_concat */
+    0,        /* sq_inplace_repeat */
 };
 
 /*	This function is based on list_ass_subscript from Python source listobject.c.
@@ -590,10 +430,11 @@ PyTypeObject LDAPValueListType = {
     0,                       /* tp_setattro */
     0,                       /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT |
-        Py_TPFLAGS_BASETYPE, /* tp_flags */
+        Py_TPFLAGS_BASETYPE |
+        Py_TPFLAGS_HAVE_GC, /* tp_flags */
     0,                       /* tp_doc */
-    0,                       /* tp_traverse */
-    0,                       /* tp_clear */
+    (traverseproc)LDAPValueList_traverse, /* tp_traverse */
+    (inquiry)LDAPValueList_clear, /* tp_clear */
     0,                       /* tp_richcompare */
     0,                       /* tp_weaklistoffset */
     0,                       /* tp_iter */
@@ -601,7 +442,7 @@ PyTypeObject LDAPValueListType = {
     LDAPValueList_methods,   /* tp_methods */
     0,       				 /* tp_members */
     0,    					 /* tp_getset */
-    &PyList_Type,            /* tp_base */
+    &UniqueListType,            /* tp_base */
     0,                       /* tp_dict */
     0,                       /* tp_descr_get */
     0,                       /* tp_descr_set */

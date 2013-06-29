@@ -1,16 +1,46 @@
 #include "errors.h"
 #include "utils.h"
+#include "uniquelist.h"
 
 #include "ldapentry.h"
+
+static int
+LDAPEntry_clear(LDAPEntry *self) {
+    PyObject *tmp;
+
+    tmp = (PyObject *)self->attributes;
+    self->attributes = NULL;
+    Py_XDECREF(tmp);
+
+    tmp = (PyObject *)self->client;
+    self->client = NULL;
+    Py_XDECREF(tmp);
+
+    tmp = (PyObject *)self->deleted;
+    self->deleted = NULL;
+    Py_XDECREF(tmp);
+
+    tmp = self->dn;
+    self->dn = NULL;
+    Py_XDECREF(tmp);
+    PyDict_Type.tp_clear((PyObject*)self);
+
+    return 0;
+}
 
 /*	Deallocate the LDAPEntry. */
 static void
 LDAPEntry_dealloc(LDAPEntry* self) {;
-    Py_XDECREF(self->dn);
-    Py_XDECREF(self->attributes);
-    Py_XDECREF(self->deleted);
-    Py_XDECREF((PyObject *)self->client);
+    LDAPEntry_clear(self);
     Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static int
+LDAPEntry_traverse(LDAPEntry *self, visitproc visit, void *arg) {
+	Py_VISIT(self->dn);
+    Py_VISIT(self->deleted);
+	Py_VISIT(self->attributes);
+    return 0;
 }
 
 /*	Create a new LDAPEntry object. */
@@ -27,13 +57,13 @@ LDAPEntry_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
             return NULL;
         }
         /* Set an empty list for attributes. */
-        self->attributes = PyList_New(0);
+        self->attributes = UniqueList_New();
         if (self->attributes == NULL) {
 			Py_DECREF(self);
 			return NULL;
 		}
         /* Set an empty list for deleted attributes. */
-        self->deleted = LDAPValueList_New();
+        self->deleted = UniqueList_New();
         if (self->deleted == NULL) {
 			Py_DECREF(self);
 			return NULL;
@@ -135,14 +165,14 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
 		}
 		if (value->status == 1) {
 			/* LDAPMod for newly added attributes and values. */
-			if (Py_SIZE(value->added) > 0) {
-				mod = createLDAPModFromItem(LDAP_MOD_ADD | LDAP_MOD_BVALUES, key, value->added);
+			if (Py_SIZE((PyObject *)value->added) > 0) {
+				mod = createLDAPModFromItem(LDAP_MOD_ADD | LDAP_MOD_BVALUES, key, (PyObject *)value->added);
 				if (mod == NULL) return NULL;
 				mods[i++] = mod;
 			}
 			/* LDAPMod for deleted values. */
-			if (Py_SIZE(value->deleted) > 0) {
-				mod = createLDAPModFromItem(LDAP_MOD_DELETE | LDAP_MOD_BVALUES, key, value->deleted);
+			if (Py_SIZE((PyObject *)value->deleted) > 0) {
+				mod = createLDAPModFromItem(LDAP_MOD_DELETE | LDAP_MOD_BVALUES, key, (PyObject *)value->deleted);
 				if (mod == NULL) return NULL;
 				mods[i++] = mod;
 			}
@@ -157,14 +187,14 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
 	}
 	Py_DECREF(iter);
 	/* LDAPMod for deleted attributes. */
-	for (j = 0; j < Py_SIZE(self->deleted); j++) {
+	for (j = 0; j < Py_SIZE((PyObject *)self->deleted); j++) {
 		mod = createLDAPModFromItem(LDAP_MOD_DELETE | LDAP_MOD_BVALUES, self->deleted->list.ob_item[j], NULL);
 		Py_DECREF(self->deleted->list.ob_item[j]);
 		if (mod == NULL) return NULL;
 		mods[i++] = mod;
 	}
 	Py_DECREF(self->deleted);
-	self->deleted = LDAPValueList_New();
+	self->deleted = UniqueList_New();
 	mods[i] = NULL;
 	return mods;
 }
@@ -222,7 +252,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPClient *client) {
 		attr != NULL; attr = ldap_next_attribute(client->ld, entrymsg, ber)) {
 		/* Create a string of attribute's name and add to the attributes list. */
 		attrobj = PyUnicode_FromString(attr);
-		if (attrobj == NULL || PyList_Append(self->attributes, attrobj) !=  0) {
+		if (attrobj == NULL || UniqueList_Append(self->attributes, attrobj) !=  0) {
 			Py_DECREF(self);
 			Py_XDECREF(attrobj);
 			ldap_memfree(attr);
@@ -453,7 +483,10 @@ LDAPEntry_Update(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 			rc = -1;
 		}
 	}
-	if (rc != -1) return Py_None;
+	if (rc != -1) {
+		Py_INCREF(Py_None); //Why?
+		return Py_None;
+	}
 	return NULL;
 }
 
@@ -636,18 +669,19 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
 				}
 				rc = PyDict_SetItem((PyObject *)self, key, (PyObject *)list);
 				list->status = status;
+				Py_DECREF(list);
 			} else {
 				rc = PyDict_SetItem((PyObject *)self, key, value);
 				((LDAPValueList *)value)->status = status;
 			}
 			/* Avoid inconsistency. (same key in the added and the deleted list) */
 			if (PySequence_Contains((PyObject *)self->deleted, key)) {
-				if (LDAPValueList_Remove(self->deleted, key) != 0) return -1;
+				if (UniqueList_Remove(self->deleted, key) != 0) return -1;
 			}
 			if (rc != 0) return rc;
 			/* New key should be added to the attribute list. */
 			if (found == 0) {
-				if (PyList_Append(self->attributes, key) != 0) {
+				if (UniqueList_Append(self->attributes, key) != 0) {
 					Py_DECREF(key);
 					return -1;
 				}
@@ -656,9 +690,9 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
 	} else {
 		/* This means, it has to remove the item. */
 		if (PyDict_DelItem((PyObject *)self, key) != 0) return -1;
-		if (LDAPValueList_Append(self->deleted, key) != 0) return -1;
+		if (UniqueList_Append(self->deleted, key) != 0) return -1;
 		/* Remove from the attributes list. */
-		if (PySequence_DelItem(self->attributes, PySequence_Index(self->attributes, key)) != 0) {
+		if (PySequence_DelItem((PyObject *)self->attributes, PySequence_Index((PyObject *)self->attributes, key)) != 0) {
 			Py_DECREF(key);
 			return -1;
 		}
@@ -770,7 +804,7 @@ LDAPEntry_SetStringDN(LDAPEntry *self, char *value) {
 static PyObject *
 LDAPEntry_getAttributes(LDAPEntry *self, void *closure) {
     Py_INCREF(self->attributes);
-    return self->attributes;
+    return (PyObject *)self->attributes;
 }
 
 static int
@@ -818,10 +852,11 @@ PyTypeObject LDAPEntryType = {
     0,                       /* tp_setattro */
     0,                       /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT |
-        Py_TPFLAGS_BASETYPE, /* tp_flags */
+        Py_TPFLAGS_BASETYPE |
+        Py_TPFLAGS_HAVE_GC, /* tp_flags */
     0,                       /* tp_doc */
-    0,                       /* tp_traverse */
-    0,                       /* tp_clear */
+    (traverseproc)LDAPEntry_traverse,/* tp_traverse */
+    (inquiry)LDAPEntry_clear, /* tp_clear */
     0,                       /* tp_richcompare */
     0,                       /* tp_weaklistoffset */
     0,                       /* tp_iter */

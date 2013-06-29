@@ -64,7 +64,6 @@ createLDAPModFromItem(int mod_op, PyObject *key, PyObject *value) {
 	mod->mod_op = mod_op;
 	mod->mod_type = PyObject2char(key);
 	mod->mod_vals.modv_bvals = PyList2BervalList(value);
-
 	return mod;
 }
 

@@ -2,7 +2,7 @@ from distutils.core import setup, Extension
 
 pyldap_module = Extension("pyLDAP", 
             libraries=["ldap", "lber"],    
-            sources = ["pyldapmodule.c", "ldapentry.c", "ldapclient.c", "ldapvaluelist.c", "errors.c", "utils.c"])
+            sources = ["pyldapmodule.c", "ldapentry.c", "ldapclient.c", "ldapvaluelist.c", "errors.c", "utils.c", "uniquelist.c"])
 
 setup(name="pyLDAP", 
       version="0.1.0",
