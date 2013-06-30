@@ -497,7 +497,6 @@ LDAPEntry_UpdateFromDict(LDAPEntry *self, PyObject *dict) {
 	PyObject *keys = PyMapping_Keys(dict);
 	PyObject *iter;
 	PyObject *key, *value;
-
 	if (keys == NULL) return -1;
 
 	iter = PyObject_GetIter(keys);
@@ -601,7 +600,10 @@ searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int* found) {
 	PyObject *iter = PyObject_GetIter(keys);
 	PyObject *item;
 
-	if (iter == NULL) return NULL;
+	if (iter == NULL) {
+		Py_DECREF(keys);
+		return NULL;
+	}
 	/* Searching for same lowercase key amongs the other keys. */
 	for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
 		if (lowerCaseMatch(item, key) == 1) {
@@ -613,6 +615,7 @@ searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int* found) {
 		Py_DECREF(item);
 	}
 	Py_DECREF(iter);
+	Py_DECREF(keys);
 	return key;
 }
 
