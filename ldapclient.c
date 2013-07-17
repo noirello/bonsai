@@ -239,36 +239,28 @@ searching(LDAPClient *self, char *basestr, int scope, char *filterstr, char **at
         return NULL;
 	}
 	/* Iterate over the response LDAP messages. */
-	for (entry = ldap_first_message(self->ld, res);
+	for (entry = ldap_first_entry(self->ld, res);
 		entry != NULL;
-		entry = ldap_next_message(self->ld, entry)) {
-		rc = ldap_msgtype(entry);
-		switch (rc) {
-			case LDAP_RES_SEARCH_ENTRY:
-				entryobj = LDAPEntry_FromLDAPMessage(entry, self);
-				/* Remove useless LDAPEntry. */
-				if (PyList_Size((PyObject *)entryobj->attributes) == 0) {
-					Py_DECREF(entryobj);
-					continue;
-				}
-				/* Return with the first entry. */
-				if (firstonly == 1) {
-					free(timelimit);
-					return (PyObject *)entryobj;
-				}
-				if ((entryobj == NULL) ||
-						(PyList_Append(entrylist, (PyObject *)entryobj)) != 0) {
-					Py_XDECREF(entryobj);
-					Py_XDECREF(entrylist);
-					free(timelimit);
-					return PyErr_NoMemory();
-				}
-				Py_DECREF(entryobj);
-				break;
-			case LDAP_RES_SEARCH_REFERENCE:
-				//TODO
-				break;
+		entry = ldap_next_entry(self->ld, entry)) {
+		entryobj = LDAPEntry_FromLDAPMessage(entry, self);
+		/* Remove useless LDAPEntry. */
+		if (PyList_Size((PyObject *)entryobj->attributes) == 0) {
+			Py_DECREF(entryobj);
+			continue;
 		}
+		/* Return with the first entry. */
+		if (firstonly == 1) {
+			free(timelimit);
+			return (PyObject *)entryobj;
+		}
+		if ((entryobj == NULL) ||
+				(PyList_Append(entrylist, (PyObject *)entryobj)) != 0) {
+			Py_XDECREF(entryobj);
+			Py_XDECREF(entrylist);
+			free(timelimit);
+			return PyErr_NoMemory();
+		}
+		Py_DECREF(entryobj);
 	}
 	free(timelimit);
 	return entrylist;
