@@ -8,6 +8,4 @@ extern PyObject *LDAPError;
 extern PyObject *LDAPExc_UrlError;
 extern PyObject *LDAPExc_NotConnected;
 
-char *lud_err2string(int rc);
-
 #endif /* ERRORS_H_ */
