@@ -32,40 +32,39 @@ LDAPClient_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 /*	Initialize the LDAPObject. */
 static int
 LDAPClient_init(LDAPClient *self, PyObject *args, PyObject *kwds) {
-	LDAPURLDesc *lud;
-	int rc, tls = 0;
+	int tls = 0;
 	char *uristr = NULL;
 	PyObject *tlso = NULL;
+	PyObject *ldapurl = NULL;
+	PyObject *ldapurl_type = NULL;
+	PyObject *scheme = NULL;
     static char *kwlist[] = {"uri", "tls", NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "|sO!", kwlist, &uristr, &PyBool_Type, &tlso)) {
     	return -1;
     }
-    /* Set default uri. */
-	if (uristr == NULL) {
-		uristr = "ldap://localhost:389/";
-	}
+
+    ldapurl_type = load_python_object("pyLDAP", "LDAPURL");
+    if (ldapurl_type == NULL) return -1;
+
+    ldapurl = PyObject_CallFunction(ldapurl_type, "s", uristr);
+    if (ldapurl == NULL) {
+    	return -1;
+    }
+    self->uri = ldapurl;
 
 	if (tlso != NULL) {
 		tls = PyObject_IsTrue(tlso);
 	}
-	rc = ldap_url_parse(uristr, &lud);
-	if (rc != 0) {
-		PyErr_SetString(LDAPExc_UrlError, lud_err2string(rc));
-		return -1;
-	}
-	/* Save uri */
-	self->uri = PyUnicode_FromString(uristr);
-	if (self->uri == NULL) {
-		PyErr_NoMemory();
-		return -1;
-	}
+
 	self->connected = 0;
 	self->tls = tls;
+	scheme = PyObject_GetAttrString(ldapurl, "scheme");
 	/* If connection uses SSL set TLS to 0, to avoid duplicated TLS session. */
-	if (strcmp("ldaps", lud->lud_scheme) == 0) {
+	if (PyUnicode_CompareWithASCIIString(scheme, "ldaps") == 0) {
 		self->tls = 0;
 	}
+	Py_DECREF(scheme);
     return 0;
 }
 
@@ -87,6 +86,7 @@ LDAPClient_Connect(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	char *realm = NULL;
 	char *authcid = NULL;
 	char *uristr = NULL;
+	PyObject *uri;
 	static char *kwlist[] = {"binddn", "password", "mechanism", "username", "realm", "authname", NULL};
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|ssssss", kwlist, &binddn, &pswstr, &mech, &authzid, &realm, &authcid)) {
@@ -95,7 +95,9 @@ LDAPClient_Connect(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	}
 
 	/* Get the LDAP URI. */
-	uristr = PyObject2char(self->uri);
+	uri = PyObject_Str(self->uri);
+	uristr = PyObject2char(uri);
+	Py_DECREF(uri);
 	if (uristr == NULL) return NULL;
 
 	ldap_initialize(&(self->ld), uristr);

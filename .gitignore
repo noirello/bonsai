@@ -4,3 +4,4 @@ build/*
 .cproject
 .pydevproject
 dist
+pyLDAP/__pycache__

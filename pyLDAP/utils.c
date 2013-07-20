@@ -197,6 +197,30 @@ lowerCaseMatch(PyObject *o1, PyObject *o2) {
 	return match;
 }
 
+/*	Load the `object_name` Python object from the `module_name` Python module.
+	Returns the object or Py_None if it's failed.
+ */
+PyObject *
+load_python_object(char *module_name, char *object_name) {
+	PyObject *module, *object;
+
+	module = PyImport_ImportModule(module_name);
+	if (module == NULL) {
+		PyErr_Format(PyExc_ImportError, "The import of %s is failed.", module_name);
+		return Py_None;
+	}
+
+	object = PyObject_GetAttrString(module, object_name);
+    if (object == NULL) {
+    	PyErr_Format(PyExc_ImportError, "%s is not found in %s module.", object_name, module_name);
+    	Py_DECREF(module);
+    	return Py_None;
+    }
+
+    Py_DECREF(module);
+    return object;
+}
+
 void *
 create_sasl_defaults(LDAP *ld, char *mech, char *realm, char *authcid, char *passwd, char *authzid) {
 	lutilSASLdefaults *defaults;

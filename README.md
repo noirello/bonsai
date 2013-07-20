@@ -3,7 +3,7 @@ pyLDAP
 
 This is a Python module for wrapping libldap2. *Heavily* under development. <br/>
 Support only Python 3.x, and LDAPv3. <br/>
-Written completely in C. Uses only synchronous LDAP operations at the moment. <br/>
+Uses only synchronous LDAP operations at the moment. <br/>
 <br/>
 This is my first public Python module, and very first time for me to use the Python/C API.
 Contributions and advices are welcome. :) (Just tell me the whats and whys.)  

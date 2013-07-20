@@ -7,14 +7,14 @@
 
 static PyModuleDef pyldap2module = {
     PyModuleDef_HEAD_INIT,
-    "pyLDAP",
+    "_cpyLDAP",
     "Module to access directory servers using LDAP.",
     -1,
     NULL, NULL, NULL, NULL, NULL
 };
 
 PyMODINIT_FUNC
-PyInit_pyLDAP(void) {
+PyInit__cpyLDAP(void) {
     PyObject* m;
 
     if (PyType_Ready(&LDAPClientType) < 0) return NULL;
