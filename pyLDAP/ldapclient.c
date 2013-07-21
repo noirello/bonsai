@@ -1,4 +1,3 @@
-#include "errors.h"
 #include "ldapclient.h"
 #include "ldapentry.h"
 #include "utils.h"
@@ -64,6 +63,7 @@ LDAPClient_init(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	if (PyUnicode_CompareWithASCIIString(scheme, "ldaps") == 0) {
 		self->tls = 0;
 	}
+	Py_DECREF(ldapurl_type);
 	Py_DECREF(scheme);
     return 0;
 }
@@ -108,7 +108,9 @@ LDAPClient_Connect(LDAPClient *self, PyObject *args, PyObject *kwds) {
 		rc = ldap_start_tls_s(self->ld, NULL, NULL);
 		if (rc != LDAP_SUCCESS) {
 			//TODO Proper errors
-			PyErr_SetString(LDAPError, ldap_err2string(rc));
+			PyObject *ldaperror = get_error("LDAPError");
+			PyErr_SetString(ldaperror, ldap_err2string(rc));
+			Py_DECREF(ldaperror);
 			return NULL;
 		}
 	}
@@ -129,7 +131,9 @@ LDAPClient_Connect(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	}
 	if (rc != LDAP_SUCCESS) {
 		//TODO Proper errors
-		PyErr_SetString(LDAPError, ldap_err2string(rc));
+		PyObject *ldaperror = get_error("LDAPError");
+		PyErr_SetString(ldaperror, ldap_err2string(rc));
+		Py_DECREF(ldaperror);
 		return NULL;
 	}
 	free(uristr);
@@ -144,7 +148,9 @@ LDAPClient_Close(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	if (self->connected) {
 		rc = ldap_unbind_ext_s(self->ld, NULL, NULL);
 		if (rc != LDAP_SUCCESS) {
-			PyErr_SetString(LDAPError, ldap_err2string(rc));
+			PyObject *ldaperror = get_error("LDAPError");
+			PyErr_SetString(ldaperror, ldap_err2string(rc));
+			Py_DECREF(ldaperror);
 			return NULL;
 		}
 		self->connected = 0;
@@ -158,7 +164,9 @@ LDAPClient_DelEntryStringDN(LDAPClient *self, char *dnstr) {
 	int rc = LDAP_SUCCESS;
 
 	if (!self->connected) {
-		PyErr_SetString(LDAPExc_NotConnected, "Client has to connect to the server first.");
+		PyObject *ldaperror = get_error("NotConnected");
+		PyErr_SetString(ldaperror, "Client has to connect to the server first.");
+		Py_DECREF(ldaperror);
 		return -1;
 	}
 
@@ -166,7 +174,9 @@ LDAPClient_DelEntryStringDN(LDAPClient *self, char *dnstr) {
 		rc = ldap_delete_ext_s(self->ld, dnstr, NULL, NULL);
 		if (rc != LDAP_SUCCESS) {
 			//TODO proper errors
-			PyErr_SetString(LDAPError, ldap_err2string(rc));
+			PyObject *ldaperror = get_error("LDAPError");
+			PyErr_SetString(ldaperror, ldap_err2string(rc));
+			Py_DECREF(ldaperror);
 			return -1;
 		}
 	}
@@ -237,7 +247,9 @@ searching(LDAPClient *self, char *basestr, int scope, char *filterstr, char **at
 		Py_DECREF(entrylist);
 		free(timelimit);
 		//TODO proper errors
-		PyErr_SetString(LDAPError, ldap_err2string(rc));
+		PyObject *ldaperror = get_error("LDAPError");
+		PyErr_SetString(ldaperror, ldap_err2string(rc));
+		Py_DECREF(ldaperror);
         return NULL;
 	}
 	/* Iterate over the response LDAP messages. */
@@ -276,7 +288,9 @@ LDAPClient_GetEntry(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	static char *kwlist[] = {"dn", NULL};
 
 	if (!self->connected) {
-		PyErr_SetString(LDAPExc_NotConnected, "Client has to connect to the server first.");
+		PyObject *ldaperror = get_error("NotConnected");
+		PyErr_SetString(ldaperror, "Client has to connect to the server first.");
+		Py_DECREF(ldaperror);
 		return NULL;
 	}
 
@@ -300,7 +314,9 @@ LDAPClient_GetRootDSE(LDAPClient *self) {
 	char *attrs[7];
 
 	if (!self->connected) {
-		PyErr_SetString(LDAPExc_NotConnected, "Client has to connect to the server first.");
+		PyObject *ldaperror = get_error("NotConnected");
+		PyErr_SetString(ldaperror, "Client has to connect to the server first.");
+		Py_DECREF(ldaperror);
 		return NULL;
 	}
 
@@ -327,7 +343,9 @@ LDAPClient_Search(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	static char *kwlist[] = {"base", "scope", "filter", "attrlist", "timeout", "sizelimit", "attrsonly", NULL};
 
 	if (!self->connected) {
-		PyErr_SetString(LDAPExc_NotConnected, "Client has to connect to the server first.");
+		PyObject *ldaperror = get_error("NotConnected");
+		PyErr_SetString(ldaperror, "Client has to connect to the server first.");
+		Py_DECREF(ldaperror);
 		return NULL;
 	}
 
@@ -352,13 +370,17 @@ LDAPClient_Whoami(LDAPClient *self) {
 	struct berval *authzid = NULL;
 
 	if (!self->connected) {
-		PyErr_SetString(LDAPExc_NotConnected, "Client has to connect to the server first.");
+		PyObject *ldaperror = get_error("NotConnected");
+		PyErr_SetString(ldaperror, "Client has to connect to the server first.");
+		Py_DECREF(ldaperror);
 		return NULL;
 	}
 	rc = ldap_whoami_s(self->ld, &authzid, NULL, NULL);
 	if (rc != LDAP_SUCCESS) {
 		//TODO proper errors
-		PyErr_SetString(LDAPError, ldap_err2string(rc));
+		PyObject *ldaperror = get_error("LDAPError");
+		PyErr_SetString(ldaperror, ldap_err2string(rc));
+		Py_DECREF(ldaperror);
 		return NULL;
 	}
 	if(authzid->bv_len == 0) {

@@ -1,6 +1,5 @@
 #include <Python.h>
 
-#include "errors.h"
 #include "ldapclient.h"
 #include "ldapentry.h"
 #include "ldapvaluelist.h"
@@ -23,18 +22,6 @@ PyInit__cpyLDAP(void) {
 
     m = PyModule_Create(&pyldap2module);
     if (m == NULL) return NULL;
-
-	LDAPError = PyErr_NewException("pyLDAP.LDAPError", NULL, NULL);
-    Py_INCREF(LDAPError);
-    PyModule_AddObject(m, "LDAPError", LDAPError);
-
-    LDAPExc_NotConnected = PyErr_NewException("pyLDAP.LDAPError.NotConnected", LDAPError, NULL);
-    Py_INCREF(LDAPExc_NotConnected);
-    PyModule_AddObject(m, "LDAPError.NotConnected", LDAPExc_NotConnected);
-
-	LDAPExc_UrlError = PyErr_NewException("pyLDAP.LDAPError.UrlError", LDAPError, NULL);
-    Py_INCREF(LDAPExc_UrlError);
-    PyModule_AddObject(m, "LDAPError.UrlError", LDAPExc_UrlError);
 
     Py_INCREF(&LDAPEntryType);
     PyModule_AddObject(m, "LDAPEntry", (PyObject *)&LDAPEntryType);

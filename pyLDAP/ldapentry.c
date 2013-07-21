@@ -1,4 +1,3 @@
-#include "errors.h"
 #include "utils.h"
 #include "uniquelist.h"
 
@@ -328,7 +327,9 @@ add_or_modify(LDAPEntry *self, int mod) {
 	}
 	if (rc != LDAP_SUCCESS) {
 		//TODO Proper errors
-		PyErr_SetString(LDAPError, ldap_err2string(rc));
+		PyObject *ldaperror = get_error("LDAPError");
+		PyErr_SetString(ldaperror, ldap_err2string(rc));
+		Py_DECREF(ldaperror);
 		free(dnstr);
 		return NULL;
 	}
@@ -346,7 +347,9 @@ LDAPEntry_add(LDAPEntry *self, PyObject *args, PyObject* kwds) {
 	}
 	/* Client must be connected. */
 	if (!self->client->connected) {
-		PyErr_SetString(LDAPExc_NotConnected, "Client has to connect to the server first.");
+		PyObject *ldaperror = get_error("NotConnected");
+		PyErr_SetString(ldaperror, "Client has to connect to the server first.");
+		Py_DECREF(ldaperror);
 		return NULL;
 	}
 	return add_or_modify(self, 0);
@@ -396,7 +399,9 @@ LDAPEntry_modify(LDAPEntry *self, PyObject *args, PyObject* kwds) {
 	}
 	/* Client must be connected. */
 	if (!self->client->connected) {
-		PyErr_SetString(LDAPExc_NotConnected, "Client has to connect to the server first.");
+		PyObject *ldaperror = get_error("NotConnected");
+		PyErr_SetString(ldaperror, "Client has to connect to the server first.");
+		Py_DECREF(ldaperror);
 		return NULL;
 	}
 	return add_or_modify(self, 1);
@@ -417,7 +422,9 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	}
 	/* Client must be connected. */
 	if (!self->client->connected) {
-		PyErr_SetString(LDAPExc_NotConnected, "Client has to connect to the server first.");
+		PyObject *ldaperror = get_error("NotConnected");
+		PyErr_SetString(ldaperror, "Client has to connect to the server first.");
+		Py_DECREF(ldaperror);
 		return NULL;
 	}
 
@@ -448,7 +455,9 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	ldap_rename_s(self->client->ld, PyObject2char(self->dn), newrdn, newparent, 1, NULL, NULL);
 	if (rc != LDAP_SUCCESS) {
 		//TODO Proper errors
-		PyErr_SetString(LDAPError, ldap_err2string(rc));
+		PyObject *ldaperror = get_error("LDAPError");
+		PyErr_SetString(ldaperror, ldap_err2string(rc));
+		Py_DECREF(ldaperror);
 		free(newrdn);
 		free(newparent);
 		return NULL;

@@ -221,6 +221,11 @@ load_python_object(char *module_name, char *object_name) {
     return object;
 }
 
+PyObject *
+get_error(char *error_name) {
+	return load_python_object("pyLDAP.errors", error_name);
+}
+
 void *
 create_sasl_defaults(LDAP *ld, char *mech, char *realm, char *authcid, char *passwd, char *authzid) {
 	lutilSASLdefaults *defaults;
