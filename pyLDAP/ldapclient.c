@@ -43,7 +43,7 @@ LDAPClient_init(LDAPClient *self, PyObject *args, PyObject *kwds) {
     	return -1;
     }
 
-    ldapurl_type = load_python_object("pyLDAP", "LDAPURL");
+    ldapurl_type = load_python_object("pyLDAP.ldapurl", "LDAPURL");
     if (ldapurl_type == NULL) return -1;
 
     ldapurl = PyObject_CallFunction(ldapurl_type, "s", uristr);
@@ -257,6 +257,11 @@ searching(LDAPClient *self, char *basestr, int scope, char *filterstr, char **at
 		entry != NULL;
 		entry = ldap_next_entry(self->ld, entry)) {
 		entryobj = LDAPEntry_FromLDAPMessage(entry, self);
+		if (entryobj == NULL) {
+			Py_DECREF(entrylist);
+			free(timelimit);
+			return NULL;
+		}
 		/* Remove useless LDAPEntry. */
 		if (PyList_Size((PyObject *)entryobj->attributes) == 0) {
 			Py_DECREF(entryobj);
