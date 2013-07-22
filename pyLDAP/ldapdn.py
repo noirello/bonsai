@@ -6,15 +6,19 @@ class LDAPDN(object):
     __slots__ = ("__rdns")
 
     def __init__(self, strdn):
+        """
+            An object for handling valid LDAP distinguished name. 
+            :param strdn: The string representation of LDAP distinguished name.
+        """
         self.__rdns = self.__str2dn__(strdn)
         # Checking validation by rebuilding the parsed string.
         if str(self) != strdn:
             raise pyLDAP.errors.InvalidDN(strdn)
 
-    """
-        Generate attribute type and value tuple from relative distinguished name.
-    """
-    def __str2ava__(self, strava):   
+    def __str2ava__(self, strava):
+        """
+            Generate attribute type and value tuple from relative distinguished name.
+        """
         rdn = []
         # Split relative distinguished name to attribute types and values.
         avas = strava.split("+")
@@ -25,11 +29,12 @@ class LDAPDN(object):
                 raise pyLDAP.errors.InvalidDN(strava) 
             value[1] = self.__non_escape(value[1])
             rdn.append(tuple(value))
-        return rdn
-    """
-        Escaping special characters.
-    """
+        return tuple(rdn)
+    
     def __escape(self, strdn):
+        """
+            Escaping special characters.
+        """
         if strdn:
             strdn = strdn.replace('\\\\', '\\5C')
             strdn = strdn.replace('\,', '\\2C')
@@ -41,10 +46,10 @@ class LDAPDN(object):
             strdn = strdn.replace('\=' ,'\\3D')  
         return strdn
 
-    """
-        Undoing the __escape() function.
-    """
     def __non_escape(self, strdn):
+        """
+            Undoing the __escape() function.
+        """
         if strdn:
             strdn = strdn.replace('\\5C', '\\\\')
             strdn = strdn.replace('\\2C', '\,')
@@ -56,10 +61,10 @@ class LDAPDN(object):
             strdn = strdn.replace('\\3D', '\=')  
         return strdn
     
-    """
-        Parsing string value to a list of rdns.
-    """
     def __str2dn__(self, strdn):
+        """
+            Parsing string value to a list of rdns.
+        """
         rdns = []
         strdn_ex = self.__escape(strdn)
         # Iterate over the relative distinguished names.
@@ -69,20 +74,46 @@ class LDAPDN(object):
             if grp:
                 rdns.append(self.__str2ava__(grp))
         return rdns
-
-    def __str__(self):
+    
+    def __rdn2str(self, rdn):
+        """
+            Converts RDN to string.
+        """
+        avs = [] 
+        for av in rdn:
+            avs.append("=".join((av[0], av[1])))
+        rdnstr = "+".join(avs)
+        return rdnstr;
+    
+    def get_rdn(self, i):
+        """
+            Returns the string representation of the indexed RDN.
+            :param i: The index. 
+        """
+        return self.__rdn2str(self.__rdns[i])
+    
+    def get_ancestors(self):
+        """
+            Returns the ancestors of the full distinguished name.
+        """
         dn = [] 
-        for rdn in self.__rdns:
-            avs = [] 
-            for av in rdn:
-                avs.append("=".join((av[0], av[1])))
-            rdnstr = "+".join(avs)
+        for rdn in self.__rdns[1:]:
+            rdnstr = self.__rdn2str(rdn)
             dn.append(rdnstr)
         return ",".join(dn)
+
+    def __str__(self):
+        return ",".join((self.get_rdn(0), self.get_ancestors()))
+    
+    def __repr__(self):
+        return "<LDAPDN %s>" % str(self)
     
     @property    
     def rdns(self):
-        return self.__rdns
+        """
+            The tuple of relative distinguished name.
+        """
+        return tuple(self.__rdns)
 
     @rdns.setter
     def rdns(self, value):
