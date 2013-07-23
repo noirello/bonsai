@@ -207,14 +207,14 @@ load_python_object(char *module_name, char *object_name) {
 	module = PyImport_ImportModule(module_name);
 	if (module == NULL) {
 		PyErr_Format(PyExc_ImportError, "The import of %s is failed.", module_name);
-		return Py_None;
+		return NULL;
 	}
 
 	object = PyObject_GetAttrString(module, object_name);
     if (object == NULL) {
     	PyErr_Format(PyExc_ImportError, "%s is not found in %s module.", object_name, module_name);
     	Py_DECREF(module);
-    	return Py_None;
+    	return NULL;
     }
 
     Py_DECREF(module);
