@@ -396,13 +396,55 @@ LDAPEntry_modify(LDAPEntry *self, PyObject *args, PyObject* kwds) {
 	return add_or_modify(self, 1);
 }
 
+/*	Set distinguished name for a LDAPEntry. */
+static int
+LDAPEntry_setDN(LDAPEntry *self, PyObject *value, void *closure) {
+	PyObject *dn = NULL;
+	PyObject *ldapdn_type = load_python_object("pyLDAP.ldapdn", "LDAPDN");
+
+	if (ldapdn_type == NULL) return -1;
+
+	if (value == NULL) {
+        PyErr_SetString(PyExc_TypeError, "Cannot delete the DN attribute.");
+        return -1;
+    }
+
+    if (PyUnicode_Check(value)) {
+    	dn = PyObject_CallFunctionObjArgs(ldapdn_type, value, NULL);
+		/* Check for valid DN. */
+		if (dn == NULL) {
+			return -1;
+		} else {
+			Py_DECREF(self->dn);
+			self->dn = dn;
+		}
+
+    } else if (PyObject_IsInstance(value, ldapdn_type)) {
+        Py_DECREF(self->dn);
+        Py_INCREF(value);
+        self->dn = value;
+    } else {
+    	PyErr_SetString(PyExc_TypeError, "The DN attribute value must be an LDAPDN or a string.");
+    	return -1;
+    }
+
+	Py_DECREF(ldapdn_type);
+    return 0;
+}
+
+static PyObject *
+LDAPEntry_getDN(LDAPEntry *self, void *closure) {
+    Py_INCREF(self->dn);
+    return self->dn;
+}
+
 static PyObject *
 LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
-	int rc, i, j = 0;
-	char *newdn, *newparent = NULL, *newrdn;
-	char *tmp;
+	int rc;
+	char *newparent_str, *newrdn_str, *olddn_str;
+	PyObject *newdn, *newparent, *newrdn;
+	PyObject *tmp;
 	char *kwlist[] = {"newdn", NULL};
-	LDAPDN dn;
 
 	/* Client must be set. */
 	if (self->client == NULL) {
@@ -417,42 +459,44 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 		return NULL;
 	}
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist, &newdn)) {
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &newdn)) {
 		PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
 		return NULL;
 	}
 
-	rc = ldap_str2dn(newdn, &dn, 0);
-	if (rc != LDAP_SUCCESS) {
-		PyErr_SetString(PyExc_AttributeError, "Invalid distinguished name.");
-		return NULL;
-	}
+	/* Save old dn string. */
+	tmp = PyObject_Str(self->dn);
+	olddn_str = PyObject2char(tmp);
+	Py_DECREF(tmp);
+	if (olddn_str == NULL) return NULL;
 
-	newrdn = strdup(newdn);
+	/* Validate and set new LDAP DN. */
+	if (LDAPEntry_setDN(self, newdn, NULL) != 0) return NULL;
 
-	strtok(newrdn, ",");
-	tmp = strchr(newdn, ',');
+	/* Get rdn and parent strings. */
+	newrdn = PyObject_CallMethod(self->dn, "get_rdn", "(i)", 0);
+	newparent = PyObject_CallMethod(self->dn, "get_ancestors", NULL);
+	if (newrdn == NULL || newparent == NULL) return NULL;
 
-	if (tmp != NULL) {
-		newparent = malloc(sizeof(char) * strlen(tmp));
-		for (i = 1; tmp[i] != '\0'; i++) {
-			newparent[j++] = tmp[i];
-		}
-		newparent[j] = '\0';
-	}
+	newrdn_str = PyObject2char(newrdn);
+	newparent_str = PyObject2char(newparent);
+	Py_DECREF(newrdn);
+	Py_DECREF(newparent);
 
-	ldap_rename_s(self->client->ld, PyObject2char(self->dn), newrdn, newparent, 1, NULL, NULL);
+	rc = ldap_rename_s(self->client->ld, olddn_str, newrdn_str, newparent_str, 1, NULL, NULL);
 	if (rc != LDAP_SUCCESS) {
 		//TODO Proper errors
 		PyObject *ldaperror = get_error("LDAPError");
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
-		free(newrdn);
-		free(newparent);
+		free(olddn_str);
+		free(newrdn_str);
+		free(newparent_str);
 		return NULL;
 	}
-	free(newrdn);
-	free(newparent);
+	free(olddn_str);
+	free(newrdn_str);
+	free(newparent_str);
 	return Py_None;
 }
 
@@ -767,48 +811,6 @@ LDAPEntry_getClient(LDAPEntry *self, void *closure) {
 	}
     Py_INCREF(self->client);
     return (PyObject *)self->client;
-}
-
-/*	Set distinguished name for a LDAPEntry. */
-static int
-LDAPEntry_setDN(LDAPEntry *self, PyObject *value, void *closure) {
-	PyObject *dn = NULL;
-	PyObject *ldapdn_type = load_python_object("pyLDAP.ldapdn", "LDAPDN");
-
-	if (ldapdn_type == NULL) return -1;
-
-	if (value == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Cannot delete the DN attribute.");
-        return -1;
-    }
-
-    if (PyUnicode_Check(value)) {
-    	dn = PyObject_CallFunctionObjArgs(ldapdn_type, value, NULL);
-		/* Check for valid DN. */
-		if (dn == NULL) {
-			return -1;
-		} else {
-			Py_DECREF(self->dn);
-			self->dn = dn;
-		}
-
-    } else if (PyObject_IsInstance(value, ldapdn_type)) {
-        Py_DECREF(self->dn);
-        Py_INCREF(value);
-        self->dn = value;
-    } else {
-    	PyErr_SetString(PyExc_TypeError, "The DN attribute value must be an LDAPDN or a string.");
-    	return -1;
-    }
-
-	Py_DECREF(ldapdn_type);
-    return 0;
-}
-
-static PyObject *
-LDAPEntry_getDN(LDAPEntry *self, void *closure) {
-    Py_INCREF(self->dn);
-    return self->dn;
 }
 
 int
