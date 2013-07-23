@@ -883,7 +883,7 @@ PyTypeObject LDAPEntryType = {
     LDAPEntry_methods,       /* tp_methods */
     0,       				 /* tp_members */
     LDAPEntry_getsetters,    /* tp_getset */
-    &PyDict_Type,            /* tp_base */
+    0,            			 /* tp_base */
     0,                       /* tp_dict */
     0,                       /* tp_descr_get */
     0,                       /* tp_descr_set */

@@ -16,6 +16,10 @@ PyMODINIT_FUNC
 PyInit__cpyLDAP(void) {
     PyObject* m;
 
+    UniqueListType.tp_base = &PyList_Type;
+    LDAPValueListType.tp_base = &UniqueListType;
+    LDAPEntryType.tp_base = &PyDict_Type;
+
     if (PyType_Ready(&LDAPClientType) < 0) return NULL;
     if (PyType_Ready(&LDAPEntryType) < 0) return NULL;
     if (PyType_Ready(&LDAPValueListType) < 0) return NULL;

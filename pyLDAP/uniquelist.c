@@ -450,7 +450,7 @@ PyTypeObject UniqueListType = {
     UniqueList_methods,   /* tp_methods */
     0,       				 /* tp_members */
     0,    					 /* tp_getset */
-    &PyList_Type,            /* tp_base */
+    0,            			/* tp_base */
     0,                       /* tp_dict */
     0,                       /* tp_descr_get */
     0,                       /* tp_descr_set */
