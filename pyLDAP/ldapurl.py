@@ -30,10 +30,7 @@ class LDAPURL(object):
             Parsing string url to LDAPURL.
         """
         # RegExp for [ldap|ldaps]://[host]:[port]/[binddn]?[attrs]?[scope]?[filter]?[exts]
-        valid = re.compile(r"""^(ldap|ldaps)://((([a-zA-Z0-9]|[a-zA-Z0-9]
-                            [a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|
-                            [A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]))?
-                            ([:][1-9][0-9]{0,4})?(/.*)?$""", re.IGNORECASE)
+        valid = re.compile(r"^(ldap|ldaps)://((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]))?([:][1-9][0-9]{0,4})?(/.*)?$", re.IGNORECASE)
         match = valid.match(strurl)     
         if match:
             self.__hostinfo[0] = match.group(1).lower()
@@ -77,9 +74,7 @@ class LDAPURL(object):
     @host.setter
     def host(self, value):
         # RegExp for valid hostname.
-        valid = re.compile(r"""((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*
-                                [a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9]
-                                [A-Za-z0-9\-]*[A-Za-z0-9]))""", re.IGNORECASE)
+        valid = re.compile(r"((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]))", re.IGNORECASE)
         match = valid.match(value)
         if match is None:
             raise ValueError("'%s' is not a valid host name." % value)
