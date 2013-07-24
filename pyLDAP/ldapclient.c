@@ -95,7 +95,8 @@ LDAPClient_Connect(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	}
 
 	/* Get the LDAP URI. */
-	uri = PyObject_Str(self->uri);
+	uri = PyObject_CallMethod(self->uri, "get_address", NULL);
+	if (uri == NULL) return NULL;
 	uristr = PyObject2char(uri);
 	Py_DECREF(uri);
 	if (uristr == NULL) return NULL;
