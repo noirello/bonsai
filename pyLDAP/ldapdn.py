@@ -103,6 +103,7 @@ class LDAPDN(object):
         return ",".join(dn)
 
     def __str__(self):
+        """ The full string format of the distinguished name. """
         return ",".join((self.get_rdn(0), self.get_ancestors()))
     
     def __repr__(self):
@@ -110,9 +111,7 @@ class LDAPDN(object):
     
     @property    
     def rdns(self):
-        """
-            The tuple of relative distinguished name.
-        """
+        """ The tuple of relative distinguished name. """
         return tuple(self.__rdns)
 
     @rdns.setter

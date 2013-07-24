@@ -104,7 +104,7 @@ LDAPClient_Connect(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	ldap_set_option(self->ld, LDAP_OPT_PROTOCOL_VERSION, &version);
 
 	/* Start TLS, if it necessary. */
-	if (self->tls == 1 && ldap_tls_inplace(self->ld) == 0) {
+	if (self->tls == 1) {
 		rc = ldap_start_tls_s(self->ld, NULL, NULL);
 		if (rc != LDAP_SUCCESS) {
 			//TODO Proper errors
