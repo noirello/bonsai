@@ -142,12 +142,16 @@ class LDAPURL(object):
     def filter(self):
         """ The seasrching filter. """ 
         return self.__bindinfo[3]
-
+    
+    def get_address(self):
+        """ Return the full address of the host. """
+        return "%s://%s:%d" % tuple(self.__hostinfo)
+    
     def __str__(self):
         """
             Returns the full format of LDAP URL.
         """       
-        strurl = "%s://%s:%d" % tuple(self.__hostinfo)
+        strurl = self.get_address()
         strattrs = ""
         strdn = ""
         strscope = ""

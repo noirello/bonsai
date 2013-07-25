@@ -4,8 +4,6 @@
 #include <Python.h>
 #include "structmember.h"
 
-#include <ldap.h>
-
 #include "uniquelist.h"
 
 typedef struct {
