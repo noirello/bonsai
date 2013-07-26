@@ -104,7 +104,10 @@ class LDAPDN(object):
 
     def __str__(self):
         """ The full string format of the distinguished name. """
-        return ",".join((self.get_rdn(0), self.get_ancestors()))
+        if self.__rdns:
+            return ",".join((self.get_rdn(0), self.get_ancestors()))
+        else:
+            return ""
     
     def __repr__(self):
         return "<LDAPDN %s>" % str(self)
