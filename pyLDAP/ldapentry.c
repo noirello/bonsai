@@ -296,9 +296,12 @@ add_or_modify(LDAPEntry *self, int mod) {
 	int rc;
 	char *dnstr = NULL;
 	LDAPMod **mods = NULL;
+	PyObject *tmp;
 
 	/* Get DN string. */
-	dnstr = PyObject2char(self->dn);
+	tmp = PyObject_Str(self->dn);
+	dnstr = PyObject2char(tmp);
+	Py_DECREF(tmp);
 	if (dnstr == NULL || strlen(dnstr) == 0) {
 		PyErr_SetString(PyExc_AttributeError, "Missing distinguished name.");
 		return NULL;
@@ -349,6 +352,7 @@ LDAPEntry_delete(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	char *dnstr;
 	PyObject *keys = PyMapping_Keys((PyObject *)self);
 	PyObject *iter, *key;
+	PyObject *tmp;
 	LDAPValueList *value;
 
 	/* Client must be set. */
@@ -357,7 +361,11 @@ LDAPEntry_delete(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 		return NULL;
 	}
 
-	dnstr = PyObject2char(self->dn);
+	/* Get DN string. */
+	tmp = PyObject_Str(self->dn);
+	dnstr = PyObject2char(tmp);
+	Py_DECREF(tmp);
+	if (dnstr == NULL) return NULL;
 	if (LDAPClient_DelEntryStringDN(self->client, dnstr) != 0) return NULL;
 
 	if (keys == NULL) return NULL;
