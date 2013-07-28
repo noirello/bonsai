@@ -82,14 +82,14 @@ LDAPClient_Connect(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	char *binddn = NULL;
 	char *pswstr = NULL;
 	char *mech = NULL;
-	char *authzid = NULL;
+	char *authzid = "";
 	char *realm = NULL;
 	char *authcid = NULL;
 	char *uristr = NULL;
 	PyObject *uri;
 	static char *kwlist[] = {"binddn", "password", "mechanism", "username", "realm", "authname", NULL};
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|ssssss", kwlist, &binddn, &pswstr, &mech, &authzid, &realm, &authcid)) {
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|ssssss", kwlist, &binddn, &pswstr, &mech, &authcid, &realm, &authzid)) {
 		PyErr_SetString(PyExc_AttributeError, "Wrong parameters (binddn<str>, password<str>)");
 		return NULL;
 	}
@@ -132,7 +132,7 @@ LDAPClient_Connect(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	}
 	if (rc != LDAP_SUCCESS) {
 		//TODO Proper errors
-		PyObject *ldaperror = get_error("LDAPError");
+		PyObject *ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
 		return NULL;

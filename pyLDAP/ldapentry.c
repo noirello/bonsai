@@ -167,7 +167,6 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
 			mods[i++] = mod;
 		}
 		Py_DECREF(key);
-		Py_DECREF(value);
 	}
 	Py_DECREF(iter);
 	/* LDAPMod for deleted attributes. */
@@ -293,7 +292,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPClient *client) {
 /* Preform a LDAP add or modify operation depend on the `mod` parameter. */
 PyObject *
 add_or_modify(LDAPEntry *self, int mod) {
-	int rc;
+	int rc = -1;
 	char *dnstr = NULL;
 	LDAPMod **mods = NULL;
 	PyObject *tmp;
@@ -322,6 +321,7 @@ add_or_modify(LDAPEntry *self, int mod) {
 		PyObject *ldaperror = get_error("LDAPError");
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
+		LDAPEntry_DismissLDAPMods(self, mods);
 		free(dnstr);
 		return NULL;
 	}

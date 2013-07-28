@@ -101,11 +101,17 @@ class LDAPDN(object):
             rdnstr = self.__rdn2str(rdn)
             dn.append(rdnstr)
         return ",".join(dn)
+    
+    def __eq__(self, other):
+        return str(self) == str(other)
 
     def __str__(self):
         """ The full string format of the distinguished name. """
         if self.__rdns:
-            return ",".join((self.get_rdn(0), self.get_ancestors()))
+            ancestors = self.get_ancestors()
+            if ancestors == "":
+                return self.get_rdn(0)
+            return ",".join((self.get_rdn(0), ancestors))
         else:
             return ""
     
