@@ -5,3 +5,4 @@ build/*
 .pydevproject
 dist
 pyLDAP/__pycache__
+tests/__pycache__

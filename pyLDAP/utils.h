@@ -26,6 +26,7 @@ char **PyList2StringList(PyObject *list);
 int lowerCaseMatch(PyObject *o1, PyObject *o2);
 PyObject *load_python_object(char *module_name, char *object_name);
 PyObject *get_error(char *error_name);
+PyObject *get_error_by_code(int code);
 void *create_sasl_defaults(LDAP *ld, char *mech, char *realm, char *authcid, char *passwd, char *authzid);
 int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
 
