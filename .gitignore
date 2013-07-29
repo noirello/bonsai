@@ -6,3 +6,4 @@ build/*
 dist
 pyLDAP/__pycache__
 tests/__pycache__
+Debug
