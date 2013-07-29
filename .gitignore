@@ -6,4 +6,7 @@ build/*
 dist
 pyLDAP/__pycache__
 tests/__pycache__
+<<<<<<< HEAD
 Debug
+=======
+>>>>>>> 9bdda038769ebdd2faa6e2e5bedbe75908ae9bd0
