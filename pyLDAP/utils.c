@@ -282,7 +282,7 @@ int LDAP_initialization(LDAP **ld, PyObject *url) {
 	Py_DECREF(addr);
 	if (addrstr == NULL) return -1;
 
-	rc = ldap_initialize(*ld, addrstr);
+	rc = ldap_initialize(ld, addrstr);
 	if (rc != LDAP_SUCCESS) return rc;
 
 	ldap_set_option(*ld, LDAP_OPT_PROTOCOL_VERSION, &version);
