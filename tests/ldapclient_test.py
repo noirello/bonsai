@@ -6,7 +6,7 @@ import pyLDAP.errors
 
 class LDAPClientTest(unittest.TestCase):
     def setUp(self):
-        self.url = "ldap://localhost"
+        self.url = "ldap://192.168.1.83"
         self.client = LDAPClient(self.url)
         self.client.connect("cn=admin,dc=local", "p@ssword")
         

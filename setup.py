@@ -1,4 +1,5 @@
 import os
+import sys
 from distutils.core import setup, Extension
 
 sources = ["pyldapmodule.c", "ldapentry.c", 
@@ -10,8 +11,13 @@ depends = ["ldapclient.h", "ldapvaluelist.h", "uniquelist.h", "utils.h"]
 sources = [ os.path.join('pyLDAP', x) for x in sources]
 depends = [ os.path.join('pyLDAP', x) for x in depends]
 
+if sys.platform == "win32":
+    libs = ["wldap32"]
+else:
+    libs = ["ldap", "lber"]
+
 pyldap_module = Extension("pyLDAP._cpyLDAP", 
-            libraries=["ldap", "lber"],    
+            libraries = libs,    
             sources = sources,
             depends = depends)
 

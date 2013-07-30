@@ -6,7 +6,7 @@ import pyLDAP.errors
 
 class LDAPEntryTest(unittest.TestCase):
     def setUp(self):
-        self.client = LDAPClient("ldap://localhost")
+        self.client = LDAPClient("ldap://192.168.1.83")
         self.client.connect("cn=admin,dc=local", "p@ssword")
         self.entry = LDAPEntry("cn=test,dc=local", self.client)
         self.entry['objectclass'] = ['top', 'inetOrgPerson', 'person', 'organizationalPerson']

@@ -236,6 +236,59 @@ get_error_by_code(int code) {
 	return error;
 }
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+
+int LDAP_initialization(LDAP **ld, PyObject *url) {
+	int rc;
+	int portnum;
+	char *hoststr = NULL;
+	const int version = LDAP_VERSION3;
+	PyObject *scheme = PyObject_GetAttrString(url, "scheme");
+	PyObject *host = PyObject_GetAttrString(url, "host");
+	PyObject *port = PyObject_GetAttrString(url, "port");
+
+	if (scheme == NULL || host == NULL || port == NULL) return -1;
+
+	hoststr = PyObject2char(host);
+	portnum = PyLong_AsLong(port);
+	Py_DECREF(host);
+	Py_DECREF(port);
+
+	if (hoststr == NULL) return -1;
+
+	if (PyUnicode_CompareWithASCIIString(scheme, "ldaps") == 0) {
+		*ld = ldap_sslinit(hoststr, portnum, 1);
+	} else {
+		*ld = ldap_init(hoststr, portnum);
+	}
+	Py_DECREF(scheme);
+	if (ld == NULL) return -1;
+	ldap_set_option(*ld, LDAP_OPT_PROTOCOL_VERSION, &version);
+	rc = ldap_connect(*ld, NULL);
+	return rc;
+}
+
+
+#else
+
+int LDAP_initialization(LDAP **ld, PyObject *url) {
+	int rc;
+	char *addrstr;
+	const int version = LDAP_VERSION3;
+
+	PyObject *addr = PyObject_CallMethod(url, "get_address", NULL);
+	if (addr == NULL) return -1;
+	addrstr = PyObject2char(addr);
+	Py_DECREF(addr);
+	if (addrstr == NULL) return -1;
+
+	rc = ldap_initialize(*ld, addrstr);
+	if (rc != LDAP_SUCCESS) return rc;
+
+	ldap_set_option(*ld, LDAP_OPT_PROTOCOL_VERSION, &version);
+	return rc;
+}
+
 void *
 create_sasl_defaults(LDAP *ld, char *mech, char *realm, char *authcid, char *passwd, char *authzid) {
 	lutilSASLdefaults *defaults;
@@ -317,3 +370,4 @@ sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in) {
 	}
 	return LDAP_SUCCESS;
 }
+#endif
