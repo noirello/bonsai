@@ -2,20 +2,10 @@
 #include "ldapentry.h"
 #include "utils.h"
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-int LDAP_unbind(LDAP *ld) {
-	return ldap_unbind(ld); // Have to learn write macro functions.
-}
-#else
-int LDAP_unbind(LDAP *ld) {
-	return ldap_unbind_ext_s((ld), NULL, NULL);
-}
-#endif
-
 /*	Dealloc the LDAPClient object. */
 static void
 LDAPClient_dealloc(LDAPClient* self) {
-    Py_XDECREF(self->uri);
+    Py_XDECREF(self->url);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -26,9 +16,9 @@ LDAPClient_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
 	self = (LDAPClient *)type->tp_alloc(type, 0);
 	if (self != NULL) {
-		/* Create az empty python string for uri. */
-        self->uri = PyUnicode_FromString("");
-        if (self->uri == NULL) {
+		/* Create az empty python string for url. */
+        self->url = PyUnicode_FromString("");
+        if (self->url == NULL) {
             Py_DECREF(self);
             return NULL;
         }
@@ -42,25 +32,25 @@ LDAPClient_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 static int
 LDAPClient_init(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	int tls = 0;
-	char *uristr = NULL;
+	char *urlstr = NULL;
 	PyObject *tlso = NULL;
 	PyObject *ldapurl = NULL;
 	PyObject *ldapurl_type = NULL;
 	PyObject *scheme = NULL;
-    static char *kwlist[] = {"uri", "tls", NULL};
+    static char *kwlist[] = {"url", "tls", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|sO!", kwlist, &uristr, &PyBool_Type, &tlso)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|sO!", kwlist, &urlstr, &PyBool_Type, &tlso)) {
     	return -1;
     }
 
     ldapurl_type = load_python_object("pyLDAP.ldapurl", "LDAPURL");
     if (ldapurl_type == NULL) return -1;
 
-    ldapurl = PyObject_CallFunction(ldapurl_type, "s", uristr);
+    ldapurl = PyObject_CallFunction(ldapurl_type, "s", urlstr);
     if (ldapurl == NULL) {
     	return -1;
     }
-    self->uri = ldapurl;
+    self->url = ldapurl;
 
 	if (tlso != NULL) {
 		tls = PyObject_IsTrue(tlso);
@@ -84,17 +74,12 @@ LDAPClient_init(LDAPClient *self, PyObject *args, PyObject *kwds) {
 static PyObject *
 LDAPClient_Connect(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	int rc = -1;
-	void *defaults;
-    LDAPControl	**sctrlsp = NULL;
-	struct berval passwd;
-	struct berval *servdata;
 	char *binddn = NULL;
 	char *pswstr = NULL;
 	char *mech = NULL;
 	char *authzid = "";
 	char *realm = NULL;
 	char *authcid = NULL;
-	char *uristr = NULL;
 	static char *kwlist[] = {"binddn", "password", "mechanism", "username", "realm", "authname", NULL};
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|ssssss", kwlist, &binddn, &pswstr, &mech, &authcid, &realm, &authzid)) {
@@ -102,7 +87,7 @@ LDAPClient_Connect(LDAPClient *self, PyObject *args, PyObject *kwds) {
 		return NULL;
 	}
 
-	rc = LDAP_initialization(&(self->ld), self->uri);
+	rc = _LDAP_initialization(&(self->ld), self->url);
 
 	if (rc != LDAP_SUCCESS) {
 		PyObject *ldaperror = get_error_by_code(rc);
@@ -122,34 +107,16 @@ LDAPClient_Connect(LDAPClient *self, PyObject *args, PyObject *kwds) {
 			return NULL;
 		}
 	}
-	/* Mechanism is set, use SASL interactive bind. */
-	if (mech != NULL) {
-		if (pswstr == NULL) pswstr = "";
-#if !defined(WIN32) || !defined(_WIN32) || !defined(__WIN32__)
-		defaults = create_sasl_defaults(self->ld, mech, realm, authcid, pswstr, authzid);
-		if (defaults == NULL) return NULL;
-		rc = ldap_sasl_interactive_bind_s(self->ld, binddn, mech, sctrlsp, NULL, LDAP_SASL_QUIET, sasl_interact, defaults);
-#endif
-	} else {
-		if (pswstr == NULL) {
-			passwd.bv_len = 0;
-		} else {
-			passwd.bv_len = strlen(pswstr);
-		}
-		passwd.bv_val = pswstr;
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-		rc = ldap_simple_bind_sA(self->ld, binddn, pswstr);
-#else
-		rc = ldap_sasl_bind_s(self->ld, binddn, LDAP_SASL_SIMPLE, &passwd, sctrlsp, NULL, &servdata);
-#endif
-	}
+
+	rc = _LDAP_bind_s(self->ld, mech, binddn, pswstr, authcid, realm, authzid);
+
 	if (rc != LDAP_SUCCESS) {
 		PyObject *ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
 		return NULL;
 	}
-	free(uristr);
+
 	self->connected = 1;
 	return Py_None;
 }
@@ -159,7 +126,7 @@ static PyObject *
 LDAPClient_Close(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	int rc;
 	if (self->connected) {
-		rc = LDAP_unbind(self->ld);
+		rc = _LDAP_unbind(self->ld);
 		if (rc != LDAP_SUCCESS) {
 			PyObject *ldaperror = get_error("LDAPError");
 			PyErr_SetString(ldaperror, ldap_err2string(rc));
@@ -411,8 +378,8 @@ LDAPClient_Whoami(LDAPClient *self) {
 #endif
 
 static PyMemberDef LDAPClient_members[] = {
-    {"uri", T_OBJECT_EX, offsetof(LDAPClient, uri), 0,
-     "LDAP uri"},
+    {"url", T_OBJECT_EX, offsetof(LDAPClient, url), 0,
+     "LDAP url"},
     {NULL}  /* Sentinel */
 };
 

@@ -38,7 +38,9 @@ PyObject *load_python_object(char *module_name, char *object_name);
 PyObject *get_error(char *error_name);
 PyObject *get_error_by_code(int code);
 
-int LDAP_initialization(LDAP **ld, PyObject *url);
+int _LDAP_initialization(LDAP **ld, PyObject *url);
+int _LDAP_bind_s(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid, char *realm, char *authzid);
+int _LDAP_unbind(LDAP *ld);
 
 #if !defined(WIN32) || !defined(_WIN32) || !defined(__WIN32__)
 

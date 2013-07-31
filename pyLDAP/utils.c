@@ -238,7 +238,7 @@ get_error_by_code(int code) {
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
-int LDAP_initialization(LDAP **ld, PyObject *url) {
+int _LDAP_initialization(LDAP **ld, PyObject *url) {
 	int rc;
 	int portnum;
 	char *hoststr = NULL;
@@ -268,10 +268,13 @@ int LDAP_initialization(LDAP **ld, PyObject *url) {
 	return rc;
 }
 
+int LDAP_unbind(LDAP *ld) {
+	return ldap_unbind(ld);
+}
 
 #else
 
-int LDAP_initialization(LDAP **ld, PyObject *url) {
+int _LDAP_initialization(LDAP **ld, PyObject *url) {
 	int rc;
 	char *addrstr;
 	const int version = LDAP_VERSION3;
@@ -287,6 +290,35 @@ int LDAP_initialization(LDAP **ld, PyObject *url) {
 
 	ldap_set_option(*ld, LDAP_OPT_PROTOCOL_VERSION, &version);
 	return rc;
+}
+
+int _LDAP_bind_s(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid, char *realm, char *authzid) {
+	int rc;
+	LDAPControl	**sctrlsp = NULL;
+	struct berval passwd;
+	struct berval *servdata;
+	void *defaults;
+
+	/* Mechanism is set, use SASL interactive bind. */
+	if (mech != NULL) {
+		if (pswstr == NULL) pswstr = "";
+		defaults = create_sasl_defaults(ld, mech, realm, authcid, pswstr, authzid);
+		if (defaults == NULL) return -1;
+		rc = ldap_sasl_interactive_bind_s(ld, binddn, mech, sctrlsp, NULL, LDAP_SASL_QUIET, sasl_interact, defaults);
+	} else {
+		if (pswstr == NULL) {
+			passwd.bv_len = 0;
+		} else {
+			passwd.bv_len = strlen(pswstr);
+		}
+		passwd.bv_val = pswstr;
+		rc = ldap_sasl_bind_s(ld, binddn, LDAP_SASL_SIMPLE, &passwd, sctrlsp, NULL, &servdata);
+	}
+	return rc;
+}
+
+int _LDAP_unbind(LDAP *ld) {
+	return ldap_unbind_ext_s((ld), NULL, NULL);
 }
 
 void *

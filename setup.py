@@ -21,11 +21,12 @@ pyldap_module = Extension("pyLDAP._cpyLDAP",
             sources = sources,
             depends = depends)
 
-setup(name="pyLDAP", 
+setup(name="pyLDAP",
       version="0.1.5",
       description = "Module to access LDAP directory servers.",
       author = "noirello",
       author_email = "noirello@gmail.com",
+      url="https://github.com/Noirello/pyLDAP",
       long_description = "This module is a wrapper for the OpenLDAP 2.4 library. Heavily under development. Support only Python 3.x.",
       ext_modules=[pyldap_module],
       packages = ["pyLDAP"]

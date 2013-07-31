@@ -20,7 +20,7 @@
 
 typedef struct {
 	PyObject_HEAD
-	PyObject *uri;
+	PyObject *url;
 	LDAP *ld;
 	int connected;
 	int tls;
