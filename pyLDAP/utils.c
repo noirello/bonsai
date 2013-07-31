@@ -268,7 +268,40 @@ int _LDAP_initialization(LDAP **ld, PyObject *url) {
 	return rc;
 }
 
-int LDAP_unbind(LDAP *ld) {
+int _LDAP_bind_s(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid, char *realm, char *authzid) {
+	int rc;
+	int method = -1;
+	SEC_WINNT_AUTH_IDENTITY creds;
+
+	creds.User = (unsigned char*)authcid;
+	if (authcid != NULL) creds.UserLength = strlen(authcid);
+	else creds.UserLength = 0;
+	creds.Password = (unsigned char*)pswstr;
+	if (pswstr != NULL) creds.PasswordLength = strlen(pswstr);
+	else creds.PasswordLength = 0;
+	/* Is SASL realm equivalent with Domain? */
+	creds.Domain = (unsigned char*)realm;
+	if (realm != NULL) creds.DomainLength = strlen(realm);
+	else creds.DomainLength = 0;
+	creds.Flags = SEC_WINNT_AUTH_IDENTITY_ANSI;
+
+	/* Mechanism is set use SEC_WINNT_AUTH_IDENTITY. */
+	if (mech != NULL) {
+		if (strcmpi(mech, "DIGEST-MD5") == 0) {
+			method = LDAP_AUTH_DIGEST;
+		} else {
+			method = LDAP_AUTH_SASL;
+		}
+		// TODO: it's depricated. Should use ldap_sasl_bind_sA instead?
+		rc = ldap_bind_sA(ld, binddn, (PCHAR)&creds, method);
+	} else {
+		rc = ldap_simple_bind_sA(ld, binddn, pswstr);
+	}
+
+	return rc;
+}
+
+int _LDAP_unbind(LDAP *ld) {
 	return ldap_unbind(ld);
 }
 
@@ -320,6 +353,12 @@ int _LDAP_bind_s(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid
 int _LDAP_unbind(LDAP *ld) {
 	return ldap_unbind_ext_s((ld), NULL, NULL);
 }
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+* The following three functions are copies from the OpenLDAP sasl.c source file.
+* Basically, they are used with the "it's working why should touch anything" principle,
+* but probably I should check them out in time.
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 void *
 create_sasl_defaults(LDAP *ld, char *mech, char *realm, char *authcid, char *passwd, char *authzid) {
@@ -374,7 +413,6 @@ sasl_interaction(unsigned flags, sasl_interact_t *interact, lutilSASLdefaults *d
 		case SASL_CB_ECHOPROMPT:
 			break;
 	}
-	/* TODO CHECK OUT !!!*/
 	if (interact->len > 0) {
 		/* duplicate */
 		char *p = (char *)interact->result;
