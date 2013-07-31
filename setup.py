@@ -27,7 +27,9 @@ setup(name="pyLDAP",
       author = "noirello",
       author_email = "noirello@gmail.com",
       url="https://github.com/Noirello/pyLDAP",
-      long_description = "This module is a wrapper for the OpenLDAP 2.4 library. Heavily under development. Support only Python 3.x.",
+      long_description = """"This module is a wrapper for libldap2 library 
+      on Unix and Winldap on Microsoft Windows. 
+      Heavily under development. Support only Python 3.x.""",
       ext_modules=[pyldap_module],
       packages = ["pyLDAP"]
 )

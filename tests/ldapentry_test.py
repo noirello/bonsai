@@ -40,4 +40,7 @@ class LDAPEntryTest(unittest.TestCase):
     def test_ci(self):
         self.entry['givenName'] = "test"
         self.assertEqual(self.entry['GiVenName'], self.entry['givenname'])
+        
+if __name__ == '__main__':
+    unittest.main()
             
