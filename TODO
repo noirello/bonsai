@@ -1,4 +1,5 @@
 - Pass LDAP URL binding info to the search method. 
 - SASL mechanism has to be revised.
 - Check out Windows binding and authentication methods.
-- Add LDAP scheme validation
+- Add LDAP schema validation.
+- Add more LDAP errors.
