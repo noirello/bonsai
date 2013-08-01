@@ -3,3 +3,4 @@
 - Check out Windows binding and authentication methods.
 - Add LDAP schema validation.
 - Add more LDAP errors.
+- Bugfix TLS and SSL connections on MS Windows.
