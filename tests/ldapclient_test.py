@@ -34,6 +34,10 @@ class LDAPClientTest(unittest.TestCase):
     def test_getentry(self):
         o = self.client.get_entry("cn=admin,dc=local")
         self.assertIsInstance(o, LDAPEntry)
+        
+    def test_whoami(self):
+        o = self.client.whoami()
+        self.assertEqual(o, "dn:cn=admin,dc=local")
  
 if __name__ == '__main__':
     unittest.main()   
