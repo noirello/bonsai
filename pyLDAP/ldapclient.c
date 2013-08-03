@@ -349,7 +349,6 @@ LDAPClient_Search(LDAPClient *self, PyObject *args, PyObject *kwds) {
 	return entrylist;
 }
 
-#if !defined(WIN32) || !defined(_WIN32) || !defined(__WIN32__)
 static PyObject *
 LDAPClient_Whoami(LDAPClient *self) {
 	int rc = -1;
@@ -369,13 +368,15 @@ LDAPClient_Whoami(LDAPClient *self) {
 		Py_DECREF(ldaperror);
 		return NULL;
 	}
+
+	if (authzid == NULL) return PyUnicode_FromString("anonym");
+
 	if(authzid->bv_len == 0) {
 		authzid->bv_val = "anonym";
 		authzid->bv_len = 6;
 	}
 	return PyUnicode_FromString(authzid->bv_val);
 }
-#endif
 
 static PyMemberDef LDAPClient_members[] = {
     {"url", T_OBJECT_EX, offsetof(LDAPClient, url), 0,
@@ -402,11 +403,9 @@ static PyMethodDef LDAPClient_methods[] = {
 	{"search", (PyCFunction)LDAPClient_Search, METH_VARARGS | METH_KEYWORDS,
 	 "Searches for LDAP entries."
 	},
-#if !defined(WIN32) || !defined(_WIN32) || !defined(__WIN32__)
 	{"whoami", (PyCFunction)LDAPClient_Whoami, METH_NOARGS,
 	 "LDAPv3 Who Am I operation."
 	},
-#endif
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 

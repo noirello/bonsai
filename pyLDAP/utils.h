@@ -42,7 +42,11 @@ int _LDAP_initialization(LDAP **ld, PyObject *url);
 int _LDAP_bind_s(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid, char *realm, char *authzid);
 int _LDAP_unbind(LDAP *ld);
 
-#if !defined(WIN32) || !defined(_WIN32) || !defined(__WIN32__)
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+
+int ldap_whoami_s(LDAP *ld, struct berval **authzid, LDAPControl **sctrls, LDAPControl **cctrls);
+
+#else
 
 void *create_sasl_defaults(LDAP *ld, char *mech, char *realm, char *authcid, char *passwd, char *authzid);
 int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
