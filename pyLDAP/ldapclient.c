@@ -351,9 +351,7 @@ LDAPClient_Search(LDAPClient *self, PyObject *args, PyObject *kwds) {
     		PyErr_SetString(PyExc_AttributeError, "Search base DN cannot be None.");
     		return NULL;
     	} else {
-    		PyObject *tmp = PyObject_Str(basedn);
-    		basestr = PyObject2char(tmp);
-    		Py_DECREF(tmp);
+    		basestr = PyObject2char(basedn);
     		Py_DECREF(basedn);
     		if (basestr == NULL) return NULL;
     	}

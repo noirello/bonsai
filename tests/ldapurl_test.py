@@ -21,7 +21,7 @@ class LDAPURLTest(unittest.TestCase):
         self.assertEqual(self.url.port, 444)
         
     def test_bind_properties(self):
-        self.assertEqual(self.url.binddn, LDAPDN("cn=test,dc=test"))
+        self.assertEqual(self.url.basedn, LDAPDN("cn=test,dc=test"))
         self.assertEqual(self.url.scope, "base")
         self.assertEqual(self.url.filter, "(objectclass=*)")
         self.assertEqual(self.url.attributes, ["sn", "gn"])
