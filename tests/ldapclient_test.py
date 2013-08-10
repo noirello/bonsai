@@ -6,7 +6,7 @@ import pyLDAP.errors
 
 class LDAPClientTest(unittest.TestCase):
     def setUp(self):
-        self.url = "ldap://192.168.1.83"
+        self.url = "ldap://192.168.1.83/dc=local?cn?sub"
         self.client = LDAPClient(self.url)
         self.client.connect("cn=admin,dc=local", "p@ssword")
         
@@ -25,8 +25,9 @@ class LDAPClientTest(unittest.TestCase):
         client.close()
         
     def test_search(self):
-        o = self.client.search("dc=local", 1)
+        o = self.client.search("dc=local", 2)
         self.assertIsNotNone(o)
+        self.assertEqual(o, self.client.search())
         
     def test_rootdse(self):
         self.assertEqual(self.client.get_rootDSE()['supportedLDAPVersion'], ["3"])

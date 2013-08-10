@@ -3,7 +3,7 @@ import urllib.parse
 from pyLDAP.ldapdn import LDAPDN
 
 class LDAPURL(object):
-    __slots__ = ("__hostinfo", "__bindinfo", "__extensions")
+    __slots__ = ("__hostinfo", "__searchinfo", "__extensions")
 
     def __init__(self, strurl=None):
         """
@@ -16,7 +16,7 @@ class LDAPURL(object):
             Must be started with ldap:// or ldaps://.
         """
         self.__hostinfo = ['ldap', 'localhost', 389]
-        self.__bindinfo = [None, None, None, None]
+        self.__searchinfo = [None, None, None, None]
         self.__extensions = None
         if strurl:
             self.__str2url(strurl)
@@ -29,7 +29,7 @@ class LDAPURL(object):
         """
             Parsing string url to LDAPURL.
         """
-        # RegExp for [ldap|ldaps]://[host]:[port]/[binddn]?[attrs]?[scope]?[filter]?[exts]
+        # RegExp for [ldap|ldaps]://[host]:[port]/[basedn]?[attrs]?[scope]?[filter]?[exts]
         valid = re.compile(r"^(ldap|ldaps)://((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]))?([:][1-9][0-9]{0,4})?(/.*)?$", re.IGNORECASE)
         match = valid.match(strurl)     
         if match:
@@ -46,20 +46,20 @@ class LDAPURL(object):
             if match.group(7):
                 rest = match.group(7)[1:].split("?")
                 # Bind DN
-                self.__bindinfo[0] = LDAPDN(urllib.parse.unquote(rest[0]))
+                self.__searchinfo[0] = LDAPDN(urllib.parse.unquote(rest[0]))
                 if len(rest) > 1:
                     # Attributes
                     if len(rest[1]) != 0:
-                        self.__bindinfo[1] = rest[1].split(',')
+                        self.__searchinfo[1] = rest[1].split(',')
                 if len(rest) > 2:
                     # Scope (base/one/sub)
                     scope = rest[2].lower()
                     if scope != "base" and scope != "one" and scope != "sub":
                         raise ValueError()
-                    self.__bindinfo[2] = scope
+                    self.__searchinfo[2] = scope
                 if len(rest) > 3:
                     # Filter
-                    self.__bindinfo[3] = urllib.parse.unquote(rest[3])
+                    self.__searchinfo[3] = urllib.parse.unquote(rest[3])
                 if len(rest) > 4:
                     # Extensions
                     self.__extensions = rest[4].split(',')
@@ -107,41 +107,50 @@ class LDAPURL(object):
             raise ValueError("Scheme only be 'ldap' or 'ldaps'.")
 
     @property
-    def binddn(self):
+    def basedn(self):
         """ The LDAP distinguished name for binding. """
-        return self.__bindinfo[0]
+        return self.__searchinfo[0]
 
-    @binddn.setter
-    def binddn(self, value):
+    @basedn.setter
+    def basedn(self, value):
         if type(value) == LDAPDN:
-            self.__bindinfo[0] = value
+            self.__searchinfo[0] = value
         else:
             raise ValueError("Bind DN must be a type of LDAPDN.")
 
     @property
     def attributes(self):
         """ The searching attributes. """
-        return self.__bindinfo[1]
+        return self.__searchinfo[1]
 
     @property
     def scope(self):
         """ The searching scope. """
-        return self.__bindinfo[2]
+        return self.__searchinfo[2]
 
     @scope.setter
     def scope(self, value):
         if type(value) == str:
             if value.lower() == "base" or value.lower() == "one" or value.lower() == "sub":
-                self.__bindinfo[2] = value
+                self.__searchinfo[2] = value
             else:
                 raise ValueError("Scope must be one of these: 'base', 'one', 'sub'.")
         else:
             raise ValueError("Scope must be a string.")
+    
+    @property    
+    def scope_num(self):
+        if self.scope == "base": 
+            return 0
+        if self.scope == "one":
+            return 1
+        if self.scope == "sub":
+            return 2
 
     @property
     def filter(self):
         """ The seasrching filter. """ 
-        return self.__bindinfo[3]
+        return self.__searchinfo[3]
     
     def get_address(self):
         """ Return the full address of the host. """
@@ -157,14 +166,14 @@ class LDAPURL(object):
         strscope = ""
         strfilter = ""
         strexts = ""
-        if self.__bindinfo[0]:
-            strdn = str(self.__bindinfo[0])
-        if self.__bindinfo[1]:
-            strattrs = ",".join(self.__bindinfo[1])
-        if self.__bindinfo[2]:
-            strscope = self.__bindinfo[2]
-        if self.__bindinfo[3]:
-            strfilter = self.__bindinfo[3]
+        if self.__searchinfo[0]:
+            strdn = str(self.__searchinfo[0])
+        if self.__searchinfo[1]:
+            strattrs = ",".join(self.__searchinfo[1])
+        if self.__searchinfo[2]:
+            strscope = self.__searchinfo[2]
+        if self.__searchinfo[3]:
+            strfilter = self.__searchinfo[3]
         if self.__extensions:    
             strexts = ",".join(self.__extensions)
         strbind = "?".join((strdn, strattrs, strscope, strfilter, strexts))

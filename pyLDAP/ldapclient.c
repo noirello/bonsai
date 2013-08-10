@@ -319,9 +319,10 @@ LDAPClient_GetRootDSE(LDAPClient *self) {
 /* Searches for LDAP entries. */
 static PyObject *
 LDAPClient_Search(LDAPClient *self, PyObject *args, PyObject *kwds) {
-	int scope;
+	int scope = -1;
 	int timeout, sizelimit, attrsonly = 0;
-	char *basestr, *filterstr = NULL;
+	char *basestr = NULL;
+	char *filterstr = NULL;
 	PyObject *entrylist;
 	PyObject *attrlist  = NULL;
 	PyObject *attrsonlyo = NULL;
@@ -334,18 +335,67 @@ LDAPClient_Search(LDAPClient *self, PyObject *args, PyObject *kwds) {
 		return NULL;
 	}
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "si|zOiiO!", kwlist, &basestr, &scope, &filterstr,
-    		&attrlist, &timeout, &sizelimit, &PyBool_Type, &attrsonly)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|sizOiiO!", kwlist, &basestr, &scope, &filterstr,
+    		&attrlist, &timeout, &sizelimit, &PyBool_Type, &attrsonlyo)) {
 		PyErr_SetString(PyExc_AttributeError,
-				"Wrong parameters (base<str>, scope<str> [, filter<str>, attrlist<List>, timeout<int>, attrsonly<bool>]).");
+				"Wrong parameters (base<str>, scope<int>, filter<str>, attrlist<List>, timeout<int>, attrsonly<bool>).");
         return NULL;
 	}
+
+    if (basestr == NULL) {
+    	PyObject *basedn = PyObject_GetAttrString(self->url, "basedn");
+    	if (basedn == NULL) return NULL;
+
+    	if (basedn == Py_None) {
+    		Py_DECREF(basedn);
+    		PyErr_SetString(PyExc_AttributeError, "Search base DN cannot be None.");
+    		return NULL;
+    	} else {
+    		PyObject *tmp = PyObject_Str(basedn);
+    		basestr = PyObject2char(tmp);
+    		Py_DECREF(tmp);
+    		Py_DECREF(basedn);
+    		if (basestr == NULL) return NULL;
+    	}
+    }
+
+    if (scope == -1) {
+    	PyObject *scopeobj = PyObject_GetAttrString(self->url, "scope_num");
+    	if (scopeobj == NULL) return NULL;
+
+    	if (scopeobj == Py_None) {
+    		Py_DECREF(scopeobj);
+			PyErr_SetString(PyExc_AttributeError, "Search scope cannot be None.");
+			return NULL;
+    	} else {
+    		scope = PyLong_AsLong(scopeobj);
+			Py_DECREF(scopeobj);
+			if (scope == -1) return NULL;
+    	}
+    }
+
+    if (filterstr == NULL) {
+    	PyObject *filter = PyObject_GetAttrString(self->url, "filter");
+    	if (filter == NULL) return NULL;
+    	if (filter == Py_None) {
+    		Py_DECREF(filter);
+    	} else {
+    		filterstr = PyObject2char(filter);
+    		Py_DECREF(filter);
+    		if (filterstr == NULL) return NULL;
+    	}
+    }
 
     if (attrsonlyo != NULL) {
     	attrsonly = PyObject_IsTrue(attrsonlyo);
 	}
 
+    if (attrlist == NULL) {
+    	attrlist = PyObject_GetAttrString(self->url, "attributes");
+    }
+
 	entrylist = searching(self, basestr, scope, filterstr, PyList2StringList(attrlist), attrsonly, 0, timeout, sizelimit);
+	Py_XDECREF(attrlist);
 	return entrylist;
 }
 
