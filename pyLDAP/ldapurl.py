@@ -3,16 +3,17 @@ import urllib.parse
 from pyLDAP.ldapdn import LDAPDN
 
 class LDAPURL(object):
+    """ LDAP URL object."""
     __slots__ = ("__hostinfo", "__searchinfo", "__extensions")
 
     def __init__(self, strurl=None):
         """
             LDAP URL object for handling LDAP connection informations,
-            such as hostname, port, LDAP bind DN, search attributes, 
-            scope (base,sub or one) and filter, extensions. 
-            If `strurl` is None, then the default url is 
+            such as hostname, port, LDAP bind DN, search attributes,
+            scope (base,sub or one) and filter, extensions.
+            If `strurl` is None, then the default url is
             ldap://localhost:389.
-            :param strurl: String representation of a valid LDAP URL. 
+            :param strurl: String representation of a valid LDAP URL.
             Must be started with ldap:// or ldaps://.
         """
         self.__hostinfo = ['ldap', 'localhost', 389]
@@ -29,19 +30,20 @@ class LDAPURL(object):
         """
             Parsing string url to LDAPURL.
         """
-        # RegExp for [ldap|ldaps]://[host]:[port]/[basedn]?[attrs]?[scope]?[filter]?[exts]
+        # RegExp for [ldap|ldaps]://[host]:[port]/[basedn]?[attrs]?[scope]
+        # ?[filter]?[exts]
         valid = re.compile(r"^(ldap|ldaps)://((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]))?([:][1-9][0-9]{0,4})?(/.*)?$", re.IGNORECASE)
-        match = valid.match(strurl)     
+        match = valid.match(strurl)
         if match:
             self.__hostinfo[0] = match.group(1).lower()
             if self.__hostinfo[0] == "ldaps":
                 self.__hostinfo[2] = 636
             # The full hostname
             if match.group(2):
-                 self.__hostinfo[1] = match.group(2)
+                self.__hostinfo[1] = match.group(2)
             # The portnumber
             if match.group(6):
-                 self.__hostinfo[2] = int(match.group(6)[1:])
+                self.__hostinfo[2] = int(match.group(6)[1:])
             # The rest of the LDAP URL.
             if match.group(7):
                 rest = match.group(7)[1:].split("?")
@@ -68,26 +70,28 @@ class LDAPURL(object):
 
     @property
     def host(self):
-        """ The hostname."""
-        return self.__hostinfo[1] 
+        """ The hostname. """
+        return self.__hostinfo[1]
 
     @host.setter
     def host(self, value):
+        """ Setter for hostname. """
         # RegExp for valid hostname.
         valid = re.compile(r"((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]))", re.IGNORECASE)
         match = valid.match(value)
         if match is None:
             raise ValueError("'%s' is not a valid host name." % value)
         else:
-            self.__hostinfo[1] = value 
+            self.__hostinfo[1] = value
 
     @property
     def port(self):
         """ The portnumber. """
         return self.__hostinfo[2]
-    
+
     @port.setter
     def port(self, value):
+        """ Setter for portnumber. """
         if type(value) == int and (value > 0 and value < 65535):
             self.__hostinfo[2] = value
         else:
@@ -95,13 +99,15 @@ class LDAPURL(object):
 
     @property
     def scheme(self):
-        """ The url scheme."""
+        """ The URL scheme."""
         return self.__hostinfo[0]
 
     @scheme.setter
     def scheme(self, value):
+        """ Setter for URL scheme."""
         # It must be ldap or ldaps
-        if type(value) == str and value.lower() == 'ldap' or value.lower() == 'ldaps':
+        if (type(value) == str and value.lower() == 'ldap'
+            or value.lower() == 'ldaps'):
             self.__hostinfo[0] = value.lower()
         else:
             raise ValueError("Scheme only be 'ldap' or 'ldaps'.")
@@ -113,6 +119,7 @@ class LDAPURL(object):
 
     @basedn.setter
     def basedn(self, value):
+        """ Setter for LDAP distinguished name for binding. """
         if type(value) == LDAPDN:
             self.__searchinfo[0] = value
         else:
@@ -130,17 +137,21 @@ class LDAPURL(object):
 
     @scope.setter
     def scope(self, value):
+        """ Setter for searching scope. """
         if type(value) == str:
-            if value.lower() == "base" or value.lower() == "one" or value.lower() == "sub":
+            if (value.lower() == "base" or value.lower() == "one"
+                or value.lower() == "sub"):
                 self.__searchinfo[2] = value
             else:
-                raise ValueError("Scope must be one of these: 'base', 'one', 'sub'.")
+                raise ValueError("""Scope must be one of these:
+                            'base', 'one', 'sub'.""")
         else:
             raise ValueError("Scope must be a string.")
-    
-    @property    
+
+    @property
     def scope_num(self):
-        if self.scope == "base": 
+        """ Return the searching scope number. """
+        if self.scope == "base":
             return 0
         if self.scope == "one":
             return 1
@@ -149,17 +160,17 @@ class LDAPURL(object):
 
     @property
     def filter(self):
-        """ The seasrching filter. """ 
+        """ The searching filter. """
         return self.__searchinfo[3]
-    
+
     def get_address(self):
         """ Return the full address of the host. """
         return "%s://%s:%d" % tuple(self.__hostinfo)
-    
+
     def __str__(self):
         """
             Returns the full format of LDAP URL.
-        """       
+        """
         strurl = self.get_address()
         strattrs = ""
         strdn = ""
@@ -174,7 +185,7 @@ class LDAPURL(object):
             strscope = self.__searchinfo[2]
         if self.__searchinfo[3]:
             strfilter = self.__searchinfo[3]
-        if self.__extensions:    
+        if self.__extensions:
             strexts = ",".join(self.__extensions)
         strbind = "?".join((strdn, strattrs, strscope, strfilter, strexts))
         # Remove unneccesary question marks at the end of the string.
@@ -185,6 +196,7 @@ class LDAPURL(object):
         if len(strbind) != 0:
             strurl = "%s/%s" % (strurl, strbind)
         return strurl
-    
+
     def __repr__(self):
-        return "<LDAPURL %s>" % str(self) 
+        """ The LDAPURL representation. """
+        return "<LDAPURL %s>" % str(self)

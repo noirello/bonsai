@@ -2,8 +2,8 @@ import os
 import sys
 from distutils.core import setup, Extension
 
-sources = ["pyldapmodule.c", "ldapentry.c", 
-           "ldapclient.c", "ldapvaluelist.c", 
+sources = ["pyldapmodule.c", "ldapentry.c",
+           "ldapclient.c", "ldapvaluelist.c",
            "utils.c", "uniquelist.c"]
 
 depends = ["ldapclient.h", "ldapvaluelist.h", "uniquelist.h", "utils.h"]
@@ -16,8 +16,8 @@ if sys.platform == "win32":
 else:
     libs = ["ldap", "lber"]
 
-pyldap_module = Extension("pyLDAP._cpyLDAP", 
-            libraries = libs,    
+pyldap_module = Extension("pyLDAP._cpyLDAP",
+            libraries = libs,
             sources = sources,
             depends = depends)
 
@@ -27,8 +27,8 @@ setup(name="pyLDAP",
       author = "noirello",
       author_email = "noirello@gmail.com",
       url="https://github.com/Noirello/pyLDAP",
-      long_description = """"This module is a wrapper for libldap2 library 
-      on Unix and Winldap on Microsoft Windows. 
+      long_description = """"This module is a wrapper for libldap2 library
+      on Unix and Winldap on Microsoft Windows.
       Heavily under development. Support only Python 3.x.""",
       ext_modules=[pyldap_module],
       packages = ["pyLDAP"]
