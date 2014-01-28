@@ -11,8 +11,8 @@ LDAPEntry_clear(LDAPEntry *self) {
     self->attributes = NULL;
     Py_XDECREF(tmp);
 
-    tmp = (PyObject *)self->client;
-    self->client = NULL;
+    tmp = (PyObject *)self->conn;
+    self->conn = NULL;
     Py_XDECREF(tmp);
 
     tmp = (PyObject *)self->deleted;
@@ -67,7 +67,7 @@ LDAPEntry_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 			Py_DECREF(self);
 			return NULL;
 		}
-        self->client = NULL;
+        self->conn = NULL;
 	}
     return (PyObject *)self;
 }
@@ -75,27 +75,27 @@ LDAPEntry_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 /*	Initializing LDAPEntry. */
 static int
 LDAPEntry_init(LDAPEntry *self, PyObject *args, PyObject *kwds) {
-	PyObject *client = NULL;
+	PyObject *conn = NULL;
 	PyObject *tmp;
-	static char *kwlist[] = {"dn", "client", NULL};
+	static char *kwlist[] = {"dn", "conn", NULL};
 	char *dnstr;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|O", kwlist, &dnstr, &client)) {
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|O", kwlist, &dnstr, &conn)) {
 		return -1;
 	}
 
 	if (LDAPEntry_SetStringDN(self, dnstr) != 0) return -1;
 
-	if (client != NULL && PyObject_IsInstance(client, (PyObject *)&LDAPClientType) != 1) {
-		PyErr_SetString(PyExc_TypeError, "Client must be an LDAPClient type.");
+	if (conn != NULL && PyObject_IsInstance(conn, (PyObject *)&LDAPConnectionType) != 1) {
+		PyErr_SetString(PyExc_TypeError, "Connection must be an LDAPConnection type.");
 		return -1;
 	}
 
 	/* Just like in the Python doc example. */
-	if (client) {
-		tmp = (PyObject *)self->client;
-		Py_INCREF(client);
-		self->client = (LDAPClient *)client;
+	if (conn) {
+		tmp = (PyObject *)self->conn;
+		Py_INCREF(conn);
+		self->conn = (LDAPConnection *)conn;
 		Py_XDECREF(tmp);
 	}
 
@@ -207,7 +207,7 @@ LDAPEntry_DismissLDAPMods(LDAPEntry *self, LDAPMod **mods) {
 
 /*	Create a LDAPEntry from a LDAPMessage. */
 LDAPEntry *
-LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPClient *client) {
+LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 	int i;
 	char *dn;
 	char *attr;
@@ -222,9 +222,9 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPClient *client) {
 	if (self == NULL) {
 		return (LDAPEntry *)PyErr_NoMemory();
 	}
-	LDAPEntry_SetClient(self, client);
+	LDAPEntry_SetConnection(self, conn);
 	/* Set the DN for LDAPEntry. */
-	dn = ldap_get_dn(client->ld, entrymsg);
+	dn = ldap_get_dn(conn->ld, entrymsg);
 	if (dn != NULL) {
 		if (LDAPEntry_SetStringDN(self, dn) != 0) {
 			Py_DECREF(self);
@@ -235,8 +235,8 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPClient *client) {
 	}
 
 	/* Iterate over the LDAP attributes. */
-	for (attr = ldap_first_attribute(client->ld, entrymsg, &ber);
-		attr != NULL; attr = ldap_next_attribute(client->ld, entrymsg, ber)) {
+	for (attr = ldap_first_attribute(conn->ld, entrymsg, &ber);
+		attr != NULL; attr = ldap_next_attribute(conn->ld, entrymsg, ber)) {
 		/* Create a string of attribute's name and add to the attributes list. */
 		attrobj = PyUnicode_FromString(attr);
 		if (attrobj == NULL || UniqueList_Append(self->attributes, attrobj) !=  0) {
@@ -248,7 +248,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPClient *client) {
 			}
 			return (LDAPEntry *)PyErr_NoMemory();
 		}
-		values = ldap_get_values_len(client->ld, entrymsg, attr);
+		values = ldap_get_values_len(conn->ld, entrymsg, attr);
 		if (values != NULL) {
 			lvl = LDAPValueList_New();
 			if (lvl == NULL){
@@ -309,9 +309,9 @@ add_or_modify(LDAPEntry *self, int mod) {
 	}
 
 	if (mod == 0) {
-		rc = ldap_add_ext_s(self->client->ld, dnstr, mods, NULL, NULL);
+		rc = ldap_add_ext_s(self->conn->ld, dnstr, mods, NULL, NULL);
 	} else {
-		rc = ldap_modify_ext_s(self->client->ld, dnstr, mods, NULL, NULL);
+		rc = ldap_modify_ext_s(self->conn->ld, dnstr, mods, NULL, NULL);
 	}
 	if (rc != LDAP_SUCCESS) {
 		//TODO Proper errors
@@ -329,18 +329,12 @@ add_or_modify(LDAPEntry *self, int mod) {
 
 static PyObject *
 LDAPEntry_add(LDAPEntry *self, PyObject *args, PyObject* kwds) {
-	/* Client must be set. */
-	if (self->client == NULL) {
-		PyErr_SetString(PyExc_AttributeError, "LDAPClient is not set.");
+	/* Connection must be set. */
+	if (self->conn == NULL) {
+		PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
 		return NULL;
 	}
-	/* Client must be connected. */
-	if (!self->client->connected) {
-		PyObject *ldaperror = get_error("NotConnected");
-		PyErr_SetString(ldaperror, "Client has to connect to the server first.");
-		Py_DECREF(ldaperror);
-		return NULL;
-	}
+
 	return add_or_modify(self, 0);
 }
 
@@ -351,16 +345,16 @@ LDAPEntry_delete(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	PyObject *iter, *key;
 	LDAPValueList *value;
 
-	/* Client must be set. */
-	if (self->client == NULL) {
-		PyErr_SetString(PyExc_AttributeError, "LDAPClient is not set.");
+	/* Connection must be set. */
+	if (self->conn == NULL) {
+		PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
 		return NULL;
 	}
 
 	/* Get DN string. */
 	dnstr = PyObject2char(self->dn);
 	if (dnstr == NULL) return NULL;
-	if (LDAPClient_DelEntryStringDN(self->client, dnstr) != 0) return NULL;
+	if (LDAPConnection_DelEntryStringDN(self->conn, dnstr) != 0) return NULL;
 
 	if (keys == NULL) return NULL;
 
@@ -383,18 +377,12 @@ LDAPEntry_delete(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 
 static PyObject *
 LDAPEntry_modify(LDAPEntry *self, PyObject *args, PyObject* kwds) {
-	/* Client must be set. */
-	if (self->client == NULL) {
-		PyErr_SetString(PyExc_AttributeError, "LDAPClient is not set.");
+	/* Connection must be set. */
+	if (self->conn == NULL) {
+		PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
 		return NULL;
 	}
-	/* Client must be connected. */
-	if (!self->client->connected) {
-		PyObject *ldaperror = get_error("NotConnected");
-		PyErr_SetString(ldaperror, "Client has to connect to the server first.");
-		Py_DECREF(ldaperror);
-		return NULL;
-	}
+
 	return add_or_modify(self, 1);
 }
 
@@ -448,16 +436,9 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	PyObject *tmp;
 	char *kwlist[] = {"newdn", NULL};
 
-	/* Client must be set. */
-	if (self->client == NULL) {
-		PyErr_SetString(PyExc_AttributeError, "LDAPClient is not set.");
-		return NULL;
-	}
-	/* Client must be connected. */
-	if (!self->client->connected) {
-		PyObject *ldaperror = get_error("NotConnected");
-		PyErr_SetString(ldaperror, "Client has to connect to the server first.");
-		Py_DECREF(ldaperror);
+	/* Connection must be set. */
+	if (self->conn == NULL) {
+		PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
 		return NULL;
 	}
 
@@ -485,7 +466,7 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	Py_DECREF(newrdn);
 	Py_DECREF(newparent);
 
-	rc = ldap_rename_s(self->client->ld, olddn_str, newrdn_str, newparent_str, 1, NULL, NULL);
+	rc = ldap_rename_s(self->conn->ld, olddn_str, newrdn_str, newparent_str, 1, NULL, NULL);
 	if (rc != LDAP_SUCCESS) {
 		//TODO Proper errors
 		PyObject *ldaperror = get_error("LDAPError");
@@ -771,15 +752,15 @@ static PyMappingMethods LDAPEntry_mapping_meths = {
 	(objobjargproc)LDAPEntry_ass_sub, 	/* mp_ass_subscript */
 };
 
-/* Set LDAPClient for a LDAPEntry. */
+/* Set LDAPConnection for a LDAPEntry. */
 int
-LDAPEntry_SetClient(LDAPEntry *self, LDAPClient *client) {
+LDAPEntry_SetConnection(LDAPEntry *self, LDAPConnection *conn) {
 	PyObject *tmp;
 
-	if (client) {
-		tmp = (PyObject *)self->client;
-		Py_INCREF(client);
-		self->client = client;
+	if (conn) {
+		tmp = (PyObject *)self->conn;
+		Py_INCREF(conn);
+		self->conn = conn;
 		Py_XDECREF(tmp);
 	} else {
 		return -1;
@@ -787,32 +768,33 @@ LDAPEntry_SetClient(LDAPEntry *self, LDAPClient *client) {
 	return 0;
 }
 
-/*	Setter for client attribute. */
+/*	Setter for connection attribute. */
 static int
-LDAPEntry_setClient(LDAPEntry *self, PyObject *value, void *closure) {
+LDAPEntry_setConnection(LDAPEntry *self, PyObject *value, void *closure) {
     if (value == NULL) {
-        PyErr_SetString(PyExc_TypeError, "Cannot delete the client attribute.");
+        PyErr_SetString(PyExc_TypeError, "Cannot delete the connection attribute.");
         return -1;
     }
 
-    if (!PyObject_IsInstance(value, (PyObject *)&LDAPClientType)) {
-        PyErr_SetString(PyExc_TypeError, "The client attribute value must be a LDAPClient.");
+
+    if (!PyObject_IsInstance(value, (PyObject *)&LDAPConnectionType)) {
+        PyErr_SetString(PyExc_TypeError, "The connection attribute value must be a LDAPConnection.");
         return -1;
     }
 
-    if (LDAPEntry_SetClient(self, (LDAPClient *)value) != 0) return -1;
+    if (LDAPEntry_SetConnection(self, (LDAPConnection *)value) != 0) return -1;
 
     return 0;
 }
 
-/*	Getter for client attribute. */
+/*	Getter for connection attribute. */
 static PyObject *
-LDAPEntry_getClient(LDAPEntry *self, void *closure) {
-	if (self->client == NULL) {
+LDAPEntry_getConnection(LDAPEntry *self, void *closure) {
+	if (self->conn == NULL) {
 		return Py_None;
 	}
-    Py_INCREF(self->client);
-    return (PyObject *)self->client;
+    Py_INCREF(self->conn);
+    return (PyObject *)self->conn;
 }
 
 int
@@ -843,9 +825,9 @@ static PyGetSetDef LDAPEntry_getsetters[] = {
     {"attributes",	(getter)LDAPEntry_getAttributes,
     				(setter)LDAPEntry_setAttributes,
     				"Tuple of attributes", NULL},
-	{"client", 		(getter)LDAPEntry_getClient,
-					(setter)LDAPEntry_setClient,
-					"LDAP client.", NULL},
+	{"connection", 	(getter)LDAPEntry_getConnection,
+					(setter)LDAPEntry_setConnection,
+					"LDAP connection.", NULL},
 	{"dn", 			(getter)LDAPEntry_getDN,
 					(setter)LDAPEntry_setDN,
 					"Distinguished name", NULL},

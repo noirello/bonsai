@@ -1,6 +1,6 @@
 #include <Python.h>
 
-#include "ldapclient.h"
+#include "ldapconnection.h"
 #include "ldapentry.h"
 #include "ldapvaluelist.h"
 
@@ -20,7 +20,7 @@ PyInit__cpyLDAP(void) {
     LDAPValueListType.tp_base = &UniqueListType;
     LDAPEntryType.tp_base = &PyDict_Type;
 
-    if (PyType_Ready(&LDAPClientType) < 0) return NULL;
+    if (PyType_Ready(&LDAPConnectionType) < 0) return NULL;
     if (PyType_Ready(&LDAPEntryType) < 0) return NULL;
     if (PyType_Ready(&LDAPValueListType) < 0) return NULL;
 
@@ -30,8 +30,8 @@ PyInit__cpyLDAP(void) {
     Py_INCREF(&LDAPEntryType);
     PyModule_AddObject(m, "LDAPEntry", (PyObject *)&LDAPEntryType);
 
-    Py_INCREF(&LDAPClientType);
-    PyModule_AddObject(m, "LDAPClient", (PyObject *)&LDAPClientType);
+    Py_INCREF(&LDAPConnectionType);
+    PyModule_AddObject(m, "LDAPConnection", (PyObject *)&LDAPConnectionType);
 
     Py_INCREF(&LDAPValueListType);
     PyModule_AddObject(m, "LDAPValueList", (PyObject *)&LDAPValueListType);

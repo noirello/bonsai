@@ -57,7 +57,7 @@ class LDAPURL(object):
                     # Scope (base/one/sub)
                     scope = rest[2].lower()
                     if scope != "base" and scope != "one" and scope != "sub":
-                        raise ValueError()
+                        raise ValueError("Invalid scope type.")
                     self.__searchinfo[2] = scope
                 if len(rest) > 3:
                     # Filter
@@ -66,7 +66,7 @@ class LDAPURL(object):
                     # Extensions
                     self.__extensions = rest[4].split(',')
         else:
-            raise ValueError()
+            raise ValueError("'%s' is not a valid LDAP URL." % strurl)
 
     @property
     def host(self):

@@ -347,7 +347,7 @@ int _LDAP_bind_s(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid
 	void *defaults;
 
 	/* Mechanism is set, use SASL interactive bind. */
-	if (mech != NULL) {
+	if (strcmp(mech, "SIMPLE") != 0) {
 		if (pswstr == NULL) pswstr = "";
 		defaults = create_sasl_defaults(ld, mech, realm, authcid, pswstr, authzid);
 		if (defaults == NULL) return -1;

@@ -16,7 +16,7 @@
 
 #endif
 
-#include "ldapclient.h"
+#include "ldapconnection.h"
 #include "ldapvaluelist.h"
 
 typedef struct {
@@ -24,7 +24,7 @@ typedef struct {
     PyObject *dn;
     UniqueList *attributes;
     UniqueList *deleted;
-    LDAPClient *client;
+    LDAPConnection *conn;
 } LDAPEntry;
 
 extern PyTypeObject LDAPEntryType;
@@ -33,13 +33,13 @@ LDAPEntry *LDAPEntry_New(void);
 int LDAPEntry_Check(PyObject *obj);
 LDAPMod **LDAPEntry_CreateLDAPMods(LDAPEntry *self);
 void LDAPEntry_DismissLDAPMods(LDAPEntry *self, LDAPMod **mods);
-LDAPEntry *LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPClient *client);
+LDAPEntry *LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn);
 int LDAPEntry_UpdateFromDict(LDAPEntry *self, PyObject *dict);
 int LDAPEntry_UpdateFromSeq2(LDAPEntry *self, PyObject *seq);
 PyObject *LDAPEntry_GetItem(LDAPEntry *self, PyObject *key);
 PyObject *LDAPEntry_GetItemString(LDAPEntry *self, const char *key);
 int LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value);
-int LDAPEntry_SetClient(LDAPEntry *self, LDAPClient *client);
+int LDAPEntry_SetConnection(LDAPEntry *self, LDAPConnection *conn);
 int LDAPEntry_SetStringDN(LDAPEntry *self, char *value);
 
 #endif /* LDAPENTRY_H_ */

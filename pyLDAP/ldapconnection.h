@@ -1,5 +1,5 @@
-#ifndef LDAPCLIENT_H_
-#define LDAPCLIENT_H_
+#ifndef LDAPCONNECTION_H_
+#define LDAPCONNECTION_H_
 
 #include <sys/time.h>
 
@@ -20,14 +20,12 @@
 
 typedef struct {
 	PyObject_HEAD
-	PyObject *url;
+	PyObject *client;
 	LDAP *ld;
-	int connected;
-	int tls;
-} LDAPClient;
+} LDAPConnection;
 
-extern PyTypeObject LDAPClientType;
+extern PyTypeObject LDAPConnectionType;
 
-int LDAPClient_DelEntryStringDN(LDAPClient *self, char *dnstr);
+int LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr);
 
-#endif /* LDAPCLIENT_H_ */
+#endif /* LDAPCONNECTION_H_ */
