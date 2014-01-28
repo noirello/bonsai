@@ -36,10 +36,6 @@ class LDAPConnectionTest(unittest.TestCase):
         self.assertEqual(self.conn.get_rootDSE()['supportedLDAPVersion'],
                                 ["3"])"""
 
-    def test_getentry(self):
-        obj = self.conn.get_entry("cn=admin,dc=local")
-        self.assertIsInstance(obj, LDAPEntry)
-
     def test_whoami(self):
         obj = self.conn.whoami()
         self.assertEqual(obj, "dn:cn=admin,dc=local")

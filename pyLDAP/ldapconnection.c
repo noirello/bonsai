@@ -200,7 +200,7 @@ LDAPConnection_DelEntry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 */
 PyObject *
 searching(LDAPConnection *self, char *basestr, int scope, char *filterstr,
-		char **attrs, int attrsonly, int firstonly, int timeout, int sizelimit) {
+		char **attrs, int attrsonly, int timeout, int sizelimit) {
 	int rc;
 	struct timeval *timelimit;
 	LDAPMessage *res, *entry;
@@ -230,12 +230,7 @@ searching(LDAPConnection *self, char *basestr, int scope, char *filterstr,
 
 	if (rc == LDAP_NO_SUCH_OBJECT) {
 		free(timelimit);
-		if (firstonly) {
-			Py_DECREF(entrylist);
-			return NULL;
-		} else {
-			return entrylist;
-		}
+		return entrylist;
 	}
 	if (rc != LDAP_SUCCESS) {
 		Py_DECREF(entrylist);
@@ -261,11 +256,6 @@ searching(LDAPConnection *self, char *basestr, int scope, char *filterstr,
 			Py_DECREF(entryobj);
 			continue;
 		}
-		/* Return with the first entry. */
-		if (firstonly == 1) {
-			free(timelimit);
-			return (PyObject *)entryobj;
-		}
 		if ((entryobj == NULL) ||
 				(PyList_Append(entrylist, (PyObject *)entryobj)) != 0) {
 			Py_XDECREF(entryobj);
@@ -277,26 +267,6 @@ searching(LDAPConnection *self, char *basestr, int scope, char *filterstr,
 	}
 	free(timelimit);
 	return entrylist;
-}
-
-/*	Return an LDAPEntry of the given distinguished name. */
-static PyObject *
-LDAPConnection_GetEntry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
-  	char *dnstr;
-	PyObject *entry;
-	static char *kwlist[] = {"dn", NULL};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist, &dnstr)) {
-		PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
-		return NULL;
-	}
-
-	entry = searching(self, dnstr, LDAP_SCOPE_BASE, NULL, NULL, 0, 1, 0, 0);
-	if (entry == NULL) {
-		Py_INCREF(Py_None);
-		return Py_None;
-	}
-	return entry;
 }
 
 /* Searches for LDAP entries. */
@@ -398,7 +368,7 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     	attrlist = PyObject_GetAttrString(url, "attributes");
     }
 
-	entrylist = searching(self, basestr, scope, filterstr, PyList2StringList(attrlist), attrsonly, 0, timeout, sizelimit);
+	entrylist = searching(self, basestr, scope, filterstr, PyList2StringList(attrlist), attrsonly, timeout, sizelimit);
 	Py_XDECREF(attrlist);
 	return entrylist;
 }
@@ -433,9 +403,6 @@ static PyMethodDef LDAPConnection_methods[] = {
 	},
 	{"del_entry", (PyCFunction)LDAPConnection_DelEntry, METH_VARARGS,
 	"Delete an LDAPEntry with the given distinguished name."
-	},
-	{"get_entry", (PyCFunction)LDAPConnection_GetEntry, METH_VARARGS | METH_KEYWORDS,
-	"Return an LDAPEntry with the given distinguished name, or return None if the entry doesn't exist."
 	},
 	{"search", (PyCFunction)LDAPConnection_Search, METH_VARARGS | METH_KEYWORDS,
 	 "Searches for LDAP entries."

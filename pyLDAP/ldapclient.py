@@ -32,8 +32,8 @@ class LDAPClient:
         attrs = ["namingContexts", "altServer", "supportedExtension", 
                  "supportedControl", "supportedSASLMechanisms", 
                  "supportedLDAPVersion"]
-        rootdse = LDAPConnection(self, False).search("", 0, "(objectclass=*)", attrs, 0, False)[0];
-        return rootdse
+        return LDAPConnection(self, False).search("", 0, "(objectclass=*)", 
+                                                  attrs, 0, False)[0];
     
     def connect(self, async=False):
         return LDAPConnection(self, async)
