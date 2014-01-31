@@ -368,12 +368,9 @@ int _LDAP_unbind(LDAP *ld) {
 	return ldap_unbind_ext_s((ld), NULL, NULL);
 }
 
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-* The following three functions are copies from the OpenLDAP sasl.c source file.
-* Basically, they are used with the "it's working why should touch anything" principle,
-* but probably I should check them out in time.
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+/*  This function is a copy from the OpenLDAP OpenLDAP liblutil's sasl.c source
+    file for creating a lutilSASLdefaults struct with default values based on
+    the given parameters or client's options. */
 void *
 create_sasl_defaults(LDAP *ld, char *mech, char *realm, char *authcid, char *passwd, char *authzid) {
 	lutilSASLdefaults *defaults;
@@ -405,51 +402,40 @@ create_sasl_defaults(LDAP *ld, char *mech, char *realm, char *authcid, char *pas
 	return defaults;
 }
 
-static int
-sasl_interaction(unsigned flags, sasl_interact_t *interact, lutilSASLdefaults *defaults) {
-	const char *dflt = interact->defresult;
-
-	switch(interact->id) {
-		case SASL_CB_GETREALM:
-			if (defaults) dflt = defaults->realm;
-			break;
-		case SASL_CB_AUTHNAME:
-			if (defaults) dflt = defaults->authcid;
-			break;
-		case SASL_CB_PASS:
-			if (defaults) dflt = defaults->passwd;
-			break;
-		case SASL_CB_USER:
-			if (defaults) dflt = defaults->authzid;
-			break;
-		case SASL_CB_NOECHOPROMPT:
-			break;
-		case SASL_CB_ECHOPROMPT:
-			break;
-	}
-	if (interact->len > 0) {
-		/* duplicate */
-		char *p = (char *)interact->result;
-		interact->result = defaults->resps[defaults->nresps++];
-		/* zap */
-		memset( p, '\0', interact->len );
-	} else {
-		/* input must be empty */
-		interact->result = dflt;
-		interact->len = strlen(interact->result);
-	}
-
-	return LDAP_SUCCESS;
-}
-
+/*	This function is based on the lutil_sasl_interact() function, which can
+    be found in the OpenLDAP liblutil's sasl.c source. I did some simplification
+    after some google and stackoverflow reasearches, and hoping to not cause
+    any problems. */
 int
-sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in) {
+sasl_interact(LDAP *ld, unsigned flags, void *defs, void *in) {
 	int rc = 0;
-	sasl_interact_t *interact = in;
+    sasl_interact_t *interact = (sasl_interact_t*)in;
+    const char *dflt = interact->defresult;
+    lutilSASLdefaults *defaults = (lutilSASLdefaults *)defs;
 
 	while (interact->id != SASL_CB_LIST_END) {
-		rc = sasl_interaction(flags, interact, defaults);
-		if (rc) return rc;
+		switch(interact->id) {
+			case SASL_CB_GETREALM:
+				if (defaults) dflt = defaults->realm;
+				break;
+			case SASL_CB_AUTHNAME:
+				if (defaults) dflt = defaults->authcid;
+				break;
+			case SASL_CB_PASS:
+				if (defaults) dflt = defaults->passwd;
+				break;
+			case SASL_CB_USER:
+				if (defaults) dflt = defaults->authzid;
+				break;
+			case SASL_CB_NOECHOPROMPT:
+				break;
+			case SASL_CB_ECHOPROMPT:
+				break;
+		}
+
+		interact->result = (dflt && *dflt) ? dflt : (char*)"";
+		interact->len = strlen( (char*)interact->result );
+
 		interact++;
 	}
 	return LDAP_SUCCESS;

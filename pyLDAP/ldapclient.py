@@ -3,7 +3,7 @@ from pyLDAP import LDAPConnection
 from pyLDAP.ldapurl import LDAPURL
 
 class LDAPClient:
-    def __init__(self, url, tls=False):
+    def __init__(self, url="ldap://", tls=False):
         self.__url = LDAPURL(url)
         if self.__url.scheme != "ldaps" and tls:
             self.__tls = True
@@ -11,6 +11,7 @@ class LDAPClient:
             self.__tls = False
         self.__page_size = 0
         self.__auth_dict = None
+        self.__raw_list = []
         self.__mechanism = "SIMPLE"
     
     def set_raw_attibutes(self, raw_list):
@@ -20,8 +21,8 @@ class LDAPClient:
         self.__raw_list = raw_list
         
     def set_page_control(self, page_size):
-        if type(page_size) != int or page_size < 0:
-            raise ValueError("The page_size parameter must be a positive integer.")
+        if type(page_size) != int or page_size < 1:
+            raise ValueError("The page_size parameter must be an integer greater, than 0.")
         self.__page_size = page_size
         
     def set_credentials(self, mechanism, auth_dict):

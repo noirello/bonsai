@@ -22,6 +22,7 @@ typedef struct {
 	PyObject_HEAD
 	PyObject *client;
 	LDAP *ld;
+	int async;
 } LDAPConnection;
 
 extern PyTypeObject LDAPConnectionType;

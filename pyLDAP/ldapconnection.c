@@ -18,6 +18,7 @@ LDAPConnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	if (self != NULL) {
         self->client = NULL;
 	}
+	self->async = 0;
     return (PyObject *)self;
 }
 
@@ -127,6 +128,8 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     		&PyBool_Type, &async_obj)) {
     	return -1;
     }
+
+    if (async_obj != NULL) self->async = PyObject_IsTrue(async_obj);
 
     ldapclient_type = load_python_object("pyLDAP.ldapclient", "LDAPClient");
     if (ldapclient_type == NULL ||
