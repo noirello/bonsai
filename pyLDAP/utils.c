@@ -24,9 +24,10 @@ createBerval(char *value) {
 	return bval;
 }
 
-/*	Converts a berval structure to a Python bytearray or if it's possible to string. */
+/*	Converts a berval structure to a Python bytearray or if it's possible to string.
+ 	If `keepbytes` param is non-zero, then return bytearray anyway. */
 PyObject *
-berval2PyObject(struct berval *bval) {
+berval2PyObject(struct berval *bval, int keepbytes) {
 	PyObject *bytes;
 	PyObject *obj;
 
@@ -35,6 +36,9 @@ berval2PyObject(struct berval *bval) {
 		PyErr_BadInternalCall();
 		return NULL;
 	}
+
+	if (keepbytes) return bytes;
+
 	obj = PyUnicode_FromEncodedObject(bytes, NULL, NULL);
 	/* Unicode converting is failed, set bytearray to return value. */
 	if (obj == NULL) {
@@ -408,7 +412,6 @@ create_sasl_defaults(LDAP *ld, char *mech, char *realm, char *authcid, char *pas
     any problems. */
 int
 sasl_interact(LDAP *ld, unsigned flags, void *defs, void *in) {
-	int rc = 0;
     sasl_interact_t *interact = (sasl_interact_t*)in;
     const char *dflt = interact->defresult;
     lutilSASLdefaults *defaults = (lutilSASLdefaults *)defs;

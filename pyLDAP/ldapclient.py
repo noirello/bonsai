@@ -14,10 +14,12 @@ class LDAPClient:
         self.__raw_list = []
         self.__mechanism = "SIMPLE"
     
-    def set_raw_attibutes(self, raw_list):
+    def set_raw_attributes(self, raw_list):
         for elem in raw_list:
             if type(elem) != str:
                 raise ValueError("All element of raw_list must be string.")
+        if len(raw_list) > len(set(map(str.lower, raw_list))):
+            raise ValueError("Attribute names must be different from each other.")
         self.__raw_list = raw_list
         
     def set_page_control(self, page_size):

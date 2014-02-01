@@ -209,11 +209,13 @@ LDAPEntry_DismissLDAPMods(LDAPEntry *self, LDAPMod **mods) {
 LDAPEntry *
 LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 	int i;
+	int contain = -1;
 	char *dn;
 	char *attr;
 	struct berval **values;
 	BerElement *ber;
-	PyObject *val, *attrobj;
+	UniqueList *rawval_list;
+	PyObject *val, *attrobj, *tmp;
 	LDAPValueList *lvl = NULL;
 	LDAPEntry *self;
 
@@ -234,6 +236,17 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 		ldap_memfree(dn);
 	}
 
+	/* Get list of attribute's names, whose values have to keep in bytearray.*/
+	rawval_list = UniqueList_New();
+	tmp = PyObject_GetAttrString(conn->client, "_LDAPClient__raw_list");
+	if (rawval_list == NULL || tmp == NULL ||
+			UniqueList_Extend(rawval_list, tmp) != 0) {
+		Py_DECREF(self);
+		Py_XDECREF(tmp);
+		return NULL;
+	}
+	Py_DECREF(tmp);
+
 	/* Iterate over the LDAP attributes. */
 	for (attr = ldap_first_attribute(conn->ld, entrymsg, &ber);
 		attr != NULL; attr = ldap_next_attribute(conn->ld, entrymsg, ber)) {
@@ -241,6 +254,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 		attrobj = PyUnicode_FromString(attr);
 		if (attrobj == NULL || UniqueList_Append(self->attributes, attrobj) !=  0) {
 			Py_DECREF(self);
+			Py_DECREF(rawval_list);
 			Py_XDECREF(attrobj);
 			ldap_memfree(attr);
 			if (ber != NULL) {
@@ -254,6 +268,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 			if (lvl == NULL){
 				Py_DECREF(self);
 				Py_DECREF(attrobj);
+				Py_DECREF(rawval_list);
 				ldap_memfree(attr);
 				if (ber != NULL) {
 					ber_free(ber, 0);
@@ -263,13 +278,15 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 
 			for (i = 0; values[i] != NULL; i++) {
 				/* Convert berval to PyObject*, if it's failed skip it. */
-				val = berval2PyObject(values[i]);
+				contain = PySequence_Contains((PyObject *)rawval_list, attrobj);
+				val = berval2PyObject(values[i], contain);
 				if (val == NULL) continue;
 				/* If the attribute has more value, then append to the list. */
 				if (PyList_Append((PyObject *)lvl, val) != 0) {
 					Py_DECREF(lvl);
 					Py_DECREF(self);
 					Py_DECREF(attrobj);
+					Py_DECREF(rawval_list);
 					ldap_memfree(attr);
 					if (ber != NULL) {
 						ber_free(ber, 0);
@@ -282,6 +299,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 		ldap_value_free_len(values);
 	}
 	/* Cleaning the mess. */
+	Py_DECREF(rawval_list);
 	ldap_memfree(attr);
 	if (ber != NULL) {
 		ber_free(ber, 0);

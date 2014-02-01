@@ -28,7 +28,7 @@ typedef struct lutil_sasl_defaults_s {
 
 char *lowercase(char *str);
 struct berval *createBerval(char *value);
-PyObject *berval2PyObject(struct berval *bval);
+PyObject *berval2PyObject(struct berval *bval, int keepbytes);
 LDAPMod *createLDAPModFromItem(int mod_op, PyObject *key, PyObject *value);
 char *PyObject2char(PyObject *obj);
 struct berval **PyList2BervalList(PyObject *list);
