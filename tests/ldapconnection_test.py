@@ -31,6 +31,12 @@ class LDAPConnectionTest(unittest.TestCase):
         obj = self.conn.search("dc=local", 2)
         self.assertIsNotNone(obj)
         self.assertEqual(obj, self.conn.search())
+        
+    def test_search_attr(self):
+        obj = self.conn.search("dc=local", 2, "(objectclass=*)", ['cn'])[0]
+        self.assertIsNotNone(obj)
+        if 'cn' not in obj.keys():
+            self.fail()
 
     """def test_rootdse(self):
         self.assertEqual(self.conn.get_rootDSE()['supportedLDAPVersion'],

@@ -429,16 +429,23 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     self->search_params->attrsonly = attrsonly;
 
     if (attrlist == NULL) {
-    	attrlist = PyObject_GetAttrString(url, "attributes");
+    	PyObject *attr_list = PyObject_GetAttrString(url, "attributes");
+    	if (attr_list == NULL) {
+    		Py_DECREF(url);
+    		return NULL;
+    	}
+    	self->search_params->attrs = PyList2StringList(attr_list);
+    	Py_DECREF(attr_list);
+    } else {
+    	self->search_params->attrs = PyList2StringList(attrlist);
     }
-    self->search_params->attrs = PyList2StringList(attrlist);
-	Py_XDECREF(attrlist);
 	Py_DECREF(url);
 
 	/* Get page size, and if it's set create cookie for page result control */
 	sizeo = PyObject_GetAttrString(self->client, "_LDAPClient__page_size");
 	if (sizeo == NULL) return NULL;
 	self->page_size = (int)PyLong_AsLong(sizeo);
+	Py_DECREF(sizeo);
 	if (PyErr_Occurred()) return NULL;
 
 	if (self->page_size > 0) {
@@ -490,7 +497,7 @@ LDAPConnection_iternext(LDAPConnection *self) {
 
 	if (Py_SIZE(self->buffer) != 0) {
 		/* Get first element from the buffer list. */
-		item = PyObject_CallMethod(self->buffer, "pop", "i", 0);
+		item = PyObject_CallMethod(self->buffer, "pop", "(i)", 0);
 		if (item != NULL) return item;
 	} else {
 		Py_DECREF(self->buffer);
@@ -499,7 +506,7 @@ LDAPConnection_iternext(LDAPConnection *self) {
 			/* Get the next page of the search. */
 			self->buffer = searching(self);
 			if (self->buffer == NULL) return NULL;
-			item = PyObject_CallMethod(self->buffer, "pop", "i", 0);
+			item = PyObject_CallMethod(self->buffer, "pop", "(i)", 0);
 			if (item != NULL) {
 				return item;
 			} else return NULL;
