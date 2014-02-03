@@ -297,7 +297,7 @@ int _LDAP_bind_s(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid
 	creds.Flags = SEC_WINNT_AUTH_IDENTITY_ANSI;
 
 	/* Mechanism is set use SEC_WINNT_AUTH_IDENTITY. */
-	if (mech != NULL) {
+	if (strcmp(mech, "SIMPLE") != 0) {
 		if (strcmpi(mech, "DIGEST-MD5") == 0) {
 			method = LDAP_AUTH_DIGEST;
 		} else {

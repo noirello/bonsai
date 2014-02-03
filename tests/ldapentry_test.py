@@ -7,14 +7,15 @@ import pyLDAP.errors
 class LDAPEntryTest(unittest.TestCase):
     def setUp(self):
         self.client = LDAPClient("ldap://192.168.1.83")
-        self.client.connect("cn=admin,dc=local", "p@ssword")
-        self.entry = LDAPEntry("cn=test,dc=local", self.client)
+        self.client.set_credentials("SIMPLE", {'binddn' : "cn=admin,dc=local",'password' : "p@ssword"})
+        self.conn = self.client.connect()
+        self.entry = LDAPEntry("cn=test,dc=local", self.conn)
         self.entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
                                      'organizationalPerson']
         self.entry['sn'] = "Test"
 
     def tearDown(self):
-        self.client.close()
+        self.conn.close()
         del self.entry
 
     def test_operations(self):
@@ -24,14 +25,14 @@ class LDAPEntryTest(unittest.TestCase):
             self.fail("Add failed")
         self.entry.rename("cn=test2,dc=local")
         self.assertEqual(str(self.entry.dn), "cn=test2,dc=local")
-        obj = self.client.get_entry("cn=test,dc=local")
+        obj = self.conn.search("cn=test,dc=local", 0)[0]
         self.assertIsNone(obj)
         self.entry['sn'] = "Test_modify"
         try:
             self.entry.modify()
         except:
             self.fail("Modify failed.")
-        obj = self.client.get_entry("cn=test2,dc=local")
+        obj = self.conn.search("cn=test2,dc=local", 0)[0]
         self.assertEqual(self.entry['sn'], obj['sn'])
         try:
             self.entry.delete()

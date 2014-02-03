@@ -44,7 +44,7 @@ LDAPConnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	If TLS is true, starts TLS session.
 */
 static int
-connect(LDAPConnection *self) {
+connecting(LDAPConnection *self) {
 	int rc = -1;
 	char *binddn = NULL;
 	char *pswstr = NULL;
@@ -163,7 +163,7 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     	Py_XDECREF(tmp);
     }
 
-    return connect(self);
+    return connecting(self);
 }
 
 /*	Close connection. */
@@ -264,11 +264,18 @@ searching(LDAPConnection *self) {
 	}
 
 	rc = ldap_parse_result(self->ld, res, NULL, NULL, NULL, NULL, &returned_ctrls, 0);
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
+	if (self->cookie != NULL && self->cookie->bv_val != NULL) {
+    	ber_bvfree(self->cookie);
+    	self->cookie = NULL;
+    }
+    rc = ldap_parse_page_control(self->ld, returned_ctrls, NULL, &(self->cookie));
+#else
 	rc = ldap_parse_pageresponse_control(self->ld,
 			ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL),
 			NULL, self->cookie);
-
+#endif
 	/* Iterate over the response LDAP messages. */
 	for (entry = ldap_first_entry(self->ld, res);
 		entry != NULL;
@@ -291,7 +298,6 @@ searching(LDAPConnection *self) {
 		}
 		Py_DECREF(entryobj);
 	}
-
 	/* Cleanup. */
 	if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
 	if (page_ctrl != NULL) ldap_control_free(page_ctrl);
@@ -494,7 +500,6 @@ LDAPConnection_getiter(LDAPConnection *self) {
 PyObject*
 LDAPConnection_iternext(LDAPConnection *self) {
 	PyObject *item = NULL;
-
 	if (Py_SIZE(self->buffer) != 0) {
 		/* Get first element from the buffer list. */
 		item = PyObject_CallMethod(self->buffer, "pop", "(i)", 0);
