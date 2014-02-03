@@ -28,15 +28,19 @@ class LDAPClient:
         self.__page_size = page_size
         
     def set_credentials(self, mechanism, auth_dict):
-        self.__mechanism = mechanism
+        if type(mechanism) != str:
+            raise ValueError("The mechanism must be a string.")
+        self.__mechanism = mechanism.upper()
         self.__auth_dict = auth_dict
         
     def get_rootDSE(self):
         attrs = ["namingContexts", "altServer", "supportedExtension", 
                  "supportedControl", "supportedSASLMechanisms", 
                  "supportedLDAPVersion"]
-        return LDAPConnection(self, False).search("", 0, "(objectclass=*)", 
-                                                  attrs, 0, False)[0];
+        conn = LDAPConnection(self, False)
+        root_dse = conn.search("", 0, "(objectclass=*)", attrs, 0, False)[0];
+        conn.close()
+        return root_dse
     
     def connect(self, async=False):
         return LDAPConnection(self, async)

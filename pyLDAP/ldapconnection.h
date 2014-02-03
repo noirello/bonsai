@@ -19,10 +19,24 @@
 #endif
 
 typedef struct {
+	char *base;
+	char *filter;
+	char **attrs;
+	struct timeval *timeout;
+	int scope;
+	int attrsonly;
+	int sizelimit;
+} SearchParams;
+
+typedef struct {
 	PyObject_HEAD
 	PyObject *client;
+	PyObject *buffer;
 	LDAP *ld;
+	struct berval *cookie;
+	SearchParams *search_params;
 	int async;
+	int page_size;
 } LDAPConnection;
 
 extern PyTypeObject LDAPConnectionType;
