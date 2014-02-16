@@ -6,7 +6,7 @@ import pyLDAP.errors
 
 class LDAPEntryTest(unittest.TestCase):
     def setUp(self):
-        self.client = LDAPClient("ldap://192.168.1.83")
+        self.client = LDAPClient()
         self.client.set_credentials("SIMPLE", {'binddn' : "cn=admin,dc=local",'password' : "p@ssword"})
         self.conn = self.client.connect()
         self.entry = LDAPEntry("cn=test,dc=local", self.conn)
@@ -20,13 +20,13 @@ class LDAPEntryTest(unittest.TestCase):
 
     def test_operations(self):
         try:
-            self.entry.add()
+            self.conn.add([self.entry])
         except:
             self.fail("Add failed")
         self.entry.rename("cn=test2,dc=local")
         self.assertEqual(str(self.entry.dn), "cn=test2,dc=local")
-        obj = self.conn.search("cn=test,dc=local", 0)[0]
-        self.assertIsNone(obj)
+        obj = self.conn.search("cn=test,dc=local", 0)
+        self.assertEqual(obj, [])
         self.entry['sn'] = "Test_modify"
         try:
             self.entry.modify()

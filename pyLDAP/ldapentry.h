@@ -30,6 +30,7 @@ typedef struct {
 extern PyTypeObject LDAPEntryType;
 
 LDAPEntry *LDAPEntry_New(void);
+PyObject *LDAPEntry_AddOrModify(LDAPEntry *self, int mod);
 int LDAPEntry_Check(PyObject *obj);
 LDAPMod **LDAPEntry_CreateLDAPMods(LDAPEntry *self);
 void LDAPEntry_DismissLDAPMods(LDAPEntry *self, LDAPMod **mods);

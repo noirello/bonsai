@@ -27,7 +27,7 @@ LDAPConnection_dealloc(LDAPConnection* self) {
 /*	Create a new LDAPConnection object. */
 static PyObject *
 LDAPConnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
-    LDAPConnection *self;
+    LDAPConnection *self = NULL;
 
 	self = (LDAPConnection *)type->tp_alloc(type, 0);
 	if (self != NULL) {
@@ -37,6 +37,7 @@ LDAPConnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	self->search_params = NULL;
 	self->async = 0;
 	self->page_size = 0;
+
     return (PyObject *)self;
 }
 
@@ -128,8 +129,8 @@ connecting(LDAPConnection *self) {
 		Py_DECREF(auth_dict);
 		return -1;
 	}
-
 	Py_DECREF(auth_dict);
+
 	return 0;
 }
 
@@ -178,6 +179,50 @@ LDAPConnection_Close(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 		Py_DECREF(ldaperror);
 		return NULL;
 	}
+	return Py_None;
+}
+
+/* Add new LDAPEntry(ies) to ther server. */
+static PyObject *
+LDAPConnection_Add(LDAPConnection *self, PyObject *args) {
+	PyObject *param = NULL;
+	PyObject *iter = NULL;
+	PyObject *item = NULL;
+
+	if (!PyArg_ParseTuple(args, "O", &param)) {
+		PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
+		return NULL;
+	}
+
+	if (LDAPEntry_Check(param) == 1) {
+		return LDAPEntry_AddOrModify((LDAPEntry *)param, 0);
+	} else if (PyList_Check(param)) {
+		iter = PyObject_GetIter(param);
+		if (iter == NULL) {
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+
+		for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
+			if (LDAPEntry_Check(item) != 1) {
+				PyErr_SetString(PyExc_AttributeError, "Wrong parameter: Only LDAPEntry elements are allowed in the list.");
+				Py_XDECREF(item);
+				Py_DECREF(iter);
+				return NULL;
+			}
+			if (LDAPEntry_AddOrModify((LDAPEntry *)item, 0) == NULL) {
+				Py_XDECREF(item);
+				Py_DECREF(iter);
+				return NULL;
+			}
+			Py_XDECREF(item);
+		}
+		Py_DECREF(iter);
+	} else {
+		PyErr_SetString(PyExc_AttributeError, "Parameter must be an LDAPEntry or a list of LDAPEntries.");
+		return NULL;
+	}
+
 	return Py_None;
 }
 
@@ -331,8 +376,10 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     	free(self->search_params->base);
     	free(self->search_params->filter);
     	free(self->search_params->timeout);
-    	for (i = 0; self->search_params->attrs[i] != NULL; i++) {
-    		free(self->search_params->attrs[i]);
+    	if (self->search_params->attrs != NULL) {
+    		for (i = 0; self->search_params->attrs[i] != NULL; i++) {
+    			free(self->search_params->attrs[i]);
+    		}
     	}
     	free(self->search_params->attrs);
     }
@@ -463,7 +510,7 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 		/* Get the first page, and create an iterator for the next. */
 		self->buffer = searching(self);
 		if (self->buffer == NULL) return NULL;
-		return PyObject_GetIter((PyObject *)self);
+		return (PyObject *)self;
 	}
 
 	return searching(self);
@@ -500,6 +547,7 @@ LDAPConnection_getiter(LDAPConnection *self) {
 PyObject*
 LDAPConnection_iternext(LDAPConnection *self) {
 	PyObject *item = NULL;
+
 	if (Py_SIZE(self->buffer) != 0) {
 		/* Get first element from the buffer list. */
 		item = PyObject_CallMethod(self->buffer, "pop", "(i)", 0);
@@ -525,18 +573,16 @@ LDAPConnection_iternext(LDAPConnection *self) {
 }
 
 static PyMethodDef LDAPConnection_methods[] = {
+	{"add",	(PyCFunction)LDAPConnection_Add, METH_VARARGS,
+			"Add new LDAPEntry(ies) to the LDAP server."},
 	{"close", (PyCFunction)LDAPConnection_Close, METH_NOARGS,
-	 "Close connection with the LDAP Server."
-	},
+			"Close connection with the LDAP Server."},
 	{"del_entry", (PyCFunction)LDAPConnection_DelEntry, METH_VARARGS,
-	"Delete an LDAPEntry with the given distinguished name."
-	},
-	{"search", (PyCFunction)LDAPConnection_Search, METH_VARARGS | METH_KEYWORDS,
-	 "Searches for LDAP entries."
-	},
+			"Delete an LDAPEntry with the given distinguished name."},
+	{"search", (PyCFunction)LDAPConnection_Search, 	METH_VARARGS | METH_KEYWORDS,
+			"Searches for LDAP entries."},
 	{"whoami", (PyCFunction)LDAPConnection_Whoami, METH_NOARGS,
-	 "LDAPv3 Who Am I operation."
-	},
+			"LDAPv3 Who Am I operation."},
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 

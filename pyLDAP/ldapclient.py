@@ -1,8 +1,16 @@
+"""
+.. module:: LDAPClient
+   :platform: Unix, Windows
+   :synopsis: For management LDAP connections.
+
+"""
 from pyLDAP import LDAPConnection
 
 from pyLDAP.ldapurl import LDAPURL
 
 class LDAPClient:
+    """This class is for managment purposes. 
+    """
     def __init__(self, url="ldap://", tls=False):
         self.__url = LDAPURL(url)
         if self.__url.scheme != "ldaps" and tls:

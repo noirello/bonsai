@@ -311,9 +311,10 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 	return self;
 }
 
-/* Preform a LDAP add or modify operation depend on the `mod` parameter. */
+/* Preform a LDAP add or modify operation depend on the `mod` parameter.
+   If `mod` is 0 then add new entry, otherwise modify it. */
 PyObject *
-add_or_modify(LDAPEntry *self, int mod) {
+LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	int rc = -1;
 	char *dnstr = NULL;
 	LDAPMod **mods = NULL;
@@ -324,6 +325,7 @@ add_or_modify(LDAPEntry *self, int mod) {
 		PyErr_SetString(PyExc_AttributeError, "Missing distinguished name.");
 		return NULL;
 	}
+
 	mods = LDAPEntry_CreateLDAPMods(self);
 	if (mods == NULL) {
 		PyErr_SetString(PyExc_MemoryError, "Create LDAPMods is failed.");
@@ -335,8 +337,8 @@ add_or_modify(LDAPEntry *self, int mod) {
 	} else {
 		rc = ldap_modify_ext_s(self->conn->ld, dnstr, mods, NULL, NULL);
 	}
+
 	if (rc != LDAP_SUCCESS) {
-		//TODO Proper errors
 		PyObject *ldaperror = get_error("LDAPError");
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
@@ -346,18 +348,8 @@ add_or_modify(LDAPEntry *self, int mod) {
 	}
 	free(dnstr);
 	LDAPEntry_DismissLDAPMods(self, mods);
+
 	return Py_None;
-}
-
-static PyObject *
-LDAPEntry_add(LDAPEntry *self, PyObject *args, PyObject* kwds) {
-	/* Connection must be set. */
-	if (self->conn == NULL) {
-		PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
-		return NULL;
-	}
-
-	return add_or_modify(self, 0);
 }
 
 static PyObject *
@@ -405,7 +397,7 @@ LDAPEntry_modify(LDAPEntry *self, PyObject *args, PyObject* kwds) {
 		return NULL;
 	}
 
-	return add_or_modify(self, 1);
+	return LDAPEntry_AddOrModify(self, 1);
 }
 
 /*	Set distinguished name for a LDAPEntry. */
@@ -630,12 +622,14 @@ Return:
 }
 
 static PyMethodDef LDAPEntry_methods[] = {
-	{"add", 	(PyCFunction)LDAPEntry_add,		METH_NOARGS,	"Add new LDAPEntry to LDAP server."},
-	{"delete", 	(PyCFunction)LDAPEntry_delete,	METH_NOARGS,	"Delete LDAPEntry on LDAP server."},
-	{"modify", 	(PyCFunction)LDAPEntry_modify, 	METH_NOARGS,	"Send LDAPEntry's modification to the LDAP server."},
-	{"rename", 	(PyCFunction)LDAPEntry_rename, 	METH_VARARGS | METH_KEYWORDS,	"Rename or remove LDAPEntry on the LDAP server."},
+	{"delete", 	(PyCFunction)LDAPEntry_delete,	METH_NOARGS,
+			"Delete LDAPEntry on LDAP server."},
+	{"modify", 	(PyCFunction)LDAPEntry_modify, 	METH_NOARGS,
+			"Send LDAPEntry's modification to the LDAP server."},
+	{"rename", 	(PyCFunction)LDAPEntry_rename, 	METH_VARARGS | METH_KEYWORDS,
+			"Rename or remove LDAPEntry on the LDAP server."},
     {"update", 	(PyCFunction)LDAPEntry_Update, 	METH_VARARGS | METH_KEYWORDS,
-    											"Updating LDAPEntry from a dictionary." },
+    		"Updating LDAPEntry from a dictionary." },
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
