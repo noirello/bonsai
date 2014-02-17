@@ -420,7 +420,7 @@ static PyMappingMethods UL_as_mapping = {
 
 PyTypeObject UniqueListType = {
     PyObject_HEAD_INIT(NULL)
-    "pyLDAP.UniqueList",      /* tp_name */
+    "pyldap.UniqueList",      /* tp_name */
     sizeof(UniqueList),       /* tp_basicsize */
     0,                       /* tp_itemsize */
     (destructor)UniqueList_dealloc,/* tp_dealloc */

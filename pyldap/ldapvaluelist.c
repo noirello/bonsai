@@ -411,7 +411,7 @@ static PyMappingMethods LVL_as_mapping = {
 
 PyTypeObject LDAPValueListType = {
     PyObject_HEAD_INIT(NULL)
-    "pyLDAP.LDAPValueList",      /* tp_name */
+    "pyldap.LDAPValueList",      /* tp_name */
     sizeof(LDAPValueList),       /* tp_basicsize */
     0,                       /* tp_itemsize */
     (destructor)LDAPValueList_dealloc,       /* tp_dealloc */

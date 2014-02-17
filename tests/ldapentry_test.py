@@ -1,8 +1,8 @@
 import unittest
 
-from pyLDAP import LDAPClient
-from pyLDAP import LDAPEntry
-import pyLDAP.errors
+from pyldap import LDAPClient
+from pyldap import LDAPEntry
+import pyldap.errors
 
 class LDAPEntryTest(unittest.TestCase):
     def setUp(self):

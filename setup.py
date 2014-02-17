@@ -8,28 +8,28 @@ sources = ["pyldapmodule.c", "ldapentry.c",
 
 depends = ["ldapconnection.h", "ldapvaluelist.h", "uniquelist.h", "utils.h"]
 
-sources = [ os.path.join('pyLDAP', x) for x in sources]
-depends = [ os.path.join('pyLDAP', x) for x in depends]
+sources = [ os.path.join('pyldap', x) for x in sources]
+depends = [ os.path.join('pyldap', x) for x in depends]
 
 if sys.platform == "win32":
     libs = ["wldap32"]
 else:
     libs = ["ldap", "lber"]
 
-pyldap_module = Extension("pyLDAP._cpyLDAP",
+pyldap_module = Extension("pyldap._cpyldap",
             libraries = libs,
             sources = sources,
             depends = depends)
 
-setup(name="pyLDAP",
+setup(name="pyldap",
       version="0.1.5",
       description = "Module to access LDAP directory servers.",
       author = "noirello",
       author_email = "noirello@gmail.com",
-      url="https://github.com/Noirello/pyLDAP",
+      url="https://github.com/Noirello/PyLDAP",
       long_description = """"This module is a wrapper for libldap2 library
       on Unix and Winldap on Microsoft Windows.
       Heavily under development. Support only Python 3.x.""",
       ext_modules=[pyldap_module],
-      packages = ["pyLDAP"]
+      packages = ["pyldap"]
 )

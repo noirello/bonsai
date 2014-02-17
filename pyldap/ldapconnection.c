@@ -150,7 +150,7 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
     if (async_obj != NULL) self->async = PyObject_IsTrue(async_obj);
 
-    ldapclient_type = load_python_object("pyLDAP.ldapclient", "LDAPClient");
+    ldapclient_type = load_python_object("pyldap.ldapclient", "LDAPClient");
     if (ldapclient_type == NULL ||
     		!PyObject_IsInstance(client, ldapclient_type)) {
     	return -1;
@@ -562,7 +562,7 @@ static PyMethodDef LDAPConnection_methods[] = {
 
 PyTypeObject LDAPConnectionType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "pyLDAP.LDAPConnection",       /* tp_name */
+    "pyldap.LDAPConnection",       /* tp_name */
     sizeof(LDAPConnection),        /* tp_basicsize */
     0,                         /* tp_itemsize */
     (destructor)LDAPConnection_dealloc, /* tp_dealloc */

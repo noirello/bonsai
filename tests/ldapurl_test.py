@@ -1,7 +1,7 @@
 import unittest
 
-from pyLDAP import LDAPURL
-from pyLDAP import LDAPDN
+from pyldap import LDAPURL
+from pyldap import LDAPDN
 
 class LDAPURLTest(unittest.TestCase):
     def setUp(self):

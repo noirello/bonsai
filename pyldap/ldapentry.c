@@ -404,7 +404,7 @@ LDAPEntry_modify(LDAPEntry *self, PyObject *args, PyObject* kwds) {
 static int
 LDAPEntry_setDN(LDAPEntry *self, PyObject *value, void *closure) {
 	PyObject *dn = NULL;
-	PyObject *ldapdn_type = load_python_object("pyLDAP.ldapdn", "LDAPDN");
+	PyObject *ldapdn_type = load_python_object("pyldap.ldapdn", "LDAPDN");
 
 	if (ldapdn_type == NULL) return -1;
 
@@ -852,7 +852,7 @@ static PyGetSetDef LDAPEntry_getsetters[] = {
 
 PyTypeObject LDAPEntryType = {
     PyObject_HEAD_INIT(NULL)
-    "pyLDAP.LDAPEntry",      /* tp_name */
+    "pyldap.LDAPEntry",      /* tp_name */
     sizeof(LDAPEntry),       /* tp_basicsize */
     0,                       /* tp_itemsize */
     (destructor)LDAPEntry_dealloc,       /* tp_dealloc */

@@ -1,6 +1,6 @@
 import unittest
 
-from pyLDAP import LDAPClient
+from pyldap import LDAPClient
 
 class LDAPClientTest(unittest.TestCase):
     def setUp(self):

@@ -1,12 +1,12 @@
 import unittest
 
-from pyLDAP import LDAPClient
-from pyLDAP import LDAPEntry
-import pyLDAP.errors
+from pyldap import LDAPClient
+from pyldap import LDAPEntry
+import pyldap.errors
 
 class LDAPConnectionTest(unittest.TestCase):
     def setUp(self):
-        self.url = "ldap://192.168.1.83/dc=local?cn?sub"
+        self.url = "ldap://localhost/dc=local?cn?sub"
         client = LDAPClient(self.url)
         client.set_credentials("SIMPLE", {"binddn" : "cn=admin,dc=local",
                                           "password" : "p@ssword"})
@@ -22,8 +22,8 @@ class LDAPConnectionTest(unittest.TestCase):
                            "password" : "p@ssword"})
         try:
             conn = client.connect()
-        except (pyLDAP.errors.ConnectionError,
-            pyLDAP.errors.AuthenticationError):
+        except (pyldap.errors.ConnectionError,
+            pyldap.errors.AuthenticationError):
             self.fail()
         conn.close()
 

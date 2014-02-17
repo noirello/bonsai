@@ -4,9 +4,9 @@
    :synopsis: For management LDAP connections.
 
 """
-from pyLDAP import LDAPConnection
+from pyldap import LDAPConnection
 
-from pyLDAP.ldapurl import LDAPURL
+from pyldap.ldapurl import LDAPURL
 
 class LDAPClient:
     """This class is for managment purposes. 

@@ -1,5 +1,5 @@
 import re
-import pyLDAP.errors
+import pyldap.errors
 
 class LDAPDN(object):
     """LDAP distinguished name object."""
@@ -13,7 +13,7 @@ class LDAPDN(object):
         self.__rdns = self.__str2dn__(strdn)
         # Checking validation by rebuilding the parsed string.
         if str(self) != strdn:
-            raise pyLDAP.errors.InvalidDN(strdn)
+            raise pyldap.errors.InvalidDN(strdn)
 
     def __str2ava__(self, strava):
         """
@@ -27,7 +27,7 @@ class LDAPDN(object):
             # Get attribute type and value.
             value = attv.split("=")
             if len(value) != 2:
-                raise pyLDAP.errors.InvalidDN(strava)
+                raise pyldap.errors.InvalidDN(strava)
             value[1] = self.__non_escape(value[1])
             rdn.append(tuple(value))
         return tuple(rdn)

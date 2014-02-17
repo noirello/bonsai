@@ -1,7 +1,7 @@
 import unittest
 
-from pyLDAP import LDAPDN
-from pyLDAP import errors
+from pyldap import LDAPDN
+from pyldap import errors
 
 class LDAPDNTest(unittest.TestCase):
     def setUp(self):

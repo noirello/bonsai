@@ -80,7 +80,7 @@ PyObject2char(PyObject *obj) {
 	char *tmp = NULL;
 	const wchar_t *wstr;
 	Py_ssize_t length = 0;
-	PyObject *ldapdn_type = load_python_object("pyLDAP.ldapdn", "LDAPDN");
+	PyObject *ldapdn_type = load_python_object("pyldap.ldapdn", "LDAPDN");
 	const unsigned int len = 24; /* The max length that a number's char* representation can be. */
 
 	if (obj == NULL) return NULL;
@@ -234,13 +234,13 @@ load_python_object(char *module_name, char *object_name) {
 
 PyObject *
 get_error(char *error_name) {
-	return load_python_object("pyLDAP.errors", error_name);
+	return load_python_object("pyldap.errors", error_name);
 }
 
 PyObject *
 get_error_by_code(int code) {
 	PyObject *error;
-	PyObject *get_error = load_python_object("pyLDAP.errors", "get_error");
+	PyObject *get_error = load_python_object("pyldap.errors", "get_error");
 	if (get_error == NULL) return NULL;
 
 	error = PyObject_CallFunction(get_error, "(i)", code);
