@@ -169,7 +169,7 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
 /*	Close connection. */
 static PyObject *
-LDAPConnection_Close(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+LDAPConnection_Close(LDAPConnection *self) {
 	int rc;
 
 	rc = _LDAP_unbind(self->ld);
@@ -182,48 +182,22 @@ LDAPConnection_Close(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	return Py_None;
 }
 
-/* Add new LDAPEntry(ies) to ther server. */
+/* Add new LDAPEntry to ther server. */
 static PyObject *
 LDAPConnection_Add(LDAPConnection *self, PyObject *args) {
 	PyObject *param = NULL;
-	PyObject *iter = NULL;
-	PyObject *item = NULL;
 
 	if (!PyArg_ParseTuple(args, "O", &param)) {
 		PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
 		return NULL;
 	}
 
-	if (LDAPEntry_Check(param) == 1) {
-		return LDAPEntry_AddOrModify((LDAPEntry *)param, 0);
-	} else if (PyList_Check(param)) {
-		iter = PyObject_GetIter(param);
-		if (iter == NULL) {
-			PyErr_BadInternalCall();
-			return NULL;
-		}
-
-		for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
-			if (LDAPEntry_Check(item) != 1) {
-				PyErr_SetString(PyExc_AttributeError, "Wrong parameter: Only LDAPEntry elements are allowed in the list.");
-				Py_XDECREF(item);
-				Py_DECREF(iter);
-				return NULL;
-			}
-			if (LDAPEntry_AddOrModify((LDAPEntry *)item, 0) == NULL) {
-				Py_XDECREF(item);
-				Py_DECREF(iter);
-				return NULL;
-			}
-			Py_XDECREF(item);
-		}
-		Py_DECREF(iter);
-	} else {
-		PyErr_SetString(PyExc_AttributeError, "Parameter must be an LDAPEntry or a list of LDAPEntries.");
+	if (LDAPEntry_Check(param) != 1) {
+		PyErr_SetString(PyExc_AttributeError, "Parameter must be an LDAPEntry");
 		return NULL;
 	}
 
-	return Py_None;
+	return LDAPEntry_AddOrModify((LDAPEntry *)param, 0);
 }
 
 /*	Delete an entry with the `dnstr` distinguished name on the server. */
@@ -574,7 +548,7 @@ LDAPConnection_iternext(LDAPConnection *self) {
 
 static PyMethodDef LDAPConnection_methods[] = {
 	{"add",	(PyCFunction)LDAPConnection_Add, METH_VARARGS,
-			"Add new LDAPEntry(ies) to the LDAP server."},
+			"Add new LDAPEntry to the LDAP server."},
 	{"close", (PyCFunction)LDAPConnection_Close, METH_NOARGS,
 			"Close connection with the LDAP Server."},
 	{"del_entry", (PyCFunction)LDAPConnection_DelEntry, METH_VARARGS,

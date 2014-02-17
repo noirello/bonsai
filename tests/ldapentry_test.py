@@ -20,7 +20,7 @@ class LDAPEntryTest(unittest.TestCase):
 
     def test_operations(self):
         try:
-            self.conn.add([self.entry])
+            self.conn.add(self.entry)
         except:
             self.fail("Add failed")
         self.entry.rename("cn=test2,dc=local")
