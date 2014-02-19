@@ -72,8 +72,9 @@ LDAPEntry_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 			Py_DECREF(self);
 			return NULL;
 		}
-        self->conn = NULL;
-
+    	/* Import LDAPDN object. */
+    	self->dntype = load_python_object("pyldap.ldapdn", "LDAPDN");
+    	if (self->dntype == NULL) return NULL;
 	}
     return (PyObject *)self;
 }
@@ -89,10 +90,6 @@ LDAPEntry_init(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|O", kwlist, &dnstr, &conn)) {
 		return -1;
 	}
-
-	/* Import LDAPDN object. */
-	self->dntype = load_python_object("pyldap.ldapdn", "LDAPDN");
-	if (self->dntype == NULL) return -1;
 
 	if (LDAPEntry_SetStringDN(self, dnstr) != 0) return -1;
 

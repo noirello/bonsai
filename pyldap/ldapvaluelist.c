@@ -281,7 +281,7 @@ LVL_pop(LDAPValueList *self, PyObject *args) {
 static PyObject *
 LVL_remove(LDAPValueList *self, PyObject *value) {
 	if (LDAPValueList_Remove(self, value) == 0) {
-		self->status = 1;
+		self->status = 2;
 		return Py_None;
 	}
 	return NULL;
