@@ -9,7 +9,7 @@ class LDAPEntryTest(unittest.TestCase):
         self.client = LDAPClient()
         self.client.set_credentials("SIMPLE", {'binddn' : "cn=admin,dc=local",'password' : "p@ssword"})
         self.conn = self.client.connect()
-        self.entry = LDAPEntry("cn=test,dc=local", self.conn)
+        self.entry = LDAPEntry("cn=test,dc=local")
         self.entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
                                      'organizationalPerson']
         self.entry['sn'] = "Test"

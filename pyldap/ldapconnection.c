@@ -196,8 +196,14 @@ LDAPConnection_Add(LDAPConnection *self, PyObject *args) {
 		PyErr_SetString(PyExc_AttributeError, "Parameter must be an LDAPEntry");
 		return NULL;
 	}
+	/* Set this connection to the LDAPEntry, before add to the server. */
+	if (LDAPEntry_SetConnection((LDAPEntry *)param, self) == 0) {
+		if (LDAPEntry_AddOrModify((LDAPEntry *)param, 0) != NULL) {
+			return Py_None;
+		}
+	}
 
-	return LDAPEntry_AddOrModify((LDAPEntry *)param, 0);
+	return NULL;
 }
 
 /*	Delete an entry with the `dnstr` distinguished name on the server. */

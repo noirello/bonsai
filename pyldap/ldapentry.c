@@ -26,6 +26,7 @@ LDAPEntry_clear(LDAPEntry *self) {
     tmp = self->dn;
     self->dn = NULL;
     Py_XDECREF(tmp);
+    Py_XDECREF(self->dntype);
     PyDict_Type.tp_clear((PyObject*)self);
 
     return 0;
@@ -72,6 +73,7 @@ LDAPEntry_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 			return NULL;
 		}
         self->conn = NULL;
+
 	}
     return (PyObject *)self;
 }
@@ -87,6 +89,10 @@ LDAPEntry_init(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|O", kwlist, &dnstr, &conn)) {
 		return -1;
 	}
+
+	/* Import LDAPDN object. */
+	self->dntype = load_python_object("pyldap.ldapdn", "LDAPDN");
+	if (self->dntype == NULL) return -1;
 
 	if (LDAPEntry_SetStringDN(self, dnstr) != 0) return -1;
 
@@ -404,9 +410,6 @@ LDAPEntry_modify(LDAPEntry *self, PyObject *args, PyObject* kwds) {
 static int
 LDAPEntry_setDN(LDAPEntry *self, PyObject *value, void *closure) {
 	PyObject *dn = NULL;
-	PyObject *ldapdn_type = load_python_object("pyldap.ldapdn", "LDAPDN");
-
-	if (ldapdn_type == NULL) return -1;
 
 	if (value == NULL) {
         PyErr_SetString(PyExc_TypeError, "Cannot delete the DN attribute.");
@@ -414,7 +417,7 @@ LDAPEntry_setDN(LDAPEntry *self, PyObject *value, void *closure) {
     }
 
     if (PyUnicode_Check(value)) {
-    	dn = PyObject_CallFunctionObjArgs(ldapdn_type, value, NULL);
+    	dn = PyObject_CallFunctionObjArgs(self->dntype, value, NULL);
 		/* Check for valid DN. */
 		if (dn == NULL) {
 			return -1;
@@ -423,7 +426,7 @@ LDAPEntry_setDN(LDAPEntry *self, PyObject *value, void *closure) {
 			self->dn = dn;
 		}
 
-    } else if (PyObject_IsInstance(value, ldapdn_type)) {
+    } else if (PyObject_IsInstance(value, self->dntype)) {
         Py_DECREF(self->dn);
         Py_INCREF(value);
         self->dn = value;
@@ -432,7 +435,6 @@ LDAPEntry_setDN(LDAPEntry *self, PyObject *value, void *closure) {
     	return -1;
     }
 
-	Py_DECREF(ldapdn_type);
     return 0;
 }
 

@@ -80,11 +80,9 @@ PyObject2char(PyObject *obj) {
 	char *tmp = NULL;
 	const wchar_t *wstr;
 	Py_ssize_t length = 0;
-	PyObject *ldapdn_type = load_python_object("pyldap.ldapdn", "LDAPDN");
 	const unsigned int len = 24; /* The max length that a number's char* representation can be. */
 
 	if (obj == NULL) return NULL;
-	if (ldapdn_type == NULL) return NULL;
 
 	/* If Python objects is a None return an empty("") char*. */
 	if (obj == Py_None) {
@@ -126,14 +124,20 @@ PyObject2char(PyObject *obj) {
 		str = (char *)malloc(sizeof(char) * (strlen(tmp) + 1));
 		strcpy(str, tmp);
 		return str;
-	} else if (PyObject_IsInstance(obj, ldapdn_type)) {
-		/* LDAPDN object converting. */
-		PyObject *tmpobj = PyObject_Str(obj);
-		str = PyObject2char(tmpobj);
-		Py_DECREF(tmpobj);
 	} else {
-		PyErr_BadInternalCall();
-		return NULL;
+		PyObject *ldapdn_type = load_python_object("pyldap.ldapdn", "LDAPDN");
+		if (ldapdn_type == NULL) return NULL;
+
+		if (PyObject_IsInstance(obj, ldapdn_type)) {
+			/* LDAPDN object converting. */
+			PyObject *tmpobj = PyObject_Str(obj);
+			str = PyObject2char(tmpobj);
+			Py_DECREF(tmpobj);
+		}
+		else  {
+			PyErr_BadInternalCall();
+			return NULL;
+		}
 	}
 	/* In case of converting numbers, optimizing the memory allocation. */
 	if (tmp != NULL) {
