@@ -274,7 +274,7 @@ LVL_pop(LDAPValueList *self, PyObject *args) {
 	status = LDAPValueList_SetSlice(self, i, i+1, (PyObject *)NULL);
 	if (status != 0) return NULL;
 
-	self->status = 1;
+	self->status = 2;
 	return value;
 }
 

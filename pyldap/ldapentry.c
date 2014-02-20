@@ -147,13 +147,24 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
 	if (iter == NULL) return NULL;
 
 	for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
-		/* Return value: New reference. */
+		/* Return value: Borrowed reference. */
 		value = (LDAPValueList *)LDAPEntry_GetItem(self, key);
 		if (value == NULL) {
 			Py_DECREF(iter);
 			Py_DECREF(key);
 			return NULL;
 		}
+
+		/* Remove empty list values. */
+		if (Py_SIZE((PyObject *)value) == 0) {
+			if (LDAPEntry_SetItem(self, key, NULL) != 0) {
+				Py_DECREF(iter);
+				Py_DECREF(key);
+				return NULL;
+			}
+			value->status = -1;
+		}
+
 		if (value->status == 1) {
 			/* LDAPMod for newly added attributes and values. */
 			if (Py_SIZE((PyObject *)value->added) > 0) {
