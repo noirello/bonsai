@@ -3,19 +3,19 @@ import urllib.parse
 from pyldap.ldapdn import LDAPDN
 
 class LDAPURL(object):
-    """ LDAP URL object."""
+    """
+    LDAP URL object for handling LDAP connection informations, such as 
+    hostname, port, LDAP bind DN, search attributes, scope (base,sub or 
+    one) filter, and extensions. If `strurl` is None, then the default 
+    url is `ldap://localhost:389`.
+    
+    :param str strurl: string representation of a valid LDAP URL. Must \
+    be started with `ldap://` or `ldaps://`.
+    """
     __slots__ = ("__hostinfo", "__searchinfo", "__extensions")
 
     def __init__(self, strurl=None):
-        """
-            LDAP URL object for handling LDAP connection informations,
-            such as hostname, port, LDAP bind DN, search attributes,
-            scope (base,sub or one) and filter, extensions.
-            If `strurl` is None, then the default url is
-            ldap://localhost:389.
-            :param strurl: String representation of a valid LDAP URL.
-            Must be started with ldap:// or ldaps://.
-        """
+        """ init method. """
         self.__hostinfo = ['ldap', 'localhost', 389]
         self.__searchinfo = [None, None, None, None]
         self.__extensions = None
@@ -27,9 +27,7 @@ class LDAPURL(object):
         raise Exception("%s cannot be deleted." % attr)
 
     def __str2url(self, strurl):
-        """
-            Parsing string url to LDAPURL.
-        """
+        """ Parsing string url to LDAPURL."""
         # RegExp for [ldap|ldaps]://[host]:[port]/[basedn]?[attrs]?[scope]
         # ?[filter]?[exts]
         valid = re.compile(r"^(ldap|ldaps)://((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]))?([:][1-9][0-9]{0,4})?(/.*)?$", re.IGNORECASE)
@@ -168,9 +166,7 @@ class LDAPURL(object):
         return "%s://%s:%d" % tuple(self.__hostinfo)
 
     def __str__(self):
-        """
-            Returns the full format of LDAP URL.
-        """
+        """ Returns the full format of LDAP URL. """
         strurl = self.get_address()
         strattrs = ""
         strdn = ""

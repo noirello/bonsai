@@ -492,7 +492,6 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 
 	rc = ldap_rename_s(self->conn->ld, olddn_str, newrdn_str, newparent_str, 1, NULL, NULL);
 	if (rc != LDAP_SUCCESS) {
-		//TODO Proper errors
 		PyObject *ldaperror = get_error("LDAPError");
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);

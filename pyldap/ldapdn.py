@@ -2,14 +2,15 @@ import re
 import pyldap.errors
 
 class LDAPDN(object):
-    """LDAP distinguished name object."""
+    """
+    A class for handling valid LDAP distinguished name.
+    
+    :param str strdn: a string representation of LDAP distinguished name.
+    """
     __slots__ = ("__rdns")
 
     def __init__(self, strdn):
-        """
-            An object for handling valid LDAP distinguished name.
-            :param strdn: The string representation of LDAP distinguished name.
-        """
+        """ init method. """
         self.__rdns = self.__str2dn__(strdn)
         # Checking validation by rebuilding the parsed string.
         if str(self) != strdn:
@@ -17,8 +18,8 @@ class LDAPDN(object):
 
     def __str2ava__(self, strava):
         """
-            Generate attribute type and value tuple from relative
-            distinguished name.
+        Generate attribute type and value tuple from relative distinguished 
+        name.
         """
         rdn = []
         # Split relative distinguished name to attribute types and values.
@@ -33,9 +34,7 @@ class LDAPDN(object):
         return tuple(rdn)
 
     def __escape(self, strdn):
-        """
-            Escaping special characters.
-        """
+        """ Escaping special characters."""
         if strdn:
             strdn = strdn.replace(r'\\\\', '\\5C')
             strdn = strdn.replace(r'\,', '\\2C')
@@ -48,9 +47,7 @@ class LDAPDN(object):
         return strdn
 
     def __non_escape(self, strdn):
-        """
-            Undoing the __escape() function.
-        """
+        """ Undoing the __escape() function."""
         if strdn:
             strdn = strdn.replace('\\5C', r'\\\\')
             strdn = strdn.replace('\\2C', r'\,')
@@ -63,9 +60,7 @@ class LDAPDN(object):
         return strdn
 
     def __str2dn__(self, strdn):
-        """
-            Parsing string value to a list of rdns.
-        """
+        """ Parsing string value to a list of rdns."""
         rdns = []
         strdn_ex = self.__escape(strdn)
         # Iterate over the relative distinguished names.
@@ -77,9 +72,7 @@ class LDAPDN(object):
         return rdns
 
     def __rdn2str(self, rdn):
-        """
-            Converts RDN to string.
-        """
+        """ Converts RDN to string."""
         avs = []
         for attv in rdn:
             avs.append("=".join((attv[0], attv[1])))
@@ -88,14 +81,15 @@ class LDAPDN(object):
 
     def get_rdn(self, i):
         """
-            Returns the string representation of the indexed RDN.
-            :param i: The index.
+        Returns the string representation of the indexed RDN.
+            
+        :param int i: The index.
         """
         return self.__rdn2str(self.__rdns[i])
 
     def get_ancestors(self):
         """
-            Returns the ancestors of the full distinguished name.
+        Returns the ancestors of the full distinguished name.
         """
         dname = []
         for rdn in self.__rdns[1:]:

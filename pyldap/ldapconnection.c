@@ -557,7 +557,7 @@ static PyMethodDef LDAPConnection_methods[] = {
 			"Add new LDAPEntry to the LDAP server."},
 	{"close", (PyCFunction)LDAPConnection_Close, METH_NOARGS,
 			"Close connection with the LDAP Server."},
-	{"del_entry", (PyCFunction)LDAPConnection_DelEntry, METH_VARARGS,
+	{"delete", (PyCFunction)LDAPConnection_DelEntry, METH_VARARGS,
 			"Delete an LDAPEntry with the given distinguished name."},
 	{"search", (PyCFunction)LDAPConnection_Search, 	METH_VARARGS | METH_KEYWORDS,
 			"Searches for LDAP entries."},
