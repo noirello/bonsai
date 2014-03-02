@@ -457,7 +457,7 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	int rc;
 	char *newparent_str, *newrdn_str, *olddn_str;
 	PyObject *newdn, *newparent, *newrdn;
-	PyObject *tmp;
+	PyObject *tmp, *start, *end;
 	char *kwlist[] = {"newdn", NULL};
 
 	/* Connection must be set. */
@@ -481,8 +481,14 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	if (LDAPEntry_setDN(self, newdn, NULL) != 0) return NULL;
 
 	/* Get rdn and parent strings. */
-	newrdn = PyObject_CallMethod(self->dn, "get_rdn", "(i)", 0);
-	newparent = PyObject_CallMethod(self->dn, "get_ancestors", NULL);
+	newrdn = PyObject_CallMethod(self->dn, "__getitem__", "(i)", 0);
+	start = PyLong_FromLong(1);
+	end = PyLong_FromLong(-1);
+	tmp = PySlice_New(start, end, NULL);
+	newparent = PyObject_CallMethod(self->dn, "__getitem__", "(O)", tmp);
+	Py_DECREF(tmp);
+	Py_DECREF(start);
+	Py_DECREF(end);
 	if (newrdn == NULL || newparent == NULL) return NULL;
 
 	newrdn_str = PyObject2char(newrdn);

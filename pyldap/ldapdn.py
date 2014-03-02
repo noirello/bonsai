@@ -10,107 +10,115 @@ class LDAPDN(object):
     __slots__ = ("__rdns")
 
     def __init__(self, strdn):
-        """ init method. """
-        self.__rdns = self.__str2dn__(strdn)
-        # Checking validation by rebuilding the parsed string.
+        if strdn != "":    
+            escaped_str = self.__escape_special_char(strdn)
+            # Get RDN strings.
+            str_rdns = escaped_str.split(',')
+            self.__rdns = list(map(self.__str_rdn_to_tuple, str_rdns))
+            # Validate by rebuilding the parsed string.
+        else:
+            self.__rdns = [] 
+        
         if str(self) != strdn:
             raise pyldap.errors.InvalidDN(strdn)
 
-    def __str2ava__(self, strava):
+    def __escape_special_char(self, strdn, reverse=False):
+        """ Escaping special characters."""
+        char_list = [(r'\\\\', '\\5C'), 
+                    (r'\,', '\\2C'),
+                    (r'\+', '\\2B'),
+                    (r'\"', '\\22'),
+                    (r'\<', '\\3C'),
+                    (r'\>', '\\3E'),
+                    (r'\;', '\\3B'),
+                    (r'\=', '\\3D')]
+        if reverse:
+            i,j = 1,0
+        else:
+            i,j = 0,1
+        if strdn:
+            for pair in char_list:
+                strdn = strdn.replace(pair[i], pair[j])
+        return strdn
+
+    def __str_rdn_to_tuple(self, str_rdn):
         """
-        Generate attribute type and value tuple from relative distinguished 
-        name.
+        Generate attribute type and value tuple from relative
+        distinguished name.
         """
         rdn = []
         # Split relative distinguished name to attribute types and values.
-        avas = strava.split("+")
-        for attv in avas:
+        type_value_list = str_rdn.split("+")
+        for attr in type_value_list:
             # Get attribute type and value.
-            value = attv.split("=")
-            if len(value) != 2:
-                raise pyldap.errors.InvalidDN(strava)
-            value[1] = self.__non_escape(value[1])
-            rdn.append(tuple(value))
+            try:
+                atype, avalue = attr.split("=")
+                avalue = self.__escape_special_char(avalue, True)
+                rdn.append((atype, avalue))
+            except ValueError:
+                # Expected when the splitting returns more, then 2 component.
+                raise pyldap.errors.InvalidDN(str_rdn)
         return tuple(rdn)
 
-    def __escape(self, strdn):
-        """ Escaping special characters."""
-        if strdn:
-            strdn = strdn.replace(r'\\\\', '\\5C')
-            strdn = strdn.replace(r'\,', '\\2C')
-            strdn = strdn.replace(r'\+', '\\2B')
-            strdn = strdn.replace(r'\"', '\\22')
-            strdn = strdn.replace(r'\<' ,'\\3C')
-            strdn = strdn.replace(r'\>' ,'\\3E')
-            strdn = strdn.replace(r'\;' ,'\\3B')
-            strdn = strdn.replace(r'\=' ,'\\3D')
-        return strdn
-
-    def __non_escape(self, strdn):
-        """ Undoing the __escape() function."""
-        if strdn:
-            strdn = strdn.replace('\\5C', r'\\\\')
-            strdn = strdn.replace('\\2C', r'\,')
-            strdn = strdn.replace('\\2B', r'\+')
-            strdn = strdn.replace('\\22', r'\"')
-            strdn = strdn.replace('\\3C', r'\<')
-            strdn = strdn.replace('\\3E', r'\>')
-            strdn = strdn.replace('\\3B', r'\;')
-            strdn = strdn.replace('\\3D', r'\=')
-        return strdn
-
-    def __str2dn__(self, strdn):
-        """ Parsing string value to a list of rdns."""
-        rdns = []
-        strdn_ex = self.__escape(strdn)
-        # Iterate over the relative distinguished names.
-        regex = re.compile(r'([\w]+=([\w\s\\-]|[.])+|[+])*')
-        for match in regex.finditer(strdn_ex):
-            grp = match.group(0)
-            if grp:
-                rdns.append(self.__str2ava__(grp))
-        return rdns
-
-    def __rdn2str(self, rdn):
-        """ Converts RDN to string."""
-        avs = []
-        for attv in rdn:
-            avs.append("=".join((attv[0], attv[1])))
-        rdnstr = "+".join(avs)
-        return rdnstr
-
-    def get_rdn(self, i):
+    def __rdns_to_str(self, rdns):
+        """ 
+        Converts RDN tuples to string. 
+        Warning: the string value must be 3 depth deep!
         """
-        Returns the string representation of the indexed RDN.
-            
-        :param int i: The index.
-        """
-        return self.__rdn2str(self.__rdns[i])
+        return ','.join(
+            map(lambda attr: "+".join(
+                map(lambda type_value: "=".join(type_value), attr)), rdns))
 
-    def get_ancestors(self):
+    def __getitem__(self, idx):
         """
-        Returns the ancestors of the full distinguished name.
+        Returns the string format of the relative distinguished names 
+        in the LDAPDN.
+        
+        :param int idx: the indeces of the RDNs.
+        :return: the string format of the RDNS.
+        :rtype: str
         """
-        dname = []
-        for rdn in self.__rdns[1:]:
-            rdnstr = self.__rdn2str(rdn)
-            dname.append(rdnstr)
-        return ",".join(dname)
+        if type(idx) == int:
+            # Convert integer index to slice, because self.__rdns_to_str()
+            # needs an extra tuple/list to convert right. 
+            idx = slice(idx, idx+1)
+        elif type(idx) != slice:
+            raise TypeError("Indices must be integers or slices.")
+        return self.__rdns_to_str(self.__rdns[idx])
+    
+    def __get_ancestors(self):
+        """ Returns ancestor RDNs for LDAPEntry rename method. """
+        return self[1:]
+
+    def __setitem__(self, idx, value):
+        """ 
+        Sets the string format of the relative distinguished names 
+        in the LDAPDN. 
+
+        :param int idx: the indeces of the RDNs.
+        :param str value: the new RDNs.
+        """
+        if type(value) != str:
+            raise ValueError("New value must be string.")
+        if type(idx) == int:
+            idx = slice(idx, idx+1)
+        elif type(idx) != slice:
+            raise TypeError("Indices must be integers or slices.")
+        escaped_str = self.__escape_special_char(value)
+        str_rdns = escaped_str.split(',')
+        rdns = list(map(self.__str_rdn_to_tuple, str_rdns))
+        self.__rdns[idx] = rdns
 
     def __eq__(self, other):
+        """ Check equality of two LDAPDN by their string format. """
         return str(self) == str(other)
 
     def __str__(self):
         """ The full string format of the distinguished name. """
-        if self.__rdns:
-            ancestors = self.get_ancestors()
-            if ancestors == "":
-                return self.get_rdn(0)
-            return ",".join((self.get_rdn(0), ancestors))
-        else:
-            return ""
+        return self.__rdns_to_str(self.__rdns)
 
     def __repr__(self):
+        """ The representation of LDAPDN class. """ 
         return "<LDAPDN %s>" % str(self)
 
     @property

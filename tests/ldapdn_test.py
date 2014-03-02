@@ -12,17 +12,17 @@ class LDAPDNTest(unittest.TestCase):
         del self.dn
 
     def test_rdn(self):
-        self.assertEqual(self.dn.get_rdn(0), "cn=user")
+        self.assertEqual(self.dn[0], "cn=user")
 
     def test_ancestors(self):
-        self.assertEqual(self.dn.get_ancestors(), "dc=test,dc=local")
+        self.assertEqual(self.dn[1:], "dc=test,dc=local")
 
     def test_str(self):
         self.assertEqual(str(self.dn), self.strdn)
 
     def test_emptydn(self):
         empty = LDAPDN("")
-        self.assertEqual(empty.get_ancestors(), "")
+        self.assertEqual(empty[1:], "")
 
     def test_equel(self):
         self.assertEqual(self.dn, LDAPDN(self.strdn))
