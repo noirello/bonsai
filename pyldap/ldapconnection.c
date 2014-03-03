@@ -1,26 +1,12 @@
 #include "ldapconnection.h"
 #include "ldapentry.h"
+#include "ldapsearchiter.h"
 #include "utils.h"
 
 /*	Dealloc the LDAPConnection object. */
 static void
 LDAPConnection_dealloc(LDAPConnection* self) {
-    int i;
-
 	Py_XDECREF(self->client);
-    Py_XDECREF(self->buffer);
-    if (self->search_params != NULL) {
-		free(self->search_params->base);
-		free(self->search_params->filter);
-		free(self->search_params->timeout);
-		if (self->search_params != NULL && self->search_params->attrs != NULL) {
-			for (i = 0; self->search_params->attrs[i] != NULL; i++) {
-				free(self->search_params->attrs[i]);
-			}
-			free(self->search_params->attrs);
-		}
-	}
-    if (self->cookie != NULL) free(self->cookie);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -32,11 +18,9 @@ LDAPConnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	self = (LDAPConnection *)type->tp_alloc(type, 0);
 	if (self != NULL) {
         self->client = NULL;
+    	self->async = 0;
+    	self->page_size = 0;
 	}
-	self->buffer = NULL;
-	self->search_params = NULL;
-	self->async = 0;
-	self->page_size = 0;
 
     return (PyObject *)self;
 }
@@ -134,7 +118,7 @@ connecting(LDAPConnection *self) {
 	return 0;
 }
 
-/*	Initialize the LDAPObject. */
+/*	Initialize the LDAPConnection. */
 static int
 LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	PyObject *async_obj = NULL;
@@ -244,7 +228,7 @@ LDAPConnection_DelEntry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	seconds for timelimit, `sizelimit` is a limit for size.
 */
 PyObject *
-searching(LDAPConnection *self) {
+LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	int rc;
 	LDAPMessage *res, *entry;
 	PyObject *entrylist;
@@ -252,6 +236,7 @@ searching(LDAPConnection *self) {
 	LDAPControl *page_ctrl = NULL;
 	LDAPControl **server_ctrls = NULL;
 	LDAPControl **returned_ctrls;
+	LDAPSearchIter *search_iter = (LDAPSearchIter *)iterator;
 
 	entrylist = PyList_New(0);
 	if (entrylist == NULL) {
@@ -263,19 +248,19 @@ searching(LDAPConnection *self) {
 		server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *)*2);
 		if (server_ctrls == NULL) return PyErr_NoMemory();
 		rc = ldap_create_page_control(self->ld, (ber_int_t)(self->page_size),
-						self->cookie, 0, &page_ctrl);
+				search_iter->cookie, 0, &page_ctrl);
 		server_ctrls[0] = page_ctrl;
 		server_ctrls[1] = NULL;
 	}
 
-	rc = ldap_search_ext_s(self->ld, self->search_params->base,
-									self->search_params->scope,
-									self->search_params->filter,
-									self->search_params->attrs,
-									self->search_params->attrsonly,
-									server_ctrls, NULL,
-									self->search_params->timeout,
-									self->search_params->sizelimit, &res);
+	rc = ldap_search_ext_s(self->ld, search_iter->base,
+				search_iter->scope,
+				search_iter->filter,
+				search_iter->attrs,
+				search_iter->attrsonly,
+				server_ctrls, NULL,
+				search_iter->timeout,
+				search_iter->sizelimit, &res);
 
 	if (rc == LDAP_NO_SUCH_OBJECT) {
 		return entrylist;
@@ -299,7 +284,7 @@ searching(LDAPConnection *self) {
 #else
 	rc = ldap_parse_pageresponse_control(self->ld,
 			ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL),
-			NULL, self->cookie);
+			NULL, search_iter->cookie);
 #endif
 	/* Iterate over the response LDAP messages. */
 	for (entry = ldap_first_entry(self->ld, res);
@@ -333,15 +318,16 @@ searching(LDAPConnection *self) {
 /* Searches for LDAP entries. */
 static PyObject *
 LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
-	int i;
 	int scope = -1;
 	int timeout, sizelimit, attrsonly = 0;
 	char *basestr = NULL;
 	char *filterstr = NULL;
+	char **attrs = NULL;
 	PyObject *attrlist  = NULL;
 	PyObject *attrsonlyo = NULL;
 	PyObject *url = NULL;
 	PyObject *sizeo = NULL;
+	LDAPSearchIter *search_iter = NULL;
 	static char *kwlist[] = {"base", "scope", "filter", "attrlist", "timeout", "sizelimit", "attrsonly", NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "|sizOiiO!", kwlist, &basestr, &scope, &filterstr,
@@ -351,41 +337,19 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
         return NULL;
 	}
 
-    /* If search_param is already set, clear it, and set the new ones. */
-    if (self->search_params != NULL) {
-    	free(self->search_params->base);
-    	free(self->search_params->filter);
-    	free(self->search_params->timeout);
-    	if (self->search_params->attrs != NULL) {
-    		for (i = 0; self->search_params->attrs[i] != NULL; i++) {
-    			free(self->search_params->attrs[i]);
-    		}
-    	}
-    	free(self->search_params->attrs);
-    }
-    self->search_params = (SearchParams *)malloc(sizeof(SearchParams));
-    if (self->search_params == NULL) return PyErr_NoMemory();
-
-    /* Create a timeval, and set tv_sec to timeout, if timeout greater than 0. */
-    if (timeout > 0) {
-    	self->search_params->timeout = malloc(sizeof(struct timeval));
-		if (self->search_params->timeout != NULL) {
-			self->search_params->timeout->tv_sec = timeout;
-			self->search_params->timeout->tv_usec = 0;
-		}
-	} else {
-		self->search_params->timeout = NULL;
-	}
-
-    self->search_params->sizelimit = sizelimit;
-
     /* Get additional informations from the LDAP URL. */
     url = PyObject_GetAttrString(self->client, "_LDAPClient__url");
     if (url == NULL) return NULL;
 
+    search_iter = LDAPSearchIter_New(self);
+    if (search_iter == NULL) {
+    	return PyErr_NoMemory();
+    }
+
     if (basestr == NULL) {
     	PyObject *basedn = PyObject_GetAttrString(url, "basedn");
     	if (basedn == NULL) {
+    		Py_DECREF(search_iter);
     	  	Py_DECREF(url);
     		return NULL;
     	}
@@ -393,6 +357,7 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     	if (basedn == Py_None) {
     		Py_DECREF(basedn);
     		PyErr_SetString(PyExc_AttributeError, "Search base DN cannot be None.");
+    		Py_DECREF(search_iter);
     	  	Py_DECREF(url);
     		return NULL;
     	} else {
@@ -400,17 +365,17 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     		Py_DECREF(basedn);
     		if (basestr == NULL) {
     		  	Py_DECREF(url);
+    		  	Py_DECREF(search_iter);
     			return NULL;
     		}
     	}
     }
-    self->search_params->base = (char *)malloc(sizeof(char) * (strlen(basestr)+1));
-    strcpy(self->search_params->base, basestr);
 
     if (scope == -1) {
     	PyObject *scopeobj = PyObject_GetAttrString(url, "scope_num");
     	if (scopeobj == NULL) {
     	  	Py_DECREF(url);
+    	  	Py_DECREF(search_iter);
     		return NULL;
     	}
 
@@ -424,16 +389,17 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 			Py_DECREF(scopeobj);
 			if (scope == -1) {
 			  	Py_DECREF(url);
+			  	Py_DECREF(search_iter);
 				return NULL;
 			}
     	}
     }
-    self->search_params->scope = scope;
 
     if (filterstr == NULL) {
     	PyObject *filter = PyObject_GetAttrString(url, "filter");
     	if (filter == NULL) {
     	  	Py_DECREF(url);
+    	  	Py_DECREF(search_iter);
     		return NULL;
     	}
     	if (filter == Py_None) {
@@ -443,36 +409,36 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     		Py_DECREF(filter);
     		if (filterstr == NULL) {
     		  	Py_DECREF(url);
+    		  	Py_DECREF(search_iter);
     			return NULL;
     		}
     	}
     }
 
-    /* If empty filter string is given, set to NULL. */
-	if (filterstr == NULL || strlen(filterstr) == 0) {
-		self->search_params->filter = NULL;
-	} else {
-	    self->search_params->filter = (char *)malloc(sizeof(char) * (strlen(filterstr)+1));
-	    strcpy(self->search_params->filter, filterstr);
-	}
-
     if (attrsonlyo != NULL) {
     	attrsonly = PyObject_IsTrue(attrsonlyo);
 	}
-    self->search_params->attrsonly = attrsonly;
 
     if (attrlist == NULL) {
     	PyObject *attr_list = PyObject_GetAttrString(url, "attributes");
     	if (attr_list == NULL) {
     		Py_DECREF(url);
+    		Py_DECREF(search_iter);
     		return NULL;
     	}
-    	self->search_params->attrs = PyList2StringList(attr_list);
+    	attrs = PyList2StringList(attr_list);
     	Py_DECREF(attr_list);
     } else {
-    	self->search_params->attrs = PyList2StringList(attrlist);
+    	attrs = PyList2StringList(attrlist);
     }
 	Py_DECREF(url);
+
+	if (LDAPSearchIter_SetParams(search_iter, attrs, attrsonly, basestr,
+			filterstr, scope, sizelimit, timeout) != 0) {
+		Py_DECREF(url);
+		Py_DECREF(search_iter);
+		return NULL;
+	}
 
 	/* Get page size, and if it's set create cookie for page result control */
 	sizeo = PyObject_GetAttrString(self->client, "_LDAPClient__page_size");
@@ -483,17 +449,20 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
 	if (self->page_size > 0) {
 		/* Create cookie for the page result. */
-		self->cookie = (struct berval *)malloc(sizeof(struct berval));
-		if (self->cookie == NULL) return PyErr_NoMemory();
-		self->cookie->bv_len = 0;
-		self->cookie->bv_val = NULL;
+		search_iter->cookie = (struct berval *)malloc(sizeof(struct berval));
+		if (search_iter->cookie == NULL) return PyErr_NoMemory();
+
+		search_iter->cookie->bv_len = 0;
+		search_iter->cookie->bv_val = NULL;
 		/* Get the first page, and create an iterator for the next. */
-		self->buffer = searching(self);
-		if (self->buffer == NULL) return NULL;
-		return (PyObject *)self;
+		search_iter->buffer = LDAPConnection_Searching(self,
+				(PyObject *)search_iter);
+
+		if (search_iter->buffer == NULL) return NULL;
+		return (PyObject *)search_iter;
 	}
 
-	return searching(self);
+	return LDAPConnection_Searching(self, (PyObject *)search_iter);
 }
 
 static PyObject *
@@ -516,40 +485,6 @@ LDAPConnection_Whoami(LDAPConnection *self) {
 		authzid->bv_len = 6;
 	}
 	return PyUnicode_FromString(authzid->bv_val);
-}
-
-PyObject*
-LDAPConnection_getiter(LDAPConnection *self) {
-    Py_INCREF(self);
-	return (PyObject*)self;
-}
-
-PyObject*
-LDAPConnection_iternext(LDAPConnection *self) {
-	PyObject *item = NULL;
-
-	if (Py_SIZE(self->buffer) != 0) {
-		/* Get first element from the buffer list. */
-		item = PyObject_CallMethod(self->buffer, "pop", "(i)", 0);
-		if (item != NULL) return item;
-	} else {
-		Py_DECREF(self->buffer);
-		if ((self->cookie->bv_val != NULL) &&
-				(strlen(self->cookie->bv_val) > 0)) {
-			/* Get the next page of the search. */
-			self->buffer = searching(self);
-			if (self->buffer == NULL) return NULL;
-			item = PyObject_CallMethod(self->buffer, "pop", "(i)", 0);
-			if (item != NULL) {
-				return item;
-			} else return NULL;
-		} else {
-			ber_bvfree(self->cookie);
-			self->cookie = NULL;
-			return NULL;
-		}
-	}
-	return NULL;
 }
 
 static PyMethodDef LDAPConnection_methods[] = {
@@ -588,14 +523,14 @@ PyTypeObject LDAPConnectionType = {
     0,                         /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT |
         Py_TPFLAGS_BASETYPE,   /* tp_flags */
-    "LDAPConnection object",   	   /* tp_doc */
+    "LDAPConnection object",   /* tp_doc */
     0,                         /* tp_traverse */
     0,                         /* tp_clear */
     0,                         /* tp_richcompare */
     0,                         /* tp_weaklistoffset */
-    (getiterfunc)LDAPConnection_getiter,  /* tp_iter */
-    (iternextfunc)LDAPConnection_iternext,/* tp_iternext */
-    LDAPConnection_methods,        /* tp_methods */
+    0,  					   /* tp_iter */
+    0,						   /* tp_iternext */
+    LDAPConnection_methods,    /* tp_methods */
     0,        				   /* tp_members */
     0,                         /* tp_getset */
     0,                         /* tp_base */

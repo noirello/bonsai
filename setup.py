@@ -4,9 +4,10 @@ from distutils.core import setup, Extension
 
 sources = ["pyldapmodule.c", "ldapentry.c",
            "ldapconnection.c", "ldapvaluelist.c",
-           "utils.c", "uniquelist.c"]
+           "ldapsearchiter.c", "utils.c", "uniquelist.c"]
 
-depends = ["ldapconnection.h", "ldapvaluelist.h", "uniquelist.h", "utils.h"]
+depends = ["ldapconnection.h", "ldapvaluelist.h", "ldapsearchiter.h",
+           "uniquelist.h", "utils.h"]
 
 sources = [ os.path.join('pyldap', x) for x in sources]
 depends = [ os.path.join('pyldap', x) for x in depends]

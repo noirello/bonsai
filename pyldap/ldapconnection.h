@@ -19,22 +19,9 @@
 #endif
 
 typedef struct {
-	char *base;
-	char *filter;
-	char **attrs;
-	struct timeval *timeout;
-	int scope;
-	int attrsonly;
-	int sizelimit;
-} SearchParams;
-
-typedef struct {
 	PyObject_HEAD
 	PyObject *client;
-	PyObject *buffer;
 	LDAP *ld;
-	struct berval *cookie;
-	SearchParams *search_params;
 	int async;
 	int page_size;
 } LDAPConnection;
@@ -42,5 +29,6 @@ typedef struct {
 extern PyTypeObject LDAPConnectionType;
 
 int LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr);
+PyObject *LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator);
 
 #endif /* LDAPCONNECTION_H_ */

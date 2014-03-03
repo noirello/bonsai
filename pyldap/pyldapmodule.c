@@ -3,6 +3,7 @@
 #include "ldapconnection.h"
 #include "ldapentry.h"
 #include "ldapvaluelist.h"
+#include "ldapsearchiter.h"
 
 static PyModuleDef pyldap2module = {
     PyModuleDef_HEAD_INIT,
@@ -21,6 +22,7 @@ PyInit__cpyldap(void) {
     LDAPEntryType.tp_base = &PyDict_Type;
 
     if (PyType_Ready(&LDAPConnectionType) < 0) return NULL;
+    if (PyType_Ready(&LDAPSearchIterType) < 0) return NULL;
     if (PyType_Ready(&LDAPEntryType) < 0) return NULL;
     if (PyType_Ready(&LDAPValueListType) < 0) return NULL;
 
