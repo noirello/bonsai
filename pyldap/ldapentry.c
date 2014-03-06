@@ -7,6 +7,7 @@
 #define ldap_rename_s ldap_rename_ext_s
 #endif
 
+/* Clear all object in the LDAPEntry. */
 static int
 LDAPEntry_clear(LDAPEntry *self) {
     PyObject *tmp;
@@ -366,8 +367,33 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	return Py_None;
 }
 
+/* Remove all item from LDAPEntry. */
 static PyObject *
-LDAPEntry_delete(LDAPEntry *self, PyObject *args, PyObject *kwds) {
+LDAPEntry_clearitems(LDAPEntry *self) {
+	PyObject *keys = PyDict_Keys((PyObject *)self);
+	PyObject *iter = PyObject_GetIter(keys);
+	PyObject *item;
+
+	Py_DECREF(keys);
+
+	if (iter == NULL) return NULL;
+
+	/* Iterate over all key in the LDAPEntry. */
+	for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
+	    /* Remove item from the LDAPEntry. */
+		if (LDAPEntry_SetItem(self, item, NULL) != 0) {
+			return NULL;
+		}
+	}
+	Py_DECREF(iter);
+
+	return Py_None;
+}
+
+/* Remove entry from the directory server,
+   change all LDAPValueList status to replaced (2) */
+static PyObject *
+LDAPEntry_delete(LDAPEntry *self) {
 	char *dnstr;
 	PyObject *keys = PyMapping_Keys((PyObject *)self);
 	PyObject *iter, *key;
@@ -391,7 +417,7 @@ LDAPEntry_delete(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	if (iter == NULL) return NULL;
 
 	for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
-		/* Return value: New reference. */
+		/* Return value: Borrowed reference. */
 		value = (LDAPValueList *)LDAPEntry_GetItem(self, key);
 		if (value == NULL) {
 			Py_DECREF(iter);
@@ -400,11 +426,31 @@ LDAPEntry_delete(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 		}
 		value->status = 2;
 	}
+	Py_DECREF(iter);
+
 	return Py_None;
 }
 
+/* Has the same functionality like dict.get(),
+   but with case-insensitive keymatch. */
 static PyObject *
-LDAPEntry_modify(LDAPEntry *self, PyObject *args, PyObject* kwds) {
+LDAPEntry_get(LDAPEntry *self, PyObject *args) {
+	PyObject *key;
+	PyObject *failobj = Py_None;
+	PyObject *val = NULL;
+
+	if (!PyArg_UnpackTuple(args, "get", 1, 2, &key, &failobj))
+		return NULL;
+	val = LDAPEntry_GetItem(self, key);
+	if (val == NULL) val = failobj;
+
+	Py_INCREF(val);
+	return val;
+}
+
+/* Sends the modifications of the entry to the directory server. */
+static PyObject *
+LDAPEntry_modify(LDAPEntry *self) {
 	/* Connection must be set. */
 	if (self->conn == NULL) {
 		PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
@@ -412,6 +458,65 @@ LDAPEntry_modify(LDAPEntry *self, PyObject *args, PyObject* kwds) {
 	}
 
 	return LDAPEntry_AddOrModify(self, 1);
+}
+
+/* Removes and returns with the element from the LDAPEntry,
+   just like the dict.pop() function. */
+static PyObject *
+LDAPEntry_pop(LDAPEntry *self, PyObject *args) {
+    PyObject *old_value;
+    PyObject *key, *deflt = NULL;
+
+    if(!PyArg_UnpackTuple(args, "pop", 1, 2, &key, &deflt))
+        return NULL;
+
+    old_value = LDAPEntry_GetItem(self, key);
+
+    if (old_value == NULL) {
+    	/* Key is not in the LDAPEntry. */
+    	if (deflt) {
+    		Py_INCREF(deflt);
+    		return deflt;
+    	}
+		PyErr_Format(PyExc_KeyError, "Key %R is not in the LDAPEntry.", key);
+		return NULL;
+	}
+    /* Increment the item's reference, then remove it from the LDAPEntry. */
+    Py_INCREF(old_value);
+    LDAPEntry_SetItem(self, key, NULL);
+    return old_value;
+}
+
+/* Has the same functionality like the dict.popitem() function. */
+static PyObject *
+LDAPEntry_popitem(LDAPEntry *self) {
+	PyObject *res, *key, *value;
+	PyObject *keys = PyDict_Keys((PyObject *)self);
+	PyObject *iter = PyObject_GetIter(keys);
+
+	Py_DECREF(keys);
+	if (iter == NULL) return NULL;
+
+	key = PyIter_Next(iter);
+	if (key == NULL) {
+		Py_DECREF(iter);
+		PyErr_SetString(PyExc_KeyError, "popitem(): LDAPEntry is empty");
+		return NULL;
+	}
+
+	value = LDAPEntry_GetItem(self, key);
+	if (value == NULL) return NULL;
+
+    res = PyTuple_New(2);
+    if (res == NULL) return NULL;
+
+    /* Stoles the reference, whatever that means. */
+    PyTuple_SET_ITEM(res, 0, key);
+    PyTuple_SET_ITEM(res, 1, value);
+
+    if (LDAPEntry_SetItem(self, key, NULL) != 0) return NULL;
+
+    return res;
 }
 
 /*	Set distinguished name for a LDAPEntry. */
@@ -446,12 +551,15 @@ LDAPEntry_setDN(LDAPEntry *self, PyObject *value, void *closure) {
     return 0;
 }
 
+/* Returns the DN of the LDAPEntry. */
 static PyObject *
 LDAPEntry_getDN(LDAPEntry *self, void *closure) {
     Py_INCREF(self->dn);
     return self->dn;
 }
 
+/* Renames the entry object on the directory server, which means changing
+   the DN of the entry. */
 static PyObject *
 LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	int rc;
@@ -633,8 +741,18 @@ Return:
 static PyMethodDef LDAPEntry_methods[] = {
 	{"delete", 	(PyCFunction)LDAPEntry_delete,	METH_NOARGS,
 			"Delete LDAPEntry on LDAP server."},
+	{"clear",	(PyCFunction)LDAPEntry_clearitems,	METH_NOARGS,
+			"Remove all items from LDAPEntry."},
+	{"get",		(PyCFunction)LDAPEntry_get,		METH_VARARGS,
+			"LDAPEntry.get(k[,d]) -> LDAPEntry[k] if k in D, else d. d defaults to None."},
 	{"modify", 	(PyCFunction)LDAPEntry_modify, 	METH_NOARGS,
 			"Send LDAPEntry's modification to the LDAP server."},
+	{"pop",		(PyCFunction)LDAPEntry_pop,		METH_VARARGS,
+			"LDAPEntry.pop(k[,d]) -> v, remove specified key and return the corresponding value.\n\
+			If key is not found, d is returned if given, otherwise KeyError is raised"},
+	{"popitem",	(PyCFunction)LDAPEntry_popitem,	METH_NOARGS,
+			"LDAPEntry.popitem() -> (k, v), remove and return some (key, value) pair as a\n\
+            2-tuple; but raise KeyError if D is empty."},
 	{"rename", 	(PyCFunction)LDAPEntry_rename, 	METH_VARARGS | METH_KEYWORDS,
 			"Rename or remove LDAPEntry on the LDAP server."},
     {"update", 	(PyCFunction)LDAPEntry_Update, 	METH_VARARGS | METH_KEYWORDS,
@@ -654,7 +772,7 @@ searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int* found) {
 		Py_DECREF(keys);
 		return NULL;
 	}
-	/* Searching for same lowercase key amongs the other keys. */
+	/* Searching for same lowercase key amongst the other keys. */
 	for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
 		if (lowerCaseMatch(item, key) == 1) {
 			key = item;
@@ -669,7 +787,8 @@ searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int* found) {
 	return key;
 }
 
-/*	Return the object from the LDAPEntry, which has a case-insensitive match. */
+/*	Returns the object (with borrowed reference) from the LDAPEntry,
+    which has a case-insensitive match. */
 PyObject *
 LDAPEntry_GetItem(LDAPEntry *self, PyObject *key) {
 	int found;
@@ -754,11 +873,38 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
 	return 0;
 }
 
+/* Checks that `key` is in the LDAPEntry. */
+static int
+LDAPEntry_contains(PyObject *op, PyObject *key) {
+    int found = -1;
+    PyObject *obj = NULL;
+    LDAPEntry *self = (LDAPEntry *)op;
+
+    obj = searchLowerCaseKeyMatch(self, key, &found);
+    if (obj == NULL) return -1;
+
+    return found;
+}
+
+static PySequenceMethods LDAPEntry_as_sequence = {
+    0,                          /* sq_length */
+    0,                          /* sq_concat */
+    0,                          /* sq_repeat */
+    0,                          /* sq_item */
+    0,                          /* sq_slice */
+    0,                          /* sq_ass_item */
+    0,                          /* sq_ass_slice */
+    LDAPEntry_contains,         /* sq_contains */
+    0,                          /* sq_inplace_concat */
+    0,                          /* sq_inplace_repeat */
+};
+
+
 static PyObject *
 LDAPEntry_subscript(LDAPEntry *self, PyObject *key) {
 	PyObject *v = LDAPEntry_GetItem(self, key);
 	if (v == NULL) {
-		PyErr_Format(PyExc_KeyError, "Key '%R' is not in the LDAPEntry.", key);
+		PyErr_Format(PyExc_KeyError, "Key %R is not in the LDAPEntry.", key);
 		return NULL;
 	}
 	Py_INCREF(v);
@@ -871,7 +1017,7 @@ PyTypeObject LDAPEntryType = {
     0,                       /* tp_reserved */
     0,                       /* tp_repr */
     0,                       /* tp_as_number */
-    0,                       /* tp_as_sequence */
+    &LDAPEntry_as_sequence,  /* tp_as_sequence */
     &LDAPEntry_mapping_meths,/* tp_as_mapping */
     0,                       /* tp_hash */
     0,                       /* tp_call */

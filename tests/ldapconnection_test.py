@@ -38,10 +38,6 @@ class LDAPConnectionTest(unittest.TestCase):
         if 'cn' not in obj.keys():
             self.fail()
 
-    """def test_rootdse(self):
-        self.assertEqual(self.conn.get_rootDSE()['supportedLDAPVersion'],
-                                ["3"])"""
-
     def test_whoami(self):
         obj = self.conn.whoami()
         self.assertEqual(obj, "dn:cn=admin,dc=local")

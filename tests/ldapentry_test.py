@@ -64,6 +64,27 @@ class LDAPEntryTest(unittest.TestCase):
         self.entry['givenname'].append("test2")
         self.assertEqual(self.entry['givenname'], ["test", "test2"])
         self.assertRaises(TypeError, self.set_same)
+        
+    def test_get(self):
+        self.assertEqual(self.entry.get("Noneelem"), None)
+        self.assertEqual(self.entry['sn'], self.entry.get('sN'))
+        
+    def test_pop(self):
+        self.entry['test'] = "test"
+        self.assertEqual(self.entry.pop("test"), ["test"])
+        self.assertEqual(self.entry.pop("test", None), None)
+        
+    def test_popitem(self):
+        item = self.entry.popitem()
+        self.assertEqual(len(item), 2)
+        self.assertNotIn(item[0], self.entry)
+        self.entry[item[0]] = item[1]
+        
+    def test_clear(self):
+        entry = self.entry
+        entry.clear()
+        self.assertDictEqual(entry, {})
+        self.assertEqual(entry.dn, self.entry.dn)
 
 if __name__ == '__main__':
     unittest.main()
