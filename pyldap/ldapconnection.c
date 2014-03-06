@@ -125,9 +125,10 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	PyObject *client = NULL;
 	PyObject *ldapclient_type = NULL;
 	PyObject *tmp = NULL;
+	PyObject *page_size = NULL;
     static char *kwlist[] = {"client", "async", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OO!", kwlist, &client,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O!", kwlist, &client,
     		&PyBool_Type, &async_obj)) {
     	return -1;
     }
@@ -146,9 +147,15 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     	Py_INCREF(client);
     	self->client = client;
     	Py_XDECREF(tmp);
+    	/* Get page size from the client. */
+    	page_size = PyObject_GetAttrString(self->client, "_LDAPClient__page_size");
+    	if (page_size == NULL) return -1;
+    	self->page_size = (int)PyLong_AsLong(page_size);
+    	Py_DECREF(page_size);
+    	if (PyErr_Occurred()) return -1;
+        return connecting(self);
     }
-
-    return connecting(self);
+    return -1;
 }
 
 /*	Close connection. */
@@ -326,7 +333,6 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	PyObject *attrlist  = NULL;
 	PyObject *attrsonlyo = NULL;
 	PyObject *url = NULL;
-	PyObject *sizeo = NULL;
 	LDAPSearchIter *search_iter = NULL;
 	static char *kwlist[] = {"base", "scope", "filter", "attrlist", "timeout", "sizelimit", "attrsonly", NULL};
 
@@ -439,13 +445,6 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 		Py_DECREF(search_iter);
 		return NULL;
 	}
-
-	/* Get page size, and if it's set create cookie for page result control */
-	sizeo = PyObject_GetAttrString(self->client, "_LDAPClient__page_size");
-	if (sizeo == NULL) return NULL;
-	self->page_size = (int)PyLong_AsLong(sizeo);
-	Py_DECREF(sizeo);
-	if (PyErr_Occurred()) return NULL;
 
 	if (self->page_size > 0) {
 		/* Create cookie for the page result. */
