@@ -83,7 +83,7 @@ To add a new entry to our dictionary we need to create an LDAPEntry object with 
     >>> anna  
     >>> {'cn': ['anna'], 'objectClass': ['top', 'inetorgperson'], 'sn': ['Wu'], 'mail' : ['anna@nerdherd.com']}
 
-then :meth:`LDAPConnection.add` to the server:
+then call :meth:`LDAPConnection.add` to add to the server:
 
     >>> conn.add(anna)
     
