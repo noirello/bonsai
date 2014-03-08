@@ -31,7 +31,7 @@ about the authenticated user - will return with the following:
     >>> conn.whoami()
     >>> 'anonym'
 
-To connect with a certan user to the server we have to set credentials before connnection:
+To connect with a certain user to the server we have to set credentials before connnection:
 
     >>> client = LDAPClient("ldaps://example.org")
     >>> client.set_credentials("SIMPLE", ("cn=test,dc=local", "secret"))
@@ -64,9 +64,11 @@ The result will be a list of LDAPEntry objects or an empty list, if no object is
     >>> conn.search("ou=nerdherd,dc=local", 0, "(objectclass=*)")
     [{'objectClass': ['organizationalUnit', 'top'], 'ou': ['nerdherd']}]
     
-.. note:: As you can see for every key - or LDAP attribute - in the entry belongs a list for the clarity, 
-          even if there is only one value. The most of the attributes could have more then one value, 
-          so it would be confusing, if some of the keys had string value and the others had list.     
+.. note:: 
+          As you can see every key - or LDAP attribute - in the entry has a list for clarity, even
+          if there is only one value belongs to the attribute. The most of the attributes could 
+          have more then one value, so it would be confusing, if some of the keys had string value 
+          and the others had list.     
 
 Add, modify, delete LDAP entry
 ------------------------------
@@ -76,7 +78,7 @@ To add a new entry to our dictionary we need to create an LDAPEntry object with 
     >>> from pyldap import LDAPEntry
     >>> anna = LDAPEntry("cn=anna,ou=nerdherd,dc=local")
     >>> anna['objectClass'] = ['top', 'inetOrgPerson'] # Must set schemas to get a valid LDAP entry.
-    >>> anna['sn'] = "Wu" # Must set a surname attribute because inetPrgPerson shema requires.
+    >>> anna['sn'] = "Wu" # Must set a surname attribute because inetOrgPerson shema requires.
     >>> anna['mail'] = "anna@nerdherd.com"
     >>> anna  
     >>> {'cn': ['anna'], 'objectClass': ['top', 'inetorgperson'], 'sn': ['Wu'], 'mail' : ['anna@nerdherd.com']}
@@ -86,12 +88,12 @@ then :meth:`LDAPConnection.add` to the server:
     >>> conn.add(anna)
     
 It's important, that we must set the schemas and every other attributes, that the shemas require. If we miss 
-a required attribute, the server will not finish the opertion and return an ObjectClassViolation error.
+a required attribute, the server will not finish the opertion and return an :class:`ObjectClassViolation` error.
 
-To modify an entry we need to have one that is already in the dictionary (get it back after a search or added 
-it by ourself previously), then we can easly add new attributes or modify already existed ones like we usually do,
-the only difference is that we need to call :meth:`LDAPEntry.modify` method after the end to save our modifications 
-on the server side. 
+To modify an entry we need to have one that is already in the dictionary (got it back after a search or added 
+it by ourself previously), then we can easly add new attributes or modify already existed ones like we usually do
+with a Python dict, the only difference is that we need to call :meth:`LDAPEntry.modify` method after the end to 
+save our modifications on the server side. 
 
     >>> anna['givenName'] = "Anna" # Set new givenName attribute.
     >>> anna['cn'].append('wu') # Add new common name attribute without remove the already set ones.
@@ -103,3 +105,9 @@ To delete an entry we've got two options:
     >>> conn.delete("cn=anna,ou=nerdherd,dc=local") # We have to know the DN of the entry.
     >>> # Or we have a loaded LDAPEntry object, then
     >>> anna.delete() # Entry is removed on the server (we still have the data on the client-side).
+
+After we finished our work with the directory server we should close the connection:
+
+    >>> conn.close()
+    
+To find out more about the PyLDAP module functionality read the :doc:`api`. 
