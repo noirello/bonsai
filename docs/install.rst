@@ -13,8 +13,8 @@ from sources you will need:
 
 - A C compiler (tested with gcc).
 
-- The Python header files. They are usually installed in a package such as
-  **python-dev**. 
+- The Python 3 header files. They are usually installed in a package such as
+  **python3-dev**. 
 
 - The libldap header files. They are usually installed in a package such as
   **libldap2-dev**.
