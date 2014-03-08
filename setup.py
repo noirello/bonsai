@@ -23,7 +23,7 @@ pyldap_module = Extension("pyldap._cpyldap",
             depends = depends)
 
 setup(name="pyldap",
-      version="0.1.5",
+      version="0.5",
       description = "Module to access LDAP directory servers.",
       author = "noirello",
       author_email = "noirello@gmail.com",

@@ -1,3 +1,4 @@
 - Check out Windows binding and authentication methods.
 - Add more LDAP errors.
 - Bugfix TLS and SSL connections on MS Windows.
+- Add sort control.
