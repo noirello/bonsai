@@ -8,8 +8,7 @@ class LDAPConnectionTest(unittest.TestCase):
     def setUp(self):
         self.url = "ldap://localhost/dc=local?cn?sub"
         client = LDAPClient(self.url)
-        client.set_credentials("SIMPLE", {"binddn" : "cn=admin,dc=local",
-                                          "password" : "p@ssword"})
+        client.set_credentials("SIMPLE", ("cn=admin,dc=local", "p@ssword"))
         self.conn = client.connect()
 
     def tearDown(self):
@@ -18,8 +17,7 @@ class LDAPConnectionTest(unittest.TestCase):
 
     def test_bind_digest(self):
         client = LDAPClient(self.url)
-        client.set_credentials("DIGEST-MD5", {"authcid" : "root",
-                           "password" : "p@ssword"})
+        client.set_credentials("DIGEST-MD5", ("root", "p@ssword", None))
         try:
             conn = client.connect()
         except (pyldap.errors.ConnectionError,

@@ -40,7 +40,7 @@ connecting(LDAPConnection *self) {
 	PyObject *url = NULL;
 	PyObject *tls = NULL;
 	PyObject *tmp = NULL;
-	PyObject *auth_dict = NULL;
+	PyObject *creds = NULL;
 
 	url = PyObject_GetAttrString(self->client, "_LDAPClient__url");
 	if (url == NULL) return -1;
@@ -72,30 +72,30 @@ connecting(LDAPConnection *self) {
 	}
 	Py_DECREF(tls);
 
-	auth_dict = PyObject_GetAttrString(self->client, "_LDAPClient__auth_dict");
-	if (auth_dict == NULL) return -1;
-
+	creds = PyObject_GetAttrString(self->client, "_LDAPClient__credentials");
+	if (creds == NULL) return -1;
 
 	tmp = PyObject_GetAttrString(self->client, "_LDAPClient__mechanism");
 	if (tmp == NULL) return -1;
 	mech = PyObject2char(tmp);
 	Py_XDECREF(tmp);
 
-	tmp = PyDict_GetItemString(auth_dict, "binddn");
-	binddn = PyObject2char(tmp);
+	/* Get credential information, if it's given. */
+	if (PyTuple_Check(creds) && PyTuple_Size(creds) > 1) {
+		if (strcmp(mech, "SIMPLE") == 0) {
+			tmp = PyTuple_GetItem(creds, 0);
+			binddn = PyObject2char(tmp);
+		} else {
+			tmp = PyTuple_GetItem(creds, 0);
+			authcid = PyObject2char(tmp);
+			tmp = PyDict_GetItemString(creds, "realm");
+			realm = PyObject2char(tmp);
+		}
+		tmp = PyTuple_GetItem(creds, 1);
+		pswstr = PyObject2char(tmp);
+	}
 
-	tmp = PyDict_GetItemString(auth_dict, "password");
-	pswstr = PyObject2char(tmp);
-
-	tmp = PyDict_GetItemString(auth_dict, "authzid");
-	authzid = PyObject2char(tmp);
 	if (authzid == NULL) authzid = "";
-
-	tmp = PyDict_GetItemString(auth_dict, "realm");
-	realm = PyObject2char(tmp);
-
-	tmp = PyDict_GetItemString(auth_dict, "authcid");
-	authcid = PyObject2char(tmp);
 
 	rc = _LDAP_bind_s(self->ld, mech, binddn, pswstr, authcid, realm, authzid);
 
@@ -110,10 +110,10 @@ connecting(LDAPConnection *self) {
 		PyObject *ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
-		Py_DECREF(auth_dict);
+		Py_DECREF(creds);
 		return -1;
 	}
-	Py_DECREF(auth_dict);
+	Py_DECREF(creds);
 
 	return 0;
 }

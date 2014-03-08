@@ -7,7 +7,7 @@ import pyldap.errors
 class LDAPEntryTest(unittest.TestCase):
     def setUp(self):
         self.client = LDAPClient()
-        self.client.set_credentials("SIMPLE", {'binddn' : "cn=admin,dc=local",'password' : "p@ssword"})
+        self.client.set_credentials("SIMPLE", ("cn=admin,dc=local", "p@ssword"))
         self.conn = self.client.connect()
         self.entry = LDAPEntry("cn=test,dc=local")
         self.entry['objectclass'] = ['top', 'inetOrgPerson', 'person',

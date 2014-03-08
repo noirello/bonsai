@@ -62,7 +62,7 @@ class LDAPDN(object):
 
     def __rdns_to_str(self, rdns):
         """ 
-        Converts RDN tuples to string. 
+        Convert RDN tuples to string. 
         Warning: the string value must be 3 depth deep!
         """
         return ','.join(
@@ -71,7 +71,7 @@ class LDAPDN(object):
 
     def __getitem__(self, idx):
         """
-        Returns the string format of the relative distinguished names 
+        Return the string format of the relative distinguished names 
         in the LDAPDN.
         
         :param int idx: the indeces of the RDNs.
@@ -92,7 +92,7 @@ class LDAPDN(object):
 
     def __setitem__(self, idx, value):
         """ 
-        Sets the string format of the relative distinguished names 
+        Set the string format of the relative distinguished names 
         in the LDAPDN. 
 
         :param int idx: the indeces of the RDNs.
@@ -114,7 +114,7 @@ class LDAPDN(object):
         return str(self) == str(other)
 
     def __str__(self):
-        """ The full string format of the distinguished name. """
+        """ Return the full string format of the distinguished name. """
         return self.__rdns_to_str(self.__rdns)
 
     def __repr__(self):

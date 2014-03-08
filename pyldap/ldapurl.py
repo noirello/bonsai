@@ -11,6 +11,9 @@ class LDAPURL(object):
     
     :param str strurl: string representation of a valid LDAP URL. Must \
     be started with `ldap://` or `ldaps://`.
+    
+    :raises ValueError: if the string parameter is not a valid LDAP URL.
+    
     """
     __slots__ = ("__hostinfo", "__searchinfo", "__extensions")
 
@@ -162,7 +165,17 @@ class LDAPURL(object):
         return self.__searchinfo[3]
 
     def get_address(self):
-        """ Return the full address of the host. """
+        """ 
+        Return the full address of the host.
+        
+        >>> import pyldap
+        >>> url = pyldap.LDAPURL("ldaps://example.com/cn=test,dc=local??sub")
+        >>> url
+        <LDAPURL ldaps://example.com:636/cn=test,dc=local??sub>
+        >>> url.get_address()
+        'ldaps://example.com:636'
+         
+        """
         return "%s://%s:%d" % tuple(self.__hostinfo)
 
     def __str__(self):
