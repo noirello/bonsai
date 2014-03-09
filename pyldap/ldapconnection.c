@@ -283,11 +283,11 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	rc = ldap_parse_result(self->ld, res, NULL, NULL, NULL, NULL, &returned_ctrls, 0);
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
-	if (self->cookie != NULL && self->cookie->bv_val != NULL) {
-    	ber_bvfree(self->cookie);
-    	self->cookie = NULL;
+	if (search_iter->cookie != NULL && search_iter->cookie->bv_val != NULL) {
+    	ber_bvfree(search_iter->cookie);
+    	search_iter->cookie = NULL;
     }
-    rc = ldap_parse_page_control(self->ld, returned_ctrls, NULL, &(self->cookie));
+    rc = ldap_parse_page_control(self->ld, returned_ctrls, NULL, &(search_iter->cookie));
 #else
 	rc = ldap_parse_pageresponse_control(self->ld,
 			ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL),

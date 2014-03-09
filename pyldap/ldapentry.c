@@ -35,7 +35,7 @@ LDAPEntry_clear(LDAPEntry *self) {
 
 /*	Deallocate the LDAPEntry. */
 static void
-LDAPEntry_dealloc(LDAPEntry* self) {;
+LDAPEntry_dealloc(LDAPEntry *self) {
     LDAPEntry_clear(self);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -506,6 +506,7 @@ LDAPEntry_popitem(LDAPEntry *self) {
 
 	value = LDAPEntry_GetItem(self, key);
 	if (value == NULL) return NULL;
+	Py_INCREF(value);
 
     res = PyTuple_New(2);
     if (res == NULL) return NULL;
