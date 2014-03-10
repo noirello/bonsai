@@ -22,15 +22,25 @@ pyldap_module = Extension("pyldap._cpyldap",
             sources = sources,
             depends = depends)
 
+with open('README.md') as file:
+    long_descr = file.read()
+
 setup(name="pyldap",
       version="0.5",
-      description = "Module to access LDAP directory servers.",
+      description = "Module for Python 3 to access LDAP directory servers.",
       author = "noirello",
       author_email = "noirello@gmail.com",
       url="https://github.com/Noirello/PyLDAP",
-      long_description = """"This module is a wrapper for libldap2 library
-      on Unix and Winldap on Microsoft Windows.
-      Heavily under development. Support only Python 3.x.""",
+      long_description = long_descr,
       ext_modules=[pyldap_module],
-      packages = ["pyldap"]
+      packages = ["pyldap"],
+      classifiers=[
+          'Development Status :: 4 - Beta',
+          'Intended Audience :: Developers',
+          'Intended Audience :: System Administrators',
+          'Operating System :: Microsoft :: Windows',
+          'Operating System :: Unix',
+          'Programming Language :: Python :: 3', 
+          'Topic :: Software Development :: Libraries :: Python Modules',
+          'Topic :: System :: Systems Administration :: Authentication/Directory :: LDAP']
 )
