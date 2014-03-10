@@ -10,7 +10,7 @@ Support only Python 3.x, and LDAPv3.
 No chance to call asynchronous LDAP operations at the moment. 
 
 Requirements for building
-=========================
+-------------------------
 
 - python3.x-dev (tested with 3.2 and 3.3)
 - libldap2-dev
@@ -18,12 +18,13 @@ Requirements for building
 
 
 Documentation
-=============
-Online documentation with tutorial at http://pyldap.readthedocs.org/en/latest/.
+-------------
+
+Online documentation with a simple tutorial at http://pyldap.readthedocs.org/en/latest/.
 
 
 Contribution
-============
+------------
 
 This is my first public Python module, and very first time for me to use the Python/C API.
 Contributions and advices are welcome. :) (Just tell me the whats and whys.) 
