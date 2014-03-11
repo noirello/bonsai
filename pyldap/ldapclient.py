@@ -12,12 +12,19 @@ class LDAPClient:
     """
     This class is for managing LDAP connections.
     
-    :param str url: an LDAP URL.
-    :param bool tls: Set `True` to use TLS connection. 
+    :param str|LDAPURL url: an LDAP URL.
+    :param bool tls: Set `True` to use TLS connection.
+    :raises ValueError: if the `url` parameter is not string or not a valid LDAP URL.
+    
     """
     def __init__(self, url="ldap://", tls=False):
         """ init method. """
-        self.__url = LDAPURL(url)
+        if type(url) == str:
+            self.__url = LDAPURL(url)
+        elif type(url) == LDAPURL:
+            self.__url = url
+        else:
+            raise ValueError("The url parameter must be string or an LDAPURL.")
         if self.__url.scheme != "ldaps" and tls:
             self.__tls = True
         else:
