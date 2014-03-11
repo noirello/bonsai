@@ -5,6 +5,11 @@ Tutorial
 
 After we installed the PyLDAP module, let's see the basic functions to communicate with an LDAP server.
 
+.. note::
+   Make sure, that you left the root directory of the module's source before you started the python 
+   interpreter. If you don't, the interpreter will try to import the local source files and fail with
+   ImportError: No module named 'pyldap._cpyldap' error message. 
+
 Connecting
 ----------
 
@@ -44,7 +49,7 @@ Searching
 
 To execute a simple search in the dictionary we have to use the :meth:`LDAPConnection.search` method. The
 function first parameter - the Base DN - sets where we would like to start the search in the 
-dictionary tree, the second parameter - the search scope - only can be one of these:
+dictionary tree, the second parameter - the search scope - can have the following values:
     
     - 0 (base): searching only  the Base DN.
     - 1 (one): searching only one tree level under the Base DN.
@@ -65,10 +70,10 @@ The result will be a list of LDAPEntry objects or an empty list, if no object is
     [{'objectClass': ['organizationalUnit', 'top'], 'ou': ['nerdherd']}]
     
 .. note:: 
-          As you can see every key - or LDAP attribute - in the entry has a list for clarity, even
-          if there is only one value belongs to the attribute. The most of the attributes could 
-          have more then one value, so it would be confusing, if some of the keys had string value 
-          and the others had list.     
+          As you can see every key - or LDAP attribute - in the entry has a list for clarity, even 
+          if only one value belongs to the attribute. As most of the attributes could have more 
+          than one value, it would be confusing, if some of the keys had string value and the 
+          others had list.     
 
 Add, modify, delete LDAP entry
 ------------------------------
@@ -88,12 +93,12 @@ then call :meth:`LDAPConnection.add` to add to the server:
     >>> conn.add(anna)
     
 It's important, that we must set the schemas and every other attributes, that the shemas require. If we miss 
-a required attribute, the server will not finish the opertion and return an :class:`ObjectClassViolation` error.
+a required attribute, the server will not finish the opertion and return an :class:`pyldap.ObjectClassViolation` error.
 
 To modify an entry we need to have one that is already in the dictionary (got it back after a search or added 
-it by ourself previously), then we can easly add new attributes or modify already existed ones like we usually do
-with a Python dict, the only difference is that we need to call :meth:`LDAPEntry.modify` method after the end to 
-save our modifications on the server side. 
+it by ourself previously), then we can easly add new attributes or modify already existing ones like we usually do
+with a Python dict, the only difference is that we need to call :meth:`LDAPEntry.modify` method at the end to save 
+our modifications on the server side. 
 
     >>> anna['givenName'] = "Anna" # Set new givenName attribute.
     >>> anna['cn'].append('wu') # Add new common name attribute without remove the already set ones.

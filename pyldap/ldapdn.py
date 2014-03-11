@@ -128,5 +128,5 @@ class LDAPDN(object):
 
     @rdns.setter
     def rdns(self, value=None):
-        """ The tuple of relative distinguished name."""
+        """ The tuple of relative distinguished names."""
         raise ValueError("RDNs attribute cannot be set.")

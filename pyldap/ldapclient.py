@@ -31,7 +31,7 @@ class LDAPClient:
         """
         By default the values of the LDAPEntry are in string format. The
         values of the listed LDAP attribute's names in the `raw_list` will be
-        keep in bytearray format.
+        kept in bytearray format.
         
         :param list raw_list: a list of LDAP attributum's names. \
         The elements must be string and unique.

@@ -4,7 +4,7 @@ Installing
 Install from source on Linux
 ----------------------------
 
-These notes illustrate how to compile pyLDAP on Linux. 
+These notes illustrate how to compile PyLDAP on Linux. 
 
 .. _requirements:
 
@@ -22,11 +22,11 @@ from sources you will need:
 - The libsasl header files. They are usually installed in a package such as
   **libsasl-dev**.
 
-- The pyLDAP source files. You can download it form the project's `github site`_.
+- The PyLDAP source files. You can download it form the project's `github site`_.
 
 .. _github site: https://github.com/Noirello/PyLDAP
 
-Once you downloaded and unpackaged the pyLDAP source files, you can run the 
+Once you downloaded and unpackaged the PyLDAP source files, you can run the 
 following command to compile and install the package::
     
     $ python3 setup.py build
@@ -34,8 +34,9 @@ following command to compile and install the package::
     
 Install from source on Windows
 ------------------------------
-pyLDAP uses WinLDAP on Microsoft Windows. To install it form sources you will
-need a C compiler and the pyLDAP source files. After you downloaded and 
+
+PyLDAP uses WinLDAP on Microsoft Windows. To install it form sources you will
+need a C compiler and the PyLDAP source files. After you downloaded and 
 unpackaged the sources, you can run::
     
     $ python setup.py build

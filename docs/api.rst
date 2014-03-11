@@ -5,7 +5,7 @@ API documentation
 
 :class:`LDAPClient`
 -------------------
-LDAPClient class is for configurate the connection to the directory server. 
+LDAPClient class is for configuring the connection to the directory server. 
 
 .. autoclass:: LDAPClient
 .. automethod:: LDAPClient.connect
@@ -55,7 +55,7 @@ LDAPClient class is for configurate the connection to the directory server.
 
 .. method:: LDAPConnection.whoami()
 
-   This method can use to obtain authorization identity.
+   This method can be used to obtain authorization identity.
    
 .. seealso::
     RFC about the LDAP Who am I extended operation `RFC4532`_.
@@ -130,6 +130,19 @@ Example for working with LDAPDN objects.
 .. _RFC4516: http://tools.ietf.org/html/rfc4516
 
 .. autoclass:: LDAPURL
+
+    An example of a valid LDAP URL with port number, base DN, list of 
+    attributes and search filter:
+    
+    >>> from pyldap import LDAPURL
+    >>> url = LDAPURL("ldap://localhost:789/ou=nerdherd,dc=local?cn,sn,gn?sub?(cn=c*)")
+    >>> url
+    <LDAPURL ldap://localhost:789/ou=nerdherd,dc=local?cn,sn,gn?sub?(cn=c*)>
+    >>> url.basedn
+    <LDAPDN ou=nerdherd,dc=local>
+    >>> url.attributes
+    ['cn', 'sn', 'gn']
+
 .. automethod:: LDAPURL.get_address
 .. automethod:: LDAPURL.__str__
 .. autoattribute:: LDAPURL.attributes
@@ -143,11 +156,11 @@ Example for working with LDAPDN objects.
 
 Errors
 ------
-.. autoclass:: pyldap.errors.LDAPError
-.. autoclass:: pyldap.errors.AlreadyExists
-.. autoclass:: pyldap.errors.AuthenticationError
-.. autoclass:: pyldap.errors.ConnectionError
-.. autoclass:: pyldap.errors.InvalidDN
-.. autoclass:: pyldap.errors.ObjectClassViolation
-.. autoclass:: pyldap.errors.NotConnected
+.. autoclass:: pyldap.LDAPError
+.. autoclass:: pyldap.AlreadyExists
+.. autoclass:: pyldap.AuthenticationError
+.. autoclass:: pyldap.ConnectionError
+.. autoclass:: pyldap.InvalidDN
+.. autoclass:: pyldap.ObjectClassViolation
+.. autoclass:: pyldap.NotConnected
 
