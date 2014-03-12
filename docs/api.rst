@@ -14,8 +14,39 @@ LDAPClient class is for configuring the connection to the directory server.
    Asynchronous connection is not supported at the moment.
 
 .. automethod:: LDAPClient.get_rootDSE
+
+   An example of getting the root DSE:
+    
+   >>> client = pyldap.LDAPClient()
+   >>> client.get_rootDSE()
+   {'namingContexts': ['dc=local'], 'supportedControl': ['2.16.840.1.113730.3.4.18', 
+   '2.16.840.1.113730.3.4.2', '1.3.6.1.4.1.4203.1.10.1', '1.2.840.113556.1.4.319', 
+   '1.2.826.0.1.3344810.2.3', '1.3.6.1.1.13.2', '1.3.6.1.1.13.1', '1.3.6.1.1.12'], 
+   'supportedLDAPVersion': ['3'], 'supportedExtension': ['1.3.6.1.4.1.1466.20037', 
+   '1.3.6.1.4.1.4203.1.11.1', '1.3.6.1.4.1.4203.1.11.3', '1.3.6.1.1.8'], 
+   'supportedSASLMechanisms': ['DIGEST-MD5', 'NTLM', 'CRAM-MD5']}
+
 .. automethod:: LDAPClient.set_credentials
+    
+   >>> from pyldap import LDAPClient
+   >>> client = LDAPClient()
+   >>> client.set_credentials("SIMPLE", ("cn=user,dc=local", "secret")) 
+   >>> client.connect()
+   <pyldap.LDAPConnection object at 0x7fadf8976440>
+   >>> client.set_credentials("DIGEST-MD5", ("user", "secret", None)) 
+   >>> client.connect()
+   <pyldap.LDAPConnection object at 0x7fadf892d3a0>
+
 .. automethod:: LDAPClient.set_raw_attributes
+
+   An example:
+    
+   >>> client = pyldap.LDAPClient()
+   >>> client.set_raw_attributes(["cn", "sn"])
+   >>> conn = client.connect()
+   >>> conn.search("cn=jeff,ou=nerdherd,dc=local", 0, attrlist=['cn', 'sn', 'gn'])
+   [{'givenName': ['Jeff'], 'sn': [b'Barnes'], 'cn': [b'jeff']}]         
+
 .. automethod:: LDAPClient.set_page_size
         
 :class:`LDAPConnection`
@@ -51,8 +82,38 @@ LDAPClient class is for configuring the connection to the directory server.
    :return: the search result.
    :rtype: list or iterator.
    
-   Perform a search on the directory server.  
+   Perform a search on the directory server. A base DN and a search scope is always necessary to perform a 
+   search, but these values - along with the attribute's list and search filter - can also be set with the 
+   :class:`LDAPClient` LDAP URL parameter. The parameters, which are passed to the :meth:`LDAPConnection.search`
+   method will overrule the previously set ones with the LDAP URL. 
+   
+   >>> from pyldap import LDAPClient
+   >>> client = LDAPClient("ldap://localhost") # without additional parameters
+   >>> conn = client.connect()
+   >>> conn.search("ou=nerdherd,dc=local", 1, "(cn=ch*)", ["cn", "sn", "gn"])
+   [{'sn': ['Bartowski'], 'cn': ['chuck'], 'givenName': ['Chuck']}]
+   >>> client = LDAPClient("ldap://localhost/ou=nerdherd,dc=local?cn,sn,gn?one?(cn=ch*)") # with addtional parameters
+   >>> conn = client.connect()
+   >>> conn.search()
+   [{'sn': ['Bartowski'], 'cn': ['chuck'], 'givenName': ['Chuck']}]
+   >>> conn.search(filter="(cn=j*)")
+   [{'sn': ['Barnes'], 'cn': ['jeff'], 'givenName': ['Jeff']}]
+   
+   The behavior of the method will change, if a page size is set with the :meth:`LDAPClient.set_page_size`. In 
+   this case the method will return an iterator instead of list. 
 
+   >>> client = LDAPClient()
+   >>> client.set_page_size(4)
+   >>> conn = client.connect()
+   >>> res = conn.search("ou=nerdherd,dc=local", 1, attrlist=["cn", "sn", "gn"])
+   >>> res
+   <pyldap.LDAPSearchIter object at 0x7f2e5714b190>
+   >>> [entry for entry in res]
+   [{'sn': ['Bartowski'], 'cn': ['chuck'], 'givenName': ['Chuck']}, {'sn': ['Patel'], 
+   'cn': ['lester'], 'givenName': ['Laster']}, {'sn': ['Barnes'], 'cn': ['jeff'], 
+   'givenName': ['Jeff']}, {'sn': ['Wu'], 'cn': ['anna'], 'givenName': ['Anna']}, 
+   {'sn': ['Agent'], 'cn': ['greta'], 'givenName': ['Greta']}]
+   
 .. method:: LDAPConnection.whoami()
 
    This method can be used to obtain authorization identity.
@@ -144,6 +205,14 @@ Example for working with LDAPDN objects.
     ['cn', 'sn', 'gn']
 
 .. automethod:: LDAPURL.get_address
+
+   >>> import pyldap
+   >>> url = pyldap.LDAPURL("ldaps://example.com/cn=test,dc=local??sub")
+   >>> url
+   <LDAPURL ldaps://example.com:636/cn=test,dc=local??sub>
+   >>> url.get_address()
+   'ldaps://example.com:636'
+
 .. automethod:: LDAPURL.__str__
 .. autoattribute:: LDAPURL.attributes
 .. autoattribute:: LDAPURL.basedn

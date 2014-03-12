@@ -15,7 +15,6 @@ class LDAPClient:
     :param str|LDAPURL url: an LDAP URL.
     :param bool tls: Set `True` to use TLS connection.
     :raises ValueError: if the `url` parameter is not string or not a valid LDAP URL.
-    
     """
     def __init__(self, url="ldap://", tls=False):
         """ init method. """
@@ -45,15 +44,6 @@ class LDAPClient:
         
         :raises ValueError: if any of the list's element is not a \
         string or not a unique element.
-        
-        An example:
-        
-        >>> client = pyldap.LDAPClient()
-        >>> client.set_raw_attributes(["cn", "sn"])
-        >>> conn = client.connect()
-        >>> conn.search("cn=jeff,ou=nerdherd,dc=local", 0, attrlist=['cn', 'sn', 'gn'])
-        [{'givenName': ['Jeff'], 'sn': [b'Barnes'], 'cn': [b'jeff']}]
-            
         """
         for elem in raw_list:
             if type(elem) != str:
@@ -87,16 +77,6 @@ class LDAPClient:
         :param tuple creds: the credential information.
         :raises ValueError: if the `mechanism` parameter is not a string, or \
         the `creds` is not a tuple, or the tuple has wrong length.
-        
-        >>> from pyldap import LDAPClient
-        >>> client = LDAPClient()
-        >>> client.set_credentials("SIMPLE", ("cn=user,dc=local", "secret")) 
-        >>> client.connect()
-        <pyldap.LDAPConnection object at 0x7fadf8976440>
-        >>> client.set_credentials("DIGEST-MD5", ("user", "secret", None)) 
-        >>> client.connect()
-        <pyldap.LDAPConnection object at 0x7fadf892d3a0>
-        
         """
         if type(mechanism) != str:
             raise ValueError("The mechanism must be a string.")
@@ -122,17 +102,6 @@ credential information: (username, password, realm).""")
         
         :return: the root DSE entry.
         :rtype: :class:`LDAPEntry`
-        
-        An example of getting the root DSE:
-        
-        >>> client = pyldap.LDAPClient()
-        >>> client.get_rootDSE()
-        {'namingContexts': ['dc=local'], 'supportedControl': ['2.16.840.1.113730.3.4.18', 
-        '2.16.840.1.113730.3.4.2', '1.3.6.1.4.1.4203.1.10.1', '1.2.840.113556.1.4.319', 
-        '1.2.826.0.1.3344810.2.3', '1.3.6.1.1.13.2', '1.3.6.1.1.13.1', '1.3.6.1.1.12'], 
-        'supportedLDAPVersion': ['3'], 'supportedExtension': ['1.3.6.1.4.1.1466.20037', 
-        '1.3.6.1.4.1.4203.1.11.1', '1.3.6.1.4.1.4203.1.11.3', '1.3.6.1.1.8'], 
-        'supportedSASLMechanisms': ['DIGEST-MD5', 'NTLM', 'CRAM-MD5']}
         """
         attrs = ["namingContexts", "altServer", "supportedExtension", 
                  "supportedControl", "supportedSASLMechanisms", 

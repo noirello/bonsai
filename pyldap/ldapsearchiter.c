@@ -114,8 +114,8 @@ LDAPSearchIter_iternext(LDAPSearchIter *self) {
 		if (item != NULL) return item;
 	} else {
 		Py_DECREF(self->buffer);
-		if ((self->cookie->bv_val != NULL) &&
-				(strlen(self->cookie->bv_val) > 0)) {
+		if ((self->cookie != NULL) && (self->cookie->bv_val != NULL) &&
+		    (strlen(self->cookie->bv_val) > 0)) {
 			/* Get the next page of the search. */
 			self->buffer = LDAPConnection_Searching(self->conn, (PyObject *)self);
 			if (self->buffer == NULL) return NULL;
