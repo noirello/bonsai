@@ -34,7 +34,7 @@ LDAPEntry *LDAPEntry_New(void);
 PyObject *LDAPEntry_AddOrModify(LDAPEntry *self, int mod);
 int LDAPEntry_Check(PyObject *obj);
 LDAPMod **LDAPEntry_CreateLDAPMods(LDAPEntry *self);
-void LDAPEntry_DismissLDAPMods(LDAPEntry *self, LDAPMod **mods);
+void LDAPEntry_DismissLDAPMods(LDAPEntry *self, LDAPMod **mods, int err);
 LDAPEntry *LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn);
 int LDAPEntry_UpdateFromDict(LDAPEntry *self, PyObject *dict);
 int LDAPEntry_UpdateFromSeq2(LDAPEntry *self, PyObject *seq);

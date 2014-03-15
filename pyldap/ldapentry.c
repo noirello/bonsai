@@ -163,7 +163,7 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
 				Py_DECREF(key);
 				return NULL;
 			}
-			value->status = -1;
+			value->status = 0;
 		}
 
 		if (value->status == 1) {
@@ -203,7 +203,7 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
 
 /* Frees null-delimitered LDAPMod list. */
 void
-LDAPEntry_DismissLDAPMods(LDAPEntry *self, LDAPMod **mods) {
+LDAPEntry_DismissLDAPMods(LDAPEntry *self, LDAPMod **mods, int err) {
 	int i, j;
 	struct berval **bvals;
 	LDAPValueList *val;
@@ -216,9 +216,11 @@ LDAPEntry_DismissLDAPMods(LDAPEntry *self, LDAPMod **mods) {
 				free(bvals[j]);
 			}
 		}
-		/* Change attributes' status to "not changed" (-1). */
-		val = (LDAPValueList *)LDAPEntry_GetItemString(self, mods[i]->mod_type);
-		if (val != NULL) val->status = -1;
+		/* Change attributes' status to "not changed" (0), if there is no error. */
+		if (err != 1) {
+			val = (LDAPValueList *)LDAPEntry_GetItemString(self, mods[i]->mod_type);
+			if (val != NULL) val->status = 0;
+		}
 		free(mods[i]->mod_type);
 		free(mods[i]);
 	}
@@ -354,15 +356,15 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	}
 
 	if (rc != LDAP_SUCCESS) {
-		PyObject *ldaperror = get_error("LDAPError");
+		PyObject *ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
-		LDAPEntry_DismissLDAPMods(self, mods);
+		LDAPEntry_DismissLDAPMods(self, mods, 1);
 		free(dnstr);
 		return NULL;
 	}
 	free(dnstr);
-	LDAPEntry_DismissLDAPMods(self, mods);
+	LDAPEntry_DismissLDAPMods(self, mods, 0);
 
 	return Py_None;
 }
@@ -601,7 +603,7 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 
 	rc = ldap_rename_s(self->conn->ld, olddn_str, newrdn_str, newparent_str, 1, NULL, NULL);
 	if (rc != LDAP_SUCCESS) {
-		PyObject *ldaperror = get_error("LDAPError");
+		PyObject *ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
 		free(olddn_str);

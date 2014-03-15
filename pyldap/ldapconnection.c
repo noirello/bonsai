@@ -63,7 +63,7 @@ connecting(LDAPConnection *self) {
 		rc = ldap_start_tls_s(self->ld, NULL, NULL);
 		if (rc != LDAP_SUCCESS) {
 			//TODO Proper errors
-			PyObject *ldaperror = get_error("LDAPError");
+			PyObject *ldaperror = get_error_by_code(rc);
 			PyErr_SetString(ldaperror, ldap_err2string(rc));
 			Py_DECREF(ldaperror);
 			Py_DECREF(tls);
@@ -165,7 +165,7 @@ LDAPConnection_Close(LDAPConnection *self) {
 
 	rc = _LDAP_unbind(self->ld);
 	if (rc != LDAP_SUCCESS) {
-		PyObject *ldaperror = get_error("LDAPError");
+		PyObject *ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
 		return NULL;
@@ -205,7 +205,7 @@ LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr) {
 	if (dnstr != NULL) {
 		rc = ldap_delete_ext_s(self->ld, dnstr, NULL, NULL);
 		if (rc != LDAP_SUCCESS) {
-			PyObject *ldaperror = get_error("LDAPError");
+			PyObject *ldaperror = get_error_by_code(rc);
 			PyErr_SetString(ldaperror, ldap_err2string(rc));
 			Py_DECREF(ldaperror);
 			return -1;
@@ -274,7 +274,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	}
 	if (rc != LDAP_SUCCESS  && rc != LDAP_PARTIAL_RESULTS) {
 		Py_DECREF(entrylist);
-		PyObject *ldaperror = get_error("LDAPError");
+		PyObject *ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
         return NULL;
@@ -471,7 +471,7 @@ LDAPConnection_Whoami(LDAPConnection *self) {
 
 	rc = ldap_whoami_s(self->ld, &authzid, NULL, NULL);
 	if (rc != LDAP_SUCCESS) {
-		PyObject *ldaperror = get_error("LDAPError");
+		PyObject *ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
 		return NULL;

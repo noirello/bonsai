@@ -48,7 +48,7 @@ LDAPValueList_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	self->deleted = UniqueList_New();
 	if (self->deleted == NULL) return NULL;
 
-	self->status = -1;
+	self->status = 0;
 
 	return (PyObject *)self;
 }

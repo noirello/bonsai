@@ -1,9 +1,6 @@
 class LDAPError(Exception):
     """General LDAP error."""
 
-class NotConnected(LDAPError):
-    """Raised, when an operation needs an open LDAP connection."""
-
 class InvalidDN(LDAPError):
     """Raised, when dn string is not a valid distinguished name."""
 
@@ -21,10 +18,12 @@ class AlreadyExists(LDAPError):
     """Raised, when try to add an entry and it already exists in the 
     dictionary"""            
 
-def get_error(code):
+def __get_error(code):
     """ Return an error by code number. """
     if code == -1:
         return ConnectionError
+    elif code == 0x22:
+        return InvalidDN
     elif code == 0x31:
         return AuthenticationError
     elif code == 0x41:

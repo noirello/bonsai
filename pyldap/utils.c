@@ -244,7 +244,7 @@ get_error(char *error_name) {
 PyObject *
 get_error_by_code(int code) {
 	PyObject *error;
-	PyObject *get_error = load_python_object("pyldap.errors", "get_error");
+	PyObject *get_error = load_python_object("pyldap.errors", "__get_error");
 	if (get_error == NULL) return NULL;
 
 	error = PyObject_CallFunction(get_error, "(i)", code);

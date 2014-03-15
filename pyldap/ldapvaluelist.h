@@ -10,7 +10,12 @@ typedef struct {
 	UniqueList list;
 	UniqueList *added;
 	UniqueList *deleted;
-	int status;
+	/* Status :
+	     - 0: unchanged,
+	     - 1: added or deleted item to list,
+	     - 2: replaced the whole list.
+	*/
+	unsigned short int status;
 } LDAPValueList;
 
 extern PyTypeObject LDAPValueListType;
