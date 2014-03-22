@@ -31,7 +31,7 @@ class LDAPConnectionTest(unittest.TestCase):
         self.assertEqual(obj, self.conn.search())
         
     def test_search_attr(self):
-        obj = self.conn.search("dc=local", 2, "(objectclass=*)", ['cn'])[0]
+        obj = self.conn.search("dc=local", 2, "(objectclass=person)", ['cn'])[0]
         self.assertIsNotNone(obj)
         if 'cn' not in obj.keys():
             self.fail()
