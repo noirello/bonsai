@@ -173,7 +173,7 @@ LDAPConnection_Close(LDAPConnection *self) {
 	return Py_None;
 }
 
-/* Add new LDAPEntry to ther server. */
+/* Add new LDAPEntry to the server. */
 static PyObject *
 LDAPConnection_Add(LDAPConnection *self, PyObject *args) {
 	PyObject *param = NULL;
@@ -302,15 +302,10 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 			Py_DECREF(entrylist);
 			return NULL;
 		}
-		/* Remove useless LDAPEntry. */
-		if (PyList_Size((PyObject *)entryobj->attributes) == 0) {
-			Py_DECREF(entryobj);
-			continue;
-		}
 		if ((entryobj == NULL) ||
 				(PyList_Append(entrylist, (PyObject *)entryobj)) != 0) {
 			Py_XDECREF(entryobj);
-			Py_XDECREF(entrylist);
+			Py_DECREF(entrylist);
 			return PyErr_NoMemory();
 		}
 		Py_DECREF(entryobj);

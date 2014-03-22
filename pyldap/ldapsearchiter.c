@@ -109,9 +109,19 @@ LDAPSearchIter_iternext(LDAPSearchIter *self) {
 	PyObject *item = NULL;
 
 	if (Py_SIZE(self->buffer) != 0) {
-		/* Get first element from the buffer list. */
-		item = PyObject_CallMethod(self->buffer, "pop", "(i)", 0);
-		if (item != NULL) return item;
+		/* Get first element from the buffer list. (Borrowed ref.)*/
+		item = PyList_GetItem(self->buffer, 0);
+		if (item == NULL) {
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+		Py_INCREF(item);
+		/* Remove the first element from the buffer list. */
+		if (PyList_SetSlice(self->buffer, 0, 1, NULL) != 0) {
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+		return item;
 	} else {
 		Py_DECREF(self->buffer);
 		if ((self->cookie != NULL) && (self->cookie->bv_val != NULL) &&
@@ -119,10 +129,19 @@ LDAPSearchIter_iternext(LDAPSearchIter *self) {
 			/* Get the next page of the search. */
 			self->buffer = LDAPConnection_Searching(self->conn, (PyObject *)self);
 			if (self->buffer == NULL) return NULL;
-			item = PyObject_CallMethod(self->buffer, "pop", "(i)", 0);
-			if (item != NULL) {
-				return item;
-			} else return NULL;
+			/* Get te first item...*/
+			item = PyList_GetItem(self->buffer, 0);
+			if (item == NULL) {
+				PyErr_BadInternalCall();
+				return NULL;
+			}
+			Py_INCREF(item);
+			/* Remove the first element...*/
+			if (PyList_SetSlice(self->buffer, 0, 1, NULL) != 0) {
+				PyErr_BadInternalCall();
+				return NULL;
+			}
+			return item;
 		} else {
 			ber_bvfree(self->cookie);
 			self->cookie = NULL;

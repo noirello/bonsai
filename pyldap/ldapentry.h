@@ -23,7 +23,6 @@ typedef struct {
     PyDictObject dict;
     PyObject *dn;
     PyObject *dntype;
-    UniqueList *attributes;
     UniqueList *deleted;
     LDAPConnection *conn;
 } LDAPEntry;
