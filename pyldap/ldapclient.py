@@ -32,6 +32,7 @@ class LDAPClient:
         self.__credentials = None
         self.__raw_list = []
         self.__mechanism = "SIMPLE"
+        self.__cert_policy = -1
     
     def set_raw_attributes(self, raw_list):
         """
@@ -92,6 +93,14 @@ credential information: (binddn, password).""")
             raise ValueError("""Simple mechanism needs 3 \
 credential information: (username, password, realm).""")
         self.__credentials = creds
+        
+    def set_cert_policy(self, policy):
+        tls_options = {'never' : 0, 'demand' : 2, 'allow': 3, 'try' : 4}
+        if type(policy) != str:
+            raise ValueError("Policy parameter must be string")
+        if policy.lower() not in tls_options.keys():
+            raise ValueError("'%s' is an invalid policy.", policy)
+        self.__cert_policy = tls_options[policy]  
         
     def get_rootDSE(self):
         """

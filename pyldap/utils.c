@@ -253,7 +253,7 @@ get_error_by_code(int code) {
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
-int _LDAP_initialization(LDAP **ld, PyObject *url) {
+int _LDAP_initialization(LDAP **ld, PyObject *url, int tls_option) {
 	int rc;
 	int portnum;
 	char *hoststr = NULL;
@@ -329,7 +329,7 @@ int ldap_whoami_s(LDAP *ld, struct berval **authzid, LDAPControl **sctrls, LDAPC
 
 #else
 
-int _LDAP_initialization(LDAP **ld, PyObject *url) {
+int _LDAP_initialization(LDAP **ld, PyObject *url, int tls_option) {
 	int rc;
 	char *addrstr;
 	const int version = LDAP_VERSION3;
@@ -344,6 +344,11 @@ int _LDAP_initialization(LDAP **ld, PyObject *url) {
 	if (rc != LDAP_SUCCESS) return rc;
 
 	ldap_set_option(*ld, LDAP_OPT_PROTOCOL_VERSION, &version);
+	if (tls_option != -1) {
+		ldap_set_option(*ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &tls_option);
+		/* Set TLS option globally. */
+		ldap_set_option(NULL, LDAP_OPT_X_TLS_REQUIRE_CERT, &tls_option);
+	}
 	return rc;
 }
 

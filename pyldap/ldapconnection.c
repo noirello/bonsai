@@ -31,6 +31,7 @@ LDAPConnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 static int
 connecting(LDAPConnection *self) {
 	int rc = -1;
+	int tls_option = -1;
 	char *binddn = NULL;
 	char *pswstr = NULL;
 	char *mech = NULL;
@@ -45,7 +46,11 @@ connecting(LDAPConnection *self) {
 	url = PyObject_GetAttrString(self->client, "_LDAPClient__url");
 	if (url == NULL) return -1;
 
-	rc = _LDAP_initialization(&(self->ld), url);
+	tmp = PyObject_GetAttrString(self->client, "_LDAPClient__cert_policy");
+	tls_option = (int)PyLong_AsLong(tmp);
+	Py_DECREF(tmp);
+
+	rc = _LDAP_initialization(&(self->ld), url, tls_option);
 	Py_DECREF(url);
 
 	if (rc != LDAP_SUCCESS) {
