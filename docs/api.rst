@@ -170,6 +170,17 @@ Example for working with LDAPDN objects.
 :class:`LDAPEntry`
 ------------------
 .. class:: LDAPEntry(dn)
+.. attribute:: LDAPEntry.dn
+
+    The distinguished name of the entry.
+    
+    >>> from pyldap import LDAPEntry
+    >>> anna = LDAPEntry('cn=anna,ou=nerdherd,dc=local')
+    >>> anna.dn
+    <LDAPDN cn=anna,ou=nerdherd,dc=local>
+    >>> str(anna.dn)
+    'cn=anna,ou=nerdherd,dc=local' 
+
 .. method:: LDAPEntry.delete()
 
     Remove LDAP entry from the dictionary server.
