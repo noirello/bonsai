@@ -98,7 +98,8 @@ credential information: (username, password, realm).""")
         """
         Set policy about server certification.
         
-        :param str policy: the cert policy:
+        :param str policy: the cert policy could be one of the following strings:
+        
             - `try` or `demand`: the server cert will be verified, and if it fail, then \
                 the :meth:`LDAPClient.connect` will raise an error.
             - `never` or `allow`: the server cert will be used without any verification. 
