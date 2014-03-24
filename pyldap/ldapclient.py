@@ -95,6 +95,22 @@ credential information: (username, password, realm).""")
         self.__credentials = creds
         
     def set_cert_policy(self, policy):
+        """
+        Set policy about server certification.
+        
+        :param str policy: the cert policy:
+            - `try` or `demand`: the server cert will be verified, and if it fail, then \
+                the :meth:`LDAPClient.connect` will raise an error.
+            - `never` or `allow`: the server cert will be used without any verification. 
+        
+        :raises ValueError: if the `policy` parameter is not a string, or not one of the \
+        four above.
+            
+        .. warning::
+           Set off the cert verification is dangerous. Without verification there is a chance \
+           of man-in-the-middle attack. 
+        
+        """
         tls_options = {'never' : 0, 'demand' : 2, 'allow': 3, 'try' : 4}
         if type(policy) != str:
             raise ValueError("Policy parameter must be string")

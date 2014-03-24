@@ -37,6 +37,7 @@ LDAPClient class is for configuring the connection to the directory server.
    >>> client.connect()
    <pyldap.LDAPConnection object at 0x7fadf892d3a0>
 
+.. automethod:: LDAPClient.set_cert_policy
 .. automethod:: LDAPClient.set_raw_attributes
 
    An example:

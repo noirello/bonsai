@@ -26,9 +26,7 @@ If we want to use a secure connection over SSL/TLS we can change the URL to `lda
 Or set the `tls` parameter to true for the LDAPClient:
        
     >>> client = LDAPClient("ldap://example.org", True)
-    >>> conn = client.connect()
-    
-.. warning:: On Microsoft Windows SSL/TLS functions are under development.   
+    >>> conn = client.connect()  
     
 Now, we have an anonym bind to the server, so LDAP whoami operation - which helps to get the identity 
 about the authenticated user - will return with the following:

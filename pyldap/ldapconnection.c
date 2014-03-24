@@ -65,7 +65,11 @@ connecting(LDAPConnection *self) {
 
 	/* Start TLS, if it necessary. */
 	if (PyObject_IsTrue(tls)) {
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+		rc = ldap_start_tls_sA(self->ld, NULL, NULL, NULL, NULL);
+#else
 		rc = ldap_start_tls_s(self->ld, NULL, NULL);
+#endif
 		if (rc != LDAP_SUCCESS) {
 			//TODO Proper errors
 			PyObject *ldaperror = get_error_by_code(rc);

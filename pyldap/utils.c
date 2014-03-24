@@ -253,11 +253,17 @@ get_error_by_code(int code) {
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
+/* It does what is says: no verification on the server cert. */
+BOOLEAN _cdecl noverify(PLDAP Connection, PCCERT_CONTEXT *ppServerCert) {
+	return 1;
+}
+
 int _LDAP_initialization(LDAP **ld, PyObject *url, int tls_option) {
 	int rc;
 	int portnum;
 	char *hoststr = NULL;
 	const int version = LDAP_VERSION3;
+	const int tls_settings = SCH_CRED_MANUAL_CRED_VALIDATION | SCH_CRED_NO_SERVERNAME_CHECK;
 	PyObject *scheme = PyObject_GetAttrString(url, "scheme");
 	PyObject *host = PyObject_GetAttrString(url, "host");
 	PyObject *port = PyObject_GetAttrString(url, "port");
@@ -279,6 +285,21 @@ int _LDAP_initialization(LDAP **ld, PyObject *url, int tls_option) {
 	Py_DECREF(scheme);
 	if (ld == NULL) return -1;
 	ldap_set_option(*ld, LDAP_OPT_PROTOCOL_VERSION, &version);
+	switch (tls_option) {
+		case -1:
+			/* Cert policy is not set, nothing to do.*/
+			break;
+		case 2:
+		case 4:
+			/* Cert policy is demand or try, then standard procedure. */
+			break;
+		case 0:
+		case 3:
+			/* Cert policy is never or allow, then set TLS settings. */
+			ldap_set_option(*ld, 0x43, &tls_settings);
+			ldap_set_option(*ld, LDAP_OPT_SERVER_CERTIFICATE, &noverify);
+			break;
+	}
 	rc = ldap_connect(*ld, NULL);
 	return rc;
 }
