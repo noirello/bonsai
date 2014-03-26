@@ -19,7 +19,8 @@ class LDAPDN(object):
         else:
             self.__rdns = [] 
         
-        if str(self) != strdn:
+        if (str(self) != strdn) and (
+            self.__escape_special_char(str(self)) != strdn):
             raise pyldap.errors.InvalidDN(strdn)
 
     def __escape_special_char(self, strdn, reverse=False):

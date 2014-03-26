@@ -85,6 +85,16 @@ class LDAPEntryTest(unittest.TestCase):
         entry.clear()
         self.assertDictEqual(entry, {})
         self.assertEqual(entry.dn, self.entry.dn)
+        
+    def test_special_char(self):
+        conn = self.client.connect()
+        entry = LDAPEntry("cn=test\, *\+withspec,dc=local")
+        entry['objectclass'] = ['top', 'inetOrgPerson']
+        entry['sn'] = "Test,*special"
+        conn.add(entry)
+        result = conn.search("dc=local", 1)
+        entry.delete()
+        self.assertIn(entry.dn, [res.dn for res in result])
 
 if __name__ == '__main__':
     unittest.main()

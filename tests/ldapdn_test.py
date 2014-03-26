@@ -12,6 +12,7 @@ class LDAPDNTest(unittest.TestCase):
         del self.dn
 
     def test_rdn(self):
+        self.assertEqual(self.dn.rdns[0], (('cn', 'user'),))
         self.assertEqual(self.dn[0], "cn=user")
 
     def test_ancestors(self):
@@ -35,6 +36,10 @@ class LDAPDNTest(unittest.TestCase):
 
     def test_invaliddn(self):
         self.assertRaises(errors.InvalidDN, self.invalid)
+        
+    def test_special_char(self):
+        spec = LDAPDN("cn=specal\, name,dc=test,dc=local")
+        self.assertEqual(str(spec), "cn=specal\, name,dc=test,dc=local")
 
 if __name__ == '__main__':
     unittest.main()
