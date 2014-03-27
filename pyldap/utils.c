@@ -182,6 +182,8 @@ PyList2StringList(PyObject *list) {
 	if (list == NULL || !PyList_Check(list)) return NULL;
 
 	strlist = malloc(sizeof(char*) * ((int)PyList_Size(list) + 1));
+	if (strlist == NULL) return NULL;
+
 	iter = PyObject_GetIter(list);
 	if (iter == NULL) return NULL;
 
@@ -192,6 +194,54 @@ PyList2StringList(PyObject *list) {
 	Py_DECREF(iter);
 	strlist[i] = NULL;
 	return strlist;
+}
+
+/*	Create a null delimitered LDAPSortKey list from a Python list which
+ 	contains tuples of attribute name aad reverse order. */
+LDAPSortKey **
+PyList2LDAPSortKeyList(PyObject *list) {
+	int i = 0;
+	char *attr = NULL;
+	LDAPSortKey **sortlist;
+	LDAPSortKey *elem;
+	PyObject *iter;
+	PyObject *item;
+	PyObject *tmp = NULL;
+
+	if (list == NULL || !PyList_Check(list)) return NULL;
+
+	sortlist = malloc(sizeof(LDAPSortKey*) * ((int)PyList_Size(list) + 1));
+	if (sortlist == NULL) return NULL;
+
+	iter = PyObject_GetIter(list);
+	if (iter == NULL) return NULL;
+
+	for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
+		if (!PyTuple_Check(item) || PyTuple_Size(item) != 2) return NULL;
+
+		/* Get attribute's name and reverse order from the tuple. */
+		tmp = PyTuple_GetItem(item, 0); /* Returns borrowed ref. */
+		if (tmp == NULL) return NULL;
+		attr = PyObject2char(tmp);
+		if (attr == NULL) return NULL;
+		tmp = PyTuple_GetItem(item, 1);
+		if (tmp == NULL) return NULL;
+
+		/* Malloc and set LDAPSortKey struct. */
+		elem = (LDAPSortKey *)malloc(sizeof(LDAPSortKey));
+		elem->attributeType = attr;
+		elem->orderingRule = NULL;
+
+		/* If the second tuple element is True reverseOrder will be 1,
+		   otherwise 0. */
+		elem->reverseOrder = PyObject_IsTrue(tmp);
+		sortlist[i++] = elem;
+
+		Py_DECREF(item);
+	}
+	Py_DECREF(iter);
+	sortlist[i] = NULL;
+	return sortlist;
 }
 
 /*	Compare lower-case representations of two Python objects.

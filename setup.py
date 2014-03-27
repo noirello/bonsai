@@ -41,6 +41,7 @@ setup(name="pyldap",
           'License :: OSI Approved :: MIT License',
           'Operating System :: Microsoft :: Windows',
           'Operating System :: Unix',
+          'Programming Language :: C',
           'Programming Language :: Python :: 3', 
           'Topic :: Software Development :: Libraries :: Python Modules',
           'Topic :: System :: Systems Administration :: Authentication/Directory :: LDAP']

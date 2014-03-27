@@ -33,6 +33,7 @@ class LDAPClient:
         self.__raw_list = []
         self.__mechanism = "SIMPLE"
         self.__cert_policy = -1
+        self.__sort_attrs = []
     
     def set_raw_attributes(self, raw_list):
         """
@@ -65,6 +66,29 @@ class LDAPClient:
         if type(page_size) != int or page_size < 2:
             raise ValueError("The page_size parameter must be an integer greater, than 1.")
         self.__page_size = page_size
+        
+    def set_sort_order(self, sort_list):
+        """
+        Set a list of attribute names to sort entries in a search result. For reverse
+        order set '-' before to the attribute name.
+        
+        :param list sort_list: List of attribute names.
+        :raises ValueError: if any element of the list is not a string or an \
+        empty string, and if any of the attributes is in the list more then once.  
+        """
+        sort_attrs = []
+        for attr in sort_list:
+            if type(attr) != str or len(attr) == 0:
+                raise ValueError("All element of sort_list must be a non empty string.")
+        for attr in sort_list:    
+            if attr[0] == '-':
+                sort_attrs.append((attr[1:], True))
+            else:
+                sort_attrs.append((attr, False))
+        if len(sort_list) > len(set(map(lambda x: x[0].lower, sort_attrs))):
+            raise ValueError("Attribute names must be different from each other.")
+        self.__sort_attrs = sort_attrs
+        
         
     def set_credentials(self, mechanism, creds):
         """

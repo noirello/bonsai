@@ -24,6 +24,7 @@ typedef struct {
 	LDAP *ld;
 	int async;
 	int page_size;
+	LDAPSortKey **sort_list;
 } LDAPConnection;
 
 extern PyTypeObject LDAPConnectionType;

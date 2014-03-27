@@ -33,6 +33,7 @@ LDAPMod *createLDAPModFromItem(int mod_op, PyObject *key, PyObject *value);
 char *PyObject2char(PyObject *obj);
 struct berval **PyList2BervalList(PyObject *list);
 char **PyList2StringList(PyObject *list);
+LDAPSortKey **PyList2LDAPSortKeyList(PyObject *list);
 int lowerCaseMatch(PyObject *o1, PyObject *o2);
 PyObject *load_python_object(char *module_name, char *object_name);
 PyObject *get_error(char *error_name);

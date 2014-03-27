@@ -6,7 +6,18 @@
 /*	Dealloc the LDAPConnection object. */
 static void
 LDAPConnection_dealloc(LDAPConnection* self) {
+	int i = 0;
 	Py_XDECREF(self->client);
+
+	/* Free LDAPSortKey list. */
+	if (self->sort_list !=  NULL) {
+		for (i = 0; self->sort_list[i] != NULL; i++) {
+			free(self->sort_list[i]->attributeType);
+			free(self->sort_list[i]);
+		}
+		free(self->sort_list);
+	}
+
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -20,6 +31,7 @@ LDAPConnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->client = NULL;
     	self->async = 0;
     	self->page_size = 0;
+    	self->sort_list = NULL;
 	}
 
     return (PyObject *)self;
@@ -134,7 +146,7 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	PyObject *client = NULL;
 	PyObject *ldapclient_type = NULL;
 	PyObject *tmp = NULL;
-	PyObject *page_size = NULL;
+	PyObject *page_size = NULL, *sort_list = NULL;
     static char *kwlist[] = {"client", "async", NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O!", kwlist, &client,
@@ -156,12 +168,24 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     	Py_INCREF(client);
     	self->client = client;
     	Py_XDECREF(tmp);
+
     	/* Get page size from the client. */
     	page_size = PyObject_GetAttrString(self->client, "_LDAPClient__page_size");
     	if (page_size == NULL) return -1;
     	self->page_size = (int)PyLong_AsLong(page_size);
     	Py_DECREF(page_size);
     	if (PyErr_Occurred()) return -1;
+
+    	/* Get sort list from the client. */
+    	sort_list = PyObject_GetAttrString(self->client, "_LDAPClient__sort_attrs");
+    	if (PyList_Size(sort_list) > 0) {
+    		self->sort_list = PyList2LDAPSortKeyList(sort_list);
+    		if (self->sort_list == NULL) {
+    			PyErr_BadInternalCall();
+    			return -1;
+    		}
+    	}
+
         return connecting(self);
     }
     return -1;
@@ -246,10 +270,14 @@ LDAPConnection_DelEntry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 PyObject *
 LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	int rc;
+	ber_int_t result = 0;
+	int num_of_ctrls = 0;
+	char **attrs = NULL;
 	LDAPMessage *res, *entry;
 	PyObject *entrylist;
 	LDAPEntry *entryobj;
 	LDAPControl *page_ctrl = NULL;
+	LDAPControl *sort_ctrl = NULL;
 	LDAPControl **server_ctrls = NULL;
 	LDAPControl **returned_ctrls;
 	LDAPSearchIter *search_iter = (LDAPSearchIter *)iterator;
@@ -259,14 +287,36 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 		return PyErr_NoMemory();
 	}
 
+	/* Check the number of server controls and allocate it. */
+	if (self->page_size > 1) num_of_ctrls++;
+	if (self->sort_list != NULL) num_of_ctrls++;
+	if (num_of_ctrls > 0) {
+		server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *)
+				* (num_of_ctrls + 1));
+		if (server_ctrls == NULL) return PyErr_NoMemory();
+		num_of_ctrls = 0;
+	}
+
 	if (self->page_size > 1) {
 		/* Create page control and add to the server controls. */
-		server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *)*2);
-		if (server_ctrls == NULL) return PyErr_NoMemory();
 		rc = ldap_create_page_control(self->ld, (ber_int_t)(self->page_size),
 				search_iter->cookie, 0, &page_ctrl);
-		server_ctrls[0] = page_ctrl;
-		server_ctrls[1] = NULL;
+		if (rc != LDAP_SUCCESS) {
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+		server_ctrls[num_of_ctrls++] = page_ctrl;
+		server_ctrls[num_of_ctrls] = NULL;
+	}
+
+	if (self->sort_list != NULL) {
+		rc = ldap_create_sort_control(self->ld, self->sort_list, 0, &sort_ctrl);
+		if (rc != LDAP_SUCCESS) {
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+		server_ctrls[num_of_ctrls++] = sort_ctrl;
+		server_ctrls[num_of_ctrls] = NULL;
 	}
 
 	rc = ldap_search_ext_s(self->ld, search_iter->base,
