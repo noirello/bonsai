@@ -372,6 +372,9 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	/* Cleanup. */
 	if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
 	if (page_ctrl != NULL) ldap_control_free(page_ctrl);
+	if (sort_ctrl != NULL) ldap_control_free(sort_ctrl);
+	if (server_ctrls != NULL) free(server_ctrls);
+
 	ldap_msgfree(res);
 	return entrylist;
 }
@@ -398,28 +401,32 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 				"Wrong parameters (base<str|LDAPDN>, scope<int>, filter<str>, attrlist<List>, timeout<int>, attrsonly<bool>).");
         return NULL;
 	}
+    /* Load LDAPDN to check basedn's type.*/
+    ldapdn_type = load_python_object("pyldap.ldapdn", "LDAPDN");
+    if (ldapdn_type == NULL) return NULL;
 
     /* Get additional informations from the LDAP URL. */
     url = PyObject_GetAttrString(self->client, "_LDAPClient__url");
     if (url == NULL) return NULL;
 
-    /* Load LDAPDN to check basedn's type.*/
-    ldapdn_type = load_python_object("pyldap.ldapdn", "LDAPDN");
-    if (ldapdn_type == NULL) return NULL;
-
-    if (basedn != NULL && PyObject_IsInstance(basedn, ldapdn_type)) {
-    	/* If basedn is an LDAPDN object convert to Python string. */
+    if (basedn != NULL &&
+    	(PyObject_IsInstance(basedn, ldapdn_type) || PyUnicode_Check(basedn))) {
+    	/* If basedn is an LDAPDN object convert to Python string.
+    	   If basedn already a string increment reference. */
     	basedn = PyObject_Str(basedn);
-    	if (basedn == NULL) return NULL;
-
-    	/* Then convert the basedn to char*. */
+    	if (basedn == NULL) {
+    		Py_DECREF(url);
+    		Py_DECREF(ldapdn_type);
+    		return NULL;
+    	}
+    	/* Convert the basedn to char*. */
         basestr = PyObject2char(basedn);
         Py_DECREF(basedn);
+        basedn = NULL;
     }
-
     Py_DECREF(ldapdn_type);
 
-    if (basedn != NULL && !PyUnicode_Check(basedn)) {
+    if (basedn != NULL) {
     	PyErr_SetString(PyExc_AttributeError, "Wrong parameters, `base` must be string or LDAPDN");
     	return NULL;
     }
