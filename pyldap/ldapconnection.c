@@ -384,16 +384,18 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	char *basestr = NULL;
 	char *filterstr = NULL;
 	char **attrs = NULL;
+	PyObject *ldapdn_type = NULL;
+	PyObject *basedn = NULL;
 	PyObject *attrlist  = NULL;
 	PyObject *attrsonlyo = NULL;
 	PyObject *url = NULL;
 	LDAPSearchIter *search_iter = NULL;
 	static char *kwlist[] = {"base", "scope", "filter", "attrlist", "timeout", "sizelimit", "attrsonly", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|sizOiiO!", kwlist, &basestr, &scope, &filterstr,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OizOiiO!", kwlist, &basedn, &scope, &filterstr,
     		&attrlist, &timeout, &sizelimit, &PyBool_Type, &attrsonlyo)) {
 		PyErr_SetString(PyExc_AttributeError,
-				"Wrong parameters (base<str>, scope<int>, filter<str>, attrlist<List>, timeout<int>, attrsonly<bool>).");
+				"Wrong parameters (base<str|LDAPDN>, scope<int>, filter<str>, attrlist<List>, timeout<int>, attrsonly<bool>).");
         return NULL;
 	}
 
@@ -401,13 +403,34 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     url = PyObject_GetAttrString(self->client, "_LDAPClient__url");
     if (url == NULL) return NULL;
 
+    /* Load LDAPDN to check basedn's type.*/
+    ldapdn_type = load_python_object("pyldap.ldapdn", "LDAPDN");
+    if (ldapdn_type == NULL) return NULL;
+
+    if (basedn != NULL && PyObject_IsInstance(basedn, ldapdn_type)) {
+    	/* If basedn is an LDAPDN object convert to Python string. */
+    	basedn = PyObject_Str(basedn);
+    	if (basedn == NULL) return NULL;
+
+    	/* Then convert the basedn to char*. */
+        basestr = PyObject2char(basedn);
+        Py_DECREF(basedn);
+    }
+
+    Py_DECREF(ldapdn_type);
+
+    if (basedn != NULL && !PyUnicode_Check(basedn)) {
+    	PyErr_SetString(PyExc_AttributeError, "Wrong parameters, `base` must be string or LDAPDN");
+    	return NULL;
+    }
+
     search_iter = LDAPSearchIter_New(self);
     if (search_iter == NULL) {
     	return PyErr_NoMemory();
     }
 
     if (basestr == NULL) {
-    	PyObject *basedn = PyObject_GetAttrString(url, "basedn");
+    	basedn = PyObject_GetAttrString(url, "basedn");
     	if (basedn == NULL) {
     		Py_DECREF(search_iter);
     	  	Py_DECREF(url);

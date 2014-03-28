@@ -1,5 +1,6 @@
 import unittest
 
+from pyldap import LDAPDN
 from pyldap import LDAPClient
 from pyldap import LDAPEntry
 import pyldap.errors
@@ -29,6 +30,11 @@ class LDAPConnectionTest(unittest.TestCase):
         obj = self.conn.search("dc=local", 2)
         self.assertIsNotNone(obj)
         self.assertEqual(obj, self.conn.search())
+        
+    def test_search_ldapdn(self):
+        dn = LDAPDN("dc=local")
+        obj = self.conn.search(dn, 1)
+        self.assertIsNotNone(obj)
         
     def test_search_attr(self):
         obj = self.conn.search("dc=local", 2, "(objectclass=person)", ['cn'])[0]
