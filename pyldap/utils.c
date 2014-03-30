@@ -71,8 +71,9 @@ createLDAPModFromItem(int mod_op, PyObject *key, PyObject *value) {
 	return mod;
 }
 
-/*	Converts Python simple objects (String, Long, Float, Boolean, Bytes, and None) to C string.
-	If the `obj` is none of these types raise BadInternalCall() error and return NULL.
+/*	Converts Python simple objects (String, Long, Float, Boolean, Bytes, and None)
+    and LDAPDn to C string.If the `obj` is none of these types raise BadInternalCall()
+    error and return NULL.
 */
 char *
 PyObject2char(PyObject *obj) {

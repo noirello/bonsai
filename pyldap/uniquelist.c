@@ -1,6 +1,9 @@
 #include "uniquelist.h"
 #include "utils.h"
-
+/*
+ A special type of list to store unique case-insesitive elements.
+ The element cannot be and instance of Python dict or list.
+ */
 static void
 UniqueList_dealloc(UniqueList *self) {
 	Py_TYPE(self)->tp_free((PyObject*)self);
@@ -30,13 +33,24 @@ get_lowercase_tuple(PyObject *list) {
 	seq = PySequence_Fast(list, "Argument is not iterable.");
 	n = PySequence_Fast_GET_SIZE(seq);
 	tup = PyTuple_New(n);
-	if (tup == NULL) return PyErr_NoMemory();
+	if (tup == NULL) {
+		Py_XDECREF(seq);
+		return PyErr_NoMemory();
+	}
 
 	for (i = 0; i < n; i++) {
 		item = PySequence_Fast_GET_ITEM(seq, i);
+		if (PyDict_Check(item) || PyList_Check(item)) {
+			PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python list or dict.");
+			Py_DECREF(tup);
+			Py_XDECREF(seq);
+			return NULL;
+		}
 		str = lowercase(PyObject2char(item));
 		if (PyTuple_SetItem(tup, i, PyUnicode_FromString(str)) != 0) {
 			PyErr_BadInternalCall();
+			Py_DECREF(tup);
+			Py_XDECREF(seq);
 			return NULL;
 		}
 		free(str);
@@ -61,9 +75,11 @@ UniqueList_init(UniqueList *self, PyObject *args, PyObject *kwds) {
 	    tmp = get_lowercase_tuple(obj);
 		for (i = 0; i < Py_SIZE(tmp); i++) {
 			item = PyTuple_GetItem(tmp, i);
+			if (item == NULL) return -1;
+
 			if (PySequence_Count(tmp, item) > 1) {
 				Py_DECREF(tmp);
-				PyErr_SetString(PyExc_AttributeError, "LDAPListValue's argument is containing non-unique values. (Bool types converted to number)");
+				PyErr_SetString(PyExc_AttributeError, "UniqueList's argument is containing non-unique values. (Bool types converted to number)");
 				return -1;
 			}
 		}
@@ -100,6 +116,12 @@ isLowerCaseUnique(UniqueList *list, PyObject *newitem) {
 /*	Append new - case-insensitive - unique item to the UniqueList. */
 int
 UniqueList_Append(UniqueList *self, PyObject *newitem) {
+
+	if (PyDict_Check(newitem) || PyList_Check(newitem)) {
+		PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python list or dict.");
+		return -1;
+	}
+
 	if (isLowerCaseUnique(self, newitem) == 0) {
 		PyErr_Format(PyExc_ValueError, "%R is already in the list.", newitem);
 		return -1;
@@ -125,6 +147,10 @@ UniqueList_Extend(UniqueList *self, PyObject *b) {
 
 	if (iter != NULL) {
 		for (newitem = PyIter_Next(iter); newitem != NULL; newitem = PyIter_Next(iter)) {
+			if (PyDict_Check(newitem) || PyList_Check(newitem)) {
+				PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python list or dict.");
+				return -1;
+			}
 			if (isLowerCaseUnique(self, newitem) == 0){
 				PyErr_SetString(PyExc_TypeError, "List is containing non-unique values.");
 				return -1;
@@ -142,6 +168,12 @@ UniqueList_Extend(UniqueList *self, PyObject *b) {
 /*	Insert new unique item to the `where` position in UniqueList. */
 int
 UniqueList_Insert(UniqueList *self, Py_ssize_t where, PyObject *newitem) {
+
+	if (PyDict_Check(newitem) || PyList_Check(newitem)) {
+		PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python list or dict.");
+		return -1;
+	}
+
 	if (isLowerCaseUnique(self, newitem) == 0) {
 		PyErr_Format(PyExc_ValueError, "%R is already in the list.", newitem);
 		return -1;
@@ -184,6 +216,12 @@ UniqueList_Remove(UniqueList *self, PyObject *value) {
 /*	Set new unique item at `i` index in UniqueList to `newitem`. Case-insensitive. */
 int
 UniqueList_SetItem(UniqueList *self, Py_ssize_t i, PyObject *newitem) {
+
+	if (PyDict_Check(newitem) || PyList_Check(newitem)) {
+		PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python list or dict.");
+		return -1;
+	}
+
 	if (isLowerCaseUnique(self, newitem) == 0) {
 		PyErr_Format(PyExc_ValueError, "%R is already in the list.", newitem);
 		return -1;
@@ -204,6 +242,10 @@ UniqueList_SetSlice(UniqueList *self, Py_ssize_t ilow, Py_ssize_t ihigh, PyObjec
 
 	if (iter != NULL) {
 		for (newitem = PyIter_Next(iter); newitem != NULL; newitem = PyIter_Next(iter)) {
+			if (PyDict_Check(newitem) || PyList_Check(newitem)) {
+				PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python list or dict.");
+				return -1;
+			}
 			if (isLowerCaseUnique(self, newitem) == 0) {
 				PyErr_Format(PyExc_ValueError, "%R is already in the list.", newitem);
 				return -1;
