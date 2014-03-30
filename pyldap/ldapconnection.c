@@ -395,8 +395,8 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	LDAPSearchIter *search_iter = NULL;
 	static char *kwlist[] = {"base", "scope", "filter", "attrlist", "timeout", "sizelimit", "attrsonly", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OizOiiO!", kwlist, &basedn, &scope, &filterstr,
-    		&attrlist, &timeout, &sizelimit, &PyBool_Type, &attrsonlyo)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OizO!iiO!", kwlist, &basedn, &scope, &filterstr,
+    		&PyList_Type, &attrlist, &timeout, &sizelimit, &PyBool_Type, &attrsonlyo)) {
 		PyErr_SetString(PyExc_AttributeError,
 				"Wrong parameters (base<str|LDAPDN>, scope<int>, filter<str>, attrlist<List>, timeout<int>, attrsonly<bool>).");
         return NULL;
