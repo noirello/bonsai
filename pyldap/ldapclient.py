@@ -157,7 +157,7 @@ credential information: (username, password, realm).""")
                  "supportedControl", "supportedSASLMechanisms", 
                  "supportedLDAPVersion"]
         conn = LDAPConnection(self, False)
-        root_dse = conn.search("", 0, "(objectclass=*)", attrs, 0, False)[0];
+        root_dse = list(conn.search("", 0, "(objectclass=*)", attrs, 0, False))[0];
         conn.close()
         return root_dse
     

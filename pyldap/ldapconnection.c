@@ -270,16 +270,14 @@ LDAPConnection_DelEntry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 PyObject *
 LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	int rc;
-	ber_int_t result = 0;
 	int num_of_ctrls = 0;
-	char **attrs = NULL;
 	LDAPMessage *res, *entry;
-	PyObject *entrylist;
-	LDAPEntry *entryobj;
+	PyObject *entrylist = NULL;
+	LDAPEntry *entryobj = NULL;
 	LDAPControl *page_ctrl = NULL;
 	LDAPControl *sort_ctrl = NULL;
 	LDAPControl **server_ctrls = NULL;
-	LDAPControl **returned_ctrls;
+	LDAPControl **returned_ctrls = NULL;
 	LDAPSearchIter *search_iter = (LDAPSearchIter *)iterator;
 
 	entrylist = PyList_New(0);
@@ -383,7 +381,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 static PyObject *
 LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	int scope = -1;
-	int timeout, sizelimit, attrsonly = 0;
+	int timeout = 0, sizelimit = 0, attrsonly = 0;
 	char *basestr = NULL;
 	char *filterstr = NULL;
 	char **attrs = NULL;
