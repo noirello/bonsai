@@ -72,8 +72,8 @@ createLDAPModFromItem(int mod_op, PyObject *key, PyObject *value) {
 }
 
 /*	Converts Python simple objects (String, Long, Float, Boolean, Bytes, and None)
-    and LDAPDn to C string.If the `obj` is none of these types raise BadInternalCall()
-    error and return NULL.
+    to C string. If the `obj` is none of these types, then call PyObject_Str, and
+    recall this function with the result.
 */
 char *
 PyObject2char(PyObject *obj) {
@@ -126,19 +126,15 @@ PyObject2char(PyObject *obj) {
 		strcpy(str, tmp);
 		return str;
 	} else {
-		PyObject *ldapdn_type = load_python_object("pyldap.ldapdn", "LDAPDN");
-		if (ldapdn_type == NULL) return NULL;
-
-		if (PyObject_IsInstance(obj, ldapdn_type)) {
-			/* LDAPDN object converting. */
-			PyObject *tmpobj = PyObject_Str(obj);
-			str = PyObject2char(tmpobj);
-			Py_DECREF(tmpobj);
-		}
-		else  {
+		PyObject *tmpobj = PyObject_Str(obj);
+		if (tmpobj == NULL) {
 			PyErr_BadInternalCall();
 			return NULL;
 		}
+
+		str = PyObject2char(tmpobj);
+		Py_DECREF(tmpobj);
+		return str;
 	}
 	/* In case of converting numbers, optimizing the memory allocation. */
 	if (tmp != NULL) {

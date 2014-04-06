@@ -40,8 +40,8 @@ get_lowercase_tuple(PyObject *list) {
 
 	for (i = 0; i < n; i++) {
 		item = PySequence_Fast_GET_ITEM(seq, i);
-		if (PyDict_Check(item) || PyList_Check(item)) {
-			PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python list or dict.");
+		if (PyDict_Check(item) || PyList_Check(item) || PyTuple_Check(item)) {
+			PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python tuple, list or dict.");
 			Py_DECREF(tup);
 			Py_XDECREF(seq);
 			return NULL;
@@ -117,8 +117,8 @@ isLowerCaseUnique(UniqueList *list, PyObject *newitem) {
 int
 UniqueList_Append(UniqueList *self, PyObject *newitem) {
 
-	if (PyDict_Check(newitem) || PyList_Check(newitem)) {
-		PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python list or dict.");
+	if (PyDict_Check(newitem) || PyList_Check(newitem) || PyTuple_Check(newitem)) {
+		PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python tuple, list or dict.");
 		return -1;
 	}
 
@@ -147,8 +147,8 @@ UniqueList_Extend(UniqueList *self, PyObject *b) {
 
 	if (iter != NULL) {
 		for (newitem = PyIter_Next(iter); newitem != NULL; newitem = PyIter_Next(iter)) {
-			if (PyDict_Check(newitem) || PyList_Check(newitem)) {
-				PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python list or dict.");
+			if (PyDict_Check(newitem) || PyList_Check(newitem) || PyTuple_Check(newitem)) {
+				PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python tuple, list or dict.");
 				return -1;
 			}
 			if (isLowerCaseUnique(self, newitem) == 0){
@@ -169,8 +169,8 @@ UniqueList_Extend(UniqueList *self, PyObject *b) {
 int
 UniqueList_Insert(UniqueList *self, Py_ssize_t where, PyObject *newitem) {
 
-	if (PyDict_Check(newitem) || PyList_Check(newitem)) {
-		PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python list or dict.");
+	if (PyDict_Check(newitem) || PyList_Check(newitem) || PyTuple_Check(newitem)) {
+		PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python tuple, list or dict.");
 		return -1;
 	}
 
@@ -217,8 +217,8 @@ UniqueList_Remove(UniqueList *self, PyObject *value) {
 int
 UniqueList_SetItem(UniqueList *self, Py_ssize_t i, PyObject *newitem) {
 
-	if (PyDict_Check(newitem) || PyList_Check(newitem)) {
-		PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python list or dict.");
+	if (PyDict_Check(newitem) || PyList_Check(newitem) || PyTuple_Check(newitem)) {
+		PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python tuple, list or dict.");
 		return -1;
 	}
 
@@ -242,8 +242,8 @@ UniqueList_SetSlice(UniqueList *self, Py_ssize_t ilow, Py_ssize_t ihigh, PyObjec
 
 	if (iter != NULL) {
 		for (newitem = PyIter_Next(iter); newitem != NULL; newitem = PyIter_Next(iter)) {
-			if (PyDict_Check(newitem) || PyList_Check(newitem)) {
-				PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python list or dict.");
+			if (PyDict_Check(newitem) || PyList_Check(newitem) || PyTuple_Check(newitem)) {
+				PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python tuple, list or dict.");
 				return -1;
 			}
 			if (isLowerCaseUnique(self, newitem) == 0) {
