@@ -243,5 +243,3 @@ Errors
 .. autoclass:: pyldap.ConnectionError
 .. autoclass:: pyldap.InvalidDN
 .. autoclass:: pyldap.ObjectClassViolation
-.. autoclass:: pyldap.NotConnected
-

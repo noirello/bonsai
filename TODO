@@ -1,4 +1,5 @@
 - Check out Windows binding and authentication methods.
 - Add more LDAP errors.
 - Add sort control.
+- Add LDIF reader and writer function.
 - Implement asyncron operations.

@@ -1,42 +1,40 @@
-import re
 import pyldap.errors
 
 class LDAPDN(object):
     """
     A class for handling valid LDAP distinguished name.
-    
+
     :param str strdn: a string representation of LDAP distinguished name.
     """
     __slots__ = ("__rdns")
 
     def __init__(self, strdn):
-        if strdn != "":    
+        if strdn != "":
             escaped_str = self.__escape_special_char(strdn)
             # Get RDN strings.
             str_rdns = escaped_str.split(',')
             self.__rdns = list(map(self.__str_rdn_to_tuple, str_rdns))
             # Validate by rebuilding the parsed string.
         else:
-            self.__rdns = [] 
-        
-        if (str(self) != strdn) and (
-            self.__escape_special_char(str(self)) != strdn):
+            self.__rdns = []
+        if str(self) != strdn and \
+        self.__escape_special_char(str(self)) != strdn:
             raise pyldap.errors.InvalidDN(strdn)
 
     def __escape_special_char(self, strdn, reverse=False):
         """ Escaping special characters."""
-        char_list = [(r'\\\\', '\\5C'), 
-                    (r'\,', '\\2C'),
-                    (r'\+', '\\2B'),
-                    (r'\"', '\\22'),
-                    (r'\<', '\\3C'),
-                    (r'\>', '\\3E'),
-                    (r'\;', '\\3B'),
-                    (r'\=', '\\3D')]
+        char_list = [(r'\\\\', '\\5C'),
+                     (r'\,', '\\2C'),
+                     (r'\+', '\\2B'),
+                     (r'\"', '\\22'),
+                     (r'\<', '\\3C'),
+                     (r'\>', '\\3E'),
+                     (r'\;', '\\3B'),
+                     (r'\=', '\\3D')]
         if reverse:
-            i,j = 1,0
+            i, j = 1, 0
         else:
-            i,j = 0,1
+            i, j = 0, 1
         if strdn:
             for pair in char_list:
                 strdn = strdn.replace(pair[i], pair[j])
@@ -62,8 +60,8 @@ class LDAPDN(object):
         return tuple(rdn)
 
     def __rdns_to_str(self, rdns):
-        """ 
-        Convert RDN tuples to string. 
+        """
+        Convert RDN tuples to string.
         Warning: the string value must be 3 depth deep!
         """
         return ','.join(
@@ -72,29 +70,32 @@ class LDAPDN(object):
 
     def __getitem__(self, idx):
         """
-        Return the string format of the relative distinguished names 
+        Return the string format of the relative distinguished names
         in the LDAPDN.
-        
+
         :param int idx: the indeces of the RDNs.
         :return: the string format of the RDNS.
         :rtype: str
         """
         if type(idx) == int:
             # Convert integer index to slice, because self.__rdns_to_str()
-            # needs an extra tuple/list to convert right. 
+            # needs an extra tuple/list to convert right.
             idx = slice(idx, idx+1)
         elif type(idx) != slice:
             raise TypeError("Indices must be integers or slices.")
         return self.__rdns_to_str(self.__rdns[idx])
-    
+
     def __get_ancestors(self):
-        """ Returns ancestor RDNs for LDAPEntry rename method. """
+        """
+        Returns ancestor RDNs for LDAPEntry rename method.
+        It is used in the LDAPEntry_rename C function.
+        """
         return self[1:]
 
     def __setitem__(self, idx, value):
-        """ 
-        Set the string format of the relative distinguished names 
-        in the LDAPDN. 
+        """
+        Set the string format of the relative distinguished names
+        in the LDAPDN.
 
         :param int idx: the indeces of the RDNs.
         :param str value: the new RDNs.
@@ -119,7 +120,7 @@ class LDAPDN(object):
         return self.__rdns_to_str(self.__rdns)
 
     def __repr__(self):
-        """ The representation of LDAPDN class. """ 
+        """ The representation of LDAPDN class. """
         return "<LDAPDN %s>" % str(self)
 
     @property

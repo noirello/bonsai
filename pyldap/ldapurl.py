@@ -4,14 +4,14 @@ from pyldap.ldapdn import LDAPDN
 
 class LDAPURL(object):
     """
-    LDAP URL object for handling LDAP connection informations, such as 
-    hostname, port, LDAP bind DN, search attributes, scope (base,sub or 
-    one) filter, and extensions. If `strurl` is None, then the default 
+    LDAP URL object for handling LDAP connection informations, such as
+    hostname, port, LDAP bind DN, search attributes, scope (base,sub or
+    one) filter, and extensions. If `strurl` is None, then the default
     url is `ldap://localhost:389`.
-    
+
     :param str strurl: string representation of a valid LDAP URL. Must \
     be started with `ldap://` or `ldaps://`.
-    
+
     :raises ValueError: if the string parameter is not a valid LDAP URL.
     """
     __slots__ = ("__hostinfo", "__searchinfo", "__extensions")
@@ -106,8 +106,8 @@ class LDAPURL(object):
     def scheme(self, value):
         """ Setter for URL scheme."""
         # It must be ldap or ldaps
-        if (type(value) == str and value.lower() == 'ldap'
-            or value.lower() == 'ldaps'):
+        if type(value) == str and value.lower() == 'ldap' \
+            or value.lower() == 'ldaps':
             self.__hostinfo[0] = value.lower()
         else:
             raise ValueError("Scheme only be 'ldap' or 'ldaps'.")
@@ -139,8 +139,8 @@ class LDAPURL(object):
     def scope(self, value):
         """ Setter for searching scope. """
         if type(value) == str:
-            if (value.lower() == "base" or value.lower() == "one"
-                or value.lower() == "sub"):
+            if value.lower() == "base" or value.lower() == "one" \
+                or value.lower() == "sub":
                 self.__searchinfo[2] = value
             else:
                 raise ValueError("""Scope must be one of these:
@@ -164,7 +164,7 @@ class LDAPURL(object):
         return self.__searchinfo[3]
 
     def get_address(self):
-        """ 
+        """
         Return the full address of the host.
         """
         return "%s://%s:%d" % tuple(self.__hostinfo)
