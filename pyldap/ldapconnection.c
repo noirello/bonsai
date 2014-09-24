@@ -8,6 +8,7 @@ static void
 LDAPConnection_dealloc(LDAPConnection* self) {
 	int i = 0;
 	Py_XDECREF(self->client);
+	Py_XDECREF(self->pending_ops);
 
 	/* Free LDAPSortKey list. */
 	if (self->sort_list !=  NULL) {
@@ -18,23 +19,24 @@ LDAPConnection_dealloc(LDAPConnection* self) {
 		free(self->sort_list);
 	}
 
-    Py_TYPE(self)->tp_free((PyObject*)self);
+	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 /*	Create a new LDAPConnection object. */
 static PyObject *
 LDAPConnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
-    LDAPConnection *self = NULL;
+	LDAPConnection *self = NULL;
 
 	self = (LDAPConnection *)type->tp_alloc(type, 0);
 	if (self != NULL) {
-        self->client = NULL;
-    	self->async = 0;
-    	self->page_size = 0;
-    	self->sort_list = NULL;
+		self->client = NULL;
+		self->pending_ops = NULL;
+		self->async = 0;
+		self->page_size = 0;
+		self->sort_list = NULL;
 	}
 
-    return (PyObject *)self;
+	return (PyObject *)self;
 }
 
 /*	Opens a connection to the LDAP server. Initializes LDAP structure.
@@ -83,7 +85,6 @@ connecting(LDAPConnection *self) {
 		rc = ldap_start_tls_s(self->ld, NULL, NULL);
 #endif
 		if (rc != LDAP_SUCCESS) {
-			//TODO Proper errors
 			PyObject *ldaperror = get_error_by_code(rc);
 			PyErr_SetString(ldaperror, ldap_err2string(rc));
 			Py_DECREF(ldaperror);
@@ -147,54 +148,88 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	PyObject *ldapclient_type = NULL;
 	PyObject *tmp = NULL;
 	PyObject *page_size = NULL, *sort_list = NULL;
-    static char *kwlist[] = {"client", "async", NULL};
+	static char *kwlist[] = {"client", "async", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O!", kwlist, &client,
-    		&PyBool_Type, &async_obj)) {
-    	return -1;
-    }
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O!", kwlist, &client,
+		&PyBool_Type, &async_obj)) {
+		return -1;
+	}
 
-    if (async_obj != NULL) self->async = PyObject_IsTrue(async_obj);
+	if (async_obj != NULL) self->async = PyObject_IsTrue(async_obj);
 
-    ldapclient_type = load_python_object("pyldap.ldapclient", "LDAPClient");
-    if (ldapclient_type == NULL ||
-    		!PyObject_IsInstance(client, ldapclient_type)) {
-    	return -1;
-    }
+	ldapclient_type = load_python_object("pyldap.ldapclient", "LDAPClient");
+	if (ldapclient_type == NULL ||
+		!PyObject_IsInstance(client, ldapclient_type)) {
+		return -1;
+	}
 	Py_DECREF(ldapclient_type);
 
-    if (client) {
-    	tmp = self->client;
-    	Py_INCREF(client);
-    	self->client = client;
-    	Py_XDECREF(tmp);
+	self->pending_ops = PyDict_New();
+	if (self->pending_ops == NULL) return -1;
 
-    	/* Get page size from the client. */
-    	page_size = PyObject_GetAttrString(self->client, "_LDAPClient__page_size");
-    	if (page_size == NULL) return -1;
-    	self->page_size = (int)PyLong_AsLong(page_size);
-    	Py_DECREF(page_size);
-    	if (PyErr_Occurred()) return -1;
+	if (client) {
+		tmp = self->client;
+		Py_INCREF(client);
+		self->client = client;
+		Py_XDECREF(tmp);
 
-    	/* Get sort list from the client. */
-    	sort_list = PyObject_GetAttrString(self->client, "_LDAPClient__sort_attrs");
-    	if (PyList_Size(sort_list) > 0) {
-    		self->sort_list = PyList2LDAPSortKeyList(sort_list);
-    		if (self->sort_list == NULL) {
-    			PyErr_BadInternalCall();
-    			return -1;
-    		}
-    	}
+		/* Get page size from the client. */
+		page_size = PyObject_GetAttrString(self->client, "_LDAPClient__page_size");
+		if (page_size == NULL) return -1;
+		self->page_size = (int)PyLong_AsLong(page_size);
+		Py_DECREF(page_size);
+		if (PyErr_Occurred()) return -1;
 
-        return connecting(self);
-    }
-    return -1;
+		/* Get sort list from the client. */
+		sort_list = PyObject_GetAttrString(self->client, "_LDAPClient__sort_attrs");
+		if (PyList_Size(sort_list) > 0) {
+			self->sort_list = PyList2LDAPSortKeyList(sort_list);
+			if (self->sort_list == NULL) {
+				PyErr_BadInternalCall();
+				return -1;
+			}
+		}
+
+		return connecting(self);
+	}
+	return -1;
 }
 
 /*	Close connection. */
 static PyObject *
 LDAPConnection_Close(LDAPConnection *self) {
 	int rc;
+	PyObject *keys = PyDict_Keys(self->pending_ops);
+	PyObject *iter, *key;
+
+	if (keys == NULL) return NULL;
+
+	iter = PyObject_GetIter(keys);
+	Py_DECREF(keys);
+	if (iter == NULL) return NULL;
+
+	for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
+		int msgid = (int)PyLong_AsLong(key);
+		/* Remove item from the dict. */
+		if (PyDict_DelItem(self->pending_ops, key) != 0) {
+			Py_DECREF(iter);
+			Py_DECREF(key);
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+		Py_DECREF(key);
+
+		/* Abandon the pending operations from the server. */
+		rc = ldap_abandon_ext(self->ld, msgid, NULL, NULL);
+		if (rc != LDAP_SUCCESS) {
+			Py_DECREF(iter);
+			PyObject *ldaperror = get_error_by_code(rc);
+			PyErr_SetString(ldaperror, ldap_err2string(rc));
+			Py_DECREF(ldaperror);
+			return NULL;
+		}
+	}
+	Py_DECREF(iter);
 
 	rc = _LDAP_unbind(self->ld);
 	if (rc != LDAP_SUCCESS) {
@@ -246,6 +281,7 @@ LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr) {
 	}
 	return 0;
 }
+
 static PyObject *
 LDAPConnection_DelEntry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	char *dnstr = NULL;
@@ -260,30 +296,17 @@ LDAPConnection_DelEntry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	return Py_None;
 }
 
-/*	LDAP search function for internal use. Returns a Python list of LDAPEntries.
-	The `basestr` is the base DN of the searching, `scope` is the search scope (BASE|ONELEVEL|SUB),
-	`filterstr` is the LDAP search filter string, `attrs` is a null-terminated string list of attributes'
-	names to get only the selected attributes. If `attrsonly` is 1 get only attributes' name without values.
-	If `firstonly` is 1, get only the first LDAP entry of the messages. The `timeout` is an integer of
-	seconds for timelimit, `sizelimit` is a limit for size.
-*/
-PyObject *
+
+int
 LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	int rc;
+	int msgid = -1;
+	char msgidstr[8];
 	int num_of_ctrls = 0;
-	LDAPMessage *res, *entry;
-	PyObject *entrylist = NULL;
-	LDAPEntry *entryobj = NULL;
 	LDAPControl *page_ctrl = NULL;
 	LDAPControl *sort_ctrl = NULL;
 	LDAPControl **server_ctrls = NULL;
-	LDAPControl **returned_ctrls = NULL;
 	LDAPSearchIter *search_iter = (LDAPSearchIter *)iterator;
-
-	entrylist = PyList_New(0);
-	if (entrylist == NULL) {
-		return PyErr_NoMemory();
-	}
 
 	/* Check the number of server controls and allocate it. */
 	if (self->page_size > 1) num_of_ctrls++;
@@ -291,7 +314,10 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	if (num_of_ctrls > 0) {
 		server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *)
 				* (num_of_ctrls + 1));
-		if (server_ctrls == NULL) return PyErr_NoMemory();
+		if (server_ctrls == NULL) {
+			PyErr_NoMemory();
+			return -1;
+		}
 		num_of_ctrls = 0;
 	}
 
@@ -301,7 +327,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 				search_iter->cookie, 0, &page_ctrl);
 		if (rc != LDAP_SUCCESS) {
 			PyErr_BadInternalCall();
-			return NULL;
+			return -1;
 		}
 		server_ctrls[num_of_ctrls++] = page_ctrl;
 		server_ctrls[num_of_ctrls] = NULL;
@@ -311,76 +337,48 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 		rc = ldap_create_sort_control(self->ld, self->sort_list, 0, &sort_ctrl);
 		if (rc != LDAP_SUCCESS) {
 			PyErr_BadInternalCall();
-			return NULL;
+			return -1;
 		}
 		server_ctrls[num_of_ctrls++] = sort_ctrl;
 		server_ctrls[num_of_ctrls] = NULL;
 	}
 
-	rc = ldap_search_ext_s(self->ld, search_iter->base,
+	rc = ldap_search_ext(self->ld, search_iter->base,
 				search_iter->scope,
 				search_iter->filter,
 				search_iter->attrs,
 				search_iter->attrsonly,
 				server_ctrls, NULL,
 				search_iter->timeout,
-				search_iter->sizelimit, &res);
+				search_iter->sizelimit, &msgid);
 
-	if (rc == LDAP_NO_SUCH_OBJECT) {
-		return entrylist;
-	}
-	if (rc != LDAP_SUCCESS  && rc != LDAP_PARTIAL_RESULTS) {
-		Py_DECREF(entrylist);
-		PyObject *ldaperror = get_error_by_code(rc);
-		PyErr_SetString(ldaperror, ldap_err2string(rc));
-		Py_DECREF(ldaperror);
-        return NULL;
+	if (rc != LDAP_SUCCESS) {
+			PyObject *ldaperror = get_error_by_code(rc);
+			PyErr_SetString(ldaperror, ldap_err2string(rc));
+			Py_DECREF(ldaperror);
+			return -1;
 	}
 
-	rc = ldap_parse_result(self->ld, res, NULL, NULL, NULL, NULL, &returned_ctrls, 0);
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-
-	if (search_iter->cookie != NULL && search_iter->cookie->bv_val != NULL) {
-    	ber_bvfree(search_iter->cookie);
-    	search_iter->cookie = NULL;
-    }
-    rc = ldap_parse_page_control(self->ld, returned_ctrls, NULL, &(search_iter->cookie));
-#else
-	rc = ldap_parse_pageresponse_control(self->ld,
-			ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL),
-			NULL, search_iter->cookie);
-#endif
-	/* Iterate over the response LDAP messages. */
-	for (entry = ldap_first_entry(self->ld, res);
-		entry != NULL;
-		entry = ldap_next_entry(self->ld, entry)) {
-		entryobj = LDAPEntry_FromLDAPMessage(entry, self);
-		if (entryobj == NULL) {
-			Py_DECREF(entrylist);
-			return NULL;
-		}
-		if ((entryobj == NULL) ||
-				(PyList_Append(entrylist, (PyObject *)entryobj)) != 0) {
-			Py_XDECREF(entryobj);
-			Py_DECREF(entrylist);
-			return PyErr_NoMemory();
-		}
-		Py_DECREF(entryobj);
+	sprintf(msgidstr, "%d", msgid);
+	if (PyDict_SetItemString(self->pending_ops, msgidstr,
+			(PyObject *)search_iter) != 0) {
+		PyErr_BadInternalCall();
+		return -1;
 	}
+
 	/* Cleanup. */
-	if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
 	if (page_ctrl != NULL) ldap_control_free(page_ctrl);
 	if (sort_ctrl != NULL) ldap_control_free(sort_ctrl);
 	if (server_ctrls != NULL) free(server_ctrls);
 
-	ldap_msgfree(res);
-	return entrylist;
+	return msgid;
 }
 
-/* Searches for LDAP entries. */
+/* Search for LDAP entries. */
 static PyObject *
 LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	int scope = -1;
+	int msgid = -1;
 	int timeout = 0, sizelimit = 0, attrsonly = 0;
 	char *basestr = NULL;
 	char *filterstr = NULL;
@@ -393,132 +391,132 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	LDAPSearchIter *search_iter = NULL;
 	static char *kwlist[] = {"base", "scope", "filter", "attrlist", "timeout", "sizelimit", "attrsonly", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OizO!iiO!", kwlist, &basedn, &scope, &filterstr,
-    		&PyList_Type, &attrlist, &timeout, &sizelimit, &PyBool_Type, &attrsonlyo)) {
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OizO!iiO!", kwlist, &basedn, &scope, &filterstr,
+			&PyList_Type, &attrlist, &timeout, &sizelimit, &PyBool_Type, &attrsonlyo)) {
 		PyErr_SetString(PyExc_AttributeError,
 				"Wrong parameters (base<str|LDAPDN>, scope<int>, filter<str>, attrlist<List>, timeout<int>, attrsonly<bool>).");
-        return NULL;
+		return NULL;
 	}
-    /* Load LDAPDN to check basedn's type.*/
-    ldapdn_type = load_python_object("pyldap.ldapdn", "LDAPDN");
-    if (ldapdn_type == NULL) return NULL;
+	/* Load LDAPDN to check basedn's type.*/
+	ldapdn_type = load_python_object("pyldap.ldapdn", "LDAPDN");
+	if (ldapdn_type == NULL) return NULL;
 
-    /* Get additional informations from the LDAP URL. */
-    url = PyObject_GetAttrString(self->client, "_LDAPClient__url");
-    if (url == NULL) return NULL;
+	/* Get additional informations from the LDAP URL. */
+	url = PyObject_GetAttrString(self->client, "_LDAPClient__url");
+	if (url == NULL) return NULL;
 
-    if (basedn != NULL &&
-    	(PyObject_IsInstance(basedn, ldapdn_type) || PyUnicode_Check(basedn))) {
-    	/* If basedn is an LDAPDN object convert to Python string.
-    	   If basedn already a string increment reference. */
-    	basedn = PyObject_Str(basedn);
-    	if (basedn == NULL) {
-    		Py_DECREF(url);
-    		Py_DECREF(ldapdn_type);
-    		return NULL;
-    	}
-    	/* Convert the basedn to char*. */
-        basestr = PyObject2char(basedn);
-        Py_DECREF(basedn);
-        basedn = NULL;
-    }
-    Py_DECREF(ldapdn_type);
-
-    if (basedn != NULL) {
-    	PyErr_SetString(PyExc_AttributeError, "Wrong parameters, `base` must be string or LDAPDN");
-    	return NULL;
-    }
-
-    search_iter = LDAPSearchIter_New(self);
-    if (search_iter == NULL) {
-    	return PyErr_NoMemory();
-    }
-
-    if (basestr == NULL) {
-    	basedn = PyObject_GetAttrString(url, "basedn");
-    	if (basedn == NULL) {
-    		Py_DECREF(search_iter);
-    	  	Py_DECREF(url);
-    		return NULL;
-    	}
-
-    	if (basedn == Py_None) {
-    		Py_DECREF(basedn);
-    		PyErr_SetString(PyExc_AttributeError, "Search base DN cannot be None.");
-    		Py_DECREF(search_iter);
-    	  	Py_DECREF(url);
-    		return NULL;
-    	} else {
-    		basestr = PyObject2char(basedn);
-    		Py_DECREF(basedn);
-    		if (basestr == NULL) {
-    		  	Py_DECREF(url);
-    		  	Py_DECREF(search_iter);
-    			return NULL;
-    		}
-    	}
-    }
-
-    if (scope == -1) {
-    	PyObject *scopeobj = PyObject_GetAttrString(url, "scope_num");
-    	if (scopeobj == NULL) {
-    	  	Py_DECREF(url);
-    	  	Py_DECREF(search_iter);
-    		return NULL;
-    	}
-
-    	if (scopeobj == Py_None) {
-    		Py_DECREF(scopeobj);
-    	  	Py_DECREF(url);
-			PyErr_SetString(PyExc_AttributeError, "Search scope cannot be None.");
+	if (basedn != NULL &&
+			(PyObject_IsInstance(basedn, ldapdn_type) || PyUnicode_Check(basedn))) {
+		/* If basedn is an LDAPDN object convert to Python string.
+		 If basedn already a string increment reference. */
+		basedn = PyObject_Str(basedn);
+		if (basedn == NULL) {
+			Py_DECREF(url);
+			Py_DECREF(ldapdn_type);
 			return NULL;
-    	} else {
-    		scope = PyLong_AsLong(scopeobj);
-			Py_DECREF(scopeobj);
-			if (scope == -1) {
-			  	Py_DECREF(url);
-			  	Py_DECREF(search_iter);
+		}
+		/* Convert the basedn to char*. */
+		basestr = PyObject2char(basedn);
+		Py_DECREF(basedn);
+		basedn = NULL;
+	}
+	Py_DECREF(ldapdn_type);
+
+	if (basedn != NULL) {
+		PyErr_SetString(PyExc_AttributeError, "Wrong parameters, `base` must be string or LDAPDN");
+		return NULL;
+	}
+
+	search_iter = LDAPSearchIter_New(self);
+	if (search_iter == NULL) {
+		return PyErr_NoMemory();
+	}
+
+	if (basestr == NULL) {
+		basedn = PyObject_GetAttrString(url, "basedn");
+		if (basedn == NULL) {
+			Py_DECREF(search_iter);
+			Py_DECREF(url);
+			return NULL;
+		}
+
+		if (basedn == Py_None) {
+			Py_DECREF(basedn);
+			PyErr_SetString(PyExc_AttributeError, "Search base DN cannot be None.");
+			Py_DECREF(search_iter);
+			Py_DECREF(url);
+			return NULL;
+		} else {
+			basestr = PyObject2char(basedn);
+			Py_DECREF(basedn);
+			if (basestr == NULL) {
+				Py_DECREF(url);
+				Py_DECREF(search_iter);
 				return NULL;
 			}
-    	}
-    }
-
-    if (filterstr == NULL) {
-    	PyObject *filter = PyObject_GetAttrString(url, "filter");
-    	if (filter == NULL) {
-    	  	Py_DECREF(url);
-    	  	Py_DECREF(search_iter);
-    		return NULL;
-    	}
-    	if (filter == Py_None) {
-    		Py_DECREF(filter);
-    	} else {
-    		filterstr = PyObject2char(filter);
-    		Py_DECREF(filter);
-    		if (filterstr == NULL) {
-    		  	Py_DECREF(url);
-    		  	Py_DECREF(search_iter);
-    			return NULL;
-    		}
-    	}
-    }
-
-    if (attrsonlyo != NULL) {
-    	attrsonly = PyObject_IsTrue(attrsonlyo);
+		}
 	}
 
-    if (attrlist == NULL) {
-    	PyObject *attr_list = PyObject_GetAttrString(url, "attributes");
-    	if (attr_list == NULL) {
-    		Py_DECREF(url);
-    		Py_DECREF(search_iter);
-    		return NULL;
-    	}
-    	attrs = PyList2StringList(attr_list);
-    	Py_DECREF(attr_list);
-    } else {
-    	attrs = PyList2StringList(attrlist);
-    }
+	if (scope == -1) {
+		PyObject *scopeobj = PyObject_GetAttrString(url, "scope_num");
+		if (scopeobj == NULL) {
+			Py_DECREF(url);
+			Py_DECREF(search_iter);
+			return NULL;
+		}
+
+		if (scopeobj == Py_None) {
+			Py_DECREF(scopeobj);
+			Py_DECREF(url);
+			PyErr_SetString(PyExc_AttributeError, "Search scope cannot be None.");
+			return NULL;
+		} else {
+			scope = PyLong_AsLong(scopeobj);
+			Py_DECREF(scopeobj);
+			if (scope == -1) {
+				Py_DECREF(url);
+				Py_DECREF(search_iter);
+				return NULL;
+			}
+		}
+	}
+
+	if (filterstr == NULL) {
+		PyObject *filter = PyObject_GetAttrString(url, "filter");
+		if (filter == NULL) {
+			Py_DECREF(url);
+			Py_DECREF(search_iter);
+			return NULL;
+		}
+		if (filter == Py_None) {
+			Py_DECREF(filter);
+		} else {
+			filterstr = PyObject2char(filter);
+			Py_DECREF(filter);
+			if (filterstr == NULL) {
+				Py_DECREF(url);
+				Py_DECREF(search_iter);
+				return NULL;
+			}
+		}
+	}
+
+	if (attrsonlyo != NULL) {
+		attrsonly = PyObject_IsTrue(attrsonlyo);
+	}
+
+	if (attrlist == NULL) {
+		PyObject *attr_list = PyObject_GetAttrString(url, "attributes");
+		if (attr_list == NULL) {
+			Py_DECREF(url);
+			Py_DECREF(search_iter);
+			return NULL;
+		}
+		attrs = PyList2StringList(attr_list);
+		Py_DECREF(attr_list);
+	} else {
+		attrs = PyList2StringList(attrlist);
+	}
 	Py_DECREF(url);
 
 	if (LDAPSearchIter_SetParams(search_iter, attrs, attrsonly, basestr,
@@ -535,15 +533,22 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
 		search_iter->cookie->bv_len = 0;
 		search_iter->cookie->bv_val = NULL;
-		/* Get the first page, and create an iterator for the next. */
-		search_iter->buffer = LDAPConnection_Searching(self,
-				(PyObject *)search_iter);
-
-		if (search_iter->buffer == NULL) return NULL;
-		return (PyObject *)search_iter;
 	}
 
-	return LDAPConnection_Searching(self, (PyObject *)search_iter);
+	msgid = LDAPConnection_Searching(self, (PyObject *)search_iter);
+	if (msgid < 0) return NULL;
+
+	if (self->async == 1) {
+		return PyLong_FromLong((long int)msgid);
+	} else {
+		PyObject *resobj = LDAPConnection_Result(self, msgid);
+		if (self->page_size < 1) {
+			PyObject *list = PySequence_List(resobj);
+			Py_XDECREF(resobj);
+			return list;
+		}
+		return resobj;
+	}
 }
 
 static PyObject *
@@ -552,6 +557,7 @@ LDAPConnection_Whoami(LDAPConnection *self) {
 	struct berval *authzid = NULL;
 
 	rc = ldap_whoami_s(self->ld, &authzid, NULL, NULL);
+
 	if (rc != LDAP_SUCCESS) {
 		PyObject *ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
@@ -568,15 +574,157 @@ LDAPConnection_Whoami(LDAPConnection *self) {
 	return PyUnicode_FromString(authzid->bv_val);
 }
 
+PyObject *
+LDAPConnection_Result(LDAPConnection *self, int msgid) {
+	int rc = -1;
+	char msgidstr[8];
+	int err = 0;
+	LDAPMessage *res, *entry;
+	LDAPControl **returned_ctrls = NULL;
+	LDAPEntry *entryobj = NULL;
+	LDAPSearchIter *search_iter = NULL;
+	struct timeval zerotime;
+
+	sprintf(msgidstr, "%d", msgid);
+
+	if (self->async == 1) {
+		zerotime.tv_sec = 0L;
+		zerotime.tv_usec = 0L;
+		rc = ldap_result(self->ld, msgid, LDAP_MSG_ALL, &zerotime, &res);
+	} else {
+		Py_BEGIN_ALLOW_THREADS
+		rc = ldap_result(self->ld, msgid, LDAP_MSG_ALL, NULL, &res);
+		Py_END_ALLOW_THREADS
+	}
+
+	switch (rc) {
+	case -1:
+		/* Error occured during the operation. */
+		/* Getting the error code from the session. */
+		ldap_get_option(self->ld, LDAP_OPT_RESULT_CODE, &err);
+		PyObject *ldaperror = get_error_by_code(err);
+		PyErr_SetString(ldaperror, ldap_err2string(err));
+		Py_DECREF(ldaperror);
+		return NULL;
+	case 0:
+		/* Timeout exceeded.*/
+		break;
+	case LDAP_RES_SEARCH_ENTRY:
+		/* Recieved one of the entries from the server. */
+		/* Only matters when ldap_result is set with LDAP_MSG_ONE. */
+		break;
+	case LDAP_RES_SEARCH_RESULT:
+		/* Get SearchIter from pending operations. */
+		search_iter = (LDAPSearchIter *)PyDict_GetItemString(self->pending_ops,
+				msgidstr);
+		Py_XINCREF(search_iter);
+		if (search_iter == NULL ||
+				PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+
+		if (search_iter->buffer == NULL) {
+			search_iter->buffer = PyList_New(0);
+			if (search_iter->buffer == NULL) return PyErr_NoMemory();
+		} else {
+			Py_DECREF(search_iter->buffer);
+			search_iter->buffer = PyList_New(0);
+		}
+		/* Iterate over the received LDAP messages. */
+		for (entry = ldap_first_entry(self->ld, res);
+			entry != NULL;
+			entry = ldap_next_entry(self->ld, entry)) {
+			entryobj = LDAPEntry_FromLDAPMessage(entry, self);
+			if (entryobj == NULL) {
+				Py_DECREF(search_iter->buffer);
+				return NULL;
+			}
+			if ((entryobj == NULL) ||
+					(PyList_Append(search_iter->buffer,
+							(PyObject *)entryobj)) != 0) {
+				Py_XDECREF(entryobj);
+				Py_DECREF(search_iter->buffer);
+				return PyErr_NoMemory();
+			}
+			Py_DECREF(entryobj);
+		}
+		/* Check for any error during the searching. */
+		rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
+				&returned_ctrls, 1);
+
+		if (err == LDAP_NO_SUCH_OBJECT) {
+			return search_iter->buffer;
+		}
+
+		if (err != LDAP_SUCCESS && err != LDAP_PARTIAL_RESULTS) {
+			PyObject *ldaperror = get_error_by_code(err);
+			PyErr_SetString(ldaperror, ldap_err2string(err));
+			Py_DECREF(ldaperror);
+			Py_DECREF(search_iter->buffer);
+			return NULL;
+		}
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+
+		if (search_iter->cookie != NULL && search_iter->cookie->bv_val != NULL) {
+			ber_bvfree(search_iter->cookie);
+			search_iter->cookie = NULL;
+		}
+		rc = ldap_parse_page_control(self->ld, returned_ctrls, NULL, &(search_iter->cookie));
+#else
+		rc = ldap_parse_pageresponse_control(self->ld,
+				ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL),
+				NULL, search_iter->cookie);
+#endif
+		/* Cleanup. */
+		if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
+
+		return (PyObject *)search_iter;
+	case LDAP_RES_EXTENDED:
+		break;
+	default:
+		rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
+				&returned_ctrls, 1);
+		if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
+			PyObject *ldaperror = get_error_by_code(err);
+			PyErr_SetString(ldaperror, ldap_err2string(err));
+			Py_DECREF(ldaperror);
+			return NULL;
+		}
+		/* Remove operations from pending_ops. */
+		if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+		Py_RETURN_TRUE;
+	}
+	Py_RETURN_NONE;
+}
+
+static PyObject *
+LDAPConnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+	int msgid = 0;
+	static char *kwlist[] = {"msgid", NULL};
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &msgid)) {
+		PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
+		return NULL;
+	}
+
+	return LDAPConnection_Result(self, msgid);
+}
+
 static PyMethodDef LDAPConnection_methods[] = {
-	{"add",	(PyCFunction)LDAPConnection_Add, METH_VARARGS,
+	{"add", (PyCFunction)LDAPConnection_Add, METH_VARARGS,
 			"Add new LDAPEntry to the LDAP server."},
 	{"close", (PyCFunction)LDAPConnection_Close, METH_NOARGS,
 			"Close connection with the LDAP Server."},
 	{"delete", (PyCFunction)LDAPConnection_DelEntry, METH_VARARGS,
 			"Delete an LDAPEntry with the given distinguished name."},
 	{"search", (PyCFunction)LDAPConnection_Search, 	METH_VARARGS | METH_KEYWORDS,
-			"Searches for LDAP entries."},
+			"Search for LDAP entries."},
+	{"get_result", (PyCFunction)LDAPConnection_result, METH_VARARGS,
+			"Poll the status of the operation associated with the given message id from LDAP server."},
 	{"whoami", (PyCFunction)LDAPConnection_Whoami, METH_NOARGS,
 			"LDAPv3 Who Am I operation."},
     {NULL, NULL, 0, NULL}  /* Sentinel */

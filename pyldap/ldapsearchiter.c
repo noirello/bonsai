@@ -10,10 +10,10 @@
 /*	Dealloc the LDAPSearchIter object. */
 static void
 LDAPSearchIter_dealloc(LDAPSearchIter* self) {
-    int i;
+	int i;
 
-    Py_XDECREF(self->buffer);
-    Py_XDECREF(self->conn);
+	Py_XDECREF(self->buffer);
+	Py_XDECREF(self->conn);
 	free(self->base);
 	free(self->filter);
 	free(self->timeout);
@@ -23,16 +23,17 @@ LDAPSearchIter_dealloc(LDAPSearchIter* self) {
 		}
 		free(self->attrs);
 	}
-    if (self->cookie != NULL) free(self->cookie);
-    Py_TYPE(self)->tp_free((PyObject*)self);
+
+	if (self->cookie != NULL) free(self->cookie);
+	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 /*	Create a new LDAPSearchIter object. */
 static PyObject *
 LDAPSearchIter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
-    LDAPSearchIter *self = NULL;
+	LDAPSearchIter *self = NULL;
 
-    //self = (LDAPSearchIter *)PyType_GenericAlloc(type, 0);
+	//self = (LDAPSearchIter *)PyType_GenericAlloc(type, 0);
 	self = (LDAPSearchIter *)type->tp_alloc(type, 0);
 
 	if (self != NULL) {
@@ -47,14 +48,15 @@ LDAPSearchIter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 		self->sizelimit = 0;
 	}
 
-    return (PyObject *)self;
+	return (PyObject *)self;
 }
 
 /*	Creates a new LDAPSearchIter object for internal use. */
 LDAPSearchIter *
 LDAPSearchIter_New(LDAPConnection *conn) {
 	LDAPSearchIter *self =
-			(LDAPSearchIter *)LDAPSearchIterType.tp_new(&LDAPSearchIterType, NULL, NULL);
+			(LDAPSearchIter *)LDAPSearchIterType.tp_new(&LDAPSearchIterType,
+					NULL, NULL);
 	if (conn != NULL && self != NULL) {
 		Py_INCREF(conn);
 		self->conn = conn;
@@ -98,14 +100,34 @@ LDAPSearchIter_SetParams(LDAPSearchIter *self, char **attrs, int attrsonly,
 	return 0;
 }
 
-PyObject*
-LDAPSearchIter_getiter(LDAPSearchIter *self) {
-    Py_INCREF(self);
-	return (PyObject*)self;
+static PyObject *
+LDAPSearchIter_AcquireNextPage(LDAPSearchIter *self) {
+	int msgid = -1;
+
+	/* If paged LDAP search is in progress. */
+	if ((self->cookie != NULL) && (self->cookie->bv_val != NULL) &&
+			(strlen(self->cookie->bv_val) > 0)) {
+		msgid = LDAPConnection_Searching(self->conn, (PyObject *)self);
+		if (msgid < 0) return NULL;
+
+		return PyLong_FromLong((long int)msgid);
+	} else {
+		ber_bvfree(self->cookie);
+		self->cookie = NULL;
+
+		Py_RETURN_NONE;
+	}
 }
 
 PyObject*
+LDAPSearchIter_getiter(LDAPSearchIter *self) {
+	Py_INCREF(self);
+	return (PyObject*)self;
+}
+
+PyObject *
 LDAPSearchIter_iternext(LDAPSearchIter *self) {
+	int msgid = 0;
 	PyObject *item = NULL;
 
 	if (Py_SIZE(self->buffer) != 0) {
@@ -124,32 +146,28 @@ LDAPSearchIter_iternext(LDAPSearchIter *self) {
 		return item;
 	} else {
 		Py_DECREF(self->buffer);
-		if ((self->cookie != NULL) && (self->cookie->bv_val != NULL) &&
-		    (strlen(self->cookie->bv_val) > 0)) {
-			/* Get the next page of the search. */
-			self->buffer = LDAPConnection_Searching(self->conn, (PyObject *)self);
+		if (self->conn->async == 0) {
+			/* In synchronous search aquire next page automatic. */
+			PyObject *msgid_obj = LDAPSearchIter_AcquireNextPage(self);
+			if (msgid_obj == NULL || msgid_obj == Py_None) return NULL;
+			msgid = (int)PyLong_AsLong(msgid_obj);
+
+			/* Parse search result which set the new list to the buffer. */
+			LDAPConnection_Result(self->conn, msgid);
+			if (PyErr_Occurred()) return NULL;
+
 			if (self->buffer == NULL) return NULL;
-			/* Get te first item...*/
-			item = PyList_GetItem(self->buffer, 0);
-			if (item == NULL) {
-				PyErr_BadInternalCall();
-				return NULL;
-			}
-			Py_INCREF(item);
-			/* Remove the first element...*/
-			if (PyList_SetSlice(self->buffer, 0, 1, NULL) != 0) {
-				PyErr_BadInternalCall();
-				return NULL;
-			}
-			return item;
-		} else {
-			ber_bvfree(self->cookie);
-			self->cookie = NULL;
-			return NULL;
+			return LDAPSearchIter_iternext(self);
 		}
 	}
 	return NULL;
 }
+
+static PyMethodDef LDAPSearchIter_methods[] = {
+	{"acquire_next_page", (PyCFunction)LDAPSearchIter_AcquireNextPage,
+			METH_NOARGS, "Get next page of paged LDAP search."},
+    {NULL, NULL, 0, NULL}  /* Sentinel */
+};
 
 PyTypeObject LDAPSearchIterType = {
     PyVarObject_HEAD_INIT(NULL, 0)
@@ -180,7 +198,7 @@ PyTypeObject LDAPSearchIterType = {
     0,                         /* tp_weaklistoffset */
     (getiterfunc)LDAPSearchIter_getiter,  /* tp_iter */
     (iternextfunc)LDAPSearchIter_iternext,/* tp_iternext */
-    0,        					/* tp_methods */
+    LDAPSearchIter_methods,   	/* tp_methods */
     0,        				   /* tp_members */
     0,                         /* tp_getset */
     0,                         /* tp_base */
@@ -190,5 +208,5 @@ PyTypeObject LDAPSearchIterType = {
     0,                         /* tp_dictoffset */
     0,							/* tp_init */
     0,                         /* tp_alloc */
-    LDAPSearchIter_new,            /* tp_new */
+    LDAPSearchIter_new,			/* tp_new */
 };

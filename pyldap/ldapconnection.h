@@ -21,6 +21,7 @@
 typedef struct {
 	PyObject_HEAD
 	PyObject *client;
+	PyObject *pending_ops;
 	LDAP *ld;
 	int async;
 	int page_size;
@@ -30,6 +31,7 @@ typedef struct {
 extern PyTypeObject LDAPConnectionType;
 
 int LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr);
-PyObject *LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator);
+int LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator);
+PyObject *LDAPConnection_Result(LDAPConnection *self, int msgid);
 
 #endif /* LDAPCONNECTION_H_ */
