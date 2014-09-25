@@ -268,23 +268,33 @@ LDAPConnection_Add(LDAPConnection *self, PyObject *args) {
 /*	Delete an entry with the `dnstr` distinguished name on the server. */
 int
 LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr) {
+	int msgid = -1;
 	int rc = LDAP_SUCCESS;
+	char msgidstr[8];
 
 	if (dnstr != NULL) {
-		rc = ldap_delete_ext_s(self->ld, dnstr, NULL, NULL);
+		rc = ldap_delete_ext(self->ld, dnstr, NULL, NULL, &msgid);
 		if (rc != LDAP_SUCCESS) {
 			PyObject *ldaperror = get_error_by_code(rc);
 			PyErr_SetString(ldaperror, ldap_err2string(rc));
 			Py_DECREF(ldaperror);
 			return -1;
 		}
+		/* Add new delete operation to the pending_ops. */
+		sprintf(msgidstr, "%d", msgid);
+		if (PyDict_SetItemString(self->pending_ops, msgidstr, Py_None) != 0) {
+			PyErr_BadInternalCall();
+			return -1;
+		}
+		return msgid;
 	}
-	return 0;
+	return -1;
 }
 
 static PyObject *
 LDAPConnection_DelEntry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	char *dnstr = NULL;
+	int msgid = -1;
 	static char *kwlist[] = {"dn", NULL};
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist, &dnstr)) {
@@ -292,10 +302,17 @@ LDAPConnection_DelEntry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 		return NULL;
 	}
 
-	if (LDAPConnection_DelEntryStringDN(self, dnstr) != 0) return NULL;
-	return Py_None;
-}
+	msgid = LDAPConnection_DelEntryStringDN(self, dnstr);
+	if (msgid < 0) return NULL;
 
+	if (self->async == 1) {
+		return PyLong_FromLong((long int)msgid);
+	} else {
+		PyObject *resobj = LDAPConnection_Result(self, msgid);
+		if (resobj == NULL || resobj != Py_True) return NULL;
+		return Py_None;
+	}
+}
 
 int
 LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
@@ -554,9 +571,10 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 static PyObject *
 LDAPConnection_Whoami(LDAPConnection *self) {
 	int rc = -1;
-	struct berval *authzid = NULL;
+	int msgid = -1;
+	char msgidstr[8];
 
-	rc = ldap_whoami_s(self->ld, &authzid, NULL, NULL);
+	rc = ldap_whoami(self->ld, NULL, NULL, &msgid);
 
 	if (rc != LDAP_SUCCESS) {
 		PyObject *ldaperror = get_error_by_code(rc);
@@ -565,13 +583,18 @@ LDAPConnection_Whoami(LDAPConnection *self) {
 		return NULL;
 	}
 
-	if (authzid == NULL) return PyUnicode_FromString("anonym");
-
-	if(authzid->bv_len == 0) {
-		authzid->bv_val = "anonym";
-		authzid->bv_len = 6;
+	sprintf(msgidstr, "%d", msgid);
+	if (PyDict_SetItemString(self->pending_ops, msgidstr, Py_None) != 0) {
+		PyErr_BadInternalCall();
+		return NULL;
 	}
-	return PyUnicode_FromString(authzid->bv_val);
+
+	if (self->async == 1) {
+		return PyLong_FromLong((long int)msgid);
+	} else {
+		PyObject *resobj = LDAPConnection_Result(self, msgid);
+		return resobj;
+	}
 }
 
 PyObject *
@@ -584,6 +607,8 @@ LDAPConnection_Result(LDAPConnection *self, int msgid) {
 	LDAPEntry *entryobj = NULL;
 	LDAPSearchIter *search_iter = NULL;
 	struct timeval zerotime;
+	struct berval *authzid = NULL;
+	char *retoid = NULL;
 
 	sprintf(msgidstr, "%d", msgid);
 
@@ -681,6 +706,25 @@ LDAPConnection_Result(LDAPConnection *self, int msgid) {
 
 		return (PyObject *)search_iter;
 	case LDAP_RES_EXTENDED:
+		rc = ldap_parse_extended_result(self->ld, res, &retoid, &authzid, 1);
+
+		if( rc != LDAP_SUCCESS ) {
+			PyObject *ldaperror = get_error_by_code(err);
+			PyErr_SetString(ldaperror, ldap_err2string(err));
+			Py_DECREF(ldaperror);
+			return NULL;
+		}
+		/* LDAP Who Am I operation. */
+		if (strcmp(retoid, "1.3.6.1.4.1.4203.1.11.3") == 0) {
+			if (authzid == NULL) return PyUnicode_FromString("anonym");
+
+			if(authzid->bv_len == 0) {
+				authzid->bv_val = "anonym";
+				authzid->bv_len = 6;
+			}
+			ber_memfree(retoid);
+			return PyUnicode_FromString(authzid->bv_val);
+		}
 		break;
 	default:
 		rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,

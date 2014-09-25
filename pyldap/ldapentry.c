@@ -326,6 +326,8 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 PyObject *
 LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	int rc = -1;
+	int msgid = -1;
+	char msgidstr[8];
 	char *dnstr = NULL;
 	LDAPMod **mods = NULL;
 
@@ -343,9 +345,9 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	}
 
 	if (mod == 0) {
-		rc = ldap_add_ext_s(self->conn->ld, dnstr, mods, NULL, NULL);
+		rc = ldap_add_ext(self->conn->ld, dnstr, mods, NULL, NULL, &msgid);
 	} else {
-		rc = ldap_modify_ext_s(self->conn->ld, dnstr, mods, NULL, NULL);
+		rc = ldap_modify_ext(self->conn->ld, dnstr, mods, NULL, NULL, &msgid);
 	}
 
 	if (rc != LDAP_SUCCESS) {
@@ -359,7 +361,20 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	free(dnstr);
 	LDAPEntry_DismissLDAPMods(self, mods, 0);
 
-	return Py_None;
+	/* Add new add or modify operation to the pending_ops. */
+	sprintf(msgidstr, "%d", msgid);
+	if (PyDict_SetItemString(self->conn->pending_ops, msgidstr,
+			Py_None) != 0) {
+		PyErr_BadInternalCall();
+		return NULL;
+	}
+	if (self->conn->async == 1) {
+		return PyLong_FromLong((long int)msgid);
+	} else {
+		PyObject *resobj = LDAPConnection_Result(self->conn, msgid);
+		if (resobj == NULL || resobj != Py_True) return NULL;
+		return Py_None;
+	}
 }
 
 /* Remove all item from LDAPEntry. */
@@ -389,6 +404,7 @@ LDAPEntry_clearitems(LDAPEntry *self) {
    change all LDAPValueList status to replaced (2) */
 static PyObject *
 LDAPEntry_delete(LDAPEntry *self) {
+	int msgid = -1;
 	char *dnstr;
 	PyObject *keys = PyMapping_Keys((PyObject *)self);
 	PyObject *iter, *key;
@@ -403,7 +419,8 @@ LDAPEntry_delete(LDAPEntry *self) {
 	/* Get DN string. */
 	dnstr = PyObject2char(self->dn);
 	if (dnstr == NULL) return NULL;
-	if (LDAPConnection_DelEntryStringDN(self->conn, dnstr) != 0) return NULL;
+	msgid = LDAPConnection_DelEntryStringDN(self->conn, dnstr);
+	if (msgid < 0) return NULL;
 
 	if (keys == NULL) return NULL;
 
@@ -423,7 +440,13 @@ LDAPEntry_delete(LDAPEntry *self) {
 	}
 	Py_DECREF(iter);
 
-	return Py_None;
+	if (self->conn->async == 1) {
+		return PyLong_FromLong((long int)msgid);
+	} else {
+		PyObject *resobj = LDAPConnection_Result(self->conn, msgid);
+		if (resobj == NULL || resobj != Py_True) return NULL;
+		return Py_None;
+	}
 }
 
 /* Has the same functionality like dict.get(),
