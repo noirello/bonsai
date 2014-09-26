@@ -758,17 +758,41 @@ LDAPConnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	return LDAPConnection_Result(self, msgid);
 }
 
+static PyObject *
+LDAPConnection_cancel(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+	int msgid = -1;
+	int rc = 0;
+	static char *kwlist[] = {"msgid", NULL};
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &msgid)) {
+		PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
+		return NULL;
+	}
+
+	ldap_abandon_ext(self->ld, msgid, NULL, NULL);
+	if (rc != LDAP_SUCCESS) {
+		PyObject *ldaperror = get_error_by_code(rc);
+		PyErr_SetString(ldaperror, ldap_err2string(rc));
+		Py_DECREF(ldaperror);
+		return NULL;
+	}
+
+	return Py_None;
+}
+
 static PyMethodDef LDAPConnection_methods[] = {
 	{"add", (PyCFunction)LDAPConnection_Add, METH_VARARGS,
 			"Add new LDAPEntry to the LDAP server."},
+	{"cancel", (PyCFunction)LDAPConnection_cancel, METH_VARARGS,
+			"Cancel ongoing operations associated with the given message id."},
 	{"close", (PyCFunction)LDAPConnection_Close, METH_NOARGS,
 			"Close connection with the LDAP Server."},
 	{"delete", (PyCFunction)LDAPConnection_DelEntry, METH_VARARGS,
 			"Delete an LDAPEntry with the given distinguished name."},
-	{"search", (PyCFunction)LDAPConnection_Search, 	METH_VARARGS | METH_KEYWORDS,
-			"Search for LDAP entries."},
 	{"get_result", (PyCFunction)LDAPConnection_result, METH_VARARGS,
 			"Poll the status of the operation associated with the given message id from LDAP server."},
+	{"search", (PyCFunction)LDAPConnection_Search, 	METH_VARARGS | METH_KEYWORDS,
+			"Search for LDAP entries."},
 	{"whoami", (PyCFunction)LDAPConnection_Whoami, METH_NOARGS,
 			"LDAPv3 Who Am I operation."},
     {NULL, NULL, 0, NULL}  /* Sentinel */

@@ -368,6 +368,7 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 		PyErr_BadInternalCall();
 		return NULL;
 	}
+
 	if (self->conn->async == 1) {
 		return PyLong_FromLong((long int)msgid);
 	} else {
@@ -582,6 +583,8 @@ LDAPEntry_getDN(LDAPEntry *self, void *closure) {
 static PyObject *
 LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	int rc;
+	int msgid = -1;
+	char msgidstr[8];
 	char *newparent_str, *newrdn_str, *olddn_str;
 	PyObject *newdn, *newparent, *newrdn;
 	PyObject *tmp;
@@ -617,7 +620,7 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	Py_DECREF(newrdn);
 	Py_DECREF(newparent);
 
-	rc = ldap_rename_s(self->conn->ld, olddn_str, newrdn_str, newparent_str, 1, NULL, NULL);
+	rc = ldap_rename(self->conn->ld, olddn_str, newrdn_str, newparent_str, 1, NULL, NULL, &msgid);
 	if (rc != LDAP_SUCCESS) {
 		PyObject *ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
@@ -630,7 +633,22 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	free(olddn_str);
 	free(newrdn_str);
 	free(newparent_str);
-	return Py_None;
+
+	/* Add new rename operation to the pending_ops. */
+	sprintf(msgidstr, "%d", msgid);
+	if (PyDict_SetItemString(self->conn->pending_ops, msgidstr,
+			Py_None) != 0) {
+		PyErr_BadInternalCall();
+		return NULL;
+	}
+
+	if (self->conn->async == 1) {
+		return PyLong_FromLong((long int)msgid);
+	} else {
+		PyObject *resobj = LDAPConnection_Result(self->conn, msgid);
+		if (resobj == NULL || resobj != Py_True) return NULL;
+		return Py_None;
+	}
 }
 
 /*	Updating LDAPEntry. Pretty much same as PyDict_Update function's codebase. */
