@@ -16,7 +16,11 @@ class ObjectClassViolation(LDAPError):
 
 class AlreadyExists(LDAPError):
     """Raised, when try to add an entry and it already exists in the
-    dictionary"""
+    dictionary. """
+
+class InvalidMessageID(LDAPError):
+    """Raised, when try to get the result with a message ID that belongs to an
+    unpending or already finished operation."""
 
 def __get_error(code):
     """ Return an error by code number. """
@@ -30,5 +34,7 @@ def __get_error(code):
         return ObjectClassViolation
     elif code == 0x44:
         return AlreadyExists
+    elif code == -10:
+        return InvalidMessageID
     else:
         return LDAPError

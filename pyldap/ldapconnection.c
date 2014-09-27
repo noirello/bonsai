@@ -649,6 +649,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid) {
 			return NULL;
 		}
 
+		/* Set a new empty list for buffer. */
 		if (search_iter->buffer == NULL) {
 			search_iter->buffer = PyList_New(0);
 			if (search_iter->buffer == NULL) return PyErr_NoMemory();
@@ -656,6 +657,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid) {
 			Py_DECREF(search_iter->buffer);
 			search_iter->buffer = PyList_New(0);
 		}
+
 		/* Iterate over the received LDAP messages. */
 		for (entry = ldap_first_entry(self->ld, res);
 			entry != NULL;
@@ -748,19 +750,41 @@ LDAPConnection_Result(LDAPConnection *self, int msgid) {
 static PyObject *
 LDAPConnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	int msgid = 0;
+	char msgidstr[8];
+	PyObject *msgid_obj = NULL;
+	PyObject *res = NULL;
+	PyObject *keys = PyDict_Keys(self->pending_ops);
+
 	static char *kwlist[] = {"msgid", NULL};
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &msgid)) {
-		PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
+		PyErr_SetString(PyExc_AttributeError, "Wrong message id parameter.");
 		return NULL;
 	}
 
-	return LDAPConnection_Result(self, msgid);
+	sprintf(msgidstr, "%d", msgid);
+	msgid_obj = PyUnicode_FromString(msgidstr);
+	if (keys == NULL || msgid_obj == NULL) return NULL;
+
+	if (PySequence_Contains(keys, msgid_obj) < 1)  {
+		PyObject *ldaperror = get_error_by_code(-10);
+		PyErr_SetString(ldaperror, "Given message ID is invalid or the"
+				" associated operation is already finished.");
+		Py_DECREF(ldaperror);
+		res = NULL;
+	} else {
+		res = LDAPConnection_Result(self, msgid);
+	}
+
+	Py_DECREF(keys);
+	Py_DECREF(msgid_obj);
+	return res;
 }
 
 static PyObject *
 LDAPConnection_cancel(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	int msgid = -1;
+	char msgidstr[8];
 	int rc = 0;
 	static char *kwlist[] = {"msgid", NULL};
 
@@ -774,6 +798,13 @@ LDAPConnection_cancel(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 		PyObject *ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
+		return NULL;
+	}
+
+	/* Remove message id from the pending_ops. */
+	sprintf(msgidstr, "%d", msgid);
+	if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
+		PyErr_BadInternalCall();
 		return NULL;
 	}
 

@@ -130,6 +130,8 @@ LDAPSearchIter_iternext(LDAPSearchIter *self) {
 	int msgid = 0;
 	PyObject *item = NULL;
 
+	if (self->buffer == NULL) return NULL;
+
 	if (Py_SIZE(self->buffer) != 0) {
 		/* Get first element from the buffer list. (Borrowed ref.)*/
 		item = PyList_GetItem(self->buffer, 0);
@@ -146,6 +148,7 @@ LDAPSearchIter_iternext(LDAPSearchIter *self) {
 		return item;
 	} else {
 		Py_DECREF(self->buffer);
+		self->buffer = NULL;
 		if (self->conn->async == 0) {
 			/* In synchronous search aquire next page automatic. */
 			PyObject *msgid_obj = LDAPSearchIter_AcquireNextPage(self);
