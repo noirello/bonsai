@@ -19,7 +19,8 @@ class LDAPURL(object):
     def __init__(self, strurl=None):
         """ init method. """
         self.__hostinfo = ['ldap', 'localhost', 389]
-        self.__searchinfo = [None, None, None, None]
+        # Default values to the search parameters.
+        self.__searchinfo = ["", [], "", ""]
         self.__extensions = None
         if strurl:
             self.__str2url(strurl)
@@ -157,6 +158,8 @@ class LDAPURL(object):
             return 1
         if self.scope == "sub":
             return 2
+        else:
+            return -1
 
     @property
     def filter(self):
@@ -173,21 +176,14 @@ class LDAPURL(object):
         """ Returns the full format of LDAP URL. """
         strurl = self.get_address()
         strattrs = ""
-        strdn = ""
-        strscope = ""
-        strfilter = ""
         strexts = ""
-        if self.__searchinfo[0]:
-            strdn = str(self.__searchinfo[0])
         if self.__searchinfo[1]:
             strattrs = ",".join(self.__searchinfo[1])
-        if self.__searchinfo[2]:
-            strscope = self.__searchinfo[2]
-        if self.__searchinfo[3]:
-            strfilter = self.__searchinfo[3]
         if self.__extensions:
             strexts = ",".join(self.__extensions)
-        strbind = "?".join((strdn, strattrs, strscope, strfilter, strexts))
+        strbind = "?".join((str(self.__searchinfo[0]), strattrs,
+                            self.__searchinfo[2], self.__searchinfo[3],
+                            strexts))
         # Remove unneccesary question marks at the end of the string.
         while strbind[-1] == '?':
             strbind = strbind[:-1]

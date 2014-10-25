@@ -7,6 +7,7 @@
 from pyldap import LDAPConnection
 
 from pyldap.ldapurl import LDAPURL
+from _ast import Index
 
 class LDAPClient:
     """
@@ -161,10 +162,17 @@ credential information: (username, password, realm).""")
                  "supportedControl", "supportedSASLMechanisms",
                  "supportedLDAPVersion"]
         conn = LDAPConnection(self, False)
-        # Convert to list to avoid possible LDAPSearchIter object. 
-        root_dse = list(conn.search("", 0, "(objectclass=*)", attrs, 0, False))[0]
+        try:
+            # Convert to list to avoid possible LDAPSearchIter object. 
+            root_dse = list(conn.search("", 0, "(objectclass=*)", attrs, 0, False))[0]
+        except IndexError:
+            return None
         conn.close()
         return root_dse
+    
+    @property
+    def url(self):
+        return self.__url;
 
     def connect(self, async=False):
         """

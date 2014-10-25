@@ -30,10 +30,10 @@ PyInit__cpyldap(void) {
     if (m == NULL) return NULL;
 
     Py_INCREF(&LDAPEntryType);
-    PyModule_AddObject(m, "LDAPEntry", (PyObject *)&LDAPEntryType);
+    PyModule_AddObject(m, "_LDAPEntry", (PyObject *)&LDAPEntryType);
 
     Py_INCREF(&LDAPConnectionType);
-    PyModule_AddObject(m, "LDAPConnection", (PyObject *)&LDAPConnectionType);
+    PyModule_AddObject(m, "_LDAPConnection", (PyObject *)&LDAPConnectionType);
 
     Py_INCREF(&LDAPValueListType);
     PyModule_AddObject(m, "LDAPValueList", (PyObject *)&LDAPValueListType);

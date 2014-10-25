@@ -26,7 +26,7 @@ with open('README.md') as file:
     long_descr = file.read()
 
 setup(name="pyldap",
-      version="0.6.0",
+      version="0.7.0",
       description = "Module for Python 3 to access LDAP directory servers.",
       author = "noirello",
       author_email = "noirello@gmail.com",

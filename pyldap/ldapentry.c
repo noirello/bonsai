@@ -83,13 +83,13 @@ LDAPEntry_init(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 
 	if (LDAPEntry_SetStringDN(self, dnstr) != 0) return -1;
 
-	if (conn != NULL && PyObject_IsInstance(conn, (PyObject *)&LDAPConnectionType) != 1) {
+	if (conn != NULL && conn != Py_None && PyObject_IsInstance(conn, (PyObject *)&LDAPConnectionType) != 1) {
 		PyErr_SetString(PyExc_TypeError, "Connection must be an LDAPConnection type.");
 		return -1;
 	}
 
 	/* Just like in the Python doc example. */
-	if (conn) {
+	if (conn && conn != Py_None) {
 		tmp = (PyObject *)self->conn;
 		Py_INCREF(conn);
 		self->conn = (LDAPConnection *)conn;
@@ -369,13 +369,7 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 		return NULL;
 	}
 
-	if (self->conn->async == 1) {
-		return PyLong_FromLong((long int)msgid);
-	} else {
-		PyObject *resobj = LDAPConnection_Result(self->conn, msgid);
-		if (resobj == NULL || resobj != Py_True) return NULL;
-		return Py_None;
-	}
+	return PyLong_FromLong((long int)msgid);
 }
 
 /* Remove all item from LDAPEntry. */
@@ -420,6 +414,8 @@ LDAPEntry_delete(LDAPEntry *self) {
 	/* Get DN string. */
 	dnstr = PyObject2char(self->dn);
 	if (dnstr == NULL) return NULL;
+
+	/* Remove the entry. */
 	msgid = LDAPConnection_DelEntryStringDN(self->conn, dnstr);
 	if (msgid < 0) return NULL;
 
@@ -429,6 +425,8 @@ LDAPEntry_delete(LDAPEntry *self) {
 	Py_DECREF(keys);
 	if (iter == NULL) return NULL;
 
+	/* The values are kept locally, thus their
+	    statuses have to change to replaced . */
 	for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
 		/* Return value: Borrowed reference. */
 		value = (LDAPValueList *)LDAPEntry_GetItem(self, key);
@@ -441,13 +439,7 @@ LDAPEntry_delete(LDAPEntry *self) {
 	}
 	Py_DECREF(iter);
 
-	if (self->conn->async == 1) {
-		return PyLong_FromLong((long int)msgid);
-	} else {
-		PyObject *resobj = LDAPConnection_Result(self->conn, msgid);
-		if (resobj == NULL || resobj != Py_True) return NULL;
-		return Py_None;
-	}
+	return PyLong_FromLong((long int)msgid);
 }
 
 /* Has the same functionality like dict.get(),
@@ -642,13 +634,7 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 		return NULL;
 	}
 
-	if (self->conn->async == 1) {
-		return PyLong_FromLong((long int)msgid);
-	} else {
-		PyObject *resobj = LDAPConnection_Result(self->conn, msgid);
-		if (resobj == NULL || resobj != Py_True) return NULL;
-		return Py_None;
-	}
+	return PyLong_FromLong((long int)msgid);
 }
 
 /*	Updating LDAPEntry. Pretty much same as PyDict_Update function's codebase. */
@@ -1011,7 +997,7 @@ static PyGetSetDef LDAPEntry_getsetters[] = {
 
 PyTypeObject LDAPEntryType = {
     PyObject_HEAD_INIT(NULL)
-    "pyldap.LDAPEntry",      /* tp_name */
+    "pyldap._LDAPEntry",      /* tp_name */
     sizeof(LDAPEntry),       /* tp_basicsize */
     0,                       /* tp_itemsize */
     (destructor)LDAPEntry_dealloc,       /* tp_dealloc */

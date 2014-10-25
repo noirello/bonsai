@@ -35,7 +35,7 @@ following command to compile and install the package::
 Install from source on Windows
 ------------------------------
 
-PyLDAP uses WinLDAP on Microsoft Windows. To install it form sources you will
+PyLDAP uses WinLDAP on Microsoft Windows. To install it from sources you will
 need a C compiler and the PyLDAP source files. After you downloaded and 
 unpackaged the sources, you can run::
     

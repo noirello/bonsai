@@ -6,7 +6,7 @@ from pyldap import LDAPEntry
 import pyldap.errors
 
 class LDAPEntryTest(unittest.TestCase):
-    """ Testing LDAPEntr object. """
+    """ Testing LDAPEntry object. """
     def setUp(self):
         """ Set LDAP connection and test entry. """
         cfg = configparser.ConfigParser()
