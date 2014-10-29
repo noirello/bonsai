@@ -5,23 +5,10 @@ class LDAPEntry(_LDAPEntry):
         super().__init__(str(dn), conn)
         
     def modify(self):
-        msg_id = super().modify()
-        if self.connection.async:
-            return self.connection._poll(msg_id)
-        else:
-            return self.connection.get_result(msg_id, True)
+        return self.connection._result(super().modify())
     
     def delete(self):
-        msg_id = super().delete()
-        if self.connection.async:
-            return self.connection._poll(msg_id)
-        else:
-            return self.connection.get_result(msg_id, True)
+        return self.connection._result(super().delete())
         
     def rename(self, newdn):
-        msg_id = super().rename(newdn)
-        if self.connection.async:
-            return self.connection._poll(msg_id)
-        else:
-            return self.connection.get_result(msg_id, True)
-    
+        return self.connection._result(super().rename(newdn))

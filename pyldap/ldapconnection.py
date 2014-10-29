@@ -19,15 +19,7 @@ class LDAPConnection(_LDAPConnection):
                 return result
             yield
             
-    def add(self, entry):
-        msg_id = super().add(entry)
-        if self.__async:
-            return self._poll(msg_id)
-        else:
-            return self.get_result(msg_id, True)
-        
-    def delete(self, dnstr):
-        msg_id = super().delete(dnstr)
+    def _result(self, msg_id):
         if self.__async:
             return self._poll(msg_id)
         else:
@@ -36,6 +28,12 @@ class LDAPConnection(_LDAPConnection):
     @property
     def async(self):
         return self.__async    
+    
+    def add(self, entry):
+        return self._result(super().add(entry))
+        
+    def delete(self, dnstr):
+        return self._result(super().delete(dnstr))
     
     def search(self,  base=None, scope=None, filter=None, attrlist=None,
                timeout=0, sizelimit=0, attrsonly=False):
@@ -61,8 +59,4 @@ class LDAPConnection(_LDAPConnection):
             res = self.get_result(msg_id, True)
         
     def whoami(self):
-        msg_id = super().whoami()
-        if self.__async:
-            return self._poll(msg_id)
-        else:
-            return self.get_result(msg_id, True)
+        return self._result(super().whoami())

@@ -13,7 +13,7 @@ class LDAPDN(object):
             escaped_str = self.__escape_special_char(strdn)
             # Get RDN strings.
             str_rdns = escaped_str.split(',')
-            self.__rdns = list(map(self.__str_rdn_to_tuple, str_rdns))
+            self.__rdns = [self.__str_rdn_to_tuple(rdn) for rdn in str_rdns]
             # Validate by rebuilding the parsed string.
         else:
             self.__rdns = []
@@ -67,7 +67,7 @@ class LDAPDN(object):
         return ','.join(
             map(lambda attr: "+".join(
                 map(lambda type_value: "=".join(type_value), attr)), rdns))
-
+        
     def __getitem__(self, idx):
         """
         Return the string format of the relative distinguished names
@@ -108,7 +108,7 @@ class LDAPDN(object):
             raise TypeError("Indices must be integers or slices.")
         escaped_str = self.__escape_special_char(value)
         str_rdns = escaped_str.split(',')
-        rdns = list(map(self.__str_rdn_to_tuple, str_rdns))
+        rdns = [self.__str_rdn_to_tuple(rdn) for rdn in str_rdns]
         self.__rdns[idx] = rdns
 
     def __eq__(self, other):
