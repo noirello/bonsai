@@ -22,6 +22,9 @@ class InvalidMessageID(LDAPError):
     """Raised, when try to get the result with a message ID that belongs to an
     unpending or already finished operation."""
 
+class ClosedConnection(LDAPError):
+    """Raised, when try to perform LDAP operation with closed connection."""
+
 def __get_error(code):
     """ Return an error by code number. """
     if code == -1:
@@ -36,5 +39,7 @@ def __get_error(code):
         return AlreadyExists
     elif code == -10:
         return InvalidMessageID
+    elif code == -11:
+        return ClosedConnection
     else:
         return LDAPError

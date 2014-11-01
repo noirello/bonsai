@@ -7,15 +7,14 @@ PyLDAP's documentation
 ======================
 
 PyLDAP is an LDAP module for Python 3, using OpenLDAP's libldap2 library on Linux, and the WinLDAP 
-library on Microsoft Windows to handle communictaions with LDAP capable directory servers. 
+library on Microsoft Windows to handle communications with LDAP capable directory servers.
 The module main goal is to give a simple way to use the LDAP protocol as pythonic as it can be.
 
 .. warning::
-   The module is under development. Only blocking operations are implemented yet, and the module's 
-   architecture could change significantly.
+   The module is under development, therefore the module's architecture could change significantly.
    
 .. note::
-   There is no support for Python 2.7.6 or older releases.
+   The module compatibles with Python 3.3 or newer releases. There is no support for Python 2.7.6 or older releases.
 
 Contents:
 
@@ -28,7 +27,7 @@ Contents:
    
 Contribution
 ============
-Any contribution is welcome. If you would like to help in development 
+Any contributions are welcome. If you would like to help in development
 fork or report issue on the project's `github site`_. 
 You can also help in improving the documentation. My English is far from perfect, so if you find 
 any grammatically incorrect sentence, please report to me (with suggestion).   

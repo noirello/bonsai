@@ -411,6 +411,9 @@ LDAPEntry_delete(LDAPEntry *self) {
 		return NULL;
 	}
 
+	/* Connection must be open. */
+	if (LDAPConnection_IsClosed(self->conn) != 0) return NULL;
+
 	/* Get DN string. */
 	dnstr = PyObject2char(self->dn);
 	if (dnstr == NULL) return NULL;
@@ -467,6 +470,9 @@ LDAPEntry_modify(LDAPEntry *self) {
 		PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
 		return NULL;
 	}
+
+	/* Connection must be open. */
+	if (LDAPConnection_IsClosed(self->conn) != 0) return NULL;
 
 	return LDAPEntry_AddOrModify(self, 1);
 }
@@ -587,6 +593,9 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 		PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
 		return NULL;
 	}
+
+	/* Connection must be open. */
+	if (LDAPConnection_IsClosed(self->conn) != 0) return NULL;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &newdn)) {
 		PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
@@ -959,7 +968,7 @@ LDAPEntry_setConnection(LDAPEntry *self, PyObject *value, void *closure) {
 
 
     if (!PyObject_IsInstance(value, (PyObject *)&LDAPConnectionType)) {
-        PyErr_SetString(PyExc_TypeError, "The connection attribute value must be a LDAPConnection.");
+        PyErr_SetString(PyExc_TypeError, "The connection attribute value must be an LDAPConnection.");
         return -1;
     }
 
@@ -972,7 +981,8 @@ LDAPEntry_setConnection(LDAPEntry *self, PyObject *value, void *closure) {
 static PyObject *
 LDAPEntry_getConnection(LDAPEntry *self, void *closure) {
 	if (self->conn == NULL) {
-		return Py_None;
+		PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
+		return NULL;
 	}
     Py_INCREF(self->conn);
     return (PyObject *)self->conn;

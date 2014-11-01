@@ -1,4 +1,3 @@
-#from pyldap._cpyldap import LDAPEntry
 from pyldap.ldapdn import LDAPDN
 from pyldap.ldapurl import LDAPURL
 from pyldap.ldapconnection import LDAPConnection

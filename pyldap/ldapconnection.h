@@ -24,11 +24,13 @@ typedef struct {
 	PyObject *pending_ops;
 	LDAP *ld;
 	int page_size;
+	int closed;
 	LDAPSortKey **sort_list;
 } LDAPConnection;
 
 extern PyTypeObject LDAPConnectionType;
 
+int LDAPConnection_IsClosed(LDAPConnection *self);
 int LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr);
 int LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator);
 

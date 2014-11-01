@@ -2,41 +2,71 @@ from pyldap._cpyldap import _LDAPConnection
 
 class LDAPConnection(_LDAPConnection):
     def __init__(self,  client, async=False):
-        super().__init__(client)
         self.__client = client
         self.__async = async
-        
+        self.__page_size = 0
+        super().__init__(client)
+
     def __enter__(self):
+        """ Context manager entry point. """
         return self
-    
+
     def __exit__(self, *exc):
+        """ Context manager exit point. """
         self.close()
-        
+
     def _poll(self, msg_id):
+        """
+        Generator function to poll the result of an LDAP operation.
+
+        :param int msg_id: the ID of the LDAP operation.
+        :return: the result of the operation.
+        :rtype: list, bool or iterator, depending on the operation.
+         """
         while True:
             result = self.get_result(msg_id)
             if result is not None:
                 return result
             yield
-            
+
     def _result(self, msg_id):
+        """
+        Depending on the connection's type (asynchronous or synchronous),
+        it returns a generator object or the result of the LDAP operation.
+
+        :param int msg_id: the ID of the LDAP operation.
+        :return: generator if the connection async, otherwise the result of the operation.
+        """
         if self.__async:
             return self._poll(msg_id)
         else:
             return self.get_result(msg_id, True)
-    
-    @property
-    def async(self):
-        return self.__async    
-    
+
     def add(self, entry):
+        """
+        Add new entry to the directory server.
+
+        :param LDAPEntry entry: the new entry.
+        :return: True, if the operation is finished.
+        :rtype: bool
+        """
         return self._result(super().add(entry))
-        
+
     def delete(self, dnstr):
+        """
+        Remove entry from the directory server.
+
+        :param str dnstr: the string format of the entry's DN.
+        :return: True, if the operation is finished.
+        :rtype: bool
+        """
         return self._result(super().delete(dnstr))
-    
+
     def search(self,  base=None, scope=None, filter=None, attrlist=None,
                timeout=0, sizelimit=0, attrsonly=False):
+        # Documentation in the docs/api.rst with detailed examples.
+        # Load values from the LDAPURL, if it is not present on the
+        # parameter list.
         _base = str(base) if base is not None else str(self.__client.url.basedn)
         _scope = scope if scope is not None else self.__client.url.scope_num
         _filter = filter if filter is not None else self.__client.url.filter
@@ -46,10 +76,25 @@ class LDAPConnection(_LDAPConnection):
         if self.__async:
             return self._poll(msg_id)
         else:
-            if self.__client._LDAPClient__page_size > 1:
+            if self.__page_size > 1:
                 return self.__paged_search(self.get_result(msg_id, True))
             return list(self.get_result(msg_id, True))
         
+    def set_page_size(self, page_size):
+        """
+        Set how many entry will be on a page of a search result. Setting the
+        page size will affect the search to use LDAP paged results.
+        :meth:`LDAPConnection.search` will return an iterator instead of a
+        list of entries.
+
+        :param int page_size:
+        :raises ValueError: if the parameter is not an integer, or lesser \
+        than 2.
+        """
+        if type(page_size) != int or page_size < 2:
+            raise ValueError("The page_size parameter must be an integer greater, than 1.")
+        self.__page_size = page_size
+
     def __paged_search(self, res):
         while True:
             yield from res
@@ -57,6 +102,13 @@ class LDAPConnection(_LDAPConnection):
             if msg_id is None:
                 break
             res = self.get_result(msg_id, True)
-        
+
     def whoami(self):
+        """
+        This method can be used to obtain authorization identity.
+
+        :return: the authorization ID.
+        :rtype: str
+         """
         return self._result(super().whoami())
+

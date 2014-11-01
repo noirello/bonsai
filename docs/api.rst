@@ -5,14 +5,10 @@ API documentation
 
 :class:`LDAPClient`
 -------------------
-LDAPClient class is for configuring the connection to the directory server. 
+LDAPClient class is for configuring the connection to the directory server.
 
 .. autoclass:: LDAPClient
 .. automethod:: LDAPClient.connect
-
-.. warning::
-   Asynchronous connection is not supported at the moment.
-
 .. automethod:: LDAPClient.get_rootDSE
 
    An example of getting the root DSE:
@@ -22,7 +18,7 @@ LDAPClient class is for configuring the connection to the directory server.
    {'namingContexts': ['dc=local'], 'supportedControl': ['2.16.840.1.113730.3.4.18', 
    '2.16.840.1.113730.3.4.2', '1.3.6.1.4.1.4203.1.10.1', '1.2.840.113556.1.4.319', 
    '1.2.826.0.1.3344810.2.3', '1.3.6.1.1.13.2', '1.3.6.1.1.13.1', '1.3.6.1.1.12'], 
-   'supportedLDAPVersion': ['3'], 'supportedExtension': ['1.3.6.1.4.1.1466.20037', 
+   'supportedLDAPVersion': ['3'], 'supportedExtension': ['1.3.6.1.4.1.1466.20037',
    '1.3.6.1.4.1.4203.1.11.1', '1.3.6.1.4.1.4203.1.11.3', '1.3.6.1.1.8'], 
    'supportedSASLMechanisms': ['DIGEST-MD5', 'NTLM', 'CRAM-MD5']}
 
@@ -47,27 +43,17 @@ LDAPClient class is for configuring the connection to the directory server.
    >>> conn = client.connect()
    >>> conn.search("cn=jeff,ou=nerdherd,dc=local", 0, attrlist=['cn', 'sn', 'gn'])
    [{'givenName': ['Jeff'], 'sn': [b'Barnes'], 'cn': [b'jeff']}]         
-
-.. automethod:: LDAPClient.set_page_size
         
 :class:`LDAPConnection`
 -----------------------
 .. class:: LDAPConnection
-.. method:: LDAPConnection.add(entry)
-
-   :param LDAPEntry entry: the new entry.
-   
-   Add new entry to the directory server.
+.. automethod:: LDAPConnection.add
 
 .. method:: LDAPConnection.close()
 
     Close LDAP connection.
     
-.. method:: LDAPConnection.delete(dn)
-
-   :param str dn: the string format of the entry's DN.
-   
-   Remove entry from the directory server.
+.. automethod:: LDAPConnection.delete
    
 .. method:: LDAPConnection.search(base=None, scope=None, filter=None, attrlist=[], timeout=0, sizelimit=0, attrsonly=False)
 
@@ -100,12 +86,12 @@ LDAPClient class is for configuring the connection to the directory server.
    >>> conn.search(filter="(cn=j*)")
    [{'sn': ['Barnes'], 'cn': ['jeff'], 'givenName': ['Jeff']}]
    
-   The behavior of the method will change, if a page size is set with the :meth:`LDAPClient.set_page_size`. In 
+   The behavior of the method will change, if a page size is set with the :meth:`LDAPConnection.set_page_size`. In
    this case the method will return an iterator instead of list. 
 
    >>> client = LDAPClient()
-   >>> client.set_page_size(4)
    >>> conn = client.connect()
+   >>> conn.set_page_size(4)
    >>> res = conn.search("ou=nerdherd,dc=local", 1, attrlist=["cn", "sn", "gn"])
    >>> res
    <pyldap.LDAPSearchIter object at 0x7f2e5714b190>
@@ -115,10 +101,8 @@ LDAPClient class is for configuring the connection to the directory server.
    'givenName': ['Jeff']}, {'sn': ['Wu'], 'cn': ['anna'], 'givenName': ['Anna']}, 
    {'sn': ['Agent'], 'cn': ['greta'], 'givenName': ['Greta']}]
    
-.. method:: LDAPConnection.whoami()
-
-   This method can be used to obtain authorization identity.
-   
+.. automethod:: LDAPConnection.set_page_size
+.. automethod:: LDAPConnection.whoami
 .. seealso::
     RFC about the LDAP Who am I extended operation `RFC4532`_.
     
@@ -182,17 +166,9 @@ Example for working with LDAPDN objects.
     >>> str(anna.dn)
     'cn=anna,ou=nerdherd,dc=local' 
 
-.. method:: LDAPEntry.delete()
-
-    Remove LDAP entry from the dictionary server.
-    
-.. method:: LDAPEntry.modify()
-
-    Send entry's modifications to the dictionary server.
-    
-.. method:: LDAPEntry.rename(dn) 
-
-   :param str dn: the new DN of the entry.
+.. automethod:: LDAPEntry.delete
+.. automethod:: LDAPEntry.modify
+.. automethod:: LDAPEntry.rename
 
 :class:`LDAPURL`
 ----------------
@@ -241,5 +217,7 @@ Errors
 .. autoclass:: pyldap.AlreadyExists
 .. autoclass:: pyldap.AuthenticationError
 .. autoclass:: pyldap.ConnectionError
+.. autoclass:: pyldap.ClosedConnection
 .. autoclass:: pyldap.InvalidDN
+.. autoclass:: pyldap.InvalidMessageID
 .. autoclass:: pyldap.ObjectClassViolation

@@ -32,10 +32,26 @@ LDAPConnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 		self->client = NULL;
 		self->pending_ops = NULL;
 		self->page_size = 0;
+		self->closed = -1;
 		self->sort_list = NULL;
 	}
 
 	return (PyObject *)self;
+}
+
+/* Check, that the connection is not closed.
+   Set Python exception if it is.
+*/
+int
+LDAPConnection_IsClosed(LDAPConnection *self) {
+	if (self->closed) {
+		/* The connection is closed. */
+		PyObject *ldaperror = get_error_by_code(-11);
+		PyErr_SetString(ldaperror, "The connection is already closed.");
+		Py_DECREF(ldaperror);
+		return 1;
+	}
+	return 0;
 }
 
 /*	Open a connection to the LDAP server. Initializes LDAP structure.
@@ -138,7 +154,7 @@ connecting(LDAPConnection *self) {
 		return -1;
 	}
 	Py_DECREF(creds);
-
+	self->closed = 0;
 	return 0;
 }
 
@@ -173,8 +189,8 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 		self->client = client;
 		Py_XDECREF(tmp);
 
-		/* Get page size from the client. */
-		page_size = PyObject_GetAttrString(self->client, "_LDAPClient__page_size");
+		/* Get page size from the connection object. */
+		page_size = PyObject_GetAttrString((PyObject *)self, "_LDAPConnection__page_size");
 		if (page_size == NULL) return -1;
 		self->page_size = (int)PyLong_AsLong(page_size);
 		Py_DECREF(page_size);
@@ -204,11 +220,19 @@ LDAPConnection_Close(LDAPConnection *self) {
 
 	if (keys == NULL) return NULL;
 
+	if (self->closed == 1) {
+		/* Connection is already close, nothing to do. */
+		Py_DECREF(keys);
+		return Py_None;
+	}
+
 	iter = PyObject_GetIter(keys);
 	Py_DECREF(keys);
 	if (iter == NULL) return NULL;
 
 	for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
+		/* Key should be an integer by design, if it is not rather not process. */
+		if (!PyLong_Check(key)) continue;
 		int msgid = (int)PyLong_AsLong(key);
 		/* Remove item from the dict. */
 		if (PyDict_DelItem(self->pending_ops, key) != 0) {
@@ -240,6 +264,7 @@ LDAPConnection_Close(LDAPConnection *self) {
 		Py_DECREF(ldaperror);
 		return NULL;
 	}
+	self->closed = 1;
 	return Py_None;
 }
 
@@ -248,6 +273,8 @@ static PyObject *
 LDAPConnection_Add(LDAPConnection *self, PyObject *args) {
 	PyObject *param = NULL;
 	PyObject *msgid = NULL;
+
+	if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
 	if (!PyArg_ParseTuple(args, "O", &param)) {
 		PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
@@ -301,6 +328,8 @@ LDAPConnection_DelEntry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	char *dnstr = NULL;
 	int msgid = -1;
 	static char *kwlist[] = {"dn", NULL};
+
+	if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist, &dnstr)) {
 		PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
@@ -404,6 +433,8 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	LDAPSearchIter *search_iter = NULL;
 	static char *kwlist[] = {"base", "scope", "filter", "attrlist", "timeout", "sizelimit", "attrsonly", NULL};
 
+	if (LDAPConnection_IsClosed(self) != 0) return NULL;
+
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|zizO!iiO!", kwlist, &basestr, &scope, &filterstr,
 			&PyList_Type, &attrlist, &timeout, &sizelimit, &PyBool_Type, &attrsonlyo)) {
 		PyErr_SetString(PyExc_AttributeError,
@@ -451,6 +482,7 @@ LDAPConnection_Whoami(LDAPConnection *self) {
 	int msgid = -1;
 	char msgidstr[8];
 
+	if (LDAPConnection_IsClosed(self) != 0) return NULL;
 	/* Start an LDAP Who Am I operation. */
 	rc = ldap_extended_operation(self->ld, "1.3.6.1.4.1.4203.1.11.3", NULL, NULL, NULL, &msgid);
 
@@ -635,9 +667,11 @@ LDAPConnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
 	static char *kwlist[] = {"msgid", "block", NULL};
 
+	if (LDAPConnection_IsClosed(self) != 0) return NULL;
+
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "i|O!", kwlist, &msgid,
 			&PyBool_Type, &block_obj)) {
-		PyErr_SetString(PyExc_AttributeError, "Wrong message id parameter.");
+		PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
 		return NULL;
 	}
 

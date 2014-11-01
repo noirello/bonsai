@@ -9,7 +9,7 @@ from pyldap import LDAPConnection
 from pyldap.ldapurl import LDAPURL
 from _ast import Index
 
-class LDAPClient:
+class LDAPClient(object):
     """
     This class is for managing LDAP connections.
 
@@ -30,7 +30,6 @@ class LDAPClient:
             self.__tls = True
         else:
             self.__tls = False
-        self.__page_size = 0
         self.__credentials = None
         self.__raw_list = []
         self.__mechanism = "SIMPLE"
@@ -40,7 +39,7 @@ class LDAPClient:
     def set_raw_attributes(self, raw_list):
         """
         By default the values of the LDAPEntry are in string format. The
-        values of the listed LDAP attribute's names in the `raw_list` will be
+        values of the listed LDAP attribute's names in `raw_list` will be
         kept in bytearray format.
 
         :param list raw_list: a list of LDAP attributum's names. \
@@ -55,21 +54,6 @@ class LDAPClient:
         if len(raw_list) > len(set(map(str.lower, raw_list))):
             raise ValueError("Attribute names must be different from each other.")
         self.__raw_list = raw_list
-
-    def set_page_size(self, page_size):
-        """
-        Set how many entry will be on a page of a search result. Setting the
-        page size will affect the search to use LDAP paged results.
-        :meth:`LDAPConnection.search` will return an iterator instead of a
-        list of entries.
-
-        :param int page_size:
-        :raises ValueError: if the parameter is not an integer, or lesser \
-        than 2.
-        """
-        if type(page_size) != int or page_size < 2:
-            raise ValueError("The page_size parameter must be an integer greater, than 1.")
-        self.__page_size = page_size
 
     def set_sort_order(self, sort_list):
         """
@@ -115,11 +99,11 @@ class LDAPClient:
         if list(filter(lambda x: type(x) != str and x != None, creds)) != []:
             raise ValueError("All element must be a string in the tuple.")
         if self.__mechanism == "SIMPLE" and len(creds) != 2:
-            raise ValueError("""Simple mechanism needs 2 \
-credential information: (binddn, password).""")
+            raise ValueError("Simple mechanism needs 2 "
+                             "credential information: (binddn, password).")
         if self.__mechanism != "SIMPLE" and len(creds) != 3:
-            raise ValueError("""Simple mechanism needs 3 \
-credential information: (username, password, realm).""")
+            raise ValueError("Simple mechanism needs 3 "
+                             "credential information: (username, password, realm).")
         self.__credentials = creds
 
     def set_cert_policy(self, policy):
@@ -144,7 +128,8 @@ credential information: (username, password, realm).""")
         tls_options = {'never' : 0, 'demand' : 2, 'allow': 3, 'try' : 4}
         if type(policy) != str:
             raise ValueError("Policy parameter must be string")
-        if policy.lower() not in tls_options.keys():
+        policy = policy.lower()
+        if policy not in tls_options.keys():
             raise ValueError("'%s' is an invalid policy.", policy)
         self.__cert_policy = tls_options[policy]
 
