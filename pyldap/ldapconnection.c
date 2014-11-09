@@ -511,6 +511,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	LDAPControl **returned_ctrls = NULL;
 	LDAPEntry *entryobj = NULL;
 	LDAPSearchIter *search_iter = NULL;
+	LDAPModList *mods = NULL;
 	struct timeval zerotime;
 	struct berval *authzid = NULL;
 	char *retoid = NULL;
@@ -640,6 +641,14 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 		rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
 				&returned_ctrls, 1);
 		if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
+			/* LDAP add or modify operation is failed,
+			   then rollback the changes. */
+			mods = (LDAPModList *)PyDict_GetItemString(self->pending_ops, msgidstr);
+			if (mods == NULL) return NULL;
+
+			if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0)
+				return NULL;
+
 			PyObject *ldaperror = get_error_by_code(err);
 			PyErr_SetString(ldaperror, ldap_err2string(err));
 			Py_DECREF(ldaperror);

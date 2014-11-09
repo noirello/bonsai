@@ -58,19 +58,6 @@ berval2PyObject(struct berval *bval, int keepbytes) {
 	return obj;
 }
 
-LDAPMod *
-createLDAPModFromItem(int mod_op, PyObject *key, PyObject *value) {
-	LDAPMod *mod;
-
-	mod = (LDAPMod *)malloc(sizeof(LDAPMod));
-	if (mod == NULL) return NULL;
-
-	mod->mod_op = mod_op;
-	mod->mod_type = PyObject2char(key);
-	mod->mod_vals.modv_bvals = PyList2BervalList(value);
-	return mod;
-}
-
 /*	Converts Python simple objects (String, Long, Float, Boolean, Bytes, and None)
     to C string. If the `obj` is none of these types, then call PyObject_Str, and
     recall this function with the result.

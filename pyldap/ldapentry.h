@@ -17,6 +17,7 @@
 #endif
 
 #include "ldapconnection.h"
+#include "ldapmodlist.h"
 #include "ldapvaluelist.h"
 
 typedef struct {
@@ -31,9 +32,9 @@ extern PyTypeObject LDAPEntryType;
 
 LDAPEntry *LDAPEntry_New(void);
 PyObject *LDAPEntry_AddOrModify(LDAPEntry *self, int mod);
+int LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods);
 int LDAPEntry_Check(PyObject *obj);
-LDAPMod **LDAPEntry_CreateLDAPMods(LDAPEntry *self);
-void LDAPEntry_DismissLDAPMods(LDAPEntry *self, LDAPMod **mods, int err);
+LDAPModList *LDAPEntry_CreateLDAPMods(LDAPEntry *self);
 LDAPEntry *LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn);
 int LDAPEntry_UpdateFromDict(LDAPEntry *self, PyObject *dict);
 int LDAPEntry_UpdateFromSeq2(LDAPEntry *self, PyObject *seq);

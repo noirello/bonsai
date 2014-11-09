@@ -97,22 +97,6 @@ UniqueList_New(void) {
 	return self;
 }
 
-/*	Returns 1 if the `newitem` is not in the list, 0 otherwise.
-	The function uses the lowerCaseMatch() to compare the list's items and the `newitem`
-	to lower-case C string.
-*/
-static int
-isLowerCaseUnique(UniqueList *list, PyObject *newitem) {
-	Py_ssize_t i;
-
-	for (i = 0; i < Py_SIZE(list); i++) {
-		if (lowerCaseMatch(list->list.ob_item[i], newitem) == 1) {
-			return 0;
-		}
-	}
-	return 1;
-}
-
 /*	Append new - case-insensitive - unique item to the UniqueList. */
 int
 UniqueList_Append(UniqueList *self, PyObject *newitem) {
@@ -122,7 +106,7 @@ UniqueList_Append(UniqueList *self, PyObject *newitem) {
 		return -1;
 	}
 
-	if (isLowerCaseUnique(self, newitem) == 0) {
+	if (UniqueList_Contain(self, newitem) == 0) {
 		PyErr_Format(PyExc_ValueError, "%R is already in the list.", newitem);
 		return -1;
 	}
@@ -139,6 +123,22 @@ UniqueList_Check(PyObject *obj) {
 	return PyObject_IsInstance(obj, (PyObject *)&UniqueListType);
 }
 
+/*	Returns 1 if the `newitem` is not in the list, 0 otherwise.
+	The function uses the lowerCaseMatch() to compare the list's items and the `newitem`
+	to lower-case C char*.
+*/
+int
+UniqueList_Contain(UniqueList *list, PyObject *item) {
+	Py_ssize_t i;
+
+	for (i = 0; i < Py_SIZE(list); i++) {
+		if (lowerCaseMatch(list->list.ob_item[i], item) == 1) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
 int
 UniqueList_Extend(UniqueList *self, PyObject *b) {
 	PyObject *iter = NULL, *newitem, *ret;
@@ -151,7 +151,7 @@ UniqueList_Extend(UniqueList *self, PyObject *b) {
 				PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python tuple, list or dict.");
 				return -1;
 			}
-			if (isLowerCaseUnique(self, newitem) == 0){
+			if (UniqueList_Contain(self, newitem) == 0){
 				PyErr_SetString(PyExc_TypeError, "List is containing non-unique values.");
 				return -1;
 			}
@@ -174,7 +174,7 @@ UniqueList_Insert(UniqueList *self, Py_ssize_t where, PyObject *newitem) {
 		return -1;
 	}
 
-	if (isLowerCaseUnique(self, newitem) == 0) {
+	if (UniqueList_Contain(self, newitem) == 0) {
 		PyErr_Format(PyExc_ValueError, "%R is already in the list.", newitem);
 		return -1;
 	}
@@ -182,6 +182,9 @@ UniqueList_Insert(UniqueList *self, Py_ssize_t where, PyObject *newitem) {
     return PyList_Insert((PyObject *)self, where, newitem);
 }
 
+/* Remove an item from the list without set an error.
+   Return 0 if item is not in the list, 1 if item is successfully removed
+   and -1 for error. */
 int
 UniqueList_Remove_wFlg(UniqueList *self, PyObject *value) {
 	int cmp;
@@ -222,7 +225,7 @@ UniqueList_SetItem(UniqueList *self, Py_ssize_t i, PyObject *newitem) {
 		return -1;
 	}
 
-	if (isLowerCaseUnique(self, newitem) == 0) {
+	if (UniqueList_Contain(self, newitem) == 0) {
 		PyErr_Format(PyExc_ValueError, "%R is already in the list.", newitem);
 		return -1;
 	}
@@ -246,7 +249,7 @@ UniqueList_SetSlice(UniqueList *self, Py_ssize_t ilow, Py_ssize_t ihigh, PyObjec
 				PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python tuple, list or dict.");
 				return -1;
 			}
-			if (isLowerCaseUnique(self, newitem) == 0) {
+			if (UniqueList_Contain(self, newitem) == 0) {
 				PyErr_Format(PyExc_ValueError, "%R is already in the list.", newitem);
 				return -1;
 			}
