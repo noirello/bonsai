@@ -650,7 +650,10 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 				return NULL;
 
 			PyObject *ldaperror = get_error_by_code(err);
-			PyErr_SetString(ldaperror, ldap_err2string(err));
+			char *errorstr = NULL;
+			ldap_get_option(self->ld, LDAP_OPT_ERROR_STRING, &errorstr);
+			PyErr_SetString(ldaperror, errorstr);
+			if (errorstr != NULL) free(errorstr);
 			Py_DECREF(ldaperror);
 			return NULL;
 		}

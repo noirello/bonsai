@@ -13,7 +13,7 @@ extern PyTypeObject UniqueListType;
 UniqueList *UniqueList_New(void);
 int UniqueList_Append(UniqueList *self, PyObject *newitem);
 int UniqueList_Check(PyObject *obj);
-int UniqueList_Contain(UniqueList *list, PyObject *item);
+int UniqueList_Contains(UniqueList *list, PyObject *item);
 int UniqueList_Extend(UniqueList *self, PyObject *b);
 int UniqueList_Insert(UniqueList *self, Py_ssize_t where, PyObject *newitem);
 int UniqueList_Remove_wFlg(UniqueList *self, PyObject *value);

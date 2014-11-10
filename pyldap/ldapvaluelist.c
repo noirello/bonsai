@@ -155,6 +155,40 @@ LDAPValueList_Remove(LDAPValueList *self, PyObject *value) {
 	return -1;
 }
 
+PyObject *
+LDAPValueList_Status(LDAPValueList *self) {
+	PyObject *status_dict = NULL;
+	PyObject *status = NULL;
+
+	status_dict = PyDict_New();
+	if (status_dict == NULL) return NULL;
+
+	status = PyLong_FromLong((long int)self->status);
+	if (status == NULL) {
+		Py_DECREF(status_dict);
+		return NULL;
+	}
+
+	if (PyDict_SetItemString(status_dict, "@status", status) != 0) {
+		Py_DECREF(status_dict);
+		Py_DECREF(status);
+		return NULL;
+	}
+	Py_DECREF(status);
+	if (PyDict_SetItemString(status_dict, "@added",
+			(PyObject *)self->added) != 0) {
+		Py_DECREF(status_dict);
+		return NULL;
+	}
+	if (PyDict_SetItemString(status_dict, "@deleted",
+			(PyObject *)self->deleted) != 0) {
+		Py_DECREF(status_dict);
+		return NULL;
+	}
+
+	return status_dict;
+}
+
 /*	Set new unique item at `i` index in LDAPValueList to `newitem`. Case-insensitive,
 	the `newitem` is also appended to the added list, or remove from the deleted list.
 	Same goes for the replaced item.
