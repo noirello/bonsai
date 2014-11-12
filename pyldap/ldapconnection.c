@@ -617,6 +617,12 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	case LDAP_RES_EXTENDED:
 		rc = ldap_parse_extended_result(self->ld, res, &retoid, &authzid, 1);
 
+		/* Remove operations from pending_ops. */
+		if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+
 		if( rc != LDAP_SUCCESS ) {
 			PyObject *ldaperror = get_error_by_code(err);
 			PyErr_SetString(ldaperror, ldap_err2string(err));
@@ -640,26 +646,33 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	default:
 		rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
 				&returned_ctrls, 1);
+
+		/* Get the modification list from the pending_ops. */
+		mods = (LDAPModList *)PyDict_GetItemString(self->pending_ops, msgidstr);
+		if (mods == NULL) return NULL;
+		Py_INCREF(mods);
+		/* Remove operations from pending_ops. */
+		if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+
 		if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
 			/* LDAP add or modify operation is failed,
 			   then rollback the changes. */
-			mods = (LDAPModList *)PyDict_GetItemString(self->pending_ops, msgidstr);
-			if (mods == NULL) return NULL;
-
 			if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0)
 				return NULL;
 
 			PyObject *ldaperror = get_error_by_code(err);
 			char *errorstr = NULL;
 			ldap_get_option(self->ld, LDAP_OPT_ERROR_STRING, &errorstr);
-			PyErr_SetString(ldaperror, errorstr);
-			if (errorstr != NULL) free(errorstr);
+			if (errorstr != NULL) {
+				PyErr_SetString(ldaperror, errorstr);
+				free(errorstr);
+			} else {
+				PyErr_SetString(ldaperror, ldap_err2string(err));
+			}
 			Py_DECREF(ldaperror);
-			return NULL;
-		}
-		/* Remove operations from pending_ops. */
-		if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
-			PyErr_BadInternalCall();
 			return NULL;
 		}
 		Py_RETURN_TRUE;

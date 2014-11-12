@@ -1,4 +1,6 @@
 from pyldap._cpyldap import _LDAPConnection
+from pyldap.ldapentry import LDAPEntry
+from pyldap.ldapdn import LDAPDN
 
 class LDAPConnection(_LDAPConnection):
     def __init__(self,  client, async=False):
@@ -60,6 +62,8 @@ class LDAPConnection(_LDAPConnection):
         :return: True, if the operation is finished.
         :rtype: bool
         """
+        if type(dnstr) == LDAPDN:
+            dnstr = str(dnstr)
         return self._result(super().delete(dnstr))
 
     def search(self,  base=None, scope=None, filter=None, attrlist=None,
