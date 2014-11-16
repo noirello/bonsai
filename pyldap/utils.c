@@ -1,5 +1,11 @@
 #include "utils.h"
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#define attributeType sk_attrtype
+#define orderingRule sk_matchruleoid
+#define reverseOrder sk_reverseorder
+#endif
+
 /*	Converts char* to a lower-case form. Returns with the lower-cased char *. */
 char *
 lowercase(char *str) {
@@ -375,11 +381,8 @@ int _LDAP_unbind(LDAP *ld) {
 	return ldap_unbind(ld);
 }
 
-int ldap_whoami_s(LDAP *ld, struct berval **authzid, LDAPControl **sctrls, LDAPControl **cctrls) {
-	int rc = -1;
-
-	rc = ldap_extended_operation_sA(ld, "1.3.6.1.4.1.4203.1.11.3", NULL, sctrls, cctrls, NULL, authzid);
-	return rc;
+int _LDAP_abandon(LDAP *ld, int msgid) {
+	return ldap_abandon(ld, msgid);
 }
 
 #else
@@ -434,6 +437,10 @@ int _LDAP_bind_s(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid
 
 int _LDAP_unbind(LDAP *ld) {
 	return ldap_unbind_ext_s((ld), NULL, NULL);
+}
+
+int _LDAP_abandon(LDAP *ld, int msgid ) {
+	return ldap_abandon_ext(ld, msgid, NULL, NULL);
 }
 
 /*  This function is a copy from the OpenLDAP OpenLDAP liblutil's sasl.c source

@@ -3,7 +3,7 @@
 #include "ldapentry.h"
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-#define ldap_rename_s ldap_rename_ext_s
+#define ldap_rename ldap_rename_ext
 #endif
 
 /* Clear all object in the LDAPEntry. */

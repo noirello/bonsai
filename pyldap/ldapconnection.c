@@ -3,6 +3,10 @@
 #include "ldapsearchiter.h"
 #include "utils.h"
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#define attributeType sk_attrtype
+#endif
+
 /*	Dealloc the LDAPConnection object. */
 static void
 LDAPConnection_dealloc(LDAPConnection* self) {
@@ -246,7 +250,7 @@ LDAPConnection_Close(LDAPConnection *self) {
 		/* Skip negatives, cause assertion error. */
 		if (msgid <= 0) continue;
 		/* Abandon the pending operations from the server. */
-		rc = ldap_abandon_ext(self->ld, msgid, NULL, NULL);
+		rc = _LDAP_abandon(self->ld, msgid);
 		if (rc != LDAP_SUCCESS) {
 			Py_DECREF(iter);
 			PyObject *ldaperror = get_error_by_code(rc);
@@ -533,7 +537,8 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	case -1:
 		/* Error occurred during the operation. */
 		/* Getting the error code from the session. */
-		ldap_get_option(self->ld, LDAP_OPT_RESULT_CODE, &err);
+		/* 0x31: LDAP_OPT_RESULT_CODE or LDAP_OPT_ERROR_NUMBER */
+		ldap_get_option(self->ld, 0x0031,  &err);
 		PyObject *ldaperror = get_error_by_code(err);
 		PyErr_SetString(ldaperror, ldap_err2string(err));
 		Py_DECREF(ldaperror);
@@ -639,7 +644,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 				authzid->bv_val = "anonym";
 				authzid->bv_len = 6;
 			}
-			ber_memfree(retoid);
+			free(retoid);
 			return PyUnicode_FromString(authzid->bv_val);
 		}
 		break;
@@ -668,7 +673,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 			ldap_get_option(self->ld, LDAP_OPT_ERROR_STRING, &errorstr);
 			if (errorstr != NULL) {
 				PyErr_SetString(ldaperror, errorstr);
-				free(errorstr);
+				//TODO free(errorstr) causes segfault on Windows, as does ldap_memfree;
 			} else {
 				PyErr_SetString(ldaperror, ldap_err2string(err));
 			}
@@ -734,7 +739,7 @@ LDAPConnection_cancel(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 		return NULL;
 	}
 
-	ldap_abandon_ext(self->ld, msgid, NULL, NULL);
+	rc = _LDAP_abandon(self->ld, msgid);
 	if (rc != LDAP_SUCCESS) {
 		PyObject *ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
@@ -761,7 +766,7 @@ static PyMethodDef LDAPConnection_methods[] = {
 			"Close connection with the LDAP Server."},
 	{"delete", (PyCFunction)LDAPConnection_DelEntry, METH_VARARGS,
 			"Delete an LDAPEntry with the given distinguished name."},
-	{"get_result", (PyCFunction)LDAPConnection_result, METH_VARARGS,
+	{"get_result", (PyCFunction)LDAPConnection_result, METH_VARARGS | METH_KEYWORDS,
 			"Poll the status of the operation associated with the given message id from LDAP server."},
 	{"search", (PyCFunction)LDAPConnection_Search, 	METH_VARARGS | METH_KEYWORDS,
 			"Search for LDAP entries."},
