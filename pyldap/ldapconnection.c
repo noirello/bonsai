@@ -372,7 +372,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 
 	if (self->page_size > 1) {
 		/* Create page control and add to the server controls. */
-		rc = ldap_create_page_control(self->ld, (ber_int_t)(self->page_size),
+		rc = ldap_create_page_control(self->ld, self->page_size,
 				search_iter->cookie, 0, &page_ctrl);
 		if (rc != LDAP_SUCCESS) {
 			PyErr_BadInternalCall();

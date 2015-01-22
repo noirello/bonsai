@@ -274,24 +274,24 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 	BerElement *ber;
 	UniqueList *rawval_list;
 	PyObject *val = NULL, *attrobj = NULL, *tmp;
+	PyObject *ldapentry_type = NULL;
+	PyObject *args = NULL;
 	LDAPValueList *lvl = NULL;
 	LDAPEntry *self;
 
-	/* Create a new LDAPEntry, raise PyErr_NoMemory if it's failed. */
-	self = LDAPEntry_New();
-	if (self == NULL) {
-		return (LDAPEntry *)PyErr_NoMemory();
-	}
-	LDAPEntry_SetConnection(self, conn);
-	/* Set the DN for LDAPEntry. */
+	/* Create an attribute list for LDAPEntry (which is implemented in Python). */
 	dn = ldap_get_dn(conn->ld, entrymsg);
 	if (dn != NULL) {
-		if (LDAPEntry_SetStringDN(self, dn) != 0) {
-			Py_DECREF(self);
-			ldap_memfree(dn);
-			return NULL;
-		}
+		args = Py_BuildValue("sO", dn, (PyObject *)conn);
 		ldap_memfree(dn);
+		if (args == NULL) return NULL;
+	}
+	/* Create a new LDAPEntry, raise PyErr_NoMemory if it's failed. */
+	ldapentry_type = load_python_object("pyldap.ldapentry", "LDAPEntry");
+	if (ldapentry_type == NULL) return NULL;
+	self = (LDAPEntry *)PyObject_CallObject(ldapentry_type, args);
+	if (self == NULL) {
+		return (LDAPEntry *)PyErr_NoMemory();
 	}
 
 	/* Get list of attribute's names, whose values have to keep in bytearray.*/
@@ -922,11 +922,11 @@ static PyMethodDef LDAPEntry_methods[] = {
     {"update", 	(PyCFunction)LDAPEntry_Update, 	METH_VARARGS | METH_KEYWORDS,
     		"Updating LDAPEntry from a dictionary." },
 	{"_status", 	(PyCFunction)LDAPEntry_status, 	METH_NOARGS,
-				"Get LDAPEntry's modifcation status.." },
+				"Get LDAPEntry's modifcation status." },
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
-/*	Searches amongs lower-cased keystrings to find a match with the key.
+/*	Searches among lower-cased keystrings to find a match with the key.
  	if `del` set to 1, then also search among the deleted keys.
   	Sets the `found` parameter's value to 1 if key found in the list, 0 otherwise. */
 PyObject *

@@ -1,8 +1,6 @@
 #ifndef LDAPCONNECTION_H_
 #define LDAPCONNECTION_H_
 
-#include <sys/time.h>
-
 #include <Python.h>
 #include "structmember.h"
 
@@ -14,8 +12,9 @@
 
 //Unix
 #else
-#include <ldap.h>
 
+#include <ldap.h>
+#include <sys/time.h>
 #endif
 
 typedef struct {

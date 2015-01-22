@@ -113,4 +113,36 @@ After we finished our work with the directory server we should close the connect
 
     >>> conn.close()
     
+Asynchronous operations
+-----------------------
+
+It is possible to start asynchronous operations, if the :meth:`LDAPClient.connect` method's async parameter is set to True.
+The module is designed to be used with Python's `asyncio` library. For further details about how to use the asyncio library
+see the  `asyncio documentation`_.
+
+An example for asynchronous search and modify with `asyncio`:
+
+.. _asyncio documentation: https://docs.python.org/3/library/asyncio.html
+
+.. code-block:: python
+    
+    import asyncio
+    import pyldap
+
+    @asyncio.coroutine
+    def do():
+        cli = pyldap.LDAPClient("ldap://localhost")
+        with cli.connect(async=True) as conn:
+            results = yield from conn.search("ou=nerdherd,dc=local", 1)
+            for res in results:
+                print(res['givenName'][0])
+            search = yield from conn.search("cn=chuck,ou=nerdherd,dc=local", 0)
+            entry = list(search)[0]
+            entry['mail'] = "chuck@nerdherd.com"
+            yield from entry.modify()
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(do())
+ 
+    
 To find out more about the PyLDAP module functionality read the :doc:`api`. 
