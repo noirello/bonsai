@@ -16,7 +16,16 @@ The module main goal is to give a simple way to use the LDAP protocol as pythoni
 .. note::
    The module compatibles with Python 3.3 or newer releases. There is no support for Python 2.7.6 or older releases.
 
-Contents:
+Features
+--------
+
+* Uses LDAP libraries (OpenLDAP and WinLDAP) written in C for faster processing. 
+* Implements an own dictionary-like object for mapping LDAP entries that makes easier to add and modify them.
+* Works with asyncio for non-blocking operations.
+
+
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
@@ -26,7 +35,8 @@ Contents:
    api
    
 Contribution
-============
+------------
+
 Any contributions are welcome. If you would like to help in development
 fork or report issue on the project's `github site`_. 
 You can also help in improving the documentation. My English is far from perfect, so if you find 
@@ -35,7 +45,7 @@ any grammatically incorrect sentence, please report to me (with suggestion).
 .. _github site: https://github.com/Noirello/PyLDAP
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
