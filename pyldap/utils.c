@@ -350,14 +350,14 @@ int _LDAP_bind_s(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid
 	SEC_WINNT_AUTH_IDENTITY creds;
 
 	creds.User = (unsigned char*)authcid;
-	if (authcid != NULL) creds.UserLength = strlen(authcid);
+	if (authcid != NULL) creds.UserLength = (unsigned long)strlen(authcid);
 	else creds.UserLength = 0;
 	creds.Password = (unsigned char*)pswstr;
-	if (pswstr != NULL) creds.PasswordLength = strlen(pswstr);
+	if (pswstr != NULL) creds.PasswordLength = (unsigned long)strlen(pswstr);
 	else creds.PasswordLength = 0;
 	/* Is SASL realm equivalent with Domain? */
 	creds.Domain = (unsigned char*)realm;
-	if (realm != NULL) creds.DomainLength = strlen(realm);
+	if (realm != NULL) creds.DomainLength = (unsigned long)strlen(realm);
 	else creds.DomainLength = 0;
 	creds.Flags = SEC_WINNT_AUTH_IDENTITY_ANSI;
 

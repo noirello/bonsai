@@ -9,6 +9,7 @@
 
 #include <windows.h>
 #include <winldap.h>
+#include <winber.h>
 
 //Unix
 #else

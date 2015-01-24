@@ -5,6 +5,7 @@
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 #define attributeType sk_attrtype
+#define timeval l_timeval
 #endif
 
 /*	Dealloc the LDAPConnection object. */
@@ -398,7 +399,11 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 				search_iter->attrs,
 				search_iter->attrsonly,
 				server_ctrls, NULL,
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+				search_iter->timeout->tv_sec,
+#else
 				search_iter->timeout,
+#endif
 				search_iter->sizelimit, &msgid);
 
 	if (rc != LDAP_SUCCESS) {
@@ -519,6 +524,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	struct timeval zerotime;
 	struct berval *authzid = NULL;
 	char *retoid = NULL;
+	PyObject *ldaperror = NULL;
 
 	sprintf(msgidstr, "%d", msgid);
 
@@ -539,7 +545,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 		/* Getting the error code from the session. */
 		/* 0x31: LDAP_OPT_RESULT_CODE or LDAP_OPT_ERROR_NUMBER */
 		ldap_get_option(self->ld, 0x0031,  &err);
-		PyObject *ldaperror = get_error_by_code(err);
+		ldaperror = get_error_by_code(err);
 		PyErr_SetString(ldaperror, ldap_err2string(err));
 		Py_DECREF(ldaperror);
 		return NULL;
@@ -597,7 +603,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 		}
 
 		if (err != LDAP_SUCCESS && err != LDAP_PARTIAL_RESULTS) {
-			PyObject *ldaperror = get_error_by_code(err);
+			ldaperror = get_error_by_code(err);
 			PyErr_SetString(ldaperror, ldap_err2string(err));
 			Py_DECREF(ldaperror);
 			Py_DECREF(search_iter->buffer);
@@ -629,7 +635,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 		}
 
 		if( rc != LDAP_SUCCESS ) {
-			PyObject *ldaperror = get_error_by_code(err);
+			ldaperror = get_error_by_code(err);
 			PyErr_SetString(ldaperror, ldap_err2string(err));
 			Py_DECREF(ldaperror);
 			return NULL;
@@ -668,7 +674,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 			if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0)
 				return NULL;
 
-			PyObject *ldaperror = get_error_by_code(err);
+			ldaperror = get_error_by_code(err);
 			char *errorstr = NULL;
 			ldap_get_option(self->ld, LDAP_OPT_ERROR_STRING, &errorstr);
 			if (errorstr != NULL) {

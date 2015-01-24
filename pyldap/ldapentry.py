@@ -31,3 +31,24 @@ class LDAPEntry(_LDAPEntry):
         :rtype: bool
         """
         return self.connection._result(super().rename(newdn))
+
+    def update(self, *args, **kwds):
+        """
+        Update the LDAPEntry with the key/value pairs from other, overwriting existing keys.
+        (Same as dict's update method.)
+        """
+        if args:
+            if hasattr(args[0], "keys"):
+                # Working with a dict on the parameter list.
+                for key, value in args[0].items():
+                    self.__setitem__(key, value)
+            else:
+                # Working with a sequence.
+                for tup in args[0]:
+                    if len(tup) != 2:
+                        raise ValueError("Sequence element has more then 2 element.")
+                    self.__setitem__(tup[0], tup[1])
+        if kwds:
+            # Key/value pairs are listed on the parameter list.
+            for key, value in kwds.items():
+                self.__setitem__(key, value)

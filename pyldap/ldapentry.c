@@ -293,6 +293,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 	if (self == NULL) {
 		return (LDAPEntry *)PyErr_NoMemory();
 	}
+	Py_DECREF(ldapentry_type);
 
 	/* Get list of attribute's names, whose values have to keep in bytearray.*/
 	rawval_list = UniqueList_New();
@@ -778,130 +779,6 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	return PyLong_FromLong((long int)msgid);
 }
 
-/*	Updating LDAPEntry. Pretty much same as PyDict_Update function's codebase. */
-static PyObject *
-LDAPEntry_Update(LDAPEntry *self, PyObject *args, PyObject *kwds) {
-	int rc = 0;
-	PyObject *arg = NULL;
-
-	if (!PyArg_UnpackTuple(args, "update", 0, 1, &arg)) {
-		rc = -1;
-	} else if (arg != NULL) {
-		if (PyObject_HasAttrString(arg, "keys") || PyDict_Check(arg)) {
-			/* If argument is a dict, use own function to update. */
-			rc = LDAPEntry_UpdateFromDict(self, arg);
-		} else {
-			/* If argument is a sequence type, use own function to update. */
-			rc = LDAPEntry_UpdateFromSeq2(self, arg);
-		}
-	}
-	if (rc == 0 && kwds != NULL) {
-		if (PyArg_ValidateKeywordArguments(kwds)) {
-			/* If arguments are keywords, use own function to update. */
-			rc = LDAPEntry_UpdateFromDict(self, kwds);
-		} else {
-			rc = -1;
-		}
-	}
-	if (rc != -1) {
-		Py_INCREF(Py_None); //Why?
-		return Py_None;
-	}
-	return NULL;
-}
-
-/*	Update LDAPEntry form dict. Based on the PyDict_Merge function. */
-int
-LDAPEntry_UpdateFromDict(LDAPEntry *self, PyObject *dict) {
-	int rc;
-	PyObject *keys = PyMapping_Keys(dict);
-	PyObject *iter;
-	PyObject *key, *value;
-	if (keys == NULL) return -1;
-
-	iter = PyObject_GetIter(keys);
-	Py_DECREF(keys);
-	if (iter == NULL) return -1;
-
-	/*Iterate over the dict keys, and get the values. */
-	for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
-		/* Return value: New reference. */
-		value = PyObject_GetItem(dict, key);
-		if (value == NULL) {
-			Py_DECREF(iter);
-			Py_DECREF(key);
-			return -1;
-		}
-		/* Set the new key-value. */
-		rc = LDAPEntry_SetItem(self, key, value);
-		Py_DECREF(key);
-		Py_DECREF(value);
-		if (rc < 0) {
-			Py_DECREF(iter);
-			return -1;
-		}
-	}
-	Py_DECREF(iter);
-	if (PyErr_Occurred()) return -1;
-    return 0;
-}
-
-/*	Update LDAPEntry form sequence. Based on the PyDict_MergeFromSeq2 function. */
-int
-LDAPEntry_UpdateFromSeq2(LDAPEntry *self, PyObject *seq2) {
-    PyObject *iter;     /* iter(seq) */
-    Py_ssize_t i = 0;   /* index into seq2 of current element */
-    PyObject *item;     /* seq[i] */
-    PyObject *fast;     /* item as a 2-tuple or 2-list */
-
-    iter = PyObject_GetIter(seq2);
-    if (iter == NULL) return -1;
-
-    for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
-        PyObject *key, *value;
-        Py_ssize_t n;
-
-        fast = NULL;
-        if (PyErr_Occurred()) goto Fail;
-
-        /* Convert item to sequence, and verify length 2. */
-        fast = PySequence_Fast(item, "");
-        if (fast == NULL) {
-            if (PyErr_ExceptionMatches(PyExc_TypeError))
-                PyErr_Format(PyExc_TypeError,
-                    "cannot convert LDAPEntry update "
-                    "sequence element #%zd to a sequence",
-                    i);
-            goto Fail;
-        }
-        n = PySequence_Fast_GET_SIZE(fast);
-        if (n != 2) {
-            PyErr_Format(PyExc_ValueError,
-                         "LDAPEntry update sequence element #%zd "
-                         "has length %zd; 2 is required",
-                         i, n);
-            goto Fail;
-        }
-
-        /* Update/merge with this (key, value) pair. */
-        key = PySequence_Fast_GET_ITEM(fast, 0);
-        value = PySequence_Fast_GET_ITEM(fast, 1);
-		int status = LDAPEntry_SetItem(self, key, value);
-		if (status < 0) goto Fail;
-        Py_DECREF(fast);
-        Py_DECREF(item);
-    }
-    i = 0;
-    goto Return;
-Fail:
-    Py_XDECREF(item);
-    Py_XDECREF(fast);
-    i = -1;
-Return:
-    Py_DECREF(iter);
-    return Py_SAFE_DOWNCAST(i, Py_ssize_t, int);
-}
-
 static PyMethodDef LDAPEntry_methods[] = {
 	{"delete", 	(PyCFunction)LDAPEntry_delete,	METH_NOARGS,
 			"Delete LDAPEntry on LDAP server."},
@@ -919,8 +796,6 @@ static PyMethodDef LDAPEntry_methods[] = {
             2-tuple; but raise KeyError if D is empty."},
 	{"rename", 	(PyCFunction)LDAPEntry_rename, 	METH_VARARGS | METH_KEYWORDS,
 			"Rename or remove LDAPEntry on the LDAP server."},
-    {"update", 	(PyCFunction)LDAPEntry_Update, 	METH_VARARGS | METH_KEYWORDS,
-    		"Updating LDAPEntry from a dictionary." },
 	{"_status", 	(PyCFunction)LDAPEntry_status, 	METH_NOARGS,
 				"Get LDAPEntry's modifcation status." },
     {NULL, NULL, 0, NULL}  /* Sentinel */
