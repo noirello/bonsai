@@ -37,8 +37,6 @@ int LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods);
 int LDAPEntry_Check(PyObject *obj);
 LDAPModList *LDAPEntry_CreateLDAPMods(LDAPEntry *self);
 LDAPEntry *LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn);
-int LDAPEntry_UpdateFromDict(LDAPEntry *self, PyObject *dict);
-int LDAPEntry_UpdateFromSeq2(LDAPEntry *self, PyObject *seq);
 PyObject *LDAPEntry_GetItem(LDAPEntry *self, PyObject *key);
 PyObject *LDAPEntry_GetItemString(LDAPEntry *self, const char *key);
 int LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value);

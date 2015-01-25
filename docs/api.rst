@@ -154,7 +154,11 @@ Example for working with LDAPDN objects.
 
 :class:`LDAPEntry`
 ------------------
-.. class:: LDAPEntry(dn)
+.. class:: LDAPEntry(dn[, conn])
+.. attribute:: LDAPEntry.connection
+
+    The LDAPConnection object of the entry. Needs to be set for any LDAP operations.
+
 .. attribute:: LDAPEntry.dn
 
     The distinguished name of the entry.
@@ -169,6 +173,7 @@ Example for working with LDAPDN objects.
 .. automethod:: LDAPEntry.delete
 .. automethod:: LDAPEntry.modify
 .. automethod:: LDAPEntry.rename
+.. automethod:: LDAPEntry.update
 
 :class:`LDAPURL`
 ----------------

@@ -616,6 +616,7 @@ LDAPEntry_pop(LDAPEntry *self, PyObject *args) {
     if (old_value == NULL) {
     	/* Key is not in the LDAPEntry. */
     	if (deflt) {
+    		/* Return the default value. */
     		Py_INCREF(deflt);
     		return deflt;
     	}

@@ -14,7 +14,7 @@ The module main goal is to give a simple way to use the LDAP protocol as pythoni
    The module is under development, therefore the module's architecture could change significantly.
    
 .. note::
-   The module compatibles with Python 3.3 or newer releases. There is no support for Python 2.7.6 or older releases.
+   The module compatibles only with Python 3.3 or newer releases.
 
 Features
 --------

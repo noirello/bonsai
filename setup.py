@@ -1,6 +1,9 @@
 import os
 import sys
-from distutils.core import setup, Extension
+try:
+    from setuptools import setup, Extension
+except ImportError:
+    from distutils.core import setup, Extension
 
 sources = ["pyldapmodule.c", "ldapentry.c",
            "ldapconnection.c", "ldapmodlist.c", "ldapvaluelist.c",
@@ -33,6 +36,7 @@ setup(name="pyldap",
       author_email = "noirello@gmail.com",
       url="https://github.com/Noirello/PyLDAP",
       long_description = long_descr,
+      license = "MIT",
       ext_modules=[pyldap_module],
       packages = ["pyldap"],
       classifiers=[
