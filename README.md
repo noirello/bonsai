@@ -10,18 +10,26 @@ Support only Python 3.3 or newer, and LDAPv3.
 Requirements for building
 -------------------------
 
-- python3.3-dev or python3.4-dev
+- python3.3-dev or newer
 - libldap2-dev
 - libsasl2-dev
+
+
+Features
+--------
+
+- Uses LDAP libraries (OpenLDAP and WinLDAP) written in C for faster processing. 
+- Implements an own dictionary-like object for mapping LDAP entries that makes easier to add and modify them.
+- Works with asyncio for asynchronous operations.
 
 
 Documentation
 -------------
 
-Online documentation with a simple tutorial at http://pyldap.readthedocs.org/en/latest/.
+Documentation is available [online](http://pyldap.readthedocs.org/en/latest/) with a simple tutorial.
 
 
 Contribution
 ------------
 
-Any contributions and advices are welcome. Please report any issues at https://github.com/Noirello/PyLDAP/issues.
+Any contributions and advices are welcome. Please report any issues at the [GitHub page](https://github.com/Noirello/PyLDAP/issues).
