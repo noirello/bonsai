@@ -30,7 +30,7 @@ pyldap_module = Extension("pyldap._cpyldap",
 with open('README.md') as file:
     long_descr = file.read()
     # Change linking format from GitHub style to PyPI compatible format.
-    pat = r"\[([a-zA-Z_]*)\]\(([a-zA-Z_:/.]*)\)"
+    pat = r"\[([a-zA-Z_ ]*)\]\(([a-zA-Z_:/.]*)\)"
     long_descr = re.sub(pat, "`\g<1> <\g<2>>`_", long_descr)
 
 setup(name="pyldap",
