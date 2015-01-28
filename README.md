@@ -24,5 +24,6 @@ Online documentation with a simple tutorial at http://pyldap.readthedocs.org/en/
 Contribution
 ------------
 
-This is my first public Python module, and very first time for me to use the Python/C API.
-Contributions and advices are welcome. :) (Just tell me the whats and whys.) 
+Any contributions and advices are welcome. Please report any issues at the `GitHub page`_.
+
+.. _GitHub page: https://docs.python.org/3/library/asyncio.html
