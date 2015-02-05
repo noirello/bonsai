@@ -1,9 +1,8 @@
 from pyldap._cpyldap import _LDAPConnection
-from pyldap.ldapentry import LDAPEntry
 from pyldap.ldapdn import LDAPDN
 
 class LDAPConnection(_LDAPConnection):
-    def __init__(self,  client, async=False):
+    def __init__(self, client, async=False):
         self.__client = client
         self.__async = async
         self.__page_size = 0
@@ -66,7 +65,7 @@ class LDAPConnection(_LDAPConnection):
             dnstr = str(dnstr)
         return self._result(super().delete(dnstr))
 
-    def search(self,  base=None, scope=None, filter=None, attrlist=None,
+    def search(self, base=None, scope=None, filter=None, attrlist=None,
                timeout=0, sizelimit=0, attrsonly=False):
         # Documentation in the docs/api.rst with detailed examples.
         # Load values from the LDAPURL, if it is not present on the
@@ -83,7 +82,7 @@ class LDAPConnection(_LDAPConnection):
             if self.__page_size > 1:
                 return self.__paged_search(self.get_result(msg_id, True))
             return list(self.get_result(msg_id, True))
-        
+
     def set_page_size(self, page_size):
         """
         Set how many entry will be on a page of a search result. Setting the
