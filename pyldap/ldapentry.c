@@ -18,7 +18,6 @@ LDAPEntry_clear(LDAPEntry *self) {
     tmp = self->dn;
     self->dn = NULL;
     Py_XDECREF(tmp);
-    Py_XDECREF(self->dntype);
     PyDict_Type.tp_clear((PyObject*)self);
 
     return 0;
@@ -57,9 +56,6 @@ LDAPEntry_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 			Py_DECREF(self);
 			return NULL;
 		}
-    	/* Import LDAPDN object. */
-    	self->dntype = load_python_object("pyldap.ldapdn", "LDAPDN");
-    	if (self->dntype == NULL) return NULL;
 	}
     return (PyObject *)self;
 }
@@ -668,31 +664,39 @@ LDAPEntry_popitem(LDAPEntry *self) {
 static int
 LDAPEntry_setDN(LDAPEntry *self, PyObject *value, void *closure) {
 	PyObject *dn = NULL;
+	PyObject *dntype = NULL;
 
 	if (value == NULL) {
         PyErr_SetString(PyExc_TypeError, "Cannot delete the DN attribute.");
         return -1;
     }
 
+	/* Import LDAPDN object. */
+	dntype = load_python_object("pyldap.ldapdn", "LDAPDN");
+	if (dntype == NULL) return -1;
+
     if (PyUnicode_Check(value)) {
-    	dn = PyObject_CallFunctionObjArgs(self->dntype, value, NULL);
+    	dn = PyObject_CallFunctionObjArgs(dntype, value, NULL);
 		/* Check for valid DN. */
 		if (dn == NULL) {
+			Py_DECREF(dntype);
 			return -1;
 		} else {
 			Py_DECREF(self->dn);
 			self->dn = dn;
 		}
 
-    } else if (PyObject_IsInstance(value, self->dntype)) {
+    } else if (PyObject_IsInstance(value, dntype)) {
         Py_DECREF(self->dn);
         Py_INCREF(value);
         self->dn = value;
     } else {
     	PyErr_SetString(PyExc_TypeError, "The DN attribute value must be an LDAPDN or a string.");
+    	Py_DECREF(dntype);
     	return -1;
     }
 
+    Py_DECREF(dntype);
     return 0;
 }
 
@@ -978,7 +982,6 @@ LDAPEntry_setConnection(LDAPEntry *self, PyObject *value, void *closure) {
         PyErr_SetString(PyExc_TypeError, "Cannot delete the connection attribute.");
         return -1;
     }
-
 
     if (!PyObject_IsInstance(value, (PyObject *)&LDAPConnectionType)) {
         PyErr_SetString(PyExc_TypeError, "The connection attribute value must be an LDAPConnection.");
