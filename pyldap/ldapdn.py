@@ -67,7 +67,7 @@ class LDAPDN(object):
         return ','.join(
             map(lambda attr: "+".join(
                 map(lambda type_value: "=".join(type_value), attr)), rdns))
-        
+
     def __getitem__(self, idx):
         """
         Return the string format of the relative distinguished names
