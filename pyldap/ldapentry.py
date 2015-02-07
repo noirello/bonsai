@@ -52,3 +52,42 @@ class LDAPEntry(_LDAPEntry):
             # Key/value pairs are listed on the parameter list.
             for key, value in kwds.items():
                 self.__setitem__(key, value)
+
+    def pop(self, *args):
+        """
+        LDAPEntry.pop(k[,d]) -> v, remove specified key and return the
+        corresponding value. If key is not found, d is returned if given,
+        otherwise KeyError is raised.
+
+        :param key: the key.
+        :patam dflt: if key is not found, d is returned.
+        :return: the value from the LDAPEntry.
+        """
+        if len(args) > 2:
+            raise TypeError("pop expected at most 2 arguments, got %d" % len(args))
+        try:
+            key = args[0]
+            value = self[key]
+            del self[key]
+            return value
+        except IndexError:
+            raise TypeError("pop expected at least 1 arguments, got 0")
+        except KeyError as err:
+            try:
+                dflt = args[1]
+                return dflt
+            except IndexError:
+                raise err
+
+    def popitem(self):
+        """
+        LDAPEntry.popitem() -> (k, v), remove and return some (key, value)
+        pair as a 2-tuple; but raise KeyError if LDAPEntry is empty.
+        """
+        try:
+            key = list(self.keys()).pop(0)
+            value = self[key]
+            del self[key]
+            return (key, value)
+        except IndexError:
+            raise KeyError("popitem(): LDAPEntry is empty")
