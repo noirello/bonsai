@@ -597,76 +597,6 @@ LDAPEntry_modify(LDAPEntry *self) {
 	return LDAPEntry_AddOrModify(self, 1);
 }
 
-/* Removes and returns with the element from the LDAPEntry,
-   just like the dict.pop() function. */
-static PyObject *
-LDAPEntry_pop(LDAPEntry *self, PyObject *args) {
-    PyObject *old_value;
-    PyObject *key, *deflt = NULL;
-
-    if(!PyArg_UnpackTuple(args, "pop", 1, 2, &key, &deflt))
-        return NULL;
-
-    old_value = LDAPEntry_GetItem(self, key);
-
-    if (old_value == NULL) {
-    	/* Key is not in the LDAPEntry. */
-    	if (deflt) {
-    		/* Return the default value. */
-    		Py_INCREF(deflt);
-    		return deflt;
-    	}
-		PyErr_Format(PyExc_KeyError, "Key %R is not in the LDAPEntry.", key);
-		return NULL;
-	}
-    /* Increment the item's reference, then remove it from the LDAPEntry. */
-    Py_INCREF(old_value);
-    LDAPEntry_SetItem(self, key, NULL);
-    return old_value;
-}
-
-/* Has the same functionality like the dict.popitem() function. */
-static PyObject *
-LDAPEntry_popitem(LDAPEntry *self) {
-	PyObject *res, *key, *value;
-	PyObject *keys = PyDict_Keys((PyObject *)self);
-	PyObject *iter = PyObject_GetIter(keys);
-
-	Py_DECREF(keys);
-	if (iter == NULL) return NULL;
-
-	key = PyIter_Next(iter);
-	Py_DECREF(iter);
-	if (key == NULL) {
-		PyErr_SetString(PyExc_KeyError, "popitem(): LDAPEntry is empty");
-		return NULL;
-	}
-
-	value = LDAPEntry_GetItem(self, key);
-	if (value == NULL) {
-		Py_DECREF(key);
-		return NULL;
-	}
-	Py_INCREF(value);
-
-    res = PyTuple_New(2);
-    if (res == NULL) {
-    	Py_DECREF(key);
-    	return NULL;
-    }
-
-    /* Stoles the reference, whatever that means. */
-    PyTuple_SET_ITEM(res, 0, key);
-    PyTuple_SET_ITEM(res, 1, value);
-
-    if (LDAPEntry_SetItem(self, key, NULL) != 0) {
-    	Py_DECREF(key);
-    	return NULL;
-    }
-    Py_DECREF(key);
-    return res;
-}
-
 /*	Set distinguished name for a LDAPEntry. */
 static int
 LDAPEntry_setDN(LDAPEntry *self, PyObject *value, void *closure) {
@@ -793,12 +723,6 @@ static PyMethodDef LDAPEntry_methods[] = {
 			"LDAPEntry.get(k[,d]) -> LDAPEntry[k] if k in D, else d. d defaults to None."},
 	{"modify", 	(PyCFunction)LDAPEntry_modify, 	METH_NOARGS,
 			"Send LDAPEntry's modification to the LDAP server."},
-	{"pop",		(PyCFunction)LDAPEntry_pop,		METH_VARARGS,
-			"LDAPEntry.pop(k[,d]) -> v, remove specified key and return the corresponding value.\n\
-			If key is not found, d is returned if given, otherwise KeyError is raised"},
-	{"popitem",	(PyCFunction)LDAPEntry_popitem,	METH_NOARGS,
-			"LDAPEntry.popitem() -> (k, v), remove and return some (key, value) pair as a\n\
-            2-tuple; but raise KeyError if D is empty."},
 	{"rename", 	(PyCFunction)LDAPEntry_rename, 	METH_VARARGS | METH_KEYWORDS,
 			"Rename or remove LDAPEntry on the LDAP server."},
 	{"_status", 	(PyCFunction)LDAPEntry_status, 	METH_NOARGS,
