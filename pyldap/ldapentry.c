@@ -384,6 +384,14 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 		return NULL;
 	}
 
+	if (mods->size == 0) {
+		PyObject *ldaperror = get_error_by_code(0x41);
+		PyErr_SetString(ldaperror, "no structural object class provided");
+		Py_DECREF(ldaperror);
+		Py_DECREF(mods);
+		return NULL;
+	}
+
 	if (mod == 0) {
 		rc = ldap_add_ext(self->conn->ld, dnstr, mods->mod_list, NULL,
 				NULL, &msgid);

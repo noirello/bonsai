@@ -57,6 +57,7 @@ LDAPModList_New(PyObject* entry, unsigned short int size) {
 	if (self == NULL) return NULL;
 	/*  Malloc a new `size` length LDAPMod list. */
 	self->mod_list  = (LDAPMod **)malloc(sizeof(LDAPMod *) * (size + 1));
+	if (self->mod_list != NULL) self->mod_list[0] = NULL;
 	self->size = size;
 	self->entry = entry;
 	return self;

@@ -24,12 +24,34 @@ createBerval(char *value) {
 	return bval;
 }
 
-/*	Converts a berval structure to a Python bytearray or if it's possible to string.
+/*	Converts a berval structure to a Python bytearray or if it's possible
+	to string, bool or long (LDAP has no support for float as far as I know).
  	If `keepbytes` param is non-zero, then return bytearray anyway. */
 PyObject *
 berval2PyObject(struct berval *bval, int keepbytes) {
-	PyObject *bytes;
-	PyObject *obj;
+	PyObject *bytes = NULL;
+	PyObject *obj = NULL;
+
+	if (keepbytes == 0) {
+		/* Check that the value is a boolean True. */
+		if (strcmp(bval->bv_val, "TRUE") == 0) {
+			Py_RETURN_TRUE;
+		}
+		/* Check that the value is a boolean False. */
+		if (strcmp(bval->bv_val, "FALSE") == 0) {
+			Py_RETURN_FALSE;
+		}
+		/* Try to convert into Long. */
+		obj = PyLong_FromString(bval->bv_val, NULL, 0);
+		if (obj == NULL ||  PyErr_Occurred()) {
+			if (PyErr_ExceptionMatches(PyExc_ValueError) == 1) {
+				/* ValueError is excepted and will be ignored.*/
+				PyErr_Clear();
+			}
+		} else {
+			return obj;
+		}
+	}
 
 	bytes = PyBytes_FromStringAndSize(bval->bv_val, bval->bv_len);
 	if (bytes == NULL) {
@@ -51,69 +73,55 @@ berval2PyObject(struct berval *bval, int keepbytes) {
 		/* Should be a reason why there is nothing about
 		   PyExc_UnicodeDecodeError in the official documentation. */
 		if (PyErr_ExceptionMatches(PyExc_UnicodeDecodeError) == 1) {
-			/* UnicodeDecode error is excepted and will be ignored.*/
+			/* UnicodeDecode error is excepted and will be ignored. */
 			PyErr_Clear();
 		}
 	}
 	return obj;
 }
 
-/*	Converts Python simple objects (String, Long, Float, Boolean, Bytes, and None)
-    to C string. If the `obj` is none of these types, then call PyObject_Str, and
-    recall this function with the result.
+/*	Converts any Python objects to C string.
+ 	For string object it uses UTF-8 encoding to convert bytes first,
+ 	then char *. For None object returns empty string, for bool it returns
+ 	TRUE or FALSE C strings.
 */
 char *
 PyObject2char(PyObject *obj) {
 	char *str = NULL;
 	char *tmp = NULL;
-	const wchar_t *wstr;
-	Py_ssize_t length = 0;
-	const unsigned int len = 24; /* The max length that a number's char* representation can be. */
+	PyObject *tmpobj = NULL;
 
 	if (obj == NULL) return NULL;
 
-	/* If Python objects is a None return an empty("") char*. */
+	/* If Python object is a None return an empty("") char*. */
 	if (obj == Py_None) {
 		str = (char *)malloc(sizeof(char));
 		str[0] = '\0';
 		return str;
 	}
-	if (PyUnicode_Check(obj)) {
-		/* Python string converting. From Python 3.3 could be use PyUnicode_AsUTF8AndSize(). */
-		wstr = PyUnicode_AsWideCharString(obj, &length);
-		str = (char *)malloc(sizeof(char) * (length + 1));
-		if (str == NULL) return (char *)PyErr_NoMemory();
-		wcstombs(str, wstr, length);
-		/* Put the delimiter at the end. */
-		str[length] = '\0';
-	} else if (PyLong_Check(obj)) {
-		/* Python integer converting. Could be longer, literally. */
-		long int inum = PyLong_AsLong(obj);
-		tmp = malloc(sizeof(char) * len);
-		if (tmp == NULL) return (char *)PyErr_NoMemory();
-		sprintf(tmp, "%ld", inum);
-	} else if (PyFloat_Check(obj)) {
-		/* Python floating point number converting. */
-		double dnum = PyFloat_AsDouble(obj);
-		tmp = malloc(sizeof(char) * len);
-		if (tmp == NULL) return (char *)PyErr_NoMemory();
-		sprintf(tmp, "%lf", dnum);
-	} else if (PyBool_Check(obj)) {
-		/* Python boolean converting to number representation (0 or 1). */
-		if (obj == Py_True) {
-			str = "1";
-		} else {
-			str = "0";
-		}
-	} else if (PyBytes_Check(obj)) {
-		/* Python bytes converting. */
+
+	if (PyBytes_Check(obj)) {
+		/* Get the buffer of the Python bytes. */
 		tmp = PyBytes_AsString(obj);
 		if (tmp == NULL) return NULL;
-		str = (char *)malloc(sizeof(char) * (strlen(tmp) + 1));
-		strcpy(str, tmp);
-		return str;
+		/* Copy the content of the buffer to avoid invalid freeing. */
+		str = strdup(tmp);
+	} else if (PyUnicode_Check(obj)) {
+		/* Use UTF-8 encoding on Python string to get bytes. */
+		tmpobj = PyUnicode_AsUTF8String(obj);
+		if (tmpobj == NULL) return NULL;
+
+		str = PyObject2char(tmpobj);
+		Py_DECREF(tmpobj);
+	} else if (PyBool_Check(obj)) {
+		/* Python boolean converting to TRUE or FALSE ( see RFC4517 3.3.3). */
+		if (obj == Py_True) {
+			str = "TRUE";
+		} else {
+			str = "FALSE";
+		}
 	} else {
-		PyObject *tmpobj = PyObject_Str(obj);
+		tmpobj = PyObject_Str(obj);
 		if (tmpobj == NULL) {
 			PyErr_BadInternalCall();
 			return NULL;
@@ -121,12 +129,6 @@ PyObject2char(PyObject *obj) {
 
 		str = PyObject2char(tmpobj);
 		Py_DECREF(tmpobj);
-		return str;
-	}
-	/* In case of converting numbers, optimizing the memory allocation. */
-	if (tmp != NULL) {
-		str = strdup(tmp);
-		free(tmp);
 	}
 	return str;
 }
