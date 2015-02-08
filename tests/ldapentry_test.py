@@ -86,10 +86,24 @@ class LDAPEntryTest(unittest.TestCase):
         entry['objectclass'] = ['top', 'inetOrgPerson']
         entry['sn'] = "Test,*special"
         conn.add(entry)
-        result = conn.search("dc=local", 1)
+        result = conn.search(self.basedn, 1)
         entry.delete()
         conn.close()
         self.assertIn(entry.dn, [res.dn for res in result])
+        
+    def test_unicode(self):
+        """ Test adding entry with special character in its DN. """
+        self.client.set_credentials(*self.creds)
+        conn = self.client.connect()
+        dname = "cn=test_\u00B5\u010D\u0F57,%s" % self.basedn
+        entry = LDAPEntry(dname)
+        entry['objectclass'] = ['top', 'inetOrgPerson']
+        entry['sn'] = "unicode_\u00B5\u010D\u0F57"
+        conn.add(entry)
+        result = conn.search(dname, 0)
+        entry.delete()
+        conn.close()
+        self.assertIn(dname, [res.dn for res in result])
     
     def test_connection(self):
         """ Test set and get connection object form LDAPEntry. """
