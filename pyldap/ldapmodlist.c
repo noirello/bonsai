@@ -49,7 +49,7 @@ LDAPModList_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	return (PyObject *)self;
 }
 
-/*	Creates a new LDAPModList object for internal use with a `size` length LDAPMod list,
+/*	Create a new LDAPModList object for internal use with a `size` length LDAPMod list,
     that represents the `entry` object modifications. */
 LDAPModList *
 LDAPModList_New(PyObject* entry, unsigned short int size) {
@@ -132,9 +132,12 @@ LDAPModList_Pop(LDAPModList *self) {
 	return ret;
 }
 
+/* Return 1, if the LDAPModList has no item, 0 otherwise. */
 int
 LDAPModList_Empty(LDAPModList *self) {
-	if (self->last == 0) {
+    /* It is possible that LDAPModList is casted from None.
+    In this case the value of last prop might be invalid. */
+	if (self->last == 0 || (PyObject *)self == Py_None) {
 		return 1;
 	}
 	return 0;
