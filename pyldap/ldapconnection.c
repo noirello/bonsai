@@ -220,8 +220,10 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 static PyObject *
 LDAPConnection_Close(LDAPConnection *self) {
 	int rc;
+	int msgid;
 	PyObject *keys = PyDict_Keys(self->pending_ops);
 	PyObject *iter, *key;
+	PyObject *ldaperror = NULL;
 
 	if (keys == NULL) return NULL;
 
@@ -238,7 +240,7 @@ LDAPConnection_Close(LDAPConnection *self) {
 	for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
 		/* Key should be an integer by design, if it is not rather not process. */
 		if (!PyLong_Check(key)) continue;
-		int msgid = (int)PyLong_AsLong(key);
+		msgid = (int)PyLong_AsLong(key);
 		/* Remove item from the dict. */
 		if (PyDict_DelItem(self->pending_ops, key) != 0) {
 			Py_DECREF(iter);
@@ -254,7 +256,7 @@ LDAPConnection_Close(LDAPConnection *self) {
 		rc = _LDAP_abandon(self->ld, msgid);
 		if (rc != LDAP_SUCCESS) {
 			Py_DECREF(iter);
-			PyObject *ldaperror = get_error_by_code(rc);
+			ldaperror = get_error_by_code(rc);
 			PyErr_SetString(ldaperror, ldap_err2string(rc));
 			Py_DECREF(ldaperror);
 			return NULL;
@@ -264,7 +266,7 @@ LDAPConnection_Close(LDAPConnection *self) {
 
 	rc = _LDAP_unbind(self->ld);
 	if (rc != LDAP_SUCCESS) {
-		PyObject *ldaperror = get_error_by_code(rc);
+		ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
 		return NULL;
@@ -524,6 +526,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	struct timeval zerotime;
 	struct berval *authzid = NULL;
 	char *retoid = NULL;
+	char *errorstr = NULL;
 	PyObject *ldaperror = NULL;
 
 	sprintf(msgidstr, "%d", msgid);
@@ -675,7 +678,6 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 				return NULL;
 
 			ldaperror = get_error_by_code(err);
-			char *errorstr = NULL;
 			ldap_get_option(self->ld, LDAP_OPT_ERROR_STRING, &errorstr);
 			if (errorstr != NULL) {
 				PyErr_SetString(ldaperror, errorstr);

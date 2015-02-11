@@ -86,6 +86,16 @@ LDAPSearchIter_SetParams(LDAPSearchIter *self, char **attrs, int attrsonly,
 	self->sizelimit = sizelimit;
 
 	/* Create a timeval, and set tv_sec to timeout, if timeout greater than 0. */
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+    self->timeout = malloc(sizeof(struct timeval));
+    if (self->timeout != NULL) {
+        self->timeout->tv_sec = timeout;
+        self->timeout->tv_usec = 0;
+    }
+    else {
+        return -1;
+    }
+#else
 	if (timeout > 0) {
 		self->timeout = malloc(sizeof(struct timeval));
 		if (self->timeout != NULL) {
@@ -97,6 +107,7 @@ LDAPSearchIter_SetParams(LDAPSearchIter *self, char **attrs, int attrsonly,
 	} else {
 		self->timeout = NULL;
 	}
+#endif
 	return 0;
 }
 
