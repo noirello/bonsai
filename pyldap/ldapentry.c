@@ -130,20 +130,12 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
 	for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
 		/* Return value: Borrowed reference. */
 		value = (LDAPValueList *)LDAPEntry_GetItem(self, key);
-		if (value == NULL) {
-			Py_DECREF(iter);
-			Py_DECREF(key);
-			Py_DECREF(mods);
-			return NULL;
-		}
+		if (value == NULL) goto error;
 
 		/* Remove empty list values. */
 		if (Py_SIZE((PyObject *)value) == 0) {
 			if (LDAPEntry_SetItem(self, key, NULL) != 0) {
-				Py_DECREF(iter);
-				Py_DECREF(key);
-				Py_DECREF(mods);
-				return NULL;
+				goto error;
 			}
 			value->status = 0;
 		}
@@ -153,30 +145,21 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
 			if (Py_SIZE((PyObject *)value->added) > 0) {
 				if (LDAPModList_Add(mods, LDAP_MOD_ADD | LDAP_MOD_BVALUES,
 						key, (PyObject *)value->added) != 0) {
-					Py_DECREF(iter);
-					Py_DECREF(key);
-					Py_DECREF(mods);
-					return NULL;
+					goto error;
 				}
 			}
 			/* LDAPMod for deleted values. */
 			if (Py_SIZE((PyObject *)value->deleted) > 0) {
 				if (LDAPModList_Add(mods, LDAP_MOD_DELETE | LDAP_MOD_BVALUES,
 						key, (PyObject *)value->deleted) != 0) {
-					Py_DECREF(iter);
-					Py_DECREF(key);
-					Py_DECREF(mods);
-					return NULL;
+					goto error;
 				}
 			}
 		} else if (value->status == 2) {
 			/* LDAPMod for replaced attributes. */
 			if (LDAPModList_Add(mods, LDAP_MOD_REPLACE | LDAP_MOD_BVALUES,
 					key, (PyObject *)value) != 0){
-				Py_DECREF(iter);
-				Py_DECREF(key);
-				Py_DECREF(mods);
-				return NULL;
+				goto error;
 			}
 		}
 		/* Change attributes' status to "not changed" (0), and clear lists. */
@@ -199,6 +182,12 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
 	Py_DECREF(self->deleted);
 	self->deleted = UniqueList_New();
 	return mods;
+
+error:
+	Py_DECREF(iter);
+	Py_DECREF(key);
+	Py_DECREF(mods);
+	return NULL;
 }
 
 static PyObject *
@@ -221,26 +210,13 @@ LDAPEntry_status(LDAPEntry *self) {
 	for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
 		/* Return value: Borrowed reference. */
 		value = (LDAPValueList *)LDAPEntry_GetItem(self, key);
-		if (value == NULL) {
-			Py_DECREF(iter);
-			Py_DECREF(key);
-			Py_DECREF(result);
-			return NULL;
-		}
+		if (value == NULL) goto error;
 
 		status_dict = LDAPValueList_Status(value);
-		if (status_dict == NULL) {
-			Py_DECREF(iter);
-			Py_DECREF(key);
-			Py_DECREF(result);
-			return NULL;
-		}
+		if (status_dict == NULL) goto error;
 		if (PyDict_SetItem(result, key, status_dict) != 0) {
-			Py_DECREF(iter);
-			Py_DECREF(key);
 			Py_DECREF(status_dict);
-			Py_DECREF(result);
-			return NULL;
+			goto error;
 		}
 		Py_DECREF(status_dict);
 		Py_DECREF(key);
@@ -253,6 +229,12 @@ LDAPEntry_status(LDAPEntry *self) {
 	}
 
 	return result;
+
+error:
+	Py_DECREF(iter);
+	Py_DECREF(key);
+	Py_DECREF(result);
+	return NULL;
 }
 
 /*	Create a LDAPEntry from a LDAPMessage. */
@@ -303,29 +285,11 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 		attr != NULL; attr = ldap_next_attribute(conn->ld, entrymsg, ber)) {
 		/* Create a string of attribute's name and add to the attributes list. */
 		attrobj = PyUnicode_FromString(attr);
-		if (attrobj == NULL) {
-			Py_DECREF(self);
-			Py_DECREF(rawval_list);
-			Py_DECREF(attrobj);
-			ldap_memfree(attr);
-			if (ber != NULL) {
-				ber_free(ber, 0);
-			}
-			return (LDAPEntry *)PyErr_NoMemory();
-		}
+		if (attrobj == NULL) goto error;
 		values = ldap_get_values_len(conn->ld, entrymsg, attr);
 
 		lvl = LDAPValueList_New();
-		if (lvl == NULL){
-			Py_DECREF(self);
-			Py_DECREF(attrobj);
-			Py_DECREF(rawval_list);
-			ldap_memfree(attr);
-			if (ber != NULL) {
-				ber_free(ber, 0);
-			}
-			return (LDAPEntry *)PyErr_NoMemory();
-		}
+		if (lvl == NULL) goto error;
 		if (values != NULL) {
 			for (i = 0; values[i] != NULL; i++) {
 				/* Check attribute is in the raw_list. */
@@ -336,14 +300,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 				/* If the attribute has more value, then append to the list. */
 				if (PyList_Append((PyObject *)lvl, val) != 0) {
 					Py_DECREF(lvl);
-					Py_DECREF(self);
-					Py_DECREF(attrobj);
-					Py_DECREF(rawval_list);
-					ldap_memfree(attr);
-					if (ber != NULL) {
-						ber_free(ber, 0);
-					}
-					return (LDAPEntry *)PyErr_NoMemory();
+					goto error;
 				}
 				Py_DECREF(val);
 			}
@@ -360,6 +317,16 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 		ber_free(ber, 0);
 	}
 	return self;
+
+error:
+	Py_DECREF(self);
+	Py_DECREF(attrobj);
+	Py_DECREF(rawval_list);
+	ldap_memfree(attr);
+	if (ber != NULL) {
+		ber_free(ber, 0);
+	}
+	return (LDAPEntry *)PyErr_NoMemory();
 }
 
 /* Preform a LDAP add or modify operation depend on the `mod` parameter.
@@ -381,14 +348,6 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	mods = LDAPEntry_CreateLDAPMods(self);
 	if (mods == NULL) {
 		PyErr_SetString(PyExc_MemoryError, "Create LDAPModList is failed.");
-		return NULL;
-	}
-
-	if (mods->size == 0) {
-		PyObject *ldaperror = get_error_by_code(0x41);
-		PyErr_SetString(ldaperror, "no structural object class provided");
-		Py_DECREF(ldaperror);
-		Py_DECREF(mods);
 		return NULL;
 	}
 
@@ -690,18 +649,16 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	Py_DECREF(newparent);
 
 	rc = ldap_rename(self->conn->ld, olddn_str, newrdn_str, newparent_str, 1, NULL, NULL, &msgid);
+	/* Clean up strings. */
+	free(olddn_str);
+	free(newrdn_str);
+	free(newparent_str);
 	if (rc != LDAP_SUCCESS) {
 		PyObject *ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
-		free(olddn_str);
-		free(newrdn_str);
-		free(newparent_str);
 		return NULL;
 	}
-	free(olddn_str);
-	free(newrdn_str);
-	free(newparent_str);
 
 	/* Add new rename operation to the pending_ops. */
 	if (addToPendingOps(self->conn->pending_ops, msgid,  Py_None) != 0) {
