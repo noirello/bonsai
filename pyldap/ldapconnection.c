@@ -169,7 +169,6 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	PyObject *client = NULL;
 	PyObject *ldapclient_type = NULL;
 	PyObject *tmp = NULL;
-	PyObject *page_size = NULL, *sort_list = NULL;
 	static char *kwlist[] = {"client", NULL};
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &client)) {
@@ -193,23 +192,6 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 		Py_INCREF(client);
 		self->client = client;
 		Py_XDECREF(tmp);
-
-		/* Get page size from the connection object. */
-		page_size = PyObject_GetAttrString((PyObject *)self, "_LDAPConnection__page_size");
-		if (page_size == NULL) return -1;
-		self->page_size = (int)PyLong_AsLong(page_size);
-		Py_DECREF(page_size);
-		if (PyErr_Occurred()) return -1;
-
-		/* Get sort list from the client. */
-		sort_list = PyObject_GetAttrString(self->client, "_LDAPClient__sort_attrs");
-		if (PyList_Size(sort_list) > 0) {
-			self->sort_list = PyList2LDAPSortKeyList(sort_list);
-			if (self->sort_list == NULL) {
-				PyErr_BadInternalCall();
-				return -1;
-			}
-		}
 
 		return connecting(self);
 	}
@@ -442,6 +424,7 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	PyObject *attrlist  = NULL;
 	PyObject *attrsonlyo = NULL;
 	LDAPSearchIter *search_iter = NULL;
+	PyObject *page_size = NULL, *sort_list = NULL;
 	static char *kwlist[] = {"base", "scope", "filter", "attrlist", "timeout", "sizelimit", "attrsonly", NULL};
 
 	if (LDAPConnection_IsClosed(self) != 0) return NULL;
@@ -461,6 +444,23 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
 	search_iter = LDAPSearchIter_New(self);
 	if (search_iter == NULL) return PyErr_NoMemory();
+
+	/* Get page size from the connection object. */
+	page_size = PyObject_GetAttrString((PyObject *)self, "_LDAPConnection__page_size");
+	if (page_size == NULL) return NULL;
+	self->page_size = (int)PyLong_AsLong(page_size);
+	Py_DECREF(page_size);
+	if (PyErr_Occurred()) return NULL;
+
+	/* Get sort list from the client. */
+	sort_list = PyObject_GetAttrString((PyObject *)self, "_LDAPConnection__sort_attrs");
+	if (PyList_Size(sort_list) > 0) {
+		self->sort_list = PyList2LDAPSortKeyList(sort_list);
+		if (self->sort_list == NULL) {
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+	}
 
 	/* Convert Python objects to C types. */
 	if (attrsonlyo != NULL) attrsonly = PyObject_IsTrue(attrsonlyo);
