@@ -65,6 +65,15 @@ class LDAPConnectionTest(unittest.TestCase):
         if 'cn' not in obj.keys():
             self.fail()
 
+    def test_add_and_delete(self):
+        entry = pyldap.LDAPEntry("cn=example,%s" % self.cfg["SERVER"]["basedn"])
+        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "example", "sn" : "example"})
+        try:
+            self.conn.add(entry)
+            self.conn.delete("cn=example,%s" % self.cfg["SERVER"]["basedn"])
+        except pyldap.LDAPError:
+            self.fail("Add and delete new entry is failed.")
+
     def test_whoami(self):
         """ Test whoami. """
         obj = self.conn.whoami()
