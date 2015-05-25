@@ -339,7 +339,6 @@ PyObject *
 LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	int rc = -1;
 	int msgid = -1;
-	char msgidstr[8];
 	char *dnstr = NULL;
 	LDAPModList *mods = NULL;
 
@@ -374,10 +373,8 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	}
 
 	/* Add new add or modify operation to the pending_ops with mod_dict. */
-	sprintf(msgidstr, "%d", msgid);
-	if (PyDict_SetItemString(self->conn->pending_ops, msgidstr,
+	if (addToPendingOps(self->conn->pending_ops, msgid,
 			(PyObject *)mods) != 0) {
-		PyErr_BadInternalCall();
 		Py_DECREF(mods);
 		return NULL;
 	}
@@ -617,7 +614,6 @@ static PyObject *
 LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	int rc;
 	int msgid = -1;
-	char msgidstr[8];
 	char *newparent_str, *newrdn_str, *olddn_str;
 	PyObject *newdn, *newparent, *newrdn;
 	PyObject *tmp;
@@ -669,11 +665,8 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	}
 
 	/* Add new rename operation to the pending_ops. */
-	sprintf(msgidstr, "%d", msgid);
-	if (PyDict_SetItemString(self->conn->pending_ops, msgidstr,
-			Py_None) != 0) {
-		PyErr_BadInternalCall();
-		return NULL;
+	if (addToPendingOps(self->conn->pending_ops, msgid,  Py_None) != 0) {
+			return NULL;
 	}
 
 	return PyLong_FromLong((long int)msgid);

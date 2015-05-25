@@ -38,9 +38,10 @@ int lowerCaseMatch(PyObject *o1, PyObject *o2);
 PyObject *load_python_object(char *module_name, char *object_name);
 PyObject *get_error(char *error_name);
 PyObject *get_error_by_code(int code);
+int addToPendingOps(PyObject *pending_ops, int msgid,  PyObject *item);
 
 int _LDAP_initialization(LDAP **ld, PyObject *url, int tls_option);
-int _LDAP_bind_s(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid, char *realm, char *authzid);
+int _LDAP_bind(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid, char *realm, char *authzid,  int *msgidp);
 int _LDAP_unbind(LDAP *ld);
 int _LDAP_abandon(LDAP *ld, int msgid);
 

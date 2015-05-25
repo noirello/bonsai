@@ -293,6 +293,19 @@ get_error_by_code(int code) {
 	return error;
 }
 
+int
+addToPendingOps(PyObject *pending_ops, int msgid,  PyObject *item)  {
+	char msgidstr[8];
+
+	sprintf(msgidstr, "%d", msgid);
+	if (PyDict_SetItemString(pending_ops, msgidstr, item) != 0) {
+		PyErr_BadInternalCall();
+		return -1;
+	}
+
+	return 0;
+}
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
 /* It does what it says: no verification on the server cert. */
@@ -412,19 +425,20 @@ int _LDAP_initialization(LDAP **ld, PyObject *url, int tls_option) {
 	return rc;
 }
 
-int _LDAP_bind_s(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid, char *realm, char *authzid) {
+int _LDAP_bind(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid, char *realm, char *authzid, int *msgidp) {
 	int rc;
 	LDAPControl	**sctrlsp = NULL;
 	struct berval passwd;
-	struct berval *servdata;
 	void *defaults;
+	const char *rmech = NULL;
+	LDAPMessage *result = NULL;
 
 	/* Mechanism is set, use SASL interactive bind. */
 	if (strcmp(mech, "SIMPLE") != 0) {
 		if (pswstr == NULL) pswstr = "";
 		defaults = create_sasl_defaults(ld, mech, realm, authcid, pswstr, authzid);
 		if (defaults == NULL) return -1;
-		rc = ldap_sasl_interactive_bind_s(ld, binddn, mech, sctrlsp, NULL, LDAP_SASL_QUIET, sasl_interact, defaults);
+		rc = ldap_sasl_interactive_bind(ld, binddn, mech, sctrlsp, NULL, LDAP_SASL_QUIET, sasl_interact, defaults, result, &rmech, msgidp);
 	} else {
 		if (pswstr == NULL) {
 			passwd.bv_len = 0;
@@ -432,13 +446,13 @@ int _LDAP_bind_s(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid
 			passwd.bv_len = strlen(pswstr);
 		}
 		passwd.bv_val = pswstr;
-		rc = ldap_sasl_bind_s(ld, binddn, LDAP_SASL_SIMPLE, &passwd, sctrlsp, NULL, &servdata);
+		rc = ldap_sasl_bind(ld, binddn, LDAP_SASL_SIMPLE, &passwd, sctrlsp, NULL, msgidp);
 	}
 	return rc;
 }
 
 int _LDAP_unbind(LDAP *ld) {
-	return ldap_unbind_ext_s((ld), NULL, NULL);
+	return ldap_unbind_ext((ld), NULL, NULL);
 }
 
 int _LDAP_abandon(LDAP *ld, int msgid ) {

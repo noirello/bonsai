@@ -160,7 +160,7 @@ class LDAPEntryTest(unittest.TestCase):
         """
         entry = LDAPEntry("cn=async_test,%s" % self.basedn)
         self.client.set_credentials(*self.creds)
-        with self.client.connect(True) as conn:
+        with (yield from self.client.connect(True)) as conn:
             entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
                                      'organizationalPerson']
             self.assertRaises(pyldap.ObjectClassViolation,
