@@ -132,7 +132,7 @@ UniqueList_Contains(UniqueList *list, PyObject *item) {
 	Py_ssize_t i;
 
 	for (i = 0; i < Py_SIZE(list); i++) {
-		if (lowerCaseMatch(list->list.ob_item[i], item) == 1) {
+		if (lower_case_match(list->list.ob_item[i], item) == 1) {
 			return 1;
 		}
 	}
@@ -191,7 +191,7 @@ UniqueList_Remove_wFlg(UniqueList *self, PyObject *value) {
 	Py_ssize_t i;
 
 	for (i = 0; i < Py_SIZE(self); i++) {
-		cmp = lowerCaseMatch(self->list.ob_item[i], value);
+		cmp = lower_case_match(self->list.ob_item[i], value);
 		if (cmp > 0) {
 			if (UniqueList_SetSlice(self, i, i+1, (PyObject *)NULL) == 0) {
 				return 1;
@@ -338,7 +338,7 @@ UL_contains(UniqueList *self, PyObject *el) {
 	if (tup == NULL) return -1;
 
     for (i = 0, cmp = 0; cmp == 0 && i < Py_SIZE(tup); ++i) {
-    	cmp = lowerCaseMatch(PyTuple_GetItem(tup, i), el);
+    	cmp = lower_case_match(PyTuple_GetItem(tup, i), el);
     }
     return cmp;
 }

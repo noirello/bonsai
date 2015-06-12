@@ -15,7 +15,7 @@ lowercase(char *str) {
 
 /* Create a berval structure from a char*. */
 struct berval *
-createBerval(char *value) {
+create_berval(char *value) {
 	struct berval *bval = NULL;
 	bval = malloc(sizeof(struct berval));
 	if (bval == NULL) return NULL;
@@ -149,7 +149,7 @@ PyList2BervalList(PyObject *list) {
 
 	for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
 		strvalue = PyObject2char(item);
-		berval_arr[i++] = createBerval(strvalue);
+		berval_arr[i++] = create_berval(strvalue);
 		Py_DECREF(item);
 	}
 	Py_DECREF(iter);
@@ -233,7 +233,7 @@ PyList2LDAPSortKeyList(PyObject *list) {
 /*	Compare lower-case representations of two Python objects.
 	Returns 1 they are matched, -1 if it's failed, and 0 otherwise. */
 int
-lowerCaseMatch(PyObject *o1, PyObject *o2) {
+lower_case_match(PyObject *o1, PyObject *o2) {
 	int match = 0;
 	char *str1 = lowercase(PyObject2char(o1));
 	char *str2 = lowercase(PyObject2char(o2));
@@ -288,7 +288,7 @@ get_error_by_code(int code) {
 }
 
 int
-addToPendingOps(PyObject *pending_ops, int msgid,  PyObject *item)  {
+add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item)  {
 	char msgidstr[8];
 	sprintf(msgidstr, "%d", msgid);
 	if (PyDict_SetItemString(pending_ops, msgidstr, item) != 0) {

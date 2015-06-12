@@ -369,7 +369,7 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	}
 
 	/* Add new add or modify operation to the pending_ops with mod_dict. */
-	if (addToPendingOps(self->conn->pending_ops, msgid,
+	if (add_to_pending_ops(self->conn->pending_ops, msgid,
 			(PyObject *)mods) != 0) {
 		Py_DECREF(mods);
 		return NULL;
@@ -661,7 +661,7 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	}
 
 	/* Add new rename operation to the pending_ops. */
-	if (addToPendingOps(self->conn->pending_ops, msgid,  Py_None) != 0) {
+	if (add_to_pending_ops(self->conn->pending_ops, msgid,  Py_None) != 0) {
 		return NULL;
 	}
 
@@ -700,7 +700,7 @@ searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int del, int* found) {
 	*found = 0;
 	/* Searching for same lowercase key among the other keys. */
 	for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
-		if (lowerCaseMatch(item, key) == 1) {
+		if (lower_case_match(item, key) == 1) {
 			key = item;
 			*found = 1;
 			break;
@@ -714,7 +714,7 @@ searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int del, int* found) {
 		iter = PyObject_GetIter((PyObject *)self->deleted);
 		if (iter ==  NULL) return NULL;
 		for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
-			if (lowerCaseMatch(item, key) == 1) {
+			if (lower_case_match(item, key) == 1) {
 				*found = 1;
 				Py_DECREF(item);
 				break;
