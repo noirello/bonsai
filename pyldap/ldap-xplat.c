@@ -4,7 +4,7 @@
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
-/* It does what is says: no verification on the server cert. */
+/* It does what it says: no verification on the server cert. */
 BOOLEAN _cdecl noverify(PLDAP Connection, PCCERT_CONTEXT *ppServerCert) {
 	return 1;
 }
