@@ -11,17 +11,7 @@
 #include <Python.h>
 #include "structmember.h"
 
-//MS Windows
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-
-#include <windows.h>
-#include <winldap.h>
-
-//Unix
-#else
-#include <ldap.h>
-
-#endif
+#include "ldap-xplat.h"
 
 typedef struct {
 	PyObject_HEAD
