@@ -2,6 +2,8 @@
 #include "uniquelist.h"
 #include "ldapentry.h"
 
+#include "ldapoperation.h"
+
 /* Clear all object in the LDAPEntry. */
 static int
 LDAPEntry_clear(LDAPEntry *self) {
@@ -368,13 +370,12 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 		return NULL;
 	}
 
-	/* Add new add or modify operation to the pending_ops with mod_dict. */
-	if (add_to_pending_ops(self->conn->pending_ops, msgid,
-			(PyObject *)mods) != 0) {
+	/* Create a new LDAPOperation and append to the pending_ops
+	    with the mod_list. */
+	if (LDAPOperation_Proceed(self->conn, msgid, 3, mods) != 0) {
 		Py_DECREF(mods);
 		return NULL;
 	}
-	Py_DECREF(mods);
 
 	return PyLong_FromLong((long int)msgid);
 }
@@ -660,10 +661,8 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 		return NULL;
 	}
 
-	/* Add new rename operation to the pending_ops. */
-	if (add_to_pending_ops(self->conn->pending_ops, msgid,  Py_None) != 0) {
-		return NULL;
-	}
+	/* Add new LDAPOperation to the pending_ops. */
+	if (LDAPOperation_Proceed(self->conn, msgid, 0, Py_None) != 0) return NULL;
 
 	return PyLong_FromLong((long int)msgid);
 }

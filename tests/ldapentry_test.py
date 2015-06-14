@@ -30,7 +30,7 @@ class LDAPEntryTest(unittest.TestCase):
                          "LDAPEntry get is failed.")
         del entry['sn']
         self.assertRaises(KeyError, lambda: entry['sn'])
-        
+         
     def test_append_extend(self):
         """ Test append and extend methods of LDAPEntry's attribute. """
         entry = LDAPEntry("cn=test");
@@ -41,14 +41,14 @@ class LDAPEntryTest(unittest.TestCase):
         self.assertRaises(TypeError,
                           lambda: entry['GivenName']
                           .extend(['teSt', "test3"]))
-
+ 
     def test_pop(self):
         """ Test LDAPEntry's pop method. """
         entry = LDAPEntry("cn=test")
         entry['test'] = "test"
         self.assertEqual(entry.pop("test"), ["test"])
         self.assertEqual(entry.pop("test", None), None)
-
+ 
     def test_popitem(self):
         """ Test LDAPEntry's popitem method. """
         entry = LDAPEntry("cn=test")
@@ -59,7 +59,7 @@ class LDAPEntryTest(unittest.TestCase):
         self.assertNotIn(item[0], entry)
         entry[item[0]] = item[1]
         self.assertEqual(entry[item[0]], item[1])
-
+ 
     def test_clear(self):
         """ Test LDAPEntry's clear method. """
         entry = LDAPEntry("cn=test")
@@ -68,7 +68,7 @@ class LDAPEntryTest(unittest.TestCase):
         entry.clear()
         self.assertDictEqual(entry, {})
         self.assertEqual(entry.dn, "cn=test")
-    
+     
     def test_update(self):
         """ Test updating LDAPEntry object. """
         entry = LDAPEntry("cn=test")
@@ -77,7 +77,7 @@ class LDAPEntryTest(unittest.TestCase):
         self.assertEqual(entry['mail'], ['test@mail'])
         self.assertEqual(entry['givenname'], ['test2'])
         self.assertEqual(entry['sn'][0], 'test')
-    
+     
     def test_special_char(self):
         """ Test adding entry with special character in its DN. """
         self.client.set_credentials(*self.creds)
@@ -90,7 +90,7 @@ class LDAPEntryTest(unittest.TestCase):
         entry.delete()
         conn.close()
         self.assertIn(entry.dn, [res.dn for res in result])
-        
+         
     def test_unicode(self):
         """ Test adding entry with special character in its DN. """
         self.client.set_credentials(*self.creds)
@@ -104,7 +104,7 @@ class LDAPEntryTest(unittest.TestCase):
         entry.delete()
         conn.close()
         self.assertIn(dname, [res.dn for res in result])
-    
+     
     def test_connection(self):
         """ Test set and get connection object form LDAPEntry. """
         entry = LDAPEntry("cn=test,%s" % self.basedn)
@@ -160,7 +160,7 @@ class LDAPEntryTest(unittest.TestCase):
         """
         entry = LDAPEntry("cn=async_test,%s" % self.basedn)
         self.client.set_credentials(*self.creds)
-        with self.client.connect(True) as conn:
+        with (yield from self.client.connect(True)) as conn:
             entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
                                      'organizationalPerson']
             self.assertRaises(pyldap.ObjectClassViolation,

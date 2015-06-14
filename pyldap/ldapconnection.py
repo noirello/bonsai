@@ -11,11 +11,14 @@ class LDAPConnection(_LDAPConnection):
 
     def __enter__(self):
         """ Context manager entry point. """
-        return self
+        return self.open()
 
     def __exit__(self, *exc):
         """ Context manager exit point. """
         self.close()
+    
+    def open(self):
+        return self._result(super().open())
 
     def _poll(self, msg_id):
         """

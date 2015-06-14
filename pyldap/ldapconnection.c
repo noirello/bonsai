@@ -1,5 +1,6 @@
 #include "ldapconnection.h"
 #include "ldapentry.h"
+#include "ldapoperation.h"
 #include "ldapsearchiter.h"
 #include "utils.h"
 
@@ -54,23 +55,20 @@ LDAPConnection_IsClosed(LDAPConnection *self) {
 	return 0;
 }
 
-/*	Open a connection to the LDAP server. Initializes LDAP structure.
+/*	Open a connection to the LDAP server. Initialises LDAP structure.
 	If TLS is true, starts TLS session.
 */
 static int
-connecting(LDAPConnection *self) {
+connecting(LDAPConnection *self, int *msgid) {
 	int rc = -1;
 	int tls_option = -1;
-	char *binddn = NULL;
-	char *pswstr = NULL;
+	int local_msgid = -1;
 	char *mech = NULL;
-	char *authzid = "";
-	char *realm = NULL;
-	char *authcid = NULL;
 	PyObject *url = NULL;
 	PyObject *tls = NULL;
 	PyObject *tmp = NULL;
 	PyObject *creds = NULL;
+	ldapConnectionInfo *info = NULL;
 
 	/* Get URL policy from LDAPClient. */
 	url = PyObject_GetAttrString(self->client, "_LDAPClient__url");
@@ -91,26 +89,7 @@ connecting(LDAPConnection *self) {
 		return -1;
 	}
 
-	tls = PyObject_GetAttrString(self->client, "_LDAPClient__tls");
-	if (tls == NULL) return -1;
-
-	/* Start TLS, if it necessary. */
-	if (PyObject_IsTrue(tls)) {
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-		rc = ldap_start_tls_sA(self->ld, NULL, NULL, NULL, NULL);
-#else
-		rc = ldap_start_tls_s(self->ld, NULL, NULL);
-#endif
-		if (rc != LDAP_SUCCESS) {
-			PyObject *ldaperror = get_error_by_code(rc);
-			PyErr_SetString(ldaperror, ldap_err2string(rc));
-			Py_DECREF(ldaperror);
-			Py_DECREF(tls);
-			return -1;
-		}
-	}
-	Py_DECREF(tls);
-
+	/* Get mechanism and credentials. */
 	creds = PyObject_GetAttrString(self->client, "_LDAPClient__credentials");
 	if (creds == NULL) return -1;
 
@@ -119,46 +98,60 @@ connecting(LDAPConnection *self) {
 	mech = PyObject2char(tmp);
 	Py_XDECREF(tmp);
 
-	/* Get credential information, if it's given. */
-	if (PyTuple_Check(creds) && PyTuple_Size(creds) > 1) {
-		if (strcmp(mech, "SIMPLE") == 0) {
-			tmp = PyTuple_GetItem(creds, 0);
-			binddn = PyObject2char(tmp);
-		} else {
-			tmp = PyTuple_GetItem(creds, 0);
-			authcid = PyObject2char(tmp);
-			tmp = PyDict_GetItemString(creds, "realm");
-			realm = PyObject2char(tmp);
+	info = create_conn_info(self->ld, mech, creds);
+	if (info == NULL) return -1;
+
+	tls = PyObject_GetAttrString(self->client, "_LDAPClient__tls");
+	if (tls == NULL) return -1;
+
+	/* Start TLS, if it necessary. */
+	if (PyObject_IsTrue(tls)) {
+		rc = ldap_start_tls(self->ld, NULL, NULL, msgid);
+		if (rc != LDAP_SUCCESS) {
+			PyObject *ldaperror = get_error_by_code(rc);
+			PyErr_SetString(ldaperror, ldap_err2string(rc));
+			Py_DECREF(ldaperror);
+			Py_DECREF(tls);
+			return -1;
 		}
-		tmp = PyTuple_GetItem(creds, 1);
-		pswstr = PyObject2char(tmp);
+		if (LDAPOperation_Proceed(self, *msgid, 1, info) != 0) {
+			Py_DECREF(tls);
+			return -1;
+		}
 	}
+	Py_DECREF(tls);
 
-	if (authzid == NULL) authzid = "";
+	rc = LDAP_bind(self->ld, info, NULL, &local_msgid);
 
-	rc = LDAP_bind(self->ld, mech, binddn, pswstr, authcid, realm, authzid);
-
-	/* Clean up. */
-	free(mech);
-	free(binddn);
-	free(pswstr);
-	free(authcid);
-	free(realm);
-	if (strcmp(authzid, "") != 0) free(authzid);
-
-	if (rc != LDAP_SUCCESS) {
+	if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
 		PyObject *ldaperror = get_error_by_code(rc);
 		PyErr_SetString(ldaperror, ldap_err2string(rc));
 		Py_DECREF(ldaperror);
 		Py_DECREF(creds);
 		return -1;
 	}
+
 	Py_DECREF(creds);
+	if (*msgid == -1) {
+		/* This means no TLS operation is started,  */
+		/* and the binding is the first operation to proceed. */
+		if (LDAPOperation_Proceed(self, local_msgid, 1, info) != 0) {
+			return -1;
+		}
+		*msgid = local_msgid;
+	} else {
+		/* TLS operation is already in progress*/
+		/* Append binding's message id to the operation's list. */
+		if (LDAPOperation_AppendMsgId(self, *msgid, local_msgid) != 0) {
+			return -1;
+		}
+	}
+
 	self->closed = 0;
 	return 0;
 }
 
-/*	Initialize the LDAPConnection. */
+/*	Initialise the LDAPConnection. */
 static int
 LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	PyObject *client = NULL;
@@ -188,9 +181,22 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 		self->client = client;
 		Py_XDECREF(tmp);
 
-		return connecting(self);
+		return 0;
 	}
 	return -1;
+}
+
+/* Open connection. */
+static PyObject *
+LDAPConnection_Open(LDAPConnection *self) {
+	int rc = 0;
+	int msgid = -1;
+
+	rc = connecting(self, &msgid);
+	if (rc != 0) return NULL;
+
+	self->closed = 0;
+	return PyLong_FromLong((long int)msgid);
 }
 
 /*	Close connection. */
@@ -296,7 +302,7 @@ LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr) {
 			return -1;
 		}
 		/* Add new delete operation to the pending_ops. */
-		if (add_to_pending_ops(self->pending_ops, msgid,  Py_None) != 0) {
+		if (LDAPOperation_Proceed(self, msgid, 0, Py_None) != 0) {
 			return -1;
 		}
 		return msgid;
@@ -388,8 +394,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 			return -1;
 	}
 
-	if (add_to_pending_ops(self->pending_ops, msgid,
-			(PyObject *)search_iter) != 0) {
+	if (LDAPOperation_Proceed(self, msgid, 2, search_iter) != 0) {
 		return -1;
 	}
 
@@ -492,14 +497,15 @@ LDAPConnection_Whoami(LDAPConnection *self) {
 		return NULL;
 	}
 
-	if (add_to_pending_ops(self->pending_ops, msgid,  Py_None) != 0) {
-		return NULL;
-	}
+
+	if (LDAPOperation_Proceed(self, msgid, 0, NULL) != 0) return NULL;
+
+	printf("FINISHED\n");
 	return PyLong_FromLong((long int)msgid);
 }
 
 PyObject *
-parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
+parse_search_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
 	int rc = -1;
 	int err = 0;
 	LDAPMessage *entry;
@@ -509,11 +515,9 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 	PyObject *ldaperror = NULL;
 
 	/* Get SearchIter from pending operations. */
-	search_iter = (LDAPSearchIter *)PyDict_GetItemString(self->pending_ops,
-			msgidstr);
-	Py_XINCREF(search_iter);
-	if (search_iter == NULL ||
-			PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
+	search_iter = (LDAPSearchIter *)LDAPOperation_GetData(self, msgid);
+
+	if (search_iter == NULL || LDAPOperation_Remove(self, msgid) != 0) {
 		PyErr_BadInternalCall();
 		return NULL;
 	}
@@ -584,7 +588,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 }
 
 PyObject *
-parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
+parse_extended_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
 	int rc = -1;
 	int err = 0;
 	struct berval *authzid = NULL;
@@ -593,10 +597,9 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 
 	rc = ldap_parse_extended_result(self->ld, res, &retoid, &authzid, 1);
 	/* Remove operations from pending_ops. */
-	if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
-		PyErr_BadInternalCall();
-		return NULL;
-	}
+
+	/* Remove LDAPOperation from pending_ops. */
+	if (LDAPOperation_Remove(self, msgid) != 0) return NULL;
 
 	if( rc != LDAP_SUCCESS ) {
 		ldaperror = get_error_by_code(err);
@@ -623,8 +626,8 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 PyObject *
 LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	int rc = -1;
-	char msgidstr[8];
 	int err = 0;
+	int local_msgid = -1;
 	LDAPMessage *res;
 	LDAPControl **returned_ctrls = NULL;
 	LDAPModList *mods = NULL;
@@ -632,18 +635,20 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	char *errorstr = NULL;
 	PyObject *ldaperror = NULL;
 	PyObject *ext_obj = NULL;
+	ldapConnectionInfo *info = NULL;
 
-	sprintf(msgidstr, "%d", msgid);
+	local_msgid = LDAPOperation_GetFirstMsgId(self, msgid);
+	if (local_msgid == -1) return NULL;
 
 	if (block == 1) {
 		/* The ldap_result will block, and wait for server response. */
 		Py_BEGIN_ALLOW_THREADS
-		rc = ldap_result(self->ld, msgid, LDAP_MSG_ALL, NULL, &res);
+		rc = ldap_result(self->ld, local_msgid, LDAP_MSG_ALL, NULL, &res);
 		Py_END_ALLOW_THREADS
 	} else {
 		zerotime.tv_sec = 0L;
 		zerotime.tv_usec = 0L;
-		rc = ldap_result(self->ld, msgid, LDAP_MSG_ALL, &zerotime, &res);
+		rc = ldap_result(self->ld, local_msgid, LDAP_MSG_ALL, &zerotime, &res);
 	}
 
 	switch (rc) {
@@ -664,9 +669,47 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 		/* Only matters when ldap_result is set with LDAP_MSG_ONE. */
 		break;
 	case LDAP_RES_SEARCH_RESULT:
-		return parse_search_result(self, res, msgidstr);
+		return parse_search_result(self, res, msgid);
+	case LDAP_RES_BIND:
+		/* Handle connecting. */
+		rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
+				&returned_ctrls, 0);
+
+		if (rc != LDAP_SUCCESS) {
+			/* Connection is failed. */
+			ldaperror = get_error_by_code(err);
+			PyErr_SetString(ldaperror, ldap_err2string(err));
+			Py_DECREF(ldaperror);
+			return NULL;
+		}
+
+		if (err == LDAP_SASL_BIND_IN_PROGRESS) {
+			info = (ldapConnectionInfo *)LDAPOperation_GetData(self, msgid);
+			if (info == NULL) return NULL;
+			rc = LDAP_bind(self->ld, info, res, &local_msgid);
+			if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
+				ldaperror = get_error_by_code(err);
+				PyErr_SetString(ldaperror, ldap_err2string(err));
+				Py_DECREF(ldaperror);
+				return NULL;
+			}
+			if (LDAPOperation_AppendMsgId(self, msgid, local_msgid) != 0) {
+				return NULL;
+			}
+		}
+
+		/* Remove LDAPOperation from pending_ops. */
+		if (LDAPOperation_Remove(self, msgid) != 0) return NULL;
+
+		if (err == LDAP_SUCCESS) {
+			Py_INCREF((PyObject *)self);
+			return (PyObject *)self;
+		}
+
+		if (block == 1) return LDAPConnection_Result(self, msgid, block);
+		break;
 	case LDAP_RES_EXTENDED:
-		ext_obj = parse_extended_result(self, res, msgidstr);
+		ext_obj = parse_extended_result(self, res, msgid);
 		if (ext_obj == NULL && PyErr_Occurred()) return NULL;
 		if (ext_obj != NULL) return ext_obj;
 		break;
@@ -674,15 +717,12 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 		rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
 				&returned_ctrls, 1);
 
-		/* Get the modification list from the pending_ops. */
-		mods = (LDAPModList *)PyDict_GetItemString(self->pending_ops, msgidstr);
+		/* Get the modification list from the corresponding LDAPOperation. */
+		mods = (LDAPModList *)LDAPOperation_GetData(self, msgid);
 		if (mods == NULL) return NULL;
-		Py_INCREF(mods);
-		/* Remove operations from pending_ops. */
-		if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
-			PyErr_BadInternalCall();
-			return NULL;
-		}
+
+		/* Remove LDAPOperation from pending_ops. */
+		if (LDAPOperation_Remove(self, msgid) != 0) return NULL;
 
 		if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
 			/* LDAP add or modify operation is failed,
@@ -789,6 +829,8 @@ static PyMethodDef LDAPConnection_methods[] = {
 			"Delete an LDAPEntry with the given distinguished name."},
 	{"get_result", (PyCFunction)LDAPConnection_result, METH_VARARGS | METH_KEYWORDS,
 			"Poll the status of the operation associated with the given message id from LDAP server."},
+	{"open", (PyCFunction)LDAPConnection_Open, METH_NOARGS,
+			"Open connection with the LDAP Server."},
 	{"search", (PyCFunction)LDAPConnection_Search, 	METH_VARARGS | METH_KEYWORDS,
 			"Search for LDAP entries."},
 	{"whoami", (PyCFunction)LDAPConnection_Whoami, METH_NOARGS,

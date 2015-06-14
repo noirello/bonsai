@@ -121,7 +121,7 @@ class LDAPClient(object):
         attrs = ["namingContexts", "altServer", "supportedExtension",
                  "supportedControl", "supportedSASLMechanisms",
                  "supportedLDAPVersion"]
-        conn = LDAPConnection(self, False)
+        conn = LDAPConnection(self, False).open()
         try:
             # Convert to list to avoid possible LDAPSearchIter object.
             root_dse = list(conn.search("", 0, "(objectclass=*)", attrs, 0, False))[0]
@@ -138,8 +138,8 @@ class LDAPClient(object):
         """
         Open a connection to the LDAP server.
 
-        :param bool async: Set `True` to use asyncronous connection.
+        :param bool async: Set `True` to use asynchronous connection.
         :return: an LDAP connection.
         :rtype: :class:`LDAPConnection`
         """
-        return LDAPConnection(self, async)
+        return LDAPConnection(self, async).open()

@@ -32,7 +32,8 @@
 #include <sasl/sasl.h>
 #include <sys/time.h>
 
-typedef struct lutil_sasl_defaults_s {
+typedef struct ldap_connection_info_s {
+	char *binddn;
 	char *mech;
 	char *realm;
 	char *authcid;
@@ -40,16 +41,17 @@ typedef struct lutil_sasl_defaults_s {
 	char *authzid;
 	char **resps;
 	int nresps;
-} lutilSASLdefaults;
+} ldapConnectionInfo;
 
-void *create_sasl_defaults(LDAP *ld, char *mech, char *realm, char *authcid, char *passwd, char *authzid);
 int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
 
 #endif
 
 int LDAP_initialization(LDAP **ld, PyObject *url, int tls_option);
-int LDAP_bind(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid, char *realm, char *authzid);
+int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgid);
 int LDAP_unbind(LDAP *ld);
 int LDAP_abandon(LDAP *ld, int msgid);
+
+void *create_conn_info(LDAP *ld, char *mech, PyObject *creds);
 
 #endif /* PYLDAP_LDAP_XPLAT_H_ */

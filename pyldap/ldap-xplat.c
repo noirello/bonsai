@@ -121,28 +121,26 @@ int LDAP_initialization(LDAP **ld, PyObject *url, int tls_option) {
 	return rc;
 }
 
-int LDAP_bind(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid, char *realm, char *authzid) {
+int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgid) {
 	int rc;
 	LDAPControl	**sctrlsp = NULL;
 	struct berval passwd;
-	struct berval *servdata;
-	void *defaults;
+	const char *rmech = NULL;
 
 	/* Mechanism is set, use SASL interactive bind. */
-	if (strcmp(mech, "SIMPLE") != 0) {
-		if (pswstr == NULL) pswstr = "";
-		defaults = create_sasl_defaults(ld, mech, realm, authcid, pswstr, authzid);
-		if (defaults == NULL) return -1;
-		rc = ldap_sasl_interactive_bind_s(ld, binddn, mech, sctrlsp, NULL, LDAP_SASL_QUIET, sasl_interact, defaults);
+	if (strcmp(info->mech, "SIMPLE") != 0) {
+		if (info->passwd == NULL) info->passwd = "";
+		rc = ldap_sasl_interactive_bind(ld, info->binddn, info->mech, sctrlsp, NULL, LDAP_SASL_QUIET, sasl_interact, info, result, &rmech, msgid);
 	} else {
-		if (pswstr == NULL) {
+		if (info->passwd  == NULL) {
 			passwd.bv_len = 0;
 		} else {
-			passwd.bv_len = strlen(pswstr);
+			passwd.bv_len = strlen(info->passwd );
 		}
-		passwd.bv_val = pswstr;
-		rc = ldap_sasl_bind_s(ld, binddn, LDAP_SASL_SIMPLE, &passwd, sctrlsp, NULL, &servdata);
+		passwd.bv_val = info->passwd ;
+		rc = ldap_sasl_bind(ld, info->binddn, LDAP_SASL_SIMPLE, &passwd, sctrlsp, NULL, msgid);
 	}
+
 	return rc;
 }
 
@@ -154,14 +152,35 @@ int LDAP_abandon(LDAP *ld, int msgid ) {
 	return ldap_abandon_ext(ld, msgid, NULL, NULL);
 }
 
-/*  This function is a copy from the OpenLDAP OpenLDAP liblutil's sasl.c source
+/*  This function is based on the OpenLDAP liblutil's sasl.c source
     file for creating a lutilSASLdefaults struct with default values based on
     the given parameters or client's options. */
 void *
-create_sasl_defaults(LDAP *ld, char *mech, char *realm, char *authcid, char *passwd, char *authzid) {
-	lutilSASLdefaults *defaults;
+create_conn_info(LDAP *ld, char *mech, PyObject *creds) {
+	ldapConnectionInfo *defaults = NULL;
+	PyObject *tmp = NULL;
+	char *authcid = NULL;
+	char *authzid = NULL;
+	char *binddn = NULL;
+	char *passwd = NULL;
+	char *realm = NULL;
 
-	defaults = ber_memalloc(sizeof(lutilSASLdefaults));
+	/* Get credential information, if it's given. */
+	if (PyTuple_Check(creds) && PyTuple_Size(creds) > 1) {
+		if (strcmp(mech, "SIMPLE") == 0) {
+			tmp = PyTuple_GetItem(creds, 0);
+			binddn = PyObject2char(tmp);
+		} else {
+			tmp = PyTuple_GetItem(creds, 0);
+			authcid = PyObject2char(tmp);
+			tmp = PyTuple_GetItem(creds, 2);
+			realm = PyObject2char(tmp);
+		}
+		tmp = PyTuple_GetItem(creds, 1);
+		passwd = PyObject2char(tmp);
+	}
+
+	defaults = ber_memalloc(sizeof(ldapConnectionInfo));
 	if(defaults == NULL) return (void *)PyErr_NoMemory();
 
 	defaults->mech = mech ? ber_strdup(mech) : NULL;
@@ -184,6 +203,7 @@ create_sasl_defaults(LDAP *ld, char *mech, char *realm, char *authcid, char *pas
 	}
 	defaults->resps = NULL;
 	defaults->nresps = 0;
+	defaults->binddn = binddn;
 
 	return defaults;
 }
@@ -196,7 +216,7 @@ int
 sasl_interact(LDAP *ld, unsigned flags, void *defs, void *in) {
     sasl_interact_t *interact = (sasl_interact_t*)in;
     const char *dflt = interact->defresult;
-    lutilSASLdefaults *defaults = (lutilSASLdefaults *)defs;
+    ldapConnectionInfo *defaults = (ldapConnectionInfo *)defs;
 
 	while (interact->id != SASL_CB_LIST_END) {
 		switch(interact->id) {
