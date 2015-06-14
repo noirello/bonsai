@@ -11,7 +11,7 @@ class LDAPConnection(_LDAPConnection):
 
     def __enter__(self):
         """ Context manager entry point. """
-        return self.open()
+        return self
 
     def __exit__(self, *exc):
         """ Context manager exit point. """
