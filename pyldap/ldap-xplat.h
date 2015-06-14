@@ -12,9 +12,15 @@
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 //MS Windows
+
 #include <windows.h>
 #include <winldap.h>
 #include <winber.h>
+
+#define SECURITY_WIN32 1
+
+#include <security.h>
+#include <Sspi.h>
 
 #define attributeType sk_attrtype
 #define orderingRule sk_matchruleoid
@@ -24,6 +30,18 @@
 #define timeval l_timeval
 
 #define ldap_rename ldap_rename_ext
+
+typedef struct ldapConnectionInfo_s {
+	char *binddn;
+	char *mech;
+	char *authzid;
+	SEC_WINNT_AUTH_IDENTITY *creds;
+	CredHandle *credhandle;
+	CtxtHandle *ctxhandle;
+	char *targetName;
+} ldapConnectionInfo;
+
+int ldap_start_tls(LDAP *ld, LDAPControl **serverctrls, LDAPControl **clientctrls, int *msgidp);
 
 #else
 //Unix
@@ -54,5 +72,6 @@ int LDAP_unbind(LDAP *ld);
 int LDAP_abandon(LDAP *ld, int msgid);
 
 void *create_conn_info(LDAP *ld, char *mech, PyObject *creds);
+void dealloc_conn_info(ldapConnectionInfo* info);
 
 #endif /* PYLDAP_LDAP_XPLAT_H_ */

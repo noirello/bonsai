@@ -22,17 +22,12 @@ LDAPOperation_dealloc(LDAPOperation* self) {
 	if (self->data != NULL) {
 		switch (self->type) {
 		case 0:
-			/*Data: Py_None. */
+			/* Data: Py_None. */
 			break;
 		case 1:
-			/*Data: ldapConnectionInfo. */
+			/* Data: ldapConnectionInfo. */
 			info = (ldapConnectionInfo *)self->data;
-			if (info->authcid) free(info->authcid);
-			if (info->authzid) free(info->authzid);
-			if (info->binddn) free(info->binddn);
-			if (info->mech) free(info->mech);
-			if (info->passwd) free(info->passwd);
-			if (info->realm) free(info->realm);
+			dealloc_conn_info(info);
 			break;
 		case 2:
 		case 3:

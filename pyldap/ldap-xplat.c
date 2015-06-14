@@ -4,6 +4,87 @@
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
+int
+decrypt_response(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int *outLen) {
+	SecBufferDesc buff_desc;
+	SecBuffer bufs[2];
+	unsigned long qop = 0;
+	int res;
+
+	buff_desc.ulVersion = SECBUFFER_VERSION;
+	buff_desc.cBuffers = 2;
+	buff_desc.pBuffers = bufs;
+
+	/* This buffer is for SSPI. */
+	bufs[0].BufferType = SECBUFFER_STREAM;
+	bufs[0].pvBuffer = inToken;
+	bufs[0].cbBuffer = inLen;
+
+	/* This buffer holds the application data. */
+	bufs[1].BufferType = SECBUFFER_DATA;
+	bufs[1].cbBuffer = 0;
+	bufs[1].pvBuffer = NULL;
+
+	res = DecryptMessage(handle, &buff_desc, 0, &qop);
+
+	if (res == SEC_E_OK) {
+		int maxlen = bufs[1].cbBuffer;
+		char *p = (char *)malloc(maxlen);
+		*outToken = p;
+		*outLen = maxlen;
+		memcpy(p, bufs[1].pvBuffer, bufs[1].cbBuffer);
+	}
+
+	return res;
+}
+
+int
+encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int *outLen) {
+	SecBufferDesc buff_desc;
+	SecBuffer bufs[3];
+	SecPkgContext_Sizes sizes;
+	int res;
+
+	res = QueryContextAttributes(handle, SECPKG_ATTR_SIZES, &sizes);
+
+	buff_desc.ulVersion = SECBUFFER_VERSION;
+	buff_desc.cBuffers = 3;
+	buff_desc.pBuffers = bufs;
+
+	/* This buffer is for SSPI. */
+	bufs[0].BufferType = SECBUFFER_TOKEN;
+	bufs[0].pvBuffer = malloc(sizes.cbSecurityTrailer);
+	bufs[0].cbBuffer = sizes.cbSecurityTrailer;
+
+	/* This buffer holds the application data. */
+	bufs[1].BufferType = SECBUFFER_DATA;
+	bufs[1].cbBuffer = inLen;
+	bufs[1].pvBuffer = malloc(inLen);
+
+	memcpy(bufs[1].pvBuffer, inToken, inLen);
+
+	/* This buffer is for SSPI. */
+	bufs[2].BufferType = SECBUFFER_PADDING;
+	bufs[2].cbBuffer = sizes.cbBlockSize;
+	bufs[2].pvBuffer = malloc(sizes.cbBlockSize);
+
+	res = EncryptMessage(handle, SECQOP_WRAP_NO_ENCRYPT, &buff_desc, 0);
+
+	if (res == SEC_E_OK) {
+		int maxlen = bufs[0].cbBuffer + bufs[1].cbBuffer + bufs[2].cbBuffer;
+		char *p = (char *)malloc(maxlen);
+		*outToken = p;
+		*outLen = maxlen;
+		memcpy(p, bufs[0].pvBuffer, bufs[0].cbBuffer);
+		p += bufs[0].cbBuffer;
+		memcpy(p, bufs[1].pvBuffer, bufs[1].cbBuffer);
+		p += bufs[1].cbBuffer;
+		memcpy(p, bufs[2].pvBuffer, bufs[2].cbBuffer);
+	}
+
+	return res;
+}
+
 /* It does what it says: no verification on the server cert. */
 BOOLEAN _cdecl noverify(PLDAP Connection, PCCERT_CONTEXT *ppServerCert) {
 	return 1;
@@ -55,36 +136,96 @@ int LDAP_initialization(LDAP **ld, PyObject *url, int tls_option) {
 	return rc;
 }
 
-int LDAP_bind_s(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid, char *realm, char *authzid) {
+int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgid) {
 	int rc;
-	int method = -1;
-	SEC_WINNT_AUTH_IDENTITY creds;
+	int len = 0;
+	int gssapi_decrpyt = 0;
+	unsigned long contextattr;
+	struct berval cred;
+	char *output = NULL;
+	SecBufferDesc out_buff_desc;
+	SecBuffer out_buff;
+	SecBufferDesc in_buff_desc;
+	SecBuffer in_buff;
+	struct berval *response = NULL;
 
-	creds.User = (unsigned char*)authcid;
-	if (authcid != NULL) creds.UserLength = (unsigned long)strlen(authcid);
-	else creds.UserLength = 0;
-	creds.Password = (unsigned char*)pswstr;
-	if (pswstr != NULL) creds.PasswordLength = (unsigned long)strlen(pswstr);
-	else creds.PasswordLength = 0;
-	/* Is SASL realm equivalent with Domain? */
-	creds.Domain = (unsigned char*)realm;
-	if (realm != NULL) creds.DomainLength = (unsigned long)strlen(realm);
-	else creds.DomainLength = 0;
-	creds.Flags = SEC_WINNT_AUTH_IDENTITY_ANSI;
-
-	/* Mechanism is set use SEC_WINNT_AUTH_IDENTITY. */
-	if (strcmp(mech, "SIMPLE") != 0) {
-		if (strcmpi(mech, "DIGEST-MD5") == 0) {
-			method = LDAP_AUTH_DIGEST;
-		} else {
-			method = LDAP_AUTH_SASL;
-		}
-		// TODO: it's depricated. Should use ldap_sasl_bind_sA instead?
-		rc = ldap_bind_sA(ld, binddn, (PCHAR)&creds, method);
-	} else {
-		rc = ldap_simple_bind_sA(ld, binddn, pswstr);
+	if (result != NULL) {
+		rc = ldap_parse_extended_result(ld, result, NULL, &response, 1);
+		if (rc != LDAP_SUCCESS) return rc;
 	}
 
+	if (strcmp(info->mech, "SIMPLE") != 0) {
+		/* Use SASL bind. */
+
+		if (response == NULL) {
+			/* First function call, no server response. */
+			out_buff_desc.ulVersion = 0;
+			out_buff_desc.cBuffers = 1;
+			out_buff_desc.pBuffers = &out_buff;
+
+			out_buff.BufferType = SECBUFFER_TOKEN;
+			out_buff.pvBuffer = NULL;
+
+			rc = InitializeSecurityContext(info->credhandle, NULL, info->targetName, ISC_REQ_MUTUAL_AUTH | ISC_REQ_ALLOCATE_MEMORY,
+				0, 0, NULL, 0, info->ctxhandle, &out_buff_desc, &contextattr, NULL);
+		} else {
+			in_buff_desc.ulVersion = SECBUFFER_VERSION;
+			in_buff_desc.cBuffers = 1;
+			in_buff_desc.pBuffers = &in_buff;
+
+			in_buff.cbBuffer = response->bv_len;
+			in_buff.BufferType = SECBUFFER_TOKEN;
+			in_buff.pvBuffer = response->bv_val;
+			if (gssapi_decrpyt) {
+				char *input = NULL;
+				rc = decrypt_response(info->ctxhandle, response->bv_val, response->bv_len, &output, &len);
+				input = output;
+				rc = encrypt_reply(info->ctxhandle, input, len, &output, &len);
+			} else {
+				rc = InitializeSecurityContext(info->credhandle, info->ctxhandle, info->targetName, ISC_REQ_MUTUAL_AUTH |
+					ISC_REQ_ALLOCATE_MEMORY, 0, 0, &in_buff_desc, 0, info->ctxhandle, &out_buff_desc, &contextattr, NULL);
+			}
+		}
+
+		switch (rc) {
+		case SEC_I_COMPLETE_NEEDED:
+		case SEC_I_COMPLETE_AND_CONTINUE:
+			CompleteAuthToken(info->ctxhandle, &out_buff_desc);
+			break;
+		case SEC_E_OK:
+			if (strcmp(info->mech, "GSSAPI") == 0) {
+				gssapi_decrpyt = 1;
+			}
+			break;
+		case SEC_I_CONTINUE_NEEDED:
+			break;
+		case SEC_E_INVALID_HANDLE:
+		case SEC_E_INVALID_TOKEN:
+			//TODO: better error;
+			PyErr_BadInternalCall();
+			return -1;
+		default:
+			break;
+		}
+
+		cred.bv_len = out_buff.cbBuffer;
+		cred.bv_val = (char *)out_buff.pvBuffer;
+
+		if (gssapi_decrpyt) {
+			cred.bv_len = len;
+			cred.bv_val = output;
+		}
+		/* Empty binddn is needed to change "" to avoid param error. */
+		if (info->binddn == NULL) info->binddn = "";
+		rc = ldap_sasl_bind(ld, info->binddn, info->mech, &cred, NULL, NULL, msgid);
+		/* Get the last error code form the LDAP struct. */
+		ldap_get_option(ld, LDAP_OPT_ERROR_NUMBER, &rc);
+	} else {
+		/* Use simple bind with bind DN and password. */
+		rc = ldap_simple_bind(ld, info->binddn, (char *)(info->creds->Password));
+		*msgid = rc;
+		if (rc > 0) rc = 0;
+	}
 	return rc;
 }
 
@@ -94,6 +235,122 @@ int LDAP_unbind(LDAP *ld) {
 
 int LDAP_abandon(LDAP *ld, int msgid) {
 	return ldap_abandon(ld, msgid);
+}
+
+int
+ldap_start_tls(LDAP *ld, LDAPControl **serverctrls, LDAPControl **clientctrls, int *msgidp) {
+	return ldap_extended_operation(ld, LDAP_START_TLS_OID, NULL, serverctrls, clientctrls, msgidp);
+}
+
+/* Create a struct with the necessary infos and structs for binding an
+   LDAP Server.
+*/
+void *
+create_conn_info(LDAP *ld, char *mech, PyObject *creds) {
+	int rc = -1;
+	ldapConnectionInfo *defaults = NULL;
+	PyObject *tmp = NULL;
+	char *secpack = NULL;
+	char *authcid = NULL;
+	char *authzid = NULL;
+	char *binddn = NULL;
+	char *passwd = NULL;
+	char *realm = NULL;
+	SEC_WINNT_AUTH_IDENTITY *wincreds = NULL;
+
+	wincreds = (SEC_WINNT_AUTH_IDENTITY *)malloc(sizeof(SEC_WINNT_AUTH_IDENTITY));
+	if (wincreds == NULL) return (void *)PyErr_NoMemory();
+	memset(wincreds, 0, sizeof(wincreds));
+
+	defaults = (ldapConnectionInfo *)malloc(sizeof(ldapConnectionInfo));
+	if (defaults == NULL) {
+		free(wincreds);
+		return (void *)PyErr_NoMemory();
+	}
+
+	defaults->credhandle = (CredHandle *)malloc(sizeof(CredHandle));
+	if (defaults->credhandle == NULL) {
+		free(wincreds);
+		free(defaults);
+		return (void *)PyErr_NoMemory();
+	}
+
+	/* Copy hostname from LDAP struct to create a valid targetName(SPN). */
+	defaults->targetName = (char *)malloc(strlen(ld->ld_host) + 6);
+	if (defaults->targetName == NULL) {
+		free(wincreds);
+		free(defaults->credhandle);
+		free(defaults);
+		return (void *)PyErr_NoMemory();
+	}
+	sprintf_s(defaults->targetName, strlen(ld->ld_host) + 6, "ldap/%hs", ld->ld_host);
+
+	defaults->mech = mech;
+
+	/* Get credential information, if it's given. */
+	if (PyTuple_Check(creds) && PyTuple_Size(creds) > 1) {
+		if (strcmp(mech, "SIMPLE") == 0) {
+			tmp = PyTuple_GetItem(creds, 0);
+			binddn = PyObject2char(tmp);
+		}
+		else {
+			tmp = PyTuple_GetItem(creds, 0);
+			authcid = PyObject2char(tmp);
+			tmp = PyTuple_GetItem(creds, 2);
+			realm = PyObject2char(tmp);
+		}
+		tmp = PyTuple_GetItem(creds, 1);
+		passwd = PyObject2char(tmp);
+	}
+
+	wincreds->User = (unsigned char *)authcid;
+	if (authcid != NULL) wincreds->UserLength = (unsigned long)strlen(authcid);
+	else wincreds->UserLength = 0;
+	wincreds->Password = (unsigned char *)passwd;
+	if (passwd != NULL) wincreds->PasswordLength = (unsigned long)strlen(passwd);
+	else wincreds->PasswordLength = 0;
+	wincreds->Domain = (unsigned char *)realm;
+	if (realm != NULL) wincreds->DomainLength = (unsigned long)strlen(realm);
+	else wincreds->DomainLength = 0;
+
+	wincreds->Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;
+
+	defaults->authzid = authzid;
+	defaults->binddn = binddn;
+	defaults->creds = wincreds;
+	defaults->ctxhandle = NULL;
+
+	if (strcmp(mech, "SIMPLE") != 0) {
+		/* Select corresponding security packagename from the mechanism name. */
+		if (strcmp(mech, "DIGEST-MD5") == 0) {
+			secpack = "WDigest";
+		} else if (strcmp(mech, "GSSAPI") == 0) {
+			secpack = "Kerberos";
+		}
+
+		/* Create credential handler. */
+		rc = AcquireCredentialsHandle(NULL, secpack, SECPKG_CRED_OUTBOUND, NULL, wincreds, NULL, NULL, defaults->credhandle, NULL);
+		if (rc != SEC_E_OK) {
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+	}
+	return defaults;
+}
+
+/* Dealloc an ldapConnectionInfo struct. */
+void
+dealloc_conn_info(ldapConnectionInfo* info) {
+	if (info->authzid) free(info->authzid);
+	if (info->binddn && strcmp(info->binddn, "") != 0) free(info->binddn);
+	if (info->mech) free(info->mech);
+	if (info->targetName) free(info->targetName);
+	if (info->credhandle) free(info->credhandle);
+	if (info->creds->Domain) free(info->creds->Domain);
+	if (info->creds->Password) free(info->creds->Password);
+	if (info->creds->User) free(info->creds->User);
+	free(info->creds);
+	free(info);
 }
 
 #else
@@ -208,6 +465,18 @@ create_conn_info(LDAP *ld, char *mech, PyObject *creds) {
 	defaults->rmech = NULL;
 
 	return defaults;
+}
+
+/* Dealloc an ldapConnectionInfo struct. */
+void
+dealloc_conn_info(ldapConnectionInfo* info) {
+	if (info->authcid) free(info->authcid);
+	if (info->authzid) free(info->authzid);
+	if (info->binddn) free(info->binddn);
+	if (info->mech) free(info->mech);
+	if (info->passwd) free(info->passwd);
+	if (info->realm) free(info->realm);
+	free(info);
 }
 
 /*	This function is based on the lutil_sasl_interact() function, which can

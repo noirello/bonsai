@@ -18,7 +18,7 @@ sources = [os.path.join('pyldap', x) for x in sources]
 depends = [os.path.join('pyldap', x) for x in depends]
 
 if sys.platform == "win32":
-    libs = ["wldap32"]
+    libs = ["wldap32", "secur32"]
 else:
     libs = ["ldap", "lber"]
 

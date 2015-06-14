@@ -611,7 +611,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
 	/* WARNING: OpenLDAP does not send back oid for whoami operations.
 		It's gonna be really messy, if it does for any type of extended op. */
 	if (retoid == NULL || strcmp(retoid, "1.3.6.1.4.1.4203.1.11.3") == 0) {
-		if (authzid == NULL) return PyUnicode_FromString("anonym");
+		if (authzid == NULL) return PyUnicode_FromString("anonymous");
 
 		if(authzid->bv_len == 0) {
 			authzid->bv_val = "anonymous";
