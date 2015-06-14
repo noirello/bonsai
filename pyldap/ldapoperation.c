@@ -14,18 +14,32 @@
 static void
 LDAPOperation_dealloc(LDAPOperation* self) {
 	PyObject *tmp;
+	ldapConnectionInfo *info;
 
 	Py_XDECREF(self->conn);
 	Py_XDECREF(self->message_ids);
 
-	printf("DEALLOC LDAPOPERATION \n");
 	if (self->data != NULL) {
 		switch (self->type) {
 		case 0:
+			/*Data: Py_None. */
 			break;
 		case 1:
+			/*Data: ldapConnectionInfo. */
+			info = (ldapConnectionInfo *)self->data;
+			if (info->authcid) free(info->authcid);
+			if (info->authzid) free(info->authzid);
+			if (info->binddn) free(info->binddn);
+			if (info->mech) free(info->mech);
+			if (info->passwd) free(info->passwd);
+			if (info->realm) free(info->realm);
+			break;
+		case 2:
+		case 3:
+			/* Data: LDAPSearchIter or LDAPModList. */
 			tmp = (PyObject *)self->data;
 			Py_DECREF(tmp);
+			break;
 		}
 	}
 
@@ -95,6 +109,8 @@ LDAPOperation_Proceed(LDAPConnection *conn, int msgid, unsigned short type, void
 		Py_DECREF(self);
 		return -1;
 	}
+	Py_DECREF(self);
+
 
 	if (PyList_Append(self->message_ids, msgid_obj) != 0) {
 		PyErr_BadInternalCall();
@@ -102,6 +118,8 @@ LDAPOperation_Proceed(LDAPConnection *conn, int msgid, unsigned short type, void
 		Py_DECREF(self);
 		return -1;
 	}
+	Py_DECREF(msgid_obj);
+
 	return 0;
 }
 
@@ -142,6 +160,7 @@ LDAPOperation_AppendMsgId(LDAPConnection *conn, int id, int new_msgid) {
 		Py_DECREF(msgid_obj);
 		return -1;
 	}
+	Py_DECREF(msgid_obj);
 
 	return 0;
 }

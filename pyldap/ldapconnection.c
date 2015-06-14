@@ -500,7 +500,6 @@ LDAPConnection_Whoami(LDAPConnection *self) {
 
 	if (LDAPOperation_Proceed(self, msgid, 0, NULL) != 0) return NULL;
 
-	printf("FINISHED\n");
 	return PyLong_FromLong((long int)msgid);
 }
 
@@ -516,6 +515,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
 
 	/* Get SearchIter from pending operations. */
 	search_iter = (LDAPSearchIter *)LDAPOperation_GetData(self, msgid);
+	Py_XINCREF(search_iter);
 
 	if (search_iter == NULL || LDAPOperation_Remove(self, msgid) != 0) {
 		PyErr_BadInternalCall();
@@ -675,7 +675,8 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 		rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
 				&returned_ctrls, 0);
 
-		if (rc != LDAP_SUCCESS) {
+		if ((rc != LDAP_SUCCESS) ||
+				(err != LDAP_SASL_BIND_IN_PROGRESS && err != LDAP_SUCCESS)) {
 			/* Connection is failed. */
 			ldaperror = get_error_by_code(err);
 			PyErr_SetString(ldaperror, ldap_err2string(err));
@@ -683,25 +684,27 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 			return NULL;
 		}
 
-		if (err == LDAP_SASL_BIND_IN_PROGRESS) {
-			info = (ldapConnectionInfo *)LDAPOperation_GetData(self, msgid);
-			if (info == NULL) return NULL;
-			rc = LDAP_bind(self->ld, info, res, &local_msgid);
-			if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
-				ldaperror = get_error_by_code(err);
-				PyErr_SetString(ldaperror, ldap_err2string(err));
-				Py_DECREF(ldaperror);
-				return NULL;
-			}
+		info = (ldapConnectionInfo *)LDAPOperation_GetData(self, msgid);
+		if (info == NULL) return NULL;
+
+		rc = LDAP_bind(self->ld, info, res, &local_msgid);
+
+		if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
+			ldaperror = get_error_by_code(err);
+			PyErr_SetString(ldaperror, ldap_err2string(err));
+			Py_DECREF(ldaperror);
+			return NULL;
+		}
+
+		if (rc == LDAP_SASL_BIND_IN_PROGRESS) {
 			if (LDAPOperation_AppendMsgId(self, msgid, local_msgid) != 0) {
 				return NULL;
 			}
 		}
-
 		/* Remove LDAPOperation from pending_ops. */
 		if (LDAPOperation_Remove(self, msgid) != 0) return NULL;
 
-		if (err == LDAP_SUCCESS) {
+		if (rc == LDAP_SUCCESS ) {
 			Py_INCREF((PyObject *)self);
 			return (PyObject *)self;
 		}
@@ -721,9 +724,6 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 		mods = (LDAPModList *)LDAPOperation_GetData(self, msgid);
 		if (mods == NULL) return NULL;
 
-		/* Remove LDAPOperation from pending_ops. */
-		if (LDAPOperation_Remove(self, msgid) != 0) return NULL;
-
 		if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
 			/* LDAP add or modify operation is failed,
 			   then rollback the changes. */
@@ -741,6 +741,8 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 			Py_DECREF(ldaperror);
 			return NULL;
 		}
+		/* Remove LDAPOperation from pending_ops. */
+		if (LDAPOperation_Remove(self, msgid) != 0) return NULL;
 		Py_RETURN_TRUE;
 	}
 	Py_RETURN_NONE;

@@ -41,6 +41,7 @@ typedef struct ldap_connection_info_s {
 	char *authzid;
 	char **resps;
 	int nresps;
+	const char *rmech;
 } ldapConnectionInfo;
 
 int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);

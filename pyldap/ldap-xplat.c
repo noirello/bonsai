@@ -125,12 +125,11 @@ int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgi
 	int rc;
 	LDAPControl	**sctrlsp = NULL;
 	struct berval passwd;
-	const char *rmech = NULL;
 
 	/* Mechanism is set, use SASL interactive bind. */
 	if (strcmp(info->mech, "SIMPLE") != 0) {
 		if (info->passwd == NULL) info->passwd = "";
-		rc = ldap_sasl_interactive_bind(ld, info->binddn, info->mech, sctrlsp, NULL, LDAP_SASL_QUIET, sasl_interact, info, result, &rmech, msgid);
+		rc = ldap_sasl_interactive_bind(ld, info->binddn, info->mech, sctrlsp, NULL, LDAP_SASL_QUIET, sasl_interact, info, result, &(info->rmech), msgid);
 	} else {
 		if (info->passwd  == NULL) {
 			passwd.bv_len = 0;
@@ -140,6 +139,8 @@ int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgi
 		passwd.bv_val = info->passwd ;
 		rc = ldap_sasl_bind(ld, info->binddn, LDAP_SASL_SIMPLE, &passwd, sctrlsp, NULL, msgid);
 	}
+
+	ldap_msgfree(result);
 
 	return rc;
 }
@@ -204,6 +205,7 @@ create_conn_info(LDAP *ld, char *mech, PyObject *creds) {
 	defaults->resps = NULL;
 	defaults->nresps = 0;
 	defaults->binddn = binddn;
+	defaults->rmech = NULL;
 
 	return defaults;
 }
