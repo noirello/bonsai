@@ -687,18 +687,21 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 		info = (ldapConnectionInfo *)LDAPOperation_GetData(self, msgid);
 		if (info == NULL) return NULL;
 
-		rc = LDAP_bind(self->ld, info, res, &local_msgid);
+		if (strcmp(info->mech, "SIMPLE") != 0) {
+			/* Continue SASL binding procedure. */
+			rc = LDAP_bind(self->ld, info, res, &local_msgid);
 
-		if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
-			ldaperror = get_error_by_code(err);
-			PyErr_SetString(ldaperror, ldap_err2string(err));
-			Py_DECREF(ldaperror);
-			return NULL;
-		}
-
-		if (rc == LDAP_SASL_BIND_IN_PROGRESS) {
-			if (LDAPOperation_AppendMsgId(self, msgid, local_msgid) != 0) {
+			if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
+				ldaperror = get_error_by_code(err);
+				PyErr_SetString(ldaperror, ldap_err2string(err));
+				Py_DECREF(ldaperror);
 				return NULL;
+			}
+
+			if (rc == LDAP_SASL_BIND_IN_PROGRESS) {
+				if (LDAPOperation_AppendMsgId(self, msgid, local_msgid) != 0) {
+					return NULL;
+				}
 			}
 		}
 		/* Remove LDAPOperation from pending_ops. */
