@@ -18,7 +18,17 @@ class LDAPConnection(_LDAPConnection):
         self.close()
     
     def open(self):
-        return self._result(super().open())
+        if (self.__async):
+            return self._poll_bind(super().open())
+        else:
+            return next(super().open())
+
+    def _poll_bind(self, conniter):
+        while True:
+            result = next(conniter)
+            if result is not None:
+                return result
+            yield
 
     def _poll(self, msg_id):
         """

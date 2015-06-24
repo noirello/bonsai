@@ -49,6 +49,7 @@ int ldap_start_tls(LDAP *ld, LDAPControl **serverctrls, LDAPControl **clientctrl
 #include <lber.h>
 #include <sasl/sasl.h>
 #include <sys/time.h>
+#include <pthread.h>
 
 typedef struct ldap_connection_info_s {
 	char *binddn;
@@ -62,11 +63,17 @@ typedef struct ldap_connection_info_s {
 	const char *rmech;
 } ldapConnectionInfo;
 
+typedef struct ldap_thread_data_s {
+	LDAP *ld;
+	char *url;
+	int retval;
+} ldapThreadData;
+
 int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
 
 #endif
 
-int LDAP_initialization(LDAP **ld, PyObject *url, int tls_option);
+int LDAP_initialization(LDAP **ld, PyObject *url, void *thread);
 int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgid);
 int LDAP_unbind(LDAP *ld);
 int LDAP_abandon(LDAP *ld, int msgid);

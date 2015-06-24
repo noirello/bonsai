@@ -6,11 +6,11 @@ try:
 except ImportError:
     from distutils.core import setup, Extension
 
-sources = ["pyldapmodule.c", "ldapentry.c", "ldapoperation.c",
+sources = ["pyldapmodule.c", "ldapentry.c", "ldapoperation.c", "ldapconnectiter.c",
            "ldapconnection.c", "ldapmodlist.c", "ldapvaluelist.c",
            "ldap-xplat.c", "ldapsearchiter.c", "utils.c", "uniquelist.c"]
 
-depends = ["ldapconnection.h", "ldapentry.h", "ldapoperation.h",
+depends = ["ldapconnection.h", "ldapentry.h", "ldapoperation.h", "ldapconnectiter.h",
            "ldapmodlist.h", "ldapvaluelist.h", "ldapsearchiter.h",
            "ldap-xplat.h", "uniquelist.h", "utils.h"]
 
