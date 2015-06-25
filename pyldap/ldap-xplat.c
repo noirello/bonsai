@@ -355,10 +355,26 @@ dealloc_conn_info(ldapConnectionInfo* info) {
 
 #else
 
-int LDAP_initialization(LDAP **ld, PyObject *url, int tls_option) {
+void *
+ldap_init_thread(void *params)  {
+	int rc = -1;
+	ldapThreadData *ldap_params = (ldapThreadData *)params;
+
+	if (ldap_params != NULL) {
+		rc = ldap_initialize(&(ldap_params->ld), ldap_params->url);
+		ldap_params->retval = rc;
+	}
+	pthread_exit((void *)ldap_params);
+}
+
+int
+LDAP_initialization(LDAP **ld, PyObject *url, void *thread) {
 	int rc;
 	char *addrstr;
-	const int version = LDAP_VERSION3;
+	ldapThreadData *data;
+
+	data = (ldapThreadData *)malloc(sizeof(ldapThreadData));
+	if (data == NULL) return -1;
 
 	PyObject *addr = PyObject_CallMethod(url, "get_address", NULL);
 	if (addr == NULL) return -1;
@@ -366,19 +382,18 @@ int LDAP_initialization(LDAP **ld, PyObject *url, int tls_option) {
 	Py_DECREF(addr);
 	if (addrstr == NULL) return -1;
 
-	rc = ldap_initialize(ld, addrstr);
-	if (rc != LDAP_SUCCESS) return rc;
+	data->ld = *ld;
+	data->url = addrstr;
 
-	ldap_set_option(*ld, LDAP_OPT_PROTOCOL_VERSION, &version);
-	if (tls_option != -1) {
-		ldap_set_option(*ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &tls_option);
-		/* Set TLS option globally. */
-		ldap_set_option(NULL, LDAP_OPT_X_TLS_REQUIRE_CERT, &tls_option);
-	}
+	Py_BEGIN_ALLOW_THREADS
+	rc = pthread_create((pthread_t *)thread, NULL, ldap_init_thread, data);
+	Py_END_ALLOW_THREADS
+
 	return rc;
 }
 
-int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgid) {
+int
+LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgid) {
 	int rc;
 	LDAPControl	**sctrlsp = NULL;
 	struct berval passwd;
@@ -402,11 +417,13 @@ int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgi
 	return rc;
 }
 
-int LDAP_unbind(LDAP *ld) {
+int
+LDAP_unbind(LDAP *ld) {
 	return ldap_unbind_ext((ld), NULL, NULL);
 }
 
-int LDAP_abandon(LDAP *ld, int msgid ) {
+int
+LDAP_abandon(LDAP *ld, int msgid ) {
 	return ldap_abandon_ext(ld, msgid, NULL, NULL);
 }
 
@@ -447,18 +464,6 @@ create_conn_info(LDAP *ld, char *mech, PyObject *creds) {
 	defaults->passwd = passwd ? ber_strdup(passwd) : NULL;
 	defaults->authzid = authzid ? ber_strdup(authzid) : NULL;
 
-	if (defaults->mech == NULL) {
-		ldap_get_option(ld, LDAP_OPT_X_SASL_MECH, &defaults->mech);
-	}
-	if (defaults->realm == NULL) {
-		ldap_get_option(ld, LDAP_OPT_X_SASL_REALM, &defaults->realm);
-	}
-	if (defaults->authcid == NULL) {
-		ldap_get_option(ld, LDAP_OPT_X_SASL_AUTHCID, &defaults->authcid);
-	}
-	if (defaults->authzid == NULL) {
-		ldap_get_option(ld, LDAP_OPT_X_SASL_AUTHZID, &defaults->authzid);
-	}
 	defaults->resps = NULL;
 	defaults->nresps = 0;
 	defaults->binddn = binddn;
