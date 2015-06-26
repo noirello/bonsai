@@ -90,7 +90,7 @@ BOOLEAN _cdecl noverify(PLDAP Connection, PCCERT_CONTEXT *ppServerCert) {
 	return 1;
 }
 
-int LDAP_initialization(LDAP **ld, PyObject *url, int tls_option) {
+int LDAP_start_init(LDAP **ld, PyObject *url, int tls_option) {
 	int rc;
 	int portnum;
 	char *hoststr = NULL;
@@ -355,20 +355,27 @@ dealloc_conn_info(ldapConnectionInfo* info) {
 
 #else
 
+/* Thread function. The ldap_initialize function opens the LDAP client's
+  	config file, thus to avoid the I/O blocking in the main (Python) thread
+  	the initialisation is done in a separate (POSIX) thread. */
 void *
 ldap_init_thread(void *params)  {
 	int rc = -1;
+	const int version = LDAP_VERSION3;
 	ldapThreadData *ldap_params = (ldapThreadData *)params;
 
 	if (ldap_params != NULL) {
 		rc = ldap_initialize(&(ldap_params->ld), ldap_params->url);
 		ldap_params->retval = rc;
+		/* Set version to LDAPv3. */
+		ldap_set_option(ldap_params->ld, LDAP_OPT_PROTOCOL_VERSION, &version);
 	}
+	/* Return the retval and the (hopefully) initialised LDAP struct. */
 	pthread_exit((void *)ldap_params);
 }
 
 int
-LDAP_initialization(LDAP **ld, PyObject *url, void *thread) {
+LDAP_start_init(PyObject *url, void *thread) {
 	int rc;
 	char *addrstr;
 	ldapThreadData *data;
@@ -382,7 +389,7 @@ LDAP_initialization(LDAP **ld, PyObject *url, void *thread) {
 	Py_DECREF(addr);
 	if (addrstr == NULL) return -1;
 
-	data->ld = *ld;
+	data->ld = NULL;
 	data->url = addrstr;
 
 	Py_BEGIN_ALLOW_THREADS
@@ -390,6 +397,52 @@ LDAP_initialization(LDAP **ld, PyObject *url, void *thread) {
 	Py_END_ALLOW_THREADS
 
 	return rc;
+}
+
+int
+LDAP_finish_init(int async, void *thread, int cert_policy, LDAP **ld) {
+	int rc = -1;
+	ldapThreadData *val = NULL;
+	struct timespec ts;
+
+	ts.tv_nsec = 100;
+	ts.tv_sec = 0;
+
+	if (async) {
+		/* Polling thread state. Warning: this function is not portable (_np). */
+		rc = pthread_timedjoin_np(*(pthread_t *)thread, (void **)&val, &ts);
+	} else {
+		/* Block until thread is finished. */
+		rc = pthread_join(*(pthread_t *)thread, (void **)&val);
+	}
+	switch (rc) {
+	case ETIMEDOUT:
+		break;
+	case 0:
+		/* Thread is finished. */
+		if (val->retval != LDAP_SUCCESS) {
+			PyObject *ldaperror = get_error_by_code(val->retval );
+			PyErr_SetString(ldaperror, ldap_err2string(val->retval ));
+			Py_DECREF(ldaperror);
+			return -1;
+		}
+		/* Set initialised LDAP struct pointer. */
+		*ld = val->ld;
+		if (cert_policy != -1) {
+			/* Set cert policy. */
+			ldap_set_option(*ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &cert_policy);
+			/* Set TLS option globally. */
+			ldap_set_option(NULL, LDAP_OPT_X_TLS_REQUIRE_CERT, &cert_policy);
+		}
+		if (val->url != NULL) free(val->url);
+		free(val);
+		break;
+	default:
+		/* The thread is failed. */
+		PyErr_BadInternalCall();
+		return -1;
+	}
+	return 0;
 }
 
 int

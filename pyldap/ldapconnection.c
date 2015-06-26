@@ -70,6 +70,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	PyObject *creds = NULL;
 	ldapConnectionInfo *info = NULL;
 
+	//TODO: Check the order of decrementing for the objects!
 	/* Get URL policy from LDAPClient. */
 	url = PyObject_GetAttrString(self->client, "_LDAPClient__url");
 	if (url == NULL) return -1;
@@ -102,7 +103,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	*conniter = LDAPConnectIter_New(self, info, PyObject_IsTrue(tmp), PyObject_IsTrue(tls), tls_option);
 	if (*conniter == NULL) return -1;
 
-	rc = LDAP_initialization(&(self->ld), url, (*conniter)->thread);
+	rc = LDAP_start_init(url, (*conniter)->thread);
 	Py_DECREF(url);
 	Py_DECREF(tls);
 

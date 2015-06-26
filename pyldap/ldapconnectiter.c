@@ -71,54 +71,19 @@ PyObject *
 LDAPConnectIter_iternext(LDAPConnectIter *self) {
 	int rc = -1;
 	int err = 0;
-	ldapThreadData *val = NULL;
-	struct timespec ts;
 	struct timeval polltime;
-	const int version = LDAP_VERSION3;
 	LDAPControl **returned_ctrls = NULL;
 	LDAPMessage *res;
-
-	ts.tv_nsec = 100;
-	ts.tv_sec = 0;
 
 	polltime.tv_sec = 0L;
 	polltime.tv_usec = 10L;
 
 	if (self->init_finished == 0) {
-		if (self->async) {
-			/* Polling thread state. Warning: this function is not portable (_np). */
-			rc = pthread_timedjoin_np(*(self->thread), (void **)&val, &ts);
-		} else {
-			/* Block until thread is finished. */
-			rc = pthread_join(*(self->thread), (void **)&val);
-		}
-		switch (rc) {
-		case ETIMEDOUT:
-			break;
-		case 0:
-			/* Thread is finished. */
-			if (val->retval != LDAP_SUCCESS) {
-				PyObject *ldaperror = get_error_by_code(val->retval );
-				PyErr_SetString(ldaperror, ldap_err2string(val->retval ));
-				Py_DECREF(ldaperror);
-				return NULL;
-			}
-			/* Set initialised LDAP struct pointer. */
-			self->conn->ld = val->ld;
-			ldap_set_option(self->conn->ld, LDAP_OPT_PROTOCOL_VERSION, &version);
-			if (self->cert_policy != -1) {
-				/* Set cert policy. */
-				ldap_set_option(self->conn->ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &(self->cert_policy));
-				/* Set TLS option globally. */
-				ldap_set_option(NULL, LDAP_OPT_X_TLS_REQUIRE_CERT, &(self->cert_policy));
-			}
-			self->init_finished = 1;
-			break;
-		default:
-			/* The thread is failed. */
-			PyErr_BadInternalCall();
+		if (LDAP_finish_init(self->async, (void *)self->thread,
+				self->cert_policy, &(self->conn->ld)) != 0) {
 			return NULL;
 		}
+		self->init_finished = 1;
 	} else if (self->tls == 1 && self->tls_step != 2) {
 		switch(self->tls_step) {
 		case 0:
