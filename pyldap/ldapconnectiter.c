@@ -73,12 +73,15 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 	polltime.tv_sec = 0L;
 	polltime.tv_usec = 10L;
 
+	/* The connection is already binded. */
+	if (self->conn->closed == 0) {
+		return PyErr_Format(PyExc_StopIteration, "Connection is already open.");
+	}
+
 	if (self->init_finished == 0) {
-		if (LDAP_finish_init(self->async, (void *)self->thread,
-				self->cert_policy, &(self->conn->ld)) != 0) {
-			return NULL;
-		}
-		self->init_finished = 1;
+		rc = LDAP_finish_init(self->async, (void *)self->thread, self->cert_policy, &(self->conn->ld));
+		if (rc == -1) return NULL; /* Error is happened. */
+		if (rc == 1) self->init_finished = 1;
 	} else if (self->tls == 1 && self->tls_step != 2) {
 		switch(self->tls_step) {
 		case 0:
@@ -133,8 +136,8 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 				break;
 			default:
 				/* Invalid return value, it never should happen. */
-				//TODO: Error handling.
-				break;
+				PyErr_BadInternalCall();
+				return NULL;
 			break;
 			}
 		}
@@ -199,6 +202,7 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 				}
 
 				if (rc == LDAP_SUCCESS ) {
+					/* The binding is successfully finished. */
 					self->bind_inprogress = 0;
 					Py_INCREF((PyObject *)self->conn);
 					self->conn->closed = 0;
@@ -207,8 +211,8 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 				break;
 			default:
 				/* Invalid return value, it never should happen. */
-				//TODO: Error handling.
-				break;
+				PyErr_BadInternalCall();
+				return NULL;
 			}
 		}
 	}

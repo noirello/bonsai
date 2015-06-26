@@ -405,6 +405,10 @@ LDAP_start_init(PyObject *url, void **thread) {
 	return rc;
 }
 
+/* Check on the initialisation thread and set cert policy.
+   The pointer of initialised LDAP struct is passed to the ld parameter.
+   Return 1 if the initialisation thread is finished, 0 if it is still in
+   progress, and -1 for error.. */
 int
 LDAP_finish_init(int async, void *thread, int cert_policy, LDAP **ld) {
 	int rc = -1;
@@ -442,7 +446,7 @@ LDAP_finish_init(int async, void *thread, int cert_policy, LDAP **ld) {
 		}
 		if (val->url != NULL) free(val->url);
 		free(val);
-		break;
+		return 1;
 	default:
 		/* The thread is failed. */
 		PyErr_BadInternalCall();

@@ -160,7 +160,6 @@ LDAPConnection_Open(LDAPConnection *self) {
 	rc = connecting(self, &iter);
 	if (rc != 0) return NULL;
 
-	self->closed = 0;
 	return (PyObject *)iter;
 }
 
