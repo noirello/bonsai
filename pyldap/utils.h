@@ -16,5 +16,6 @@ int lower_case_match(PyObject *o1, PyObject *o2);
 PyObject *load_python_object(char *module_name, char *object_name);
 PyObject *get_error(char *error_name);
 PyObject *get_error_by_code(int code);
+int add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item);
 
 #endif /* UTILS_H_ */

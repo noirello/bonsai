@@ -286,3 +286,14 @@ get_error_by_code(int code) {
 	error = PyObject_CallFunction(get_error, "(i)", code);
 	return error;
 }
+
+int
+add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item)  {
+       char msgidstr[8];
+       sprintf(msgidstr, "%d", msgid);
+       if (PyDict_SetItemString(pending_ops, msgidstr, item) != 0) {
+               PyErr_BadInternalCall();
+               return -1;
+       }
+       return 0;
+}
