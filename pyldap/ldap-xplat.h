@@ -73,7 +73,7 @@ int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
 
 #endif
 
-int LDAP_start_init(PyObject *url, void *thread);
+int LDAP_start_init(PyObject *url, void **thread);
 int LDAP_finish_init(int async, void *thread, int cert_policy, LDAP **ld);
 int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgid);
 int LDAP_unbind(LDAP *ld);

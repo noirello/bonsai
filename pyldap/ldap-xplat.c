@@ -375,7 +375,7 @@ ldap_init_thread(void *params)  {
 }
 
 int
-LDAP_start_init(PyObject *url, void *thread) {
+LDAP_start_init(PyObject *url, void **thread) {
 	int rc;
 	char *addrstr;
 	ldapThreadData *data;
@@ -392,6 +392,12 @@ LDAP_start_init(PyObject *url, void *thread) {
 	data->ld = NULL;
 	data->url = addrstr;
 
+	/* Create a separate thread for init- */
+	*thread = (pthread_t *)malloc(sizeof(pthread_t));
+	if (*thread == NULL) {
+		PyErr_NoMemory();
+		return -1;
+	}
 	Py_BEGIN_ALLOW_THREADS
 	rc = pthread_create((pthread_t *)thread, NULL, ldap_init_thread, data);
 	Py_END_ALLOW_THREADS

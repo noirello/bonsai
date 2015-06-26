@@ -51,11 +51,6 @@ LDAPConnectIter_New(LDAPConnection *conn, ldapConnectionInfo *info, int async, i
 		self->tls = has_tls;
 		self->cert_policy = cert_policy;
 		self->async = async;
-		self->thread = (pthread_t *)malloc(sizeof(pthread_t));
-		if (self->thread == NULL) {
-			PyErr_NoMemory();
-			return NULL;
-		}
 	}
 
 	return self;

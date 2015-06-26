@@ -103,7 +103,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	*conniter = LDAPConnectIter_New(self, info, PyObject_IsTrue(tmp), PyObject_IsTrue(tls), tls_option);
 	if (*conniter == NULL) return -1;
 
-	rc = LDAP_start_init(url, (*conniter)->thread);
+	rc = LDAP_start_init(url, &((*conniter)->thread));
 	Py_DECREF(url);
 	Py_DECREF(tls);
 

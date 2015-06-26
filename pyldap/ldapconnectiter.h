@@ -23,7 +23,7 @@ typedef struct {
     int cert_policy;
     int tls;
     int async;
-    pthread_t *thread;
+    void *thread;
 } LDAPConnectIter;
 
 extern PyTypeObject LDAPConnectIterType;
