@@ -69,6 +69,7 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 	struct timeval polltime;
 	LDAPControl **returned_ctrls = NULL;
 	LDAPMessage *res;
+	PyObject *ldaperror = NULL;
 
 	polltime.tv_sec = 0L;
 	polltime.tv_usec = 10L;
@@ -89,7 +90,7 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 			/* Send START_TLS to the server. */
 			rc = ldap_start_tls(self->conn->ld, NULL, NULL, &(self->message_id));
 			if (rc != LDAP_SUCCESS) {
-				PyObject *ldaperror = get_error_by_code(rc);
+				ldaperror = get_error_by_code(rc);
 				PyErr_SetString(ldaperror, ldap_err2string(rc));
 				Py_DECREF(ldaperror);
 				return NULL;
@@ -110,7 +111,7 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 				/* Getting the error code from the session. */
 				/* 0x31: LDAP_OPT_RESULT_CODE or LDAP_OPT_ERROR_NUMBER */
 				ldap_get_option(self->conn->ld, 0x0031,  &err);
-				PyObject *ldaperror = get_error_by_code(err);
+				ldaperror = get_error_by_code(err);
 				PyErr_SetString(ldaperror, ldap_err2string(err));
 				Py_DECREF(ldaperror);
 				return NULL;
@@ -121,14 +122,14 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 				/* Response is arrived about the START_TLS. */
 				rc = ldap_parse_extended_result(self->conn->ld, res, NULL, NULL, 1);
 				if (rc != LDAP_SUCCESS) {
-					PyObject *ldaperror = get_error_by_code(rc);
+					ldaperror = get_error_by_code(rc);
 					PyErr_SetString(ldaperror, ldap_err2string(rc));
 					Py_DECREF(ldaperror);
 					return NULL;
 				}
 				rc = ldap_install_tls(self->conn->ld);
 				if (rc != LDAP_SUCCESS) {
-					PyObject *ldaperror = get_error_by_code(rc);
+					ldaperror = get_error_by_code(rc);
 					PyErr_SetString(ldaperror, ldap_err2string(rc));
 					Py_DECREF(ldaperror);
 					return NULL;
@@ -148,7 +149,7 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 			/* First call of bind. */
 			rc = LDAP_bind(self->conn->ld, self->info, NULL, &(self->message_id));
 			if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
-				PyObject *ldaperror = get_error_by_code(rc);
+				ldaperror = get_error_by_code(rc);
 				PyErr_SetString(ldaperror, ldap_err2string(rc));
 				Py_DECREF(ldaperror);
 				return NULL;
@@ -168,7 +169,7 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 				/* Getting the error code from the session. */
 				/* 0x31: LDAP_OPT_RESULT_CODE or LDAP_OPT_ERROR_NUMBER */
 				ldap_get_option(self->conn->ld, 0x0031,  &err);
-				PyObject *ldaperror = get_error_by_code(err);
+				ldaperror = get_error_by_code(err);
 				PyErr_SetString(ldaperror, ldap_err2string(err));
 				Py_DECREF(ldaperror);
 				return NULL;
