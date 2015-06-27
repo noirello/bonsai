@@ -86,19 +86,42 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
 }
 
 /* It does what it says: no verification on the server cert. */
-BOOLEAN _cdecl noverify(PLDAP Connection, PCCERT_CONTEXT *ppServerCert) {
+BOOLEAN _cdecl
+noverify(PLDAP Connection, PCCERT_CONTEXT *ppServerCert) {
 	return 1;
 }
 
-int LDAP_start_init(LDAP **ld, PyObject *url, int tls_option) {
+/* Basicly a dummy function that copies the url reference into the misc
+   parameter. The reason behind this is only cross platform purpose: the
+   two phase init on Windows is unnecessary, but with this hack the same
+   function declaration can be used on both platform. */
+int
+LDAP_start_init(PyObject *url, void **misc) {
+	*misc = url;
+	/* Keep alive the object. */
+	Py_INCREF(*misc);
+	return 0;
+}
+
+/* The actual initialisation function that creates an LDAP struct and
+   set cert policy. The misc paramter here is a PyObject (LDAPURL) with
+   the url information from the LDAPClient object. Returns 1 on success
+   and -1 in case of an error. */
+int
+LDAP_finish_init(int async, void *misc, int cert_policy, LDAP **ld) {
 	int rc;
 	int portnum;
 	char *hoststr = NULL;
 	const int version = LDAP_VERSION3;
 	const int tls_settings = SCH_CRED_MANUAL_CRED_VALIDATION | SCH_CRED_NO_SERVERNAME_CHECK;
+
+	PyObject *url = (PyObject *)misc;
+
 	PyObject *scheme = PyObject_GetAttrString(url, "scheme");
 	PyObject *host = PyObject_GetAttrString(url, "host");
 	PyObject *port = PyObject_GetAttrString(url, "port");
+	/* Undo the increment in LDAP_start_init. */
+	Py_DECREF(url);
 
 	if (scheme == NULL || host == NULL || port == NULL) return -1;
 
@@ -117,23 +140,30 @@ int LDAP_start_init(LDAP **ld, PyObject *url, int tls_option) {
 	Py_DECREF(scheme);
 	if (ld == NULL) return -1;
 	ldap_set_option(*ld, LDAP_OPT_PROTOCOL_VERSION, &version);
-	switch (tls_option) {
-		case -1:
-			/* Cert policy is not set, nothing to do.*/
-			break;
-		case 2:
-		case 4:
-			/* Cert policy is demand or try, then standard procedure. */
-			break;
-		case 0:
-		case 3:
-			/* Cert policy is never or allow, then set TLS settings. */
-			ldap_set_option(*ld, 0x43, &tls_settings);
-			ldap_set_option(*ld, LDAP_OPT_SERVER_CERTIFICATE, &noverify);
-			break;
+	switch (cert_policy) {
+	case -1:
+		/* Cert policy is not set, nothing to do.*/
+		break;
+	case 2:
+	case 4:
+		/* Cert policy is demand or try, then standard procedure. */
+		break;
+	case 0:
+	case 3:
+		/* Cert policy is never or allow, then set TLS settings. */
+		ldap_set_option(*ld, 0x43, &tls_settings);
+		ldap_set_option(*ld, LDAP_OPT_SERVER_CERTIFICATE, &noverify);
+		break;
 	}
 	rc = ldap_connect(*ld, NULL);
-	return rc;
+	if (rc == LDAP_SUCCESS) return 1;
+	else {
+		/* The ldap_connect is failed. Set a Python error. */
+		PyObject *ldaperror = get_error_by_code(rc);
+		PyErr_SetString(ldaperror, ldap_err2string(rc));
+		Py_DECREF(ldaperror);
+		return -1;
+	}
 }
 
 int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgid) {
@@ -226,14 +256,17 @@ int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgi
 		*msgid = rc;
 		if (rc > 0) rc = 0;
 	}
+
 	return rc;
 }
 
-int LDAP_unbind(LDAP *ld) {
+int
+LDAP_unbind(LDAP *ld) {
 	return ldap_unbind(ld);
 }
 
-int LDAP_abandon(LDAP *ld, int msgid) {
+int
+LDAP_abandon(LDAP *ld, int msgid) {
 	return ldap_abandon(ld, msgid);
 }
 
@@ -242,11 +275,16 @@ ldap_start_tls(LDAP *ld, LDAPControl **serverctrls, LDAPControl **clientctrls, i
 	return ldap_extended_operation(ld, LDAP_START_TLS_OID, NULL, serverctrls, clientctrls, msgidp);
 }
 
+int
+ldap_install_tls(LDAP *ld) {
+	return LDAP_SUCCESS;
+}
+
 /* Create a struct with the necessary infos and structs for binding an
    LDAP Server.
 */
 void *
-create_conn_info(LDAP *ld, char *mech, PyObject *creds) {
+create_conn_info(char *mech, PyObject *creds) {
 	int rc = -1;
 	ldapConnectionInfo *defaults = NULL;
 	PyObject *tmp = NULL;
@@ -274,16 +312,6 @@ create_conn_info(LDAP *ld, char *mech, PyObject *creds) {
 		free(defaults);
 		return (void *)PyErr_NoMemory();
 	}
-
-	/* Copy hostname from LDAP struct to create a valid targetName(SPN). */
-	defaults->targetName = (char *)malloc(strlen(ld->ld_host) + 6);
-	if (defaults->targetName == NULL) {
-		free(wincreds);
-		free(defaults->credhandle);
-		free(defaults);
-		return (void *)PyErr_NoMemory();
-	}
-	sprintf_s(defaults->targetName, strlen(ld->ld_host) + 6, "ldap/%hs", ld->ld_host);
 
 	defaults->mech = mech;
 
@@ -338,6 +366,19 @@ create_conn_info(LDAP *ld, char *mech, PyObject *creds) {
 	return defaults;
 }
 
+/* Updates after initialised LDAP struct. */
+int
+update_conn_info(LDAP *ld, ldapConnectionInfo *info) {
+	/* Copy hostname from LDAP struct to create a valid targetName(SPN). */
+	info->targetName = (char *)malloc(strlen(ld->ld_host) + 6);
+	if (info->targetName == NULL) {
+		PyErr_NoMemory();
+		return -1;
+	}
+	sprintf_s(info->targetName, strlen(ld->ld_host) + 6, "ldap/%hs", ld->ld_host);
+	return 0;
+}
+
 /* Dealloc an ldapConnectionInfo struct. */
 void
 dealloc_conn_info(ldapConnectionInfo* info) {
@@ -374,8 +415,10 @@ ldap_init_thread(void *params)  {
 	pthread_exit((void *)ldap_params);
 }
 
+/* Create a separate for initialise LDAP struct. The pointer of the 
+   created thread is passed to the misc parameter. */
 int
-LDAP_start_init(PyObject *url, void **thread) {
+LDAP_start_init(PyObject *url, void **misc) {
 	int rc;
 	char *addrstr;
 	ldapThreadData *data;
@@ -383,6 +426,7 @@ LDAP_start_init(PyObject *url, void **thread) {
 	data = (ldapThreadData *)malloc(sizeof(ldapThreadData));
 	if (data == NULL) return -1;
 
+	/* Get URL address information from the LDAPClient's LDAPURL object. */
 	PyObject *addr = PyObject_CallMethod(url, "get_address", NULL);
 	if (addr == NULL) return -1;
 	addrstr = PyObject2char(addr);
@@ -392,25 +436,25 @@ LDAP_start_init(PyObject *url, void **thread) {
 	data->ld = NULL;
 	data->url = addrstr;
 
-	/* Create a separate thread for init- */
-	*thread = (pthread_t *)malloc(sizeof(pthread_t));
-	if (*thread == NULL) {
+	/* Create the separate thread. */
+	*misc = (pthread_t *)malloc(sizeof(pthread_t));
+	if (*misc == NULL) {
 		PyErr_NoMemory();
 		return -1;
 	}
 	Py_BEGIN_ALLOW_THREADS
-	rc = pthread_create((pthread_t *)thread, NULL, ldap_init_thread, data);
+	rc = pthread_create((pthread_t *)misc, NULL, ldap_init_thread, data);
 	Py_END_ALLOW_THREADS
 
 	return rc;
 }
 
-/* Check on the initialisation thread and set cert policy.
-   The pointer of initialised LDAP struct is passed to the ld parameter.
-   Return 1 if the initialisation thread is finished, 0 if it is still in
-   progress, and -1 for error.. */
+/* Check on the initialisation thread and set cert policy. The misc
+   parameter has to be a pthread_t object. The pointer of initialised
+   LDAP struct is passed to the ld parameter. Return 1 if the initialisation
+   thread is finished, 0 if it is still in progress, and -1 for error. */
 int
-LDAP_finish_init(int async, void *thread, int cert_policy, LDAP **ld) {
+LDAP_finish_init(int async, void *misc, int cert_policy, LDAP **ld) {
 	int rc = -1;
 	ldapThreadData *val = NULL;
 	struct timespec ts;
@@ -420,10 +464,10 @@ LDAP_finish_init(int async, void *thread, int cert_policy, LDAP **ld) {
 
 	if (async) {
 		/* Polling thread state. Warning: this function is not portable (_np). */
-		rc = pthread_timedjoin_np(*(pthread_t *)thread, (void **)&val, &ts);
+		rc = pthread_timedjoin_np(*(pthread_t *)misc, (void **)&val, &ts);
 	} else {
 		/* Block until thread is finished. */
-		rc = pthread_join(*(pthread_t *)thread, (void **)&val);
+		rc = pthread_join(*(pthread_t *)misc, (void **)&val);
 	}
 	switch (rc) {
 	case ETIMEDOUT:
@@ -494,7 +538,7 @@ LDAP_abandon(LDAP *ld, int msgid ) {
     file for creating a lutilSASLdefaults struct with default values based on
     the given parameters or client's options. */
 void *
-create_conn_info(LDAP *ld, char *mech, PyObject *creds) {
+create_conn_info(char *mech, PyObject *creds) {
 	ldapConnectionInfo *defaults = NULL;
 	PyObject *tmp = NULL;
 	char *authcid = NULL;
@@ -533,6 +577,12 @@ create_conn_info(LDAP *ld, char *mech, PyObject *creds) {
 	defaults->rmech = NULL;
 
 	return defaults;
+}
+
+/* Updates after initialised LDAP struct. */
+int
+update_conn_info(LDAP *ld, ldapConnectionInfo *info) {
+	return 0;
 }
 
 /* Dealloc an ldapConnectionInfo struct. */

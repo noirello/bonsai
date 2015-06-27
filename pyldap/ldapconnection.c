@@ -88,7 +88,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	mech = PyObject2char(tmp);
 	Py_XDECREF(tmp);
 
-	info = create_conn_info(self->ld, mech, creds);
+	info = create_conn_info(mech, creds);
 	if (info == NULL) return -1;
 	Py_DECREF(creds);
 
@@ -103,6 +103,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	if (*conniter == NULL) return -1;
 
 	rc = LDAP_start_init(url, &((*conniter)->thread));
+
 	Py_DECREF(url);
 	Py_DECREF(tls);
 

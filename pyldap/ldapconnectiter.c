@@ -56,7 +56,7 @@ LDAPConnectIter_New(LDAPConnection *conn, ldapConnectionInfo *info, int async, i
 	return self;
 }
 
-PyObject*
+PyObject *
 LDAPConnectIter_getiter(LDAPConnectIter *self) {
 	Py_INCREF(self);
 	return (PyObject*)self;
@@ -82,6 +82,7 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 		rc = LDAP_finish_init(self->async, (void *)self->thread, self->cert_policy, &(self->conn->ld));
 		if (rc == -1) return NULL; /* Error is happened. */
 		if (rc == 1) self->init_finished = 1;
+		if (update_conn_info(self->conn->ld, self->info) != 0) return NULL;
 	} else if (self->tls == 1 && self->tls_step != 2) {
 		switch(self->tls_step) {
 		case 0:
@@ -114,7 +115,7 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 				Py_DECREF(ldaperror);
 				return NULL;
 			case 0:
-				/* Timeout exceeded.*/
+				/* Timeout exceeded. */
 				break;
 			case LDAP_RES_EXTENDED:
 				/* Response is arrived about the START_TLS. */
