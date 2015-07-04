@@ -26,11 +26,8 @@ LDAPConnectIter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	if (self != NULL) {
 		self->conn = NULL;
 		self->init_finished = 0;
-		self->tls = 0;
-		self->tls_step = 0;
 		self->message_id = 0;
 		self->thread = NULL;
-		self->cert_policy = -1;
 		self->async = 0;
 	}
 
@@ -39,7 +36,7 @@ LDAPConnectIter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
 /*	Creates a new LDAPConnectIter object for internal use. */
 LDAPConnectIter *
-LDAPConnectIter_New(LDAPConnection *conn, ldapConnectionInfo *info, int async, int has_tls, int cert_policy) {
+LDAPConnectIter_New(LDAPConnection *conn, ldapConnectionInfo *info, int async) {
 	LDAPConnectIter *self =
 			(LDAPConnectIter *)LDAPConnectIterType.tp_new(&LDAPConnectIterType,
 					NULL, NULL);
@@ -48,8 +45,6 @@ LDAPConnectIter_New(LDAPConnection *conn, ldapConnectionInfo *info, int async, i
 		Py_INCREF(conn);
 		self->conn = conn;
 		self->info = info;
-		self->tls = has_tls;
-		self->cert_policy = cert_policy;
 		self->async = async;
 	}
 
@@ -79,69 +74,10 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 	}
 
 	if (self->init_finished == 0) {
-		rc = LDAP_finish_init(self->async, (void *)self->thread, self->cert_policy, &(self->conn->ld));
+		rc = LDAP_finish_init(self->async, (void *)self->thread, &(self->conn->ld));
 		if (rc == -1) return NULL; /* Error is happened. */
 		if (rc == 1) self->init_finished = 1;
-	} else if (self->tls == 1 && self->tls_step != 2) {
-		switch(self->tls_step) {
-		case 0:
-			/* Send START_TLS to the server. */
-			rc = ldap_start_tls(self->conn->ld, NULL, NULL, &(self->message_id));
-			if (rc != LDAP_SUCCESS) {
-				PyObject *ldaperror = get_error_by_code(rc);
-				PyErr_SetString(ldaperror, ldap_err2string(rc));
-				Py_DECREF(ldaperror);
-				return NULL;
-			}
-			self->tls_step++;
-			break;
-		case 1:
-			if (self->async) {
-				/* Poll result from the server. */
-				rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, &polltime, &res);
-			} else {
-				/* Block until the server response. */
-				rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, NULL, &res);
-			}
-			switch (rc) {
-			case -1:
-				/* Error occurred during the operation. */
-				/* Getting the error code from the session. */
-				/* 0x31: LDAP_OPT_RESULT_CODE or LDAP_OPT_ERROR_NUMBER */
-				ldap_get_option(self->conn->ld, 0x0031,  &err);
-				PyObject *ldaperror = get_error_by_code(err);
-				PyErr_SetString(ldaperror, ldap_err2string(err));
-				Py_DECREF(ldaperror);
-				return NULL;
-			case 0:
-				/* Timeout exceeded.*/
-				break;
-			case LDAP_RES_EXTENDED:
-				/* Response is arrived about the START_TLS. */
-				rc = ldap_parse_extended_result(self->conn->ld, res, NULL, NULL, 1);
-				if (rc != LDAP_SUCCESS) {
-					PyObject *ldaperror = get_error_by_code(rc);
-					PyErr_SetString(ldaperror, ldap_err2string(rc));
-					Py_DECREF(ldaperror);
-					return NULL;
-				}
-				rc = ldap_install_tls(self->conn->ld);
-				if (rc != LDAP_SUCCESS) {
-					PyObject *ldaperror = get_error_by_code(rc);
-					PyErr_SetString(ldaperror, ldap_err2string(rc));
-					Py_DECREF(ldaperror);
-					return NULL;
-				}
-				self->tls_step++;
-				break;
-			default:
-				/* Invalid return value, it never should happen. */
-				PyErr_BadInternalCall();
-				return NULL;
-			break;
-			}
-		}
-	} else {
+	}  else {
 		/* Init for the LDAP structure is finished, TLS (if it as needed) already set, start binding. */
 		if (self->bind_inprogress == 0) {
 			/* First call of bind. */

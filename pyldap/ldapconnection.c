@@ -99,10 +99,10 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	tmp = PyObject_GetAttrString((PyObject *)self, "_LDAPConnection__async");
 	if (tmp == NULL) return -1;
 
-	*conniter = LDAPConnectIter_New(self, info, PyObject_IsTrue(tmp), PyObject_IsTrue(tls), tls_option);
+	*conniter = LDAPConnectIter_New(self, info, PyObject_IsTrue(tmp));
 	if (*conniter == NULL) return -1;
 
-	rc = LDAP_start_init(url, &((*conniter)->thread));
+	rc = LDAP_start_init(url, PyObject_IsTrue(tls), tls_option, &((*conniter)->thread));
 	Py_DECREF(url);
 	Py_DECREF(tls);
 

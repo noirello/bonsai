@@ -366,16 +366,29 @@ ldap_init_thread(void *params)  {
 
 	if (ldap_params != NULL) {
 		rc = ldap_initialize(&(ldap_params->ld), ldap_params->url);
-		ldap_params->retval = rc;
+		if (rc != LDAP_SUCCESS) {
+			pthread_exit((void *)ldap_params);
+		}
 		/* Set version to LDAPv3. */
 		ldap_set_option(ldap_params->ld, LDAP_OPT_PROTOCOL_VERSION, &version);
+		if (ldap_params->cert_policy != -1) {
+			/* Set cert policy. */
+			ldap_set_option(ldap_params->ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &(ldap_params->cert_policy));
+			/* Set TLS option globally. */
+			ldap_set_option(NULL, LDAP_OPT_X_TLS_REQUIRE_CERT, &(ldap_params->cert_policy));
+		}
+		if (ldap_params->tls == 1) {
+			/* Start TLS if it's required. */
+			rc = ldap_start_tls_s(ldap_params->ld, NULL, NULL);
+		}
+		ldap_params->retval = rc;
 	}
 	/* Return the retval and the (hopefully) initialised LDAP struct. */
 	pthread_exit((void *)ldap_params);
 }
 
 int
-LDAP_start_init(PyObject *url, void **thread) {
+LDAP_start_init(PyObject *url,  int has_tls, int cert_policy, void **thread) {
 	int rc;
 	char *addrstr;
 	ldapThreadData *data;
@@ -391,6 +404,8 @@ LDAP_start_init(PyObject *url, void **thread) {
 
 	data->ld = NULL;
 	data->url = addrstr;
+	data->tls = has_tls;
+	data->cert_policy = cert_policy;
 
 	/* Create a separate thread for init- */
 	*thread = (pthread_t *)malloc(sizeof(pthread_t));
@@ -410,7 +425,7 @@ LDAP_start_init(PyObject *url, void **thread) {
    Return 1 if the initialisation thread is finished, 0 if it is still in
    progress, and -1 for error.. */
 int
-LDAP_finish_init(int async, void *thread, int cert_policy, LDAP **ld) {
+LDAP_finish_init(int async, void *thread, LDAP **ld) {
 	int rc = -1;
 	ldapThreadData *val = NULL;
 	struct timespec ts;
@@ -438,12 +453,6 @@ LDAP_finish_init(int async, void *thread, int cert_policy, LDAP **ld) {
 		}
 		/* Set initialised LDAP struct pointer. */
 		*ld = val->ld;
-		if (cert_policy != -1) {
-			/* Set cert policy. */
-			ldap_set_option(*ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &cert_policy);
-			/* Set TLS option globally. */
-			ldap_set_option(NULL, LDAP_OPT_X_TLS_REQUIRE_CERT, &cert_policy);
-		}
 		if (val->url != NULL) free(val->url);
 		free(val);
 		return 1;
