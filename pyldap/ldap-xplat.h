@@ -75,13 +75,14 @@ int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
 
 #endif
 
-int LDAP_start_init(PyObject *url,  int has_tls, int cert_policy, void **thread);
+int LDAP_start_init(PyObject *url,  int has_tls, int cert_policy, void **misc);
 int LDAP_finish_init(int async, void *thread, LDAP **ld);
 int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgid);
 int LDAP_unbind(LDAP *ld);
 int LDAP_abandon(LDAP *ld, int msgid);
 
-void *create_conn_info(LDAP *ld, char *mech, PyObject *creds);
+void *create_conn_info(char *mech, PyObject *creds);
+int update_conn_info(LDAP *ld, ldapConnectionInfo *info);
 void dealloc_conn_info(ldapConnectionInfo* info);
 
 #endif /* PYLDAP_LDAP_XPLAT_H_ */

@@ -51,7 +51,7 @@ LDAPConnectIter_New(LDAPConnection *conn, ldapConnectionInfo *info, int async) {
 	return self;
 }
 
-PyObject*
+PyObject *
 LDAPConnectIter_getiter(LDAPConnectIter *self) {
 	Py_INCREF(self);
 	return (PyObject*)self;
@@ -64,6 +64,7 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 	struct timeval polltime;
 	LDAPControl **returned_ctrls = NULL;
 	LDAPMessage *res;
+	PyObject *ldaperror = NULL;
 
 	polltime.tv_sec = 0L;
 	polltime.tv_usec = 10L;
@@ -77,13 +78,14 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 		rc = LDAP_finish_init(self->async, (void *)self->thread, &(self->conn->ld));
 		if (rc == -1) return NULL; /* Error is happened. */
 		if (rc == 1) self->init_finished = 1;
+		if (update_conn_info(self->conn->ld, self->info) != 0) return NULL;
 	}  else {
 		/* Init for the LDAP structure is finished, TLS (if it as needed) already set, start binding. */
 		if (self->bind_inprogress == 0) {
 			/* First call of bind. */
 			rc = LDAP_bind(self->conn->ld, self->info, NULL, &(self->message_id));
 			if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
-				PyObject *ldaperror = get_error_by_code(rc);
+				ldaperror = get_error_by_code(rc);
 				PyErr_SetString(ldaperror, ldap_err2string(rc));
 				Py_DECREF(ldaperror);
 				return NULL;
@@ -103,7 +105,7 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 				/* Getting the error code from the session. */
 				/* 0x31: LDAP_OPT_RESULT_CODE or LDAP_OPT_ERROR_NUMBER */
 				ldap_get_option(self->conn->ld, 0x0031,  &err);
-				PyObject *ldaperror = get_error_by_code(err);
+				ldaperror = get_error_by_code(err);
 				PyErr_SetString(ldaperror, ldap_err2string(err));
 				Py_DECREF(ldaperror);
 				return NULL;
