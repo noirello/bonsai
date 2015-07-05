@@ -41,7 +41,12 @@ typedef struct ldapConnectionInfo_s {
 	char *targetName;
 } ldapConnectionInfo;
 
-int ldap_start_tls(LDAP *ld, LDAPControl **serverctrls, LDAPControl **clientctrls, int *msgidp);
+typedef struct ldap_thread_data_s {
+	LDAP *ld;
+	int tls;
+	int cert_policy;
+	int retval;
+} ldapThreadData;
 
 #else
 //Unix
@@ -75,8 +80,8 @@ int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
 
 #endif
 
-int LDAP_start_init(PyObject *url,  int has_tls, int cert_policy, void **misc);
-int LDAP_finish_init(int async, void *thread, LDAP **ld);
+int LDAP_start_init(PyObject *url, int has_tls, int cert_policy, void **thread, void **misc);
+int LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld);
 int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgid);
 int LDAP_unbind(LDAP *ld);
 int LDAP_abandon(LDAP *ld, int msgid);

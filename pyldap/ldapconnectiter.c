@@ -28,6 +28,7 @@ LDAPConnectIter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 		self->init_finished = 0;
 		self->message_id = 0;
 		self->thread = NULL;
+		self->data = NULL;
 		self->async = 0;
 	}
 
@@ -75,7 +76,7 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 	}
 
 	if (self->init_finished == 0) {
-		rc = LDAP_finish_init(self->async, (void *)self->thread, &(self->conn->ld));
+		rc = LDAP_finish_init(self->async, (void *)self->thread, (void *)self->data, &(self->conn->ld));
 		if (rc == -1) return NULL; /* Error is happened. */
 		if (rc == 1) self->init_finished = 1;
 		if (update_conn_info(self->conn->ld, self->info) != 0) return NULL;

@@ -68,6 +68,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	PyObject *tmp = NULL;
 	PyObject *creds = NULL;
 	ldapConnectionInfo *info = NULL;
+	ldapThreadData *data = NULL;
 
 	//TODO: Check the order of decrementing for the objects!
 	/* Get URL policy from LDAPClient. */
@@ -102,7 +103,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	*conniter = LDAPConnectIter_New(self, info, PyObject_IsTrue(tmp));
 	if (*conniter == NULL) return -1;
 
-	rc = LDAP_start_init(url, PyObject_IsTrue(tls), tls_option, &((*conniter)->thread));
+	rc = LDAP_start_init(url, PyObject_IsTrue(tls), tls_option, &((*conniter)->thread), &((*conniter)->data));
 	Py_DECREF(url);
 	Py_DECREF(tls);
 
