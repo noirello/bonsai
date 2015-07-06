@@ -136,6 +136,9 @@ LDAP_start_init(PyObject *url, int has_tls, int cert_policy, void **thread, void
 	char *hoststr = NULL;
 	const int version = LDAP_VERSION3;
 	ldapThreadData *data = NULL;
+	PyObject *scheme = NULL;
+	PyObject *host = NULL;
+	PyObject *port = NULL;
 
 	data = (ldapThreadData *)malloc(sizeof(ldapThreadData));
 	if (data == NULL) {
@@ -146,9 +149,9 @@ LDAP_start_init(PyObject *url, int has_tls, int cert_policy, void **thread, void
 	data->cert_policy = cert_policy;
 	data->tls = has_tls;
 
-	PyObject *scheme = PyObject_GetAttrString(url, "scheme");
-	PyObject *host = PyObject_GetAttrString(url, "host");
-	PyObject *port = PyObject_GetAttrString(url, "port");
+	scheme = PyObject_GetAttrString(url, "scheme");
+	host = PyObject_GetAttrString(url, "host");
+	port = PyObject_GetAttrString(url, "port");
 
 	if (scheme == NULL || host == NULL || port == NULL) return -1;
 
