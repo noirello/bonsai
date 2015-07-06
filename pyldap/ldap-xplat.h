@@ -39,6 +39,9 @@ typedef struct ldapConnectionInfo_s {
 	CredHandle *credhandle;
 	CtxtHandle *ctxhandle;
 	char *targetName;
+	/* For the thread. */
+	LDAP *ld;
+	HANDLE thread;
 } ldapConnectionInfo;
 
 typedef struct ldap_thread_data_s {

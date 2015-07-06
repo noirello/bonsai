@@ -8,11 +8,158 @@
 
 #include "utils.h"
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+//MS Windows
+
+/* Poll the answer of the separate thread that runs the binding process.
+Returns NULL in case of error, Py_None for timeout, and the LDAPConnection
+object if successfully finished the binding. */
+static PyObject *
+binding(LDAPConnectIter *self) {
+	int rc;
+	PyObject *ldaperror = NULL;
+
+	if (self->bind_inprogress == 0) {
+		/* First call of bind. */
+		rc = LDAP_bind(self->conn->ld, self->info, NULL, &(self->message_id));
+		if (rc != LDAP_SUCCESS) {
+			ldaperror = get_error_by_code(rc);
+			PyErr_SetString(ldaperror, ldap_err2string(rc));
+			Py_DECREF(ldaperror);
+			return NULL;
+		}
+		self->bind_inprogress = 1;
+		Py_RETURN_NONE;
+	} else {
+		if (self->async) {
+			rc = WaitForSingleObject(self->info->thread, 10);
+		} else {
+			rc = WaitForSingleObject(self->info->thread, INFINITE);
+		}
+		switch (rc) {
+		case WAIT_TIMEOUT:
+			Py_RETURN_NONE;
+		case WAIT_OBJECT_0:
+			GetExitCodeThread(self->info->thread, &rc);
+			CloseHandle(self->info->thread);
+			if (rc != LDAP_SUCCESS) {
+				/* The ldap_connect is failed. Set a Python error. */
+				PyObject *ldaperror = get_error_by_code(rc);
+				PyErr_SetString(ldaperror, ldap_err2string(rc));
+				Py_DECREF(ldaperror);
+				return NULL;
+			}
+			/* The binding is successfully finished. */
+			self->bind_inprogress = 0;
+			self->conn->closed = 0;
+			Py_INCREF((PyObject *)self->conn);
+			return (PyObject *)self->conn;
+		default:
+			/* The thread is failed. */
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+	}
+}
+
+#else
+
+ /* Poll the answer of the async function calls of the binding process.
+ Returns NULL in case of error, Py_None for timeout, and the LDAPConnection
+ object if successfully finished the binding. */
+static PyObject *
+binding(LDAPConnectIter *self) {
+	int rc = -1;
+	int err = 0;
+	struct timeval polltime;
+	LDAPControl **returned_ctrls = NULL;
+	LDAPMessage *res;
+	PyObject *ldaperror = NULL;
+
+	polltime.tv_sec = 0L;
+	polltime.tv_usec = 10L;
+
+	if (self->bind_inprogress == 0) {
+		/* First call of bind. */
+		rc = LDAP_bind(self->conn->ld, self->info, NULL, &(self->message_id));
+		if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
+			ldaperror = get_error_by_code(rc);
+			PyErr_SetString(ldaperror, ldap_err2string(rc));
+			Py_DECREF(ldaperror);
+			return NULL;
+		}
+		self->bind_inprogress = 1;
+	} else {
+		if (self->async) {
+			/* Binding is already in progress, poll result from the server. */
+			rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, &polltime, &res);
+		} else {
+			/* Block until the server response. */
+			rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, NULL, &res);
+		}
+		switch (rc) {
+		case -1:
+			/* Error occurred during the operation. */
+			/* Getting the error code from the session. */
+			/* 0x31: LDAP_OPT_RESULT_CODE or LDAP_OPT_ERROR_NUMBER */
+			ldap_get_option(self->conn->ld, 0x0031, &err);
+			ldaperror = get_error_by_code(err);
+			PyErr_SetString(ldaperror, ldap_err2string(err));
+			Py_DECREF(ldaperror);
+			return NULL;
+		case 0:
+			/* Timeout exceeded.*/
+			Py_RETURN_NONE;
+		case LDAP_RES_BIND:
+			/* Response is arrived from the server. */
+			rc = ldap_parse_result(self->conn->ld, res, &err, NULL, NULL, NULL, &returned_ctrls, 0);
+
+			if ((rc != LDAP_SUCCESS) ||
+				(err != LDAP_SASL_BIND_IN_PROGRESS && err != LDAP_SUCCESS)) {
+				/* Connection is failed. */
+				ldaperror = get_error_by_code(err);
+				PyErr_SetString(ldaperror, ldap_err2string(err));
+				Py_DECREF(ldaperror);
+				return NULL;
+			}
+
+			if (strcmp(self->info->mech, "SIMPLE") != 0) {
+				/* Continue SASL binding procedure. */
+				rc = LDAP_bind(self->conn->ld, self->info, res, &(self->message_id));
+
+				if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
+					ldaperror = get_error_by_code(err);
+					PyErr_SetString(ldaperror, ldap_err2string(err));
+					Py_DECREF(ldaperror);
+					return NULL;
+				}
+
+				if (rc == LDAP_SASL_BIND_IN_PROGRESS) break;
+			}
+
+			if (rc == LDAP_SUCCESS) {
+				/* The binding is successfully finished. */
+				self->bind_inprogress = 0;
+				self->conn->closed = 0;
+				Py_INCREF((PyObject *)self->conn);
+				return (PyObject *)self->conn;
+			}
+			break;
+		default:
+			/* Invalid return value, it never should happen. */
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+	}
+}
+
+#endif
+
 /*	Dealloc the LDAPConnectIter object. */
 static void
 LDAPConnectIter_dealloc(LDAPConnectIter* self) {
 	Py_XDECREF(self->conn);
-	if (self->conn != NULL) dealloc_conn_info(self->info);
+	if (self->info != NULL) dealloc_conn_info(self->info);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -61,14 +208,7 @@ LDAPConnectIter_getiter(LDAPConnectIter *self) {
 PyObject *
 LDAPConnectIter_iternext(LDAPConnectIter *self) {
 	int rc = -1;
-	int err = 0;
-	struct timeval polltime;
-	LDAPControl **returned_ctrls = NULL;
-	LDAPMessage *res;
-	PyObject *ldaperror = NULL;
-
-	polltime.tv_sec = 0L;
-	polltime.tv_usec = 10L;
+	PyObject *val = NULL;
 
 	/* The connection is already binded. */
 	if (self->conn->closed == 0) {
@@ -80,80 +220,11 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 		if (rc == -1) return NULL; /* Error is happened. */
 		if (rc == 1) self->init_finished = 1;
 		if (update_conn_info(self->conn->ld, self->info) != 0) return NULL;
-	}  else {
-		/* Init for the LDAP structure is finished, TLS (if it as needed) already set, start binding. */
-		if (self->bind_inprogress == 0) {
-			/* First call of bind. */
-			rc = LDAP_bind(self->conn->ld, self->info, NULL, &(self->message_id));
-			if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
-				ldaperror = get_error_by_code(rc);
-				PyErr_SetString(ldaperror, ldap_err2string(rc));
-				Py_DECREF(ldaperror);
-				return NULL;
-			}
-			self->bind_inprogress = 1;
-		} else {
-			if (self->async) {
-				/* Binding is already in progress, poll result from the server. */
-				rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, &polltime, &res);
-			} else {
-				/* Block until the server response. */
-				rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, NULL, &res);
-			}
-			switch (rc) {
-			case -1:
-				/* Error occurred during the operation. */
-				/* Getting the error code from the session. */
-				/* 0x31: LDAP_OPT_RESULT_CODE or LDAP_OPT_ERROR_NUMBER */
-				ldap_get_option(self->conn->ld, 0x0031,  &err);
-				ldaperror = get_error_by_code(err);
-				PyErr_SetString(ldaperror, ldap_err2string(err));
-				Py_DECREF(ldaperror);
-				return NULL;
-			case 0:
-				/* Timeout exceeded.*/
-				break;
-			case LDAP_RES_BIND:
-				/* Response is arrived from the server. */
-				rc = ldap_parse_result(self->conn->ld, res, &err, NULL, NULL, NULL, &returned_ctrls, 0);
-
-				if ((rc != LDAP_SUCCESS) ||
-						(err != LDAP_SASL_BIND_IN_PROGRESS && err != LDAP_SUCCESS)) {
-					/* Connection is failed. */
-					ldaperror = get_error_by_code(err);
-					PyErr_SetString(ldaperror, ldap_err2string(err));
-					Py_DECREF(ldaperror);
-					return NULL;
-				}
-
-				if (strcmp(self->info->mech, "SIMPLE") != 0) {
-					/* Continue SASL binding procedure. */
-					rc = LDAP_bind(self->conn->ld, self->info, res, &(self->message_id));
-
-					if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
-						ldaperror = get_error_by_code(err);
-						PyErr_SetString(ldaperror, ldap_err2string(err));
-						Py_DECREF(ldaperror);
-						return NULL;
-					}
-
-					if (rc == LDAP_SASL_BIND_IN_PROGRESS) break;
-				}
-
-				if (rc == LDAP_SUCCESS ) {
-					/* The binding is successfully finished. */
-					self->bind_inprogress = 0;
-					Py_INCREF((PyObject *)self->conn);
-					self->conn->closed = 0;
-					return (PyObject *)self->conn;
-				}
-				break;
-			default:
-				/* Invalid return value, it never should happen. */
-				PyErr_BadInternalCall();
-				return NULL;
-			}
-		}
+	} else {
+		/* Init for the LDAP structure is finished, TLS (if it is needed) already set, start binding. */
+		val = binding(self);
+		if (val == NULL) return NULL;
+		if (val != Py_None) return val;
 	}
 	if (self->async) {
 		Py_RETURN_NONE;

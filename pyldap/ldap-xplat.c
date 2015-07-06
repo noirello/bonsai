@@ -221,7 +221,10 @@ LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld) {
 	return 0;
 }
 
-int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgid) {
+/* Execute a synchronous simple or SASL binding (with SSPI), called from a 
+separate thread. */
+int
+ldap_thread_bind(void *param) {
 	int rc;
 	int len = 0;
 	int gssapi_decrpyt = 0;
@@ -233,86 +236,94 @@ int LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgi
 	SecBufferDesc in_buff_desc;
 	SecBuffer in_buff;
 	struct berval *response = NULL;
+	ldapConnectionInfo *info = (ldapConnectionInfo *)param;
 
-	if (result != NULL) {
-		rc = ldap_parse_extended_result(ld, result, NULL, &response, 1);
-		if (rc != LDAP_SUCCESS) return rc;
-	}
+	do {
+		if (strcmp(info->mech, "SIMPLE") != 0) {
+			/* Use SASL bind. */
 
-	if (strcmp(info->mech, "SIMPLE") != 0) {
-		/* Use SASL bind. */
+			if (response == NULL) {
+				/* First function call, no server response. */
+				out_buff_desc.ulVersion = 0;
+				out_buff_desc.cBuffers = 1;
+				out_buff_desc.pBuffers = &out_buff;
 
-		if (response == NULL) {
-			/* First function call, no server response. */
-			out_buff_desc.ulVersion = 0;
-			out_buff_desc.cBuffers = 1;
-			out_buff_desc.pBuffers = &out_buff;
+				out_buff.BufferType = SECBUFFER_TOKEN;
+				out_buff.pvBuffer = NULL;
 
-			out_buff.BufferType = SECBUFFER_TOKEN;
-			out_buff.pvBuffer = NULL;
-
-			rc = InitializeSecurityContext(info->credhandle, NULL, info->targetName, ISC_REQ_MUTUAL_AUTH | ISC_REQ_ALLOCATE_MEMORY,
-				0, 0, NULL, 0, info->ctxhandle, &out_buff_desc, &contextattr, NULL);
-		} else {
-			in_buff_desc.ulVersion = SECBUFFER_VERSION;
-			in_buff_desc.cBuffers = 1;
-			in_buff_desc.pBuffers = &in_buff;
-
-			in_buff.cbBuffer = response->bv_len;
-			in_buff.BufferType = SECBUFFER_TOKEN;
-			in_buff.pvBuffer = response->bv_val;
-			if (gssapi_decrpyt) {
-				char *input = NULL;
-				rc = decrypt_response(info->ctxhandle, response->bv_val, response->bv_len, &output, &len);
-				input = output;
-				rc = encrypt_reply(info->ctxhandle, input, len, &output, &len);
+				rc = InitializeSecurityContext(info->credhandle, NULL, info->targetName, ISC_REQ_MUTUAL_AUTH | ISC_REQ_ALLOCATE_MEMORY,
+					0, 0, NULL, 0, info->ctxhandle, &out_buff_desc, &contextattr, NULL);
 			} else {
-				rc = InitializeSecurityContext(info->credhandle, info->ctxhandle, info->targetName, ISC_REQ_MUTUAL_AUTH |
-					ISC_REQ_ALLOCATE_MEMORY, 0, 0, &in_buff_desc, 0, info->ctxhandle, &out_buff_desc, &contextattr, NULL);
+				in_buff_desc.ulVersion = SECBUFFER_VERSION;
+				in_buff_desc.cBuffers = 1;
+				in_buff_desc.pBuffers = &in_buff;
+
+				in_buff.cbBuffer = response->bv_len;
+				in_buff.BufferType = SECBUFFER_TOKEN;
+				in_buff.pvBuffer = response->bv_val;
+				if (gssapi_decrpyt) {
+					char *input = NULL;
+					rc = decrypt_response(info->ctxhandle, response->bv_val, response->bv_len, &output, &len);
+					input = output;
+					rc = encrypt_reply(info->ctxhandle, input, len, &output, &len);
+				} else {
+					rc = InitializeSecurityContext(info->credhandle, info->ctxhandle, info->targetName, ISC_REQ_MUTUAL_AUTH |
+						ISC_REQ_ALLOCATE_MEMORY, 0, 0, &in_buff_desc, 0, info->ctxhandle, &out_buff_desc, &contextattr, NULL);
+				}
 			}
-		}
 
-		switch (rc) {
-		case SEC_I_COMPLETE_NEEDED:
-		case SEC_I_COMPLETE_AND_CONTINUE:
-			CompleteAuthToken(info->ctxhandle, &out_buff_desc);
-			break;
-		case SEC_E_OK:
-			if (strcmp(info->mech, "GSSAPI") == 0) {
-				gssapi_decrpyt = 1;
+			switch (rc) {
+			case SEC_I_COMPLETE_NEEDED:
+			case SEC_I_COMPLETE_AND_CONTINUE:
+				CompleteAuthToken(info->ctxhandle, &out_buff_desc);
+				break;
+			case SEC_E_OK:
+				if (strcmp(info->mech, "GSSAPI") == 0) {
+					gssapi_decrpyt = 1;
+				}
+				break;
+			case SEC_I_CONTINUE_NEEDED:
+				break;
+			case SEC_E_INVALID_HANDLE:
+			case SEC_E_INVALID_TOKEN:
+				return -1;
+			default:
+				break;
 			}
-			break;
-		case SEC_I_CONTINUE_NEEDED:
-			break;
-		case SEC_E_INVALID_HANDLE:
-		case SEC_E_INVALID_TOKEN:
-			//TODO: better error;
-			PyErr_BadInternalCall();
-			return -1;
-		default:
-			break;
-		}
 
-		cred.bv_len = out_buff.cbBuffer;
-		cred.bv_val = (char *)out_buff.pvBuffer;
+			cred.bv_len = out_buff.cbBuffer;
+			cred.bv_val = (char *)out_buff.pvBuffer;
 
-		if (gssapi_decrpyt) {
-			cred.bv_len = len;
-			cred.bv_val = output;
+			if (gssapi_decrpyt) {
+				cred.bv_len = len;
+				cred.bv_val = output;
+			}
+			/* Empty binddn is needed to change "" to avoid param error. */
+			if (info->binddn == NULL) info->binddn = "";
+			rc = ldap_sasl_bind_s(info->ld, info->binddn, info->mech, &cred, NULL, NULL, &response);
+			/* Get the last error code form the LDAP struct. */
+			ldap_get_option(info->ld, LDAP_OPT_ERROR_NUMBER, &rc);
+		} else {
+			/* Use simple bind with bind DN and password. */
+			rc = ldap_simple_bind_s(info->ld, info->binddn, (char *)(info->creds->Password));
 		}
-		/* Empty binddn is needed to change "" to avoid param error. */
-		if (info->binddn == NULL) info->binddn = "";
-		rc = ldap_sasl_bind(ld, info->binddn, info->mech, &cred, NULL, NULL, msgid);
-		/* Get the last error code form the LDAP struct. */
-		ldap_get_option(ld, LDAP_OPT_ERROR_NUMBER, &rc);
-	} else {
-		/* Use simple bind with bind DN and password. */
-		rc = ldap_simple_bind(ld, info->binddn, (char *)(info->creds->Password));
-		*msgid = rc;
-		if (rc > 0) rc = 0;
-	}
+	} while (rc == LDAP_SASL_BIND_IN_PROGRESS);
 
 	return rc;
+}
+
+/* Create a separate thread for binding to the server. Results of asynchronous
+SASL function call cannot be parsed (because of some kind of bug in WinLDAP). */
+int
+LDAP_bind(LDAP *ld, ldapConnectionInfo *info, LDAPMessage *result, int *msgid) {
+
+	info->ld = ld;
+
+	Py_BEGIN_ALLOW_THREADS
+	info->thread = (void *)CreateThread(NULL, 0, ldap_thread_bind, (void *)info, 0, NULL);
+	Py_END_ALLOW_THREADS
+
+	return LDAP_SUCCESS;
 }
 
 int
@@ -386,7 +397,8 @@ create_conn_info(char *mech, PyObject *creds) {
 	if (realm != NULL) wincreds->DomainLength = (unsigned long)strlen(realm);
 	else wincreds->DomainLength = 0;
 
-	wincreds->Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;
+	//TODO: Change it to UNICODE.
+	wincreds->Flags = SEC_WINNT_AUTH_IDENTITY_ANSI;
 
 	defaults->authzid = authzid;
 	defaults->binddn = binddn;

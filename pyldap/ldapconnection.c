@@ -587,7 +587,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 			authzid->bv_val = "anonymous";
 			authzid->bv_len = 9;
 		}
-		free(retoid);
+		// free(retoid); //TODO: Causes segfault on MS platform should use ldap_memfree. 
 		return PyUnicode_FromString(authzid->bv_val);
 	}
 	return NULL;
