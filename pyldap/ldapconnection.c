@@ -68,7 +68,6 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	PyObject *tmp = NULL;
 	PyObject *creds = NULL;
 	ldapConnectionInfo *info = NULL;
-	ldapThreadData *data = NULL;
 
 	//TODO: Check the order of decrementing for the objects!
 	/* Get URL policy from LDAPClient. */

@@ -89,6 +89,7 @@ binding(LDAPConnectIter *self) {
 			return NULL;
 		}
 		self->bind_inprogress = 1;
+		Py_RETURN_NONE;
 	} else {
 		if (self->async) {
 			/* Binding is already in progress, poll result from the server. */
@@ -134,7 +135,9 @@ binding(LDAPConnectIter *self) {
 					return NULL;
 				}
 
-				if (rc == LDAP_SASL_BIND_IN_PROGRESS) break;
+				if (rc == LDAP_SASL_BIND_IN_PROGRESS) {
+					Py_RETURN_NONE;
+				}
 			}
 
 			if (rc == LDAP_SUCCESS) {
@@ -144,7 +147,7 @@ binding(LDAPConnectIter *self) {
 				Py_INCREF((PyObject *)self->conn);
 				return (PyObject *)self->conn;
 			}
-			break;
+			Py_RETURN_NONE;
 		default:
 			/* Invalid return value, it never should happen. */
 			PyErr_BadInternalCall();

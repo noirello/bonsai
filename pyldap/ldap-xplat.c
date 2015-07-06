@@ -563,7 +563,6 @@ LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld) {
 		*ld = val->ld;
 		if (val->url != NULL) free(val->url);
 		free(val);
-		free(thread);
 		return 1;
 	default:
 		/* The thread is failed. */
