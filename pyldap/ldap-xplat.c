@@ -206,9 +206,7 @@ LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld) {
 	case WAIT_OBJECT_0:
 		if (((ldapThreadData *)misc)->retval != LDAP_SUCCESS) {
 			/* The ldap_connect is failed. Set a Python error. */
-			PyObject *ldaperror = get_error_by_code(rc);
-			PyErr_SetString(ldaperror, ldap_err2string(rc));
-			Py_DECREF(ldaperror);
+			set_exception(NULL, ((ldapThreadData *)misc)->retval);
 			return -1;
 		}
 		/* Set the new LDAP struct and clean up the mess. */
@@ -244,7 +242,6 @@ ldap_thread_bind(void *param) {
 	do {
 		if (strcmp(info->mech, "SIMPLE") != 0) {
 			/* Use SASL bind. */
-
 			if (response == NULL) {
 				/* First function call, no server response. */
 				out_buff_desc.ulVersion = 0;
@@ -407,6 +404,7 @@ create_conn_info(char *mech, PyObject *creds) {
 	defaults->binddn = binddn;
 	defaults->creds = wincreds;
 	defaults->ctxhandle = NULL;
+	defaults->targetName = NULL;
 
 	if (strcmp(mech, "SIMPLE") != 0) {
 		/* Select corresponding security packagename from the mechanism name. */
@@ -557,9 +555,7 @@ LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld) {
 		if (val == NULL) return -1;
 
 		if (val->retval != LDAP_SUCCESS) {
-			PyObject *ldaperror = get_error_by_code(val->retval );
-			PyErr_SetString(ldaperror, ldap_err2string(val->retval ));
-			Py_DECREF(ldaperror);
+			set_exception(NULL, val->retval);
 			return -1;
 		}
 		/* Set initialised LDAP struct pointer. */

@@ -50,7 +50,7 @@ LDAPConnection_IsClosed(LDAPConnection *self) {
 		PyObject *ldaperror = get_error_by_code(-11);
 		PyErr_SetString(ldaperror, "The connection is already closed.");
 		Py_DECREF(ldaperror);
-		return 1;
+		return -1;
 	}
 	return 0;
 }
@@ -69,7 +69,6 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	PyObject *creds = NULL;
 	ldapConnectionInfo *info = NULL;
 
-	//TODO: Check the order of decrementing for the objects!
 	/* Get URL policy from LDAPClient. */
 	url = PyObject_GetAttrString(self->client, "_LDAPClient__url");
 	if (url == NULL) return -1;
@@ -112,9 +111,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	Py_DECREF(tls);
 
 	if (rc != 0) {
-		PyObject *ldaperror = get_error_by_code(rc);
-		PyErr_SetString(ldaperror, ldap_err2string(rc));
-		Py_DECREF(ldaperror);
+		set_exception(self->ld, rc);
 		return -1;
 	}
 	return 0;
@@ -178,7 +175,6 @@ LDAPConnection_Close(LDAPConnection *self) {
 	int msgid;
 	PyObject *keys = PyDict_Keys(self->pending_ops);
 	PyObject *iter, *key;
-	PyObject *ldaperror = NULL;
 
 	if (keys == NULL) return NULL;
 
@@ -211,9 +207,7 @@ LDAPConnection_Close(LDAPConnection *self) {
 		rc = LDAP_abandon(self->ld, msgid);
 		if (rc != LDAP_SUCCESS) {
 			Py_DECREF(iter);
-			ldaperror = get_error_by_code(rc);
-			PyErr_SetString(ldaperror, ldap_err2string(rc));
-			Py_DECREF(ldaperror);
+			set_exception(self->ld, rc);
 			return NULL;
 		}
 	}
@@ -221,9 +215,7 @@ LDAPConnection_Close(LDAPConnection *self) {
 
 	rc = LDAP_unbind(self->ld);
 	if (rc != LDAP_SUCCESS) {
-		ldaperror = get_error_by_code(rc);
-		PyErr_SetString(ldaperror, ldap_err2string(rc));
-		Py_DECREF(ldaperror);
+		set_exception(self->ld, rc);
 		return NULL;
 	}
 	self->closed = 1;
@@ -268,9 +260,7 @@ LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr) {
 	if (dnstr != NULL) {
 		rc = ldap_delete_ext(self->ld, dnstr, NULL, NULL, &msgid);
 		if (rc != LDAP_SUCCESS) {
-			PyObject *ldaperror = get_error_by_code(rc);
-			PyErr_SetString(ldaperror, ldap_err2string(rc));
-			Py_DECREF(ldaperror);
+			set_exception(self->ld, rc);
 			return -1;
 		}
 		/* Add new delete operation to the pending_ops. */
@@ -360,10 +350,8 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 				search_iter->sizelimit, &msgid);
 
 	if (rc != LDAP_SUCCESS) {
-			PyObject *ldaperror = get_error_by_code(rc);
-			PyErr_SetString(ldaperror, ldap_err2string(rc));
-			Py_DECREF(ldaperror);
-			return -1;
+		set_exception(self->ld, rc);
+		return -1;
 	}
 
 	if (add_to_pending_ops(self->pending_ops, msgid,
@@ -464,9 +452,7 @@ LDAPConnection_Whoami(LDAPConnection *self) {
 	rc = ldap_extended_operation(self->ld, "1.3.6.1.4.1.4203.1.11.3", NULL, NULL, NULL, &msgid);
 
 	if (rc != LDAP_SUCCESS) {
-		PyObject *ldaperror = get_error_by_code(rc);
-		PyErr_SetString(ldaperror, ldap_err2string(rc));
-		Py_DECREF(ldaperror);
+		set_exception(self->ld, rc);
 		return NULL;
 	}
 
@@ -485,7 +471,6 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 	LDAPControl **returned_ctrls = NULL;
 	LDAPEntry *entryobj = NULL;
 	LDAPSearchIter *search_iter = NULL;
-	PyObject *ldaperror = NULL;
 
 	/* Get SearchIter from pending operations. */
 	search_iter = (LDAPSearchIter *)PyDict_GetItemString(self->pending_ops,
@@ -527,10 +512,8 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 	rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
 			&returned_ctrls, 1);
 
-	if( rc != LDAP_SUCCESS ) {
-		ldaperror = get_error_by_code(err);
-		PyErr_SetString(ldaperror, ldap_err2string(err));
-		Py_DECREF(ldaperror);
+	if (rc != LDAP_SUCCESS ) {
+		set_exception(self->ld, rc);
 		return NULL;
 	}
 
@@ -539,9 +522,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 	}
 
 	if (err != LDAP_SUCCESS && err != LDAP_PARTIAL_RESULTS) {
-		ldaperror = get_error_by_code(err);
-		PyErr_SetString(ldaperror, ldap_err2string(err));
-		Py_DECREF(ldaperror);
+		set_exception(self->ld, err);
 		Py_DECREF(search_iter->buffer);
 		return NULL;
 	}
@@ -566,10 +547,8 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 PyObject *
 parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 	int rc = -1;
-	int err = 0;
 	struct berval *authzid = NULL;
 	char *retoid = NULL;
-	PyObject *ldaperror = NULL;
 
 	rc = ldap_parse_extended_result(self->ld, res, &retoid, &authzid, 1);
 
@@ -579,10 +558,8 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 		return NULL;
 	}
 
-	if( rc != LDAP_SUCCESS ) {
-		ldaperror = get_error_by_code(err);
-		PyErr_SetString(ldaperror, ldap_err2string(err));
-		Py_DECREF(ldaperror);
+	if (rc != LDAP_SUCCESS ) {
+		set_exception(self->ld, rc);
 		return NULL;
 	}
 	/* LDAP Who Am I operation. */
@@ -611,7 +588,6 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	LDAPModList *mods = NULL;
 	struct timeval zerotime;
 	char *errorstr = NULL;
-	PyObject *ldaperror = NULL;
 	PyObject *ext_obj = NULL;
 
 	/*- Create a char* from int message id. */
@@ -631,12 +607,8 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	switch (rc) {
 	case -1:
 		/* Error occurred during the operation. */
-		/* Getting the error code from the session. */
-		/* 0x31: LDAP_OPT_RESULT_CODE or LDAP_OPT_ERROR_NUMBER */
-		ldap_get_option(self->ld, 0x0031,  &err);
-		ldaperror = get_error_by_code(err);
-		PyErr_SetString(ldaperror, ldap_err2string(err));
-		Py_DECREF(ldaperror);
+		/* Call set_exception with 0 param to get error code from session. */
+		set_exception(self->ld, 0);
 		return NULL;
 	case 0:
 		/* Timeout exceeded.*/
@@ -672,16 +644,8 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 			   then rollback the changes. */
 			if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0)
 				return NULL;
-
-			ldaperror = get_error_by_code(err);
-			ldap_get_option(self->ld, LDAP_OPT_ERROR_STRING, &errorstr);
-			if (errorstr != NULL) {
-				PyErr_SetString(ldaperror, errorstr);
-				//TODO free(errorstr) causes segfault on Windows, as does ldap_memfree;
-			} else {
-				PyErr_SetString(ldaperror, ldap_err2string(err));
-			}
-			Py_DECREF(ldaperror);
+			/* Set Python error. */
+			set_exception(self->ld, err);
 			return NULL;
 		}
 
@@ -746,9 +710,7 @@ LDAPConnection_cancel(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
 	rc = LDAP_abandon(self->ld, msgid);
 	if (rc != LDAP_SUCCESS) {
-		PyObject *ldaperror = get_error_by_code(rc);
-		PyErr_SetString(ldaperror, ldap_err2string(rc));
-		Py_DECREF(ldaperror);
+		set_exception(self->ld, rc);
 		return NULL;
 	}
 

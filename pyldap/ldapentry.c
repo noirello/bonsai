@@ -361,9 +361,7 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	free(dnstr);
 
 	if (rc != LDAP_SUCCESS) {
-		PyObject *ldaperror = get_error_by_code(rc);
-		PyErr_SetString(ldaperror, ldap_err2string(rc));
-		Py_DECREF(ldaperror);
+		set_exception(self->conn->ld, rc);
 		Py_DECREF(mods);
 		return NULL;
 	}
@@ -653,9 +651,7 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	free(newrdn_str);
 	free(newparent_str);
 	if (rc != LDAP_SUCCESS) {
-		PyObject *ldaperror = get_error_by_code(rc);
-		PyErr_SetString(ldaperror, ldap_err2string(rc));
-		Py_DECREF(ldaperror);
+		set_exception(self->conn->ld, rc);
 		return NULL;
 	}
 

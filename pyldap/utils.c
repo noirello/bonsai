@@ -284,7 +284,45 @@ get_error_by_code(int code) {
 	if (get_error == NULL) return NULL;
 
 	error = PyObject_CallFunction(get_error, "(i)", code);
+
 	return error;
+}
+
+void
+set_exception(LDAP *ld, int code) {
+	int err = -1;
+	char *opt_errorstr = NULL;
+	PyObject *ldaperror = NULL;
+	PyObject *errormsg = NULL;
+
+	if (code == 0) {
+		/* Getting the error code from the session. */
+		/* 0x31: LDAP_OPT_RESULT_CODE or LDAP_OPT_ERROR_NUMBER */
+		ldap_get_option(ld, 0x0031, &err);
+	} else {
+		/* Use the paramater for error code. */
+		err = code;
+	}
+	ldaperror = get_error_by_code(err);
+	/* Get additional error message from teh session. */
+	ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &opt_errorstr);
+
+	if (opt_errorstr != NULL) {
+		if (strcmp(ldap_err2string(err), opt_errorstr) != 0) {
+			errormsg = PyUnicode_FromFormat("%s %s",
+				ldap_err2string(err),
+				opt_errorstr);
+		} else {
+			errormsg = PyUnicode_FromString(ldap_err2string(err));
+		}
+		PyErr_SetObject(ldaperror, errormsg);
+		Py_DECREF(errormsg);
+		ldap_memfree(opt_errorstr);
+	} else {
+		PyErr_SetString(ldaperror, ldap_err2string(err));
+	}
+
+	Py_DECREF(ldaperror);
 }
 
 int

@@ -17,15 +17,12 @@ object if successfully finished the binding. */
 static PyObject *
 binding(LDAPConnectIter *self) {
 	int rc;
-	PyObject *ldaperror = NULL;
 
 	if (self->bind_inprogress == 0) {
 		/* First call of bind. */
 		rc = LDAP_bind(self->conn->ld, self->info, NULL, &(self->message_id));
 		if (rc != LDAP_SUCCESS) {
-			ldaperror = get_error_by_code(rc);
-			PyErr_SetString(ldaperror, ldap_err2string(rc));
-			Py_DECREF(ldaperror);
+			set_exception(self->conn->ld, rc);
 			return NULL;
 		}
 		self->bind_inprogress = 1;
@@ -44,9 +41,7 @@ binding(LDAPConnectIter *self) {
 			CloseHandle(self->info->thread);
 			if (rc != LDAP_SUCCESS) {
 				/* The ldap_connect is failed. Set a Python error. */
-				PyObject *ldaperror = get_error_by_code(rc);
-				PyErr_SetString(ldaperror, ldap_err2string(rc));
-				Py_DECREF(ldaperror);
+				set_exception(self->conn->ld, rc);
 				return NULL;
 			}
 			/* The binding is successfully finished. */
@@ -74,7 +69,6 @@ binding(LDAPConnectIter *self) {
 	struct timeval polltime;
 	LDAPControl **returned_ctrls = NULL;
 	LDAPMessage *res;
-	PyObject *ldaperror = NULL;
 
 	polltime.tv_sec = 0L;
 	polltime.tv_usec = 10L;
@@ -83,9 +77,7 @@ binding(LDAPConnectIter *self) {
 		/* First call of bind. */
 		rc = LDAP_bind(self->conn->ld, self->info, NULL, &(self->message_id));
 		if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
-			ldaperror = get_error_by_code(rc);
-			PyErr_SetString(ldaperror, ldap_err2string(rc));
-			Py_DECREF(ldaperror);
+			set_exception(self->conn->ld, rc);
 			return NULL;
 		}
 		self->bind_inprogress = 1;
@@ -101,12 +93,7 @@ binding(LDAPConnectIter *self) {
 		switch (rc) {
 		case -1:
 			/* Error occurred during the operation. */
-			/* Getting the error code from the session. */
-			/* 0x31: LDAP_OPT_RESULT_CODE or LDAP_OPT_ERROR_NUMBER */
-			ldap_get_option(self->conn->ld, 0x0031, &err);
-			ldaperror = get_error_by_code(err);
-			PyErr_SetString(ldaperror, ldap_err2string(err));
-			Py_DECREF(ldaperror);
+			set_exception(self->conn->ld, 0);
 			return NULL;
 		case 0:
 			/* Timeout exceeded.*/
@@ -118,9 +105,7 @@ binding(LDAPConnectIter *self) {
 			if ((rc != LDAP_SUCCESS) ||
 				(err != LDAP_SASL_BIND_IN_PROGRESS && err != LDAP_SUCCESS)) {
 				/* Connection is failed. */
-				ldaperror = get_error_by_code(err);
-				PyErr_SetString(ldaperror, ldap_err2string(err));
-				Py_DECREF(ldaperror);
+				set_exception(self->conn->ld, err);
 				return NULL;
 			}
 
@@ -129,9 +114,7 @@ binding(LDAPConnectIter *self) {
 				rc = LDAP_bind(self->conn->ld, self->info, res, &(self->message_id));
 
 				if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
-					ldaperror = get_error_by_code(err);
-					PyErr_SetString(ldaperror, ldap_err2string(err));
-					Py_DECREF(ldaperror);
+					set_exception(self->conn->ld, rc);
 					return NULL;
 				}
 
