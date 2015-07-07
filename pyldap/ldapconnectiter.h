@@ -21,7 +21,7 @@ typedef struct {
     int message_id;
     int async;
     void *thread;
-	void *data;
+    void *data;
 } LDAPConnectIter;
 
 extern PyTypeObject LDAPConnectIterType;

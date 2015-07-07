@@ -76,31 +76,36 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 
 	/* Get cert policy from LDAPClient. */
 	tmp = PyObject_GetAttrString(self->client, "_LDAPClient__cert_policy");
+	if (tmp == NULL) goto error;
 	tls_option = (int)PyLong_AsLong(tmp);
 	Py_DECREF(tmp);
 
 	/* Get mechanism and credentials. */
 	creds = PyObject_GetAttrString(self->client, "_LDAPClient__credentials");
-	if (creds == NULL) return -1;
+	if (creds == NULL) goto error;
 
 	tmp = PyObject_GetAttrString(self->client, "_LDAPClient__mechanism");
-	if (tmp == NULL) return -1;
+	if (tmp == NULL) {
+		Py_DECREF(creds);
+		goto error;
+	}
 	mech = PyObject2char(tmp);
-	Py_XDECREF(tmp);
+	Py_DECREF(tmp);
 
 	info = create_conn_info(mech, creds);
-	if (info == NULL) return -1;
 	Py_DECREF(creds);
+	if (info == NULL) goto error;
 
 	tls = PyObject_GetAttrString(self->client, "_LDAPClient__tls");
-	if (tls == NULL) return -1;
+	if (tls == NULL) goto error;
 
 	/* Get async attribute from the connection object. */
 	tmp = PyObject_GetAttrString((PyObject *)self, "_LDAPConnection__async");
-	if (tmp == NULL) return -1;
+	if (tmp == NULL) goto error;
 
 	*conniter = LDAPConnectIter_New(self, info, PyObject_IsTrue(tmp));
-	if (*conniter == NULL) return -1;
+	Py_DECREF(tmp);
+	if (*conniter == NULL) goto error;
 
 	rc = LDAP_start_init(url, PyObject_IsTrue(tls), tls_option, &((*conniter)->thread), &((*conniter)->data));
 	Py_DECREF(url);
@@ -113,6 +118,10 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 		return -1;
 	}
 	return 0;
+
+error:
+	Py_DECREF(url);
+	return -1;
 }
 
 /*	Initialise the LDAPConnection. */
@@ -586,7 +595,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 			authzid->bv_val = "anonymous";
 			authzid->bv_len = 9;
 		}
-		// free(retoid); //TODO: Causes segfault on MS platform should use ldap_memfree. 
+		ldap_memfree(retoid);
 		return PyUnicode_FromString(authzid->bv_val);
 	}
 	return NULL;
