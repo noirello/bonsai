@@ -16,19 +16,6 @@ class LDAPConnection(_LDAPConnection):
     def __exit__(self, *exc):
         """ Context manager exit point. """
         self.close()
-    
-    def open(self):
-        if (self.__async):
-            return self._poll_bind(super().open())
-        else:
-            return next(super().open())
-
-    def _poll_bind(self, conniter):
-        while True:
-            result = next(conniter)
-            if result is not None:
-                return result
-            yield
 
     def _poll(self, msg_id):
         """

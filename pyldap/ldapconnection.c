@@ -165,7 +165,10 @@ LDAPConnection_Open(LDAPConnection *self) {
 	rc = connecting(self, &iter);
 	if (rc != 0) return NULL;
 
-	return (PyObject *)iter;
+	if (iter->async) {
+		return (PyObject *)iter;
+	}
+	return PyIter_Next((PyObject *)iter);
 }
 
 /*	Close connection. */

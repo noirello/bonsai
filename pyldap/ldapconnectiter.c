@@ -210,7 +210,28 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 		/* Init for the LDAP structure is finished, TLS (if it is needed) already set, start binding. */
 		val = binding(self);
 		if (val == NULL) return NULL;
-		if (val != Py_None) return val;
+		if (val != Py_None) {
+			if (self->async) {
+				/* Raise a StopIteration error to imitate a generator func. */
+				/* Nasty workaround to get work with Python 3.3. */
+				/* It shouldn't be needed from Python 3.4. (Python Issue #23996) */
+				PyObject *wrapper = NULL;
+				wrapper = _PyObject_New(PyExc_StopIteration->ob_type);
+				if (wrapper == NULL) {
+					Py_DECREF(val);
+					PyErr_BadInternalCall();
+					return NULL;
+				}
+				/* Embedding StopIterator into StopIterator to
+				   avoid *_PyGen_FetchStopIterationValue() crashes */
+				((PyStopIterationObject *)wrapper)->value = val;
+				PyErr_SetObject(PyExc_StopIteration, wrapper);
+				return NULL;
+			} else {
+				/* Simple return the LDAPConnection object. */
+				return val;
+			}
+		}
 	}
 	if (self->async) {
 		Py_RETURN_NONE;

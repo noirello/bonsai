@@ -671,7 +671,7 @@ dealloc_conn_info(ldapConnectionInfo* info) {
 
 /*	This function is based on the lutil_sasl_interact() function, which can
     be found in the OpenLDAP liblutil's sasl.c source. I did some simplification
-    after some google and stackoverflow reasearches, and hoping to not cause
+    after some google and stackoverflow researches, and hoping to not cause
     any problems. */
 int
 sasl_interact(LDAP *ld, unsigned flags, void *defs, void *in) {
