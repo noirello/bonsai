@@ -587,7 +587,6 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	LDAPControl **returned_ctrls = NULL;
 	LDAPModList *mods = NULL;
 	struct timeval zerotime;
-	char *errorstr = NULL;
 	PyObject *ext_obj = NULL;
 
 	/*- Create a char* from int message id. */

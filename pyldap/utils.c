@@ -309,7 +309,7 @@ set_exception(LDAP *ld, int code) {
 
 	if (opt_errorstr != NULL) {
 		if (strcmp(ldap_err2string(err), opt_errorstr) != 0) {
-			errormsg = PyUnicode_FromFormat("%s %s",
+			errormsg = PyUnicode_FromFormat("%s. %s",
 				ldap_err2string(err),
 				opt_errorstr);
 		} else {
