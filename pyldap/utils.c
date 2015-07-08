@@ -133,6 +133,8 @@ PyObject2char(PyObject *obj) {
 	return str;
 }
 
+/* Create a berval list from a Python list by converting the list element
+   using PyObject2char. Returns NULL if the parameter is not a list or NULL. */
 struct berval **
 PyList2BervalList(PyObject *list) {
 	int i = 0;
@@ -157,7 +159,7 @@ PyList2BervalList(PyObject *list) {
 	return berval_arr;
 }
 
-/*	Converts Python list to a C string list. Retruns NULL if it's failed. */
+/*	Converts Python list to a C string list. Returns NULL if it's failed. */
 char **
 PyList2StringList(PyObject *list) {
 	int i = 0;
@@ -272,11 +274,14 @@ load_python_object(char *module_name, char *object_name) {
 	return object;
 }
 
+/* Get an error by name from the pyldap.errors Python module. */
 PyObject *
 get_error(char *error_name) {
 	return load_python_object("pyldap.errors", error_name);
 }
 
+/* Get an error by code calling the get_error function from
+   the pyldap.errors Python module. */
 PyObject *
 get_error_by_code(int code) {
 	PyObject *error;
@@ -288,6 +293,8 @@ get_error_by_code(int code) {
 	return error;
 }
 
+/* Set a Python exception using the return code from an LDAP function.
+   If it's possible append additional error message from the LDAP session. */
 void
 set_exception(LDAP *ld, int code) {
 	int err = -1;
@@ -300,7 +307,7 @@ set_exception(LDAP *ld, int code) {
 		/* 0x31: LDAP_OPT_RESULT_CODE or LDAP_OPT_ERROR_NUMBER */
 		ldap_get_option(ld, 0x0031, &err);
 	} else {
-		/* Use the paramater for error code. */
+		/* Use the parameter for error code. */
 		err = code;
 	}
 	ldaperror = get_error_by_code(err);
@@ -325,6 +332,8 @@ set_exception(LDAP *ld, int code) {
 	Py_DECREF(ldaperror);
 }
 
+/* Add a pending LDAP operations to a dictionary. The key is the
+ * corresponding message id,  the value depends on the type of operation. */
 int
 add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item)  {
        char msgidstr[8];
