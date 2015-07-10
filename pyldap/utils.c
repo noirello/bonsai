@@ -299,6 +299,7 @@ void
 set_exception(LDAP *ld, int code) {
 	int err = -1;
 	char *opt_errorstr = NULL;
+	char *errorstr = NULL;
 	PyObject *ldaperror = NULL;
 	PyObject *errormsg = NULL;
 
@@ -311,24 +312,24 @@ set_exception(LDAP *ld, int code) {
 		err = code;
 	}
 	ldaperror = get_error_by_code(err);
-	/* Get additional error message from teh session. */
+	/* Get additional error message from the session. */
 	ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &opt_errorstr);
-
+	errorstr = ldap_err2string(err);
 	if (opt_errorstr != NULL) {
-		if (strcmp(ldap_err2string(err), opt_errorstr) != 0) {
-			errormsg = PyUnicode_FromFormat("%s. %s",
-				ldap_err2string(err),
-				opt_errorstr);
+		if (strcmp(errorstr, opt_errorstr) != 0) {
+			errormsg = PyUnicode_FromFormat("%s. %s", errorstr, opt_errorstr);
 		} else {
-			errormsg = PyUnicode_FromString(ldap_err2string(err));
+			//TODO: Need a better way to convert ASCII or whatever to UTF-8.
+			errormsg = PyUnicode_FromFormat("%s.", errorstr);
 		}
-		PyErr_SetObject(ldaperror, errormsg);
-		Py_DECREF(errormsg);
+		if (errormsg != NULL) {
+			PyErr_SetObject(ldaperror, errormsg);
+			Py_DECREF(errormsg);
+		}
 		ldap_memfree(opt_errorstr);
 	} else {
-		PyErr_SetString(ldaperror, ldap_err2string(err));
+		PyErr_SetString(ldaperror, errorstr);
 	}
-
 	Py_DECREF(ldaperror);
 }
 
