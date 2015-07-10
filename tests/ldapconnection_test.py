@@ -43,7 +43,9 @@ class LDAPConnectionTest(unittest.TestCase):
         except (pyldap.errors.ConnectionError, \
                 pyldap.errors.AuthenticationError):
             self.fail()
-        conn.close()
+        finally:
+            self.assertNotEqual("anonymus", conn.whoami(), "Digest authentication was unsuccessful.")
+            conn.close()
 
     def test_search(self):
         """ Test searching. """
@@ -79,6 +81,18 @@ class LDAPConnectionTest(unittest.TestCase):
         obj = self.conn.whoami()
         expected_res = "dn:%s" % self.cfg["SIMPLEAUTH"]["user"]
         self.assertEqual(obj, expected_res)
+
+    def test_tls(self):
+        "Test TLS connection. "
+        if self.cfg['SERVER']['has_tls'] == 'False':
+            self.skipTest("TLS is not set.")
+        client = LDAPClient(self.url, True)
+        client.set_cert_policy("ALLOW")
+        try:
+            conn = client.connect()
+            conn.close()
+        except:
+            self.fail("TLS connection is failed")
 
 if __name__ == '__main__':
     unittest.main()
