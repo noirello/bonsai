@@ -232,6 +232,7 @@ ldap_thread_bind(void *param) {
 	unsigned long contextattr;
 	struct berval cred;
 	char *output = NULL;
+	char *input = NULL;
 	SecBufferDesc out_buff_desc;
 	SecBuffer out_buff;
 	SecBufferDesc in_buff_desc;
@@ -254,6 +255,7 @@ ldap_thread_bind(void *param) {
 				rc = InitializeSecurityContext(info->credhandle, NULL, info->targetName, ISC_REQ_MUTUAL_AUTH | ISC_REQ_ALLOCATE_MEMORY,
 					0, 0, NULL, 0, info->ctxhandle, &out_buff_desc, &contextattr, NULL);
 			} else {
+				/* Set server response as an input buffer. */
 				in_buff_desc.ulVersion = SECBUFFER_VERSION;
 				in_buff_desc.cBuffers = 1;
 				in_buff_desc.pBuffers = &in_buff;
@@ -262,7 +264,7 @@ ldap_thread_bind(void *param) {
 				in_buff.BufferType = SECBUFFER_TOKEN;
 				in_buff.pvBuffer = response->bv_val;
 				if (gssapi_decrpyt) {
-					char *input = NULL;
+					/* GSSAPI decrypting and encrypting is needed. */
 					rc = decrypt_response(info->ctxhandle, response->bv_val, response->bv_len, &output, &len);
 					input = output;
 					rc = encrypt_reply(info->ctxhandle, input, len, &output, &len);
@@ -369,6 +371,14 @@ create_conn_info(char *mech, PyObject *creds) {
 		return (void *)PyErr_NoMemory();
 	}
 
+	defaults->ctxhandle = (CtxtHandle *)malloc(sizeof(CtxtHandle));
+	if (defaults->ctxhandle == NULL) {
+		free(defaults->credhandle);
+		free(wincreds);
+		free(defaults);
+		return (void *)PyErr_NoMemory();
+	}
+
 	defaults->mech = mech;
 
 	/* Get credential information, if it's given. */
@@ -403,7 +413,6 @@ create_conn_info(char *mech, PyObject *creds) {
 	defaults->authzid = authzid;
 	defaults->binddn = binddn;
 	defaults->creds = wincreds;
-	defaults->ctxhandle = NULL;
 	defaults->targetName = NULL;
 
 	if (strcmp(mech, "SIMPLE") != 0) {
@@ -445,6 +454,7 @@ dealloc_conn_info(ldapConnectionInfo* info) {
 	if (info->mech) free(info->mech);
 	if (info->targetName) free(info->targetName);
 	if (info->credhandle) free(info->credhandle);
+	if (info->ctxhandle) free(info->ctxhandle);
 	if (info->creds->Domain) free(info->creds->Domain);
 	if (info->creds->Password) free(info->creds->Password);
 	if (info->creds->User) free(info->creds->User);
