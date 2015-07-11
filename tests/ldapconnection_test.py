@@ -83,7 +83,7 @@ class LDAPConnectionTest(unittest.TestCase):
         self.assertEqual(obj, expected_res)
 
     def test_tls(self):
-        "Test TLS connection. "
+        """ Test TLS connection. """
         if self.cfg['SERVER']['has_tls'] == 'False':
             self.skipTest("TLS is not set.")
         client = LDAPClient(self.url, True)
@@ -93,6 +93,17 @@ class LDAPConnectionTest(unittest.TestCase):
             conn.close()
         except:
             self.fail("TLS connection is failed")
+
+    def test_connection_error(self):
+        """ Test connection error. """
+        client = LDAPClient("ldap://invalid")
+        self.assertRaises(pyldap.ConnectionError, lambda : client.connect())
+
+    def test_authentication_error(self):
+        """ Test authentication error. """
+        client = LDAPClient(self.url)
+        client.set_credentials("SIMPLE", ("cn=wrong", "wronger"))
+        self.assertRaises(pyldap.AuthenticationError, lambda : client.connect())
 
 if __name__ == '__main__':
     unittest.main()

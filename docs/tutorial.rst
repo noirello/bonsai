@@ -32,7 +32,7 @@ Now, we have an anonym bind to the server, so LDAP whoami operation - which help
 about the authenticated user - will return with the following:
 
     >>> conn.whoami()
-    >>> 'anonymus'
+    >>> 'anonymous'
 
 To connect with a certain user to the server we have to set credentials before connnection:
 
