@@ -216,7 +216,9 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 				/* Nasty workaround to get work with Python 3.3. */
 				/* It shouldn't be needed from Python 3.4. (Python Issue #23996) */
 				PyObject *wrapper = NULL;
-				wrapper = _PyObject_New(PyExc_StopIteration->ob_type);
+				PyObject *args = Py_BuildValue("(O)", val);
+				wrapper = PyObject_CallObject(PyExc_StopIteration, args);
+				Py_DECREF(args);
 				if (wrapper == NULL) {
 					Py_DECREF(val);
 					PyErr_BadInternalCall();
