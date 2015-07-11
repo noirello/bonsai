@@ -38,7 +38,7 @@ Contribution
 ------------
 
 Any contributions are welcome. If you would like to help in development
-fork or report issue on the project's `github site`_. 
+fork or report issue on the project's `GitHub site`_. 
 You can also help in improving the documentation. My English is far from perfect, so if you find 
 any grammatically incorrect sentence, please report to me (with suggestion).   
 

@@ -51,10 +51,17 @@ LDAPClient class is for configuring the connection to the directory server.
 
 .. method:: LDAPConnection.close()
 
-    Close LDAP connection.
+   Close LDAP connection.
     
 .. automethod:: LDAPConnection.delete
-   
+
+.. method:: LDAPConnection.open()
+
+   Open LDAP connection.
+
+   :return: The :class:`LDAPConnection` object itself, if it is a synchronous or an iterator if it's an asynchronous connection.
+   :rtype: :class:`LDAPConnection` or iterator.
+
 .. method:: LDAPConnection.search(base=None, scope=None, filter=None, attrlist=[], timeout=0, sizelimit=0, attrsonly=False)
 
    :param str base: the base DN of the search.

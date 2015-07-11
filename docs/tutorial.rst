@@ -32,7 +32,7 @@ Now, we have an anonym bind to the server, so LDAP whoami operation - which help
 about the authenticated user - will return with the following:
 
     >>> conn.whoami()
-    >>> 'anonym'
+    >>> 'anonymus'
 
 To connect with a certain user to the server we have to set credentials before connnection:
 
@@ -53,7 +53,7 @@ dictionary tree, the second parameter - the search scope - can have the followin
     - 1 (one): searching only one tree level under the Base DN.
     - 2 (sub): searching of all entries at all levels under and th Base DN.
 
-The third paramter is a standard LDAP filter string. 
+The third parameter is a standard LDAP filter string. 
 The result will be a list of LDAPEntry objects or an empty list, if no object is found. 
 
     >>> conn = client.connect()
@@ -118,7 +118,7 @@ Asynchronous operations
 
 It is possible to start asynchronous operations, if the :meth:`LDAPClient.connect` method's async parameter is set to True.
 The module is designed to be used with Python's `asyncio` library. For further details about how to use the asyncio library
-see the  `asyncio documentation`_.
+see the  `official documentation`_.
 
 An example for asynchronous search and modify with `asyncio`:
 
@@ -132,7 +132,7 @@ An example for asynchronous search and modify with `asyncio`:
     @asyncio.coroutine
     def do():
         cli = pyldap.LDAPClient("ldap://localhost")
-        with cli.connect(async=True) as conn:
+        with (yield from cli.connect(async=True)) as conn:
             results = yield from conn.search("ou=nerdherd,dc=local", 1)
             for res in results:
                 print(res['givenName'][0])

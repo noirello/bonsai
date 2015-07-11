@@ -22,7 +22,7 @@ from sources you will need:
 - The libsasl header files. They are usually installed in a package such as
   **libsasl-dev**.
 
-- The PyLDAP source files. You can download it form the project's `github site`_.
+- The PyLDAP source files. You can download it form the project's `GitHub site`_.
 
 .. _github site: https://github.com/Noirello/PyLDAP
 
@@ -43,7 +43,4 @@ unpackaged the sources, you can run::
     $ python setup.py install
 
 .. note::  
-   The package compiled with MinGW under development on Windows. The setuptools 
-   uses the Visual C++ compiler by default. You can change it::
-       
-       $ python setup.py build -c mingw32
+   Compiling the package with MinGW is no longer recommended.
