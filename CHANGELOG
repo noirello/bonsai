@@ -1,0 +1,20 @@
+# Change Log
+
+## [0.7.5] - 2015-07-12
+### Changed
+- LDAPClient.connect is a coroutine if async param is True. (Issue #1)
+- The binding function on Windows uses ldap_sasl_bind instead of the
+deprecated ldap_bind.
+- The connection procedure (init, set TLS, bind) creates POSIX and Windows
+threads to avoid I/O blocking.
+- Optional error messages are appended to the Python LDAP errors.
+
+### Added
+- New open method for LDAPConnection object to build up the connection.
+- New LDAPConnectIter object for initialisation, setting TLS, and binding to the
+server.
+
+### Fixed
+- LDAPConnection.whoami() returns 'anonymous' after an anonymous bind.
+- After failed connection LDAPClient.connect() returns ConnectionError
+on MS Windows.

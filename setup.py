@@ -34,7 +34,7 @@ with open('README.md') as file:
     long_descr = re.sub(pat, r"`\g<1> <\g<2>>`_", long_descr)
 
 setup(name="pyldap",
-      version="0.7.0",
+      version="0.7.5",
       description="Module for Python 3 to access LDAP directory servers.",
       author="noirello",
       author_email="noirello@gmail.com",

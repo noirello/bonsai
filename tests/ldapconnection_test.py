@@ -45,7 +45,8 @@ class LDAPConnectionTest(unittest.TestCase):
                 pyldap.errors.AuthenticationError):
             self.fail()
         finally:
-            self.assertNotEqual("anonymus", conn.whoami(), "Digest authentication was unsuccessful.")
+            self.assertNotEqual("anonymous", conn.whoami(), "Digest "
+            "authentication was unsuccessful.")
             conn.close()
 
     def test_search(self):
