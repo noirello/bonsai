@@ -16,6 +16,7 @@ class LDAPConnectionTest(unittest.TestCase):
                                         self.cfg["SERVER"]["basedn"], \
                                         self.cfg["SERVER"]["search_attr"], \
                                         self.cfg["SERVER"]["search_scope"])
+        self.basedn = self.cfg["SERVER"]["basedn"]
         client = LDAPClient(self.url)
         client.set_credentials("SIMPLE", (self.cfg["SIMPLEAUTH"]["user"],
                                           self.cfg["SIMPLEAUTH"]["password"]))
@@ -49,19 +50,19 @@ class LDAPConnectionTest(unittest.TestCase):
 
     def test_search(self):
         """ Test searching. """
-        obj = self.conn.search("dc=local", 2)
+        obj = self.conn.search(self.basedn, 2)
         self.assertIsNotNone(obj)
         self.assertEqual(obj, self.conn.search())
 
     def test_search_ldapdn(self):
         """ Test searching with LDAPDN object. """
-        ldap_dn = LDAPDN("dc=local")
+        ldap_dn = LDAPDN(self.basedn)
         obj = self.conn.search(ldap_dn, 1)
         self.assertIsNotNone(obj)
 
     def test_search_attr(self):
         """ Test searching with given list of attributes. """
-        obj = self.conn.search("dc=local", 2, "(objectclass=person)",
+        obj = self.conn.search(self.basedn, 2, "(objectclass=person)",
                                ['cn'])[0]
         self.assertIsNotNone(obj)
         if 'cn' not in obj.keys():
