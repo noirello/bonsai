@@ -195,6 +195,7 @@ PyObject *
 LDAPConnectIter_iternext(LDAPConnectIter *self) {
 	int rc = -1;
 	PyObject *val = NULL;
+	PyObject *wrapper = NULL;
 
 	/* The connection is already binded. */
 	if (self->conn->closed == 0) {
@@ -204,8 +205,11 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 	if (self->init_finished == 0) {
 		rc = LDAP_finish_init(self->async, (void *)self->thread, (void *)self->data, &(self->conn->ld));
 		if (rc == -1) return NULL; /* Error is happened. */
-		if (rc == 1) self->init_finished = 1;
-		if (update_conn_info(self->conn->ld, self->info) != 0) return NULL;
+		if (rc == 1) {
+			/* Initialisation is finished. */
+			self->init_finished = 1;
+			if (update_conn_info(self->conn->ld, self->info) != 0) return NULL;
+		}
 	} else {
 		/* Init for the LDAP structure is finished, TLS (if it is needed) already set, start binding. */
 		val = binding(self);
@@ -213,9 +217,7 @@ LDAPConnectIter_iternext(LDAPConnectIter *self) {
 		if (val != Py_None) {
 			if (self->async) {
 				/* Raise a StopIteration error to imitate a generator func. */
-				/* Nasty workaround to get work with Python 3.3. */
-				/* It shouldn't be needed from Python 3.4. (Python Issue #23996) */
-				PyObject *wrapper = NULL;
+				/* Need some workaround (Python Issue #23996). */
 				PyObject *args = Py_BuildValue("(O)", val);
 				wrapper = PyObject_CallObject(PyExc_StopIteration, args);
 				Py_DECREF(args);
