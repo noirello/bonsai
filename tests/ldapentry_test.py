@@ -30,7 +30,7 @@ class LDAPEntryTest(unittest.TestCase):
                          "LDAPEntry get is failed.")
         del entry['sn']
         self.assertRaises(KeyError, lambda: entry['sn'])
-        
+         
     def test_append_extend(self):
         """ Test append and extend methods of LDAPEntry's attribute. """
         entry = LDAPEntry("cn=test");
@@ -41,14 +41,14 @@ class LDAPEntryTest(unittest.TestCase):
         self.assertRaises(TypeError,
                           lambda: entry['GivenName']
                           .extend(['teSt', "test3"]))
-
+ 
     def test_pop(self):
         """ Test LDAPEntry's pop method. """
         entry = LDAPEntry("cn=test")
         entry['test'] = "test"
         self.assertEqual(entry.pop("test"), ["test"])
         self.assertEqual(entry.pop("test", None), None)
-
+ 
     def test_popitem(self):
         """ Test LDAPEntry's popitem method. """
         entry = LDAPEntry("cn=test")
@@ -59,7 +59,7 @@ class LDAPEntryTest(unittest.TestCase):
         self.assertNotIn(item[0], entry)
         entry[item[0]] = item[1]
         self.assertEqual(entry[item[0]], item[1])
-
+ 
     def test_clear(self):
         """ Test LDAPEntry's clear method. """
         entry = LDAPEntry("cn=test")
@@ -68,7 +68,7 @@ class LDAPEntryTest(unittest.TestCase):
         entry.clear()
         self.assertDictEqual(entry, {})
         self.assertEqual(entry.dn, "cn=test")
-    
+     
     def test_update(self):
         """ Test updating LDAPEntry object. """
         entry = LDAPEntry("cn=test")
@@ -77,7 +77,7 @@ class LDAPEntryTest(unittest.TestCase):
         self.assertEqual(entry['mail'], ['test@mail'])
         self.assertEqual(entry['givenname'], ['test2'])
         self.assertEqual(entry['sn'][0], 'test')
-    
+     
     def test_special_char(self):
         """ Test adding entry with special character in its DN. """
         self.client.set_credentials(*self.creds)
@@ -90,7 +90,7 @@ class LDAPEntryTest(unittest.TestCase):
         entry.delete()
         conn.close()
         self.assertIn(entry.dn, [res.dn for res in result])
-        
+         
     def test_unicode(self):
         """ Test adding entry with special character in its DN. """
         self.client.set_credentials(*self.creds)
@@ -104,7 +104,7 @@ class LDAPEntryTest(unittest.TestCase):
         entry.delete()
         conn.close()
         self.assertIn(dname, [res.dn for res in result])
-    
+     
     def test_connection(self):
         """ Test set and get connection object form LDAPEntry. """
         entry = LDAPEntry("cn=test,%s" % self.basedn)
@@ -158,45 +158,63 @@ class LDAPEntryTest(unittest.TestCase):
         Test LDAPEntry's add, modify, rename and delete
         asynchronous operations. 
         """
-        entry = LDAPEntry("cn=async_test,%s" % self.basedn)
-        self.client.set_credentials(*self.creds)
-        with (yield from self.client.connect(True)) as conn:
-            entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
+        try:
+            import asyncio
+
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(None)
+
+            entry = LDAPEntry("cn=async_test,%s" % self.basedn)
+            self.client.set_credentials(*self.creds)
+
+            @asyncio.coroutine
+            def test1():
+                """ Test receiving ObjectClassViolation error. """
+                with (yield from self.client.connect(True)) as conn:
+                    entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
                                      'organizationalPerson']
-            self.assertRaises(pyldap.ObjectClassViolation,
-                              lambda: [res for res in conn.add(entry)])
-            entry['sn'] = 'test'
-            try:
-                [res for res in conn.add(entry)]
-            except pyldap.AlreadyExists:
-                [res for res in conn.delete(entry.dn)]
-                [res for res in conn.add(entry)]
-            except:
-                self.fail("Adding LDAPEntry to the server is failed.")
-            [res for res in entry.rename("cn=async_test2,%s" % self.basedn)]
-            self.assertEqual(str(entry.dn), "cn=async_test2,%s" % self.basedn)
-            def get_res(basedn):
-                res = conn.search(basedn, 0)
-                while True:
+                    yield from conn.add(entry)
+
+            @asyncio.coroutine
+            def test2():
+                """ Test add, rename, search and delete an entry. """
+                entry['sn'] = 'test'
+                with (yield from self.client.connect(True)) as conn:
                     try:
-                        next(res)
-                    except Exception as e:
-                        return (e.value)
-            obj = get_res("cn=async_test,%s" % self.basedn)
-            self.assertEqual(obj, [])
-            obj = list(get_res("cn=async_test2,%s" % self.basedn))[0]
-            self.assertEqual(entry.dn, obj.dn)
-            entry['sn'] = "Test_modify"
-            try:
-                [res for res in entry.modify()]
-            except:
-                self.fail("Modify failed.")
-            obj = list(get_res("cn=async_test2,%s" % self.basedn))[0]
-            self.assertEqual(entry['sn'], obj['sn'])
-            try:
-                [res for res in entry.delete()]
-            except:
-                self.fail("Delete failed.")
+                        yield from conn.add(entry)
+                    except pyldap.AlreadyExists:
+                        yield from conn.delete(entry.dn)
+                        yield from conn.add(entry)
+                    except Exception as ex:
+                        self.fail("Adding LDAPEntry to the server "
+                                  "async is failed with: %s" % str(ex))
+                    yield from entry.rename("cn=async_test2,%s" % self.basedn)
+                    self.assertEqual(str(entry.dn), "cn=async_test2,%s" %
+                                     self.basedn)
+                    obj = yield from conn.search("cn=async_test,%s" %
+                                                 self.basedn, 0)
+                    self.assertEqual(obj, [])
+                    obj = yield from conn.search("cn=async_test2,%s" %
+                                                 self.basedn, 0)
+                    self.assertEqual(entry.dn, list(obj)[0].dn)
+                    entry['sn'] = "Test_modify"
+                    try:
+                        yield from entry.modify()
+                    except:
+                        self.fail("Modify failed.")
+                    obj = yield from conn.search("cn=async_test2,%s" %
+                                                 self.basedn, 0)
+                    self.assertEqual(entry['sn'], list(obj)[0]['sn'])
+                    try:
+                        yield from entry.delete()
+                    except:
+                        self.fail("Delete failed.")
+
+            self.assertRaises(pyldap.ObjectClassViolation,
+                              lambda: loop.run_until_complete(test1()))
+            loop.run_until_complete(test2())
+        except ImportError:
+            self.skipTest("Asyncio library is not installed.")
 
 if __name__ == '__main__':
     unittest.main()

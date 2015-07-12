@@ -18,7 +18,7 @@ class LDAPClientTest(unittest.TestCase):
         self.assertIsNotNone(self.client.connect())
 
     def test_rootdse(self):
-        """ Test recieving root DSE. """
+        """ Test receiving root DSE. """
         root_dse = self.client.get_rootDSE()
         self.assertEqual(root_dse['supportedLDAPVersion'][0], 3)
 

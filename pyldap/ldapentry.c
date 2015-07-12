@@ -2,10 +2,6 @@
 #include "uniquelist.h"
 #include "ldapentry.h"
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-#define ldap_rename ldap_rename_ext
-#endif
-
 /* Clear all object in the LDAPEntry. */
 static int
 LDAPEntry_clear(LDAPEntry *self) {
@@ -365,15 +361,12 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	free(dnstr);
 
 	if (rc != LDAP_SUCCESS) {
-		PyObject *ldaperror = get_error_by_code(rc);
-		PyErr_SetString(ldaperror, ldap_err2string(rc));
-		Py_DECREF(ldaperror);
+		set_exception(self->conn->ld, rc);
 		Py_DECREF(mods);
 		return NULL;
 	}
-
 	/* Add new add or modify operation to the pending_ops with mod_dict. */
-	if (addToPendingOps(self->conn->pending_ops, msgid,
+	if (add_to_pending_ops(self->conn->pending_ops, msgid,
 			(PyObject *)mods) != 0) {
 		Py_DECREF(mods);
 		return NULL;
@@ -658,15 +651,13 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	free(newrdn_str);
 	free(newparent_str);
 	if (rc != LDAP_SUCCESS) {
-		PyObject *ldaperror = get_error_by_code(rc);
-		PyErr_SetString(ldaperror, ldap_err2string(rc));
-		Py_DECREF(ldaperror);
+		set_exception(self->conn->ld, rc);
 		return NULL;
 	}
 
 	/* Add new rename operation to the pending_ops. */
-	if (addToPendingOps(self->conn->pending_ops, msgid,  Py_None) != 0) {
-			return NULL;
+	if (add_to_pending_ops(self->conn->pending_ops, msgid,  Py_None) != 0) {
+		return NULL;
 	}
 
 	return PyLong_FromLong((long int)msgid);
@@ -704,7 +695,7 @@ searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int del, int* found) {
 	*found = 0;
 	/* Searching for same lowercase key among the other keys. */
 	for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
-		if (lowerCaseMatch(item, key) == 1) {
+		if (lower_case_match(item, key) == 1) {
 			key = item;
 			*found = 1;
 			break;
@@ -718,7 +709,7 @@ searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int del, int* found) {
 		iter = PyObject_GetIter((PyObject *)self->deleted);
 		if (iter ==  NULL) return NULL;
 		for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
-			if (lowerCaseMatch(item, key) == 1) {
+			if (lower_case_match(item, key) == 1) {
 				*found = 1;
 				Py_DECREF(item);
 				break;

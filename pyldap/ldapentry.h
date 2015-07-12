@@ -4,22 +4,10 @@
 #include <Python.h>
 #include "structmember.h"
 
-//MS Windows
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-
-#include <windows.h>
-#include <winldap.h>
-#include <winber.h>
-
-//Unix
-#else
-#include <ldap.h>
-
-#endif
-
 #include "ldapconnection.h"
 #include "ldapmodlist.h"
 #include "ldapvaluelist.h"
+#include "ldap-xplat.h"
 
 typedef struct {
     PyDictObject dict;

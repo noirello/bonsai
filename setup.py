@@ -6,19 +6,19 @@ try:
 except ImportError:
     from distutils.core import setup, Extension
 
-sources = ["pyldapmodule.c", "ldapentry.c",
+sources = ["pyldapmodule.c", "ldapentry.c", "ldapconnectiter.c",
            "ldapconnection.c", "ldapmodlist.c", "ldapvaluelist.c",
-           "ldapsearchiter.c", "utils.c", "uniquelist.c"]
+           "ldap-xplat.c", "ldapsearchiter.c", "utils.c", "uniquelist.c"]
 
-depends = ["ldapconnection.h", "ldapentry.h",
+depends = ["ldapconnection.h", "ldapentry.h", "ldapconnectiter.h",
            "ldapmodlist.h", "ldapvaluelist.h", "ldapsearchiter.h",
-           "uniquelist.h", "utils.h"]
+           "ldap-xplat.h", "uniquelist.h", "utils.h"]
 
 sources = [os.path.join('pyldap', x) for x in sources]
 depends = [os.path.join('pyldap', x) for x in depends]
 
 if sys.platform == "win32":
-    libs = ["wldap32"]
+    libs = ["wldap32", "secur32"]
 else:
     libs = ["ldap", "lber"]
 
@@ -34,7 +34,7 @@ with open('README.md') as file:
     long_descr = re.sub(pat, r"`\g<1> <\g<2>>`_", long_descr)
 
 setup(name="pyldap",
-      version="0.7.0",
+      version="0.7.5",
       description="Module for Python 3 to access LDAP directory servers.",
       author="noirello",
       author_email="noirello@gmail.com",

@@ -1,11 +1,5 @@
 #include "utils.h"
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-#define attributeType sk_attrtype
-#define orderingRule sk_matchruleoid
-#define reverseOrder sk_reverseorder
-#endif
-
 /*	Converts char* to a lower-case form. Returns with the lower-cased char *. */
 char *
 lowercase(char *str) {
@@ -21,7 +15,7 @@ lowercase(char *str) {
 
 /* Create a berval structure from a char*. */
 struct berval *
-createBerval(char *value) {
+create_berval(char *value) {
 	struct berval *bval = NULL;
 	bval = malloc(sizeof(struct berval));
 	if (bval == NULL) return NULL;
@@ -139,6 +133,8 @@ PyObject2char(PyObject *obj) {
 	return str;
 }
 
+/* Create a berval list from a Python list by converting the list element
+   using PyObject2char. Returns NULL if the parameter is not a list or NULL. */
 struct berval **
 PyList2BervalList(PyObject *list) {
 	int i = 0;
@@ -155,7 +151,7 @@ PyList2BervalList(PyObject *list) {
 
 	for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
 		strvalue = PyObject2char(item);
-		berval_arr[i++] = createBerval(strvalue);
+		berval_arr[i++] = create_berval(strvalue);
 		Py_DECREF(item);
 	}
 	Py_DECREF(iter);
@@ -163,7 +159,7 @@ PyList2BervalList(PyObject *list) {
 	return berval_arr;
 }
 
-/*	Converts Python list to a C string list. Retruns NULL if it's failed. */
+/*	Converts Python list to a C string list. Returns NULL if it's failed. */
 char **
 PyList2StringList(PyObject *list) {
 	int i = 0;
@@ -239,7 +235,7 @@ PyList2LDAPSortKeyList(PyObject *list) {
 /*	Compare lower-case representations of two Python objects.
 	Returns 1 they are matched, -1 if it's failed, and 0 otherwise. */
 int
-lowerCaseMatch(PyObject *o1, PyObject *o2) {
+lower_case_match(PyObject *o1, PyObject *o2) {
 	int match = 0;
 	char *str1 = lowercase(PyObject2char(o1));
 	char *str2 = lowercase(PyObject2char(o2));
@@ -278,11 +274,14 @@ load_python_object(char *module_name, char *object_name) {
 	return object;
 }
 
+/* Get an error by name from the pyldap.errors Python module. */
 PyObject *
 get_error(char *error_name) {
 	return load_python_object("pyldap.errors", error_name);
 }
 
+/* Get an error by code calling the get_error function from
+   the pyldap.errors Python module. */
 PyObject *
 get_error_by_code(int code) {
 	PyObject *error;
@@ -290,244 +289,59 @@ get_error_by_code(int code) {
 	if (get_error == NULL) return NULL;
 
 	error = PyObject_CallFunction(get_error, "(i)", code);
+
 	return error;
 }
 
-int
-addToPendingOps(PyObject *pending_ops, int msgid,  PyObject *item)  {
-	char msgidstr[8];
+/* Set a Python exception using the return code from an LDAP function.
+   If it's possible append additional error message from the LDAP session. */
+void
+set_exception(LDAP *ld, int code) {
+	int err = -1;
+	char *opt_errorstr = NULL;
+	char *errorstr = NULL;
+	PyObject *ldaperror = NULL;
+	PyObject *errormsg = NULL;
 
-	sprintf(msgidstr, "%d", msgid);
-	if (PyDict_SetItemString(pending_ops, msgidstr, item) != 0) {
-		PyErr_BadInternalCall();
-		return -1;
-	}
-
-	return 0;
-}
-
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-
-/* It does what it says: no verification on the server cert. */
-BOOLEAN _cdecl noverify(PLDAP Connection, PCCERT_CONTEXT *ppServerCert) {
-	return 1;
-}
-
-int _LDAP_initialization(LDAP **ld, PyObject *url, int tls_option) {
-	int rc;
-	int portnum;
-	char *hoststr = NULL;
-	const int version = LDAP_VERSION3;
-	const int tls_settings = SCH_CRED_MANUAL_CRED_VALIDATION | SCH_CRED_NO_SERVERNAME_CHECK;
-	PyObject *scheme = PyObject_GetAttrString(url, "scheme");
-	PyObject *host = PyObject_GetAttrString(url, "host");
-	PyObject *port = PyObject_GetAttrString(url, "port");
-
-	if (scheme == NULL || host == NULL || port == NULL) return -1;
-
-	hoststr = PyObject2char(host);
-	portnum = PyLong_AsLong(port);
-	Py_DECREF(host);
-	Py_DECREF(port);
-
-	if (hoststr == NULL) return -1;
-
-	if (PyUnicode_CompareWithASCIIString(scheme, "ldaps") == 0) {
-		*ld = ldap_sslinit(hoststr, portnum, 1);
+	if (code == 0) {
+		/* Getting the error code from the session. */
+		/* 0x31: LDAP_OPT_RESULT_CODE or LDAP_OPT_ERROR_NUMBER */
+		ldap_get_option(ld, 0x0031, &err);
 	} else {
-		*ld = ldap_init(hoststr, portnum);
+		/* Use the parameter for error code. */
+		err = code;
 	}
-	Py_DECREF(scheme);
-	if (ld == NULL) return -1;
-	ldap_set_option(*ld, LDAP_OPT_PROTOCOL_VERSION, &version);
-	switch (tls_option) {
-		case -1:
-			/* Cert policy is not set, nothing to do.*/
-			break;
-		case 2:
-		case 4:
-			/* Cert policy is demand or try, then standard procedure. */
-			break;
-		case 0:
-		case 3:
-			/* Cert policy is never or allow, then set TLS settings. */
-			ldap_set_option(*ld, 0x43, &tls_settings);
-			ldap_set_option(*ld, LDAP_OPT_SERVER_CERTIFICATE, &noverify);
-			break;
-	}
-	rc = ldap_connect(*ld, NULL);
-	return rc;
-}
-
-int _LDAP_bind_s(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid, char *realm, char *authzid) {
-	int rc;
-	int method = -1;
-	SEC_WINNT_AUTH_IDENTITY creds;
-
-	creds.User = (unsigned char*)authcid;
-	if (authcid != NULL) creds.UserLength = (unsigned long)strlen(authcid);
-	else creds.UserLength = 0;
-	creds.Password = (unsigned char*)pswstr;
-	if (pswstr != NULL) creds.PasswordLength = (unsigned long)strlen(pswstr);
-	else creds.PasswordLength = 0;
-	/* Is SASL realm equivalent with Domain? */
-	creds.Domain = (unsigned char*)realm;
-	if (realm != NULL) creds.DomainLength = (unsigned long)strlen(realm);
-	else creds.DomainLength = 0;
-	creds.Flags = SEC_WINNT_AUTH_IDENTITY_ANSI;
-
-	/* Mechanism is set use SEC_WINNT_AUTH_IDENTITY. */
-	if (strcmp(mech, "SIMPLE") != 0) {
-		if (strcmpi(mech, "DIGEST-MD5") == 0) {
-			method = LDAP_AUTH_DIGEST;
+	ldaperror = get_error_by_code(err);
+	/* Get additional error message from the session. */
+	ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &opt_errorstr);
+	errorstr = ldap_err2string(err);
+	if (opt_errorstr != NULL) {
+		if (strcmp(errorstr, opt_errorstr) != 0) {
+			errormsg = PyUnicode_FromFormat("%s. %s", errorstr, opt_errorstr);
 		} else {
-			method = LDAP_AUTH_SASL;
+			//TODO: Need a better way to convert ASCII or whatever to UTF-8.
+			errormsg = PyUnicode_FromFormat("%s.", errorstr);
 		}
-		// TODO: it's depricated. Should use ldap_sasl_bind_sA instead?
-		rc = ldap_bind_sA(ld, binddn, (PCHAR)&creds, method);
-	} else {
-		rc = ldap_simple_bind_sA(ld, binddn, pswstr);
-	}
-
-	return rc;
-}
-
-int _LDAP_unbind(LDAP *ld) {
-	return ldap_unbind(ld);
-}
-
-int _LDAP_abandon(LDAP *ld, int msgid) {
-	return ldap_abandon(ld, msgid);
-}
-
-#else
-
-int _LDAP_initialization(LDAP **ld, PyObject *url, int tls_option) {
-	int rc;
-	char *addrstr;
-	const int version = LDAP_VERSION3;
-
-	PyObject *addr = PyObject_CallMethod(url, "get_address", NULL);
-	if (addr == NULL) return -1;
-	addrstr = PyObject2char(addr);
-	Py_DECREF(addr);
-	if (addrstr == NULL) return -1;
-
-	rc = ldap_initialize(ld, addrstr);
-	if (rc != LDAP_SUCCESS) return rc;
-
-	ldap_set_option(*ld, LDAP_OPT_PROTOCOL_VERSION, &version);
-	if (tls_option != -1) {
-		ldap_set_option(*ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &tls_option);
-		/* Set TLS option globally. */
-		ldap_set_option(NULL, LDAP_OPT_X_TLS_REQUIRE_CERT, &tls_option);
-	}
-	return rc;
-}
-
-int _LDAP_bind(LDAP *ld, char *mech, char* binddn, char *pswstr, char *authcid, char *realm, char *authzid, int *msgidp) {
-	int rc;
-	LDAPControl	**sctrlsp = NULL;
-	struct berval passwd;
-	void *defaults;
-	const char *rmech = NULL;
-	LDAPMessage *result = NULL;
-
-	/* Mechanism is set, use SASL interactive bind. */
-	if (strcmp(mech, "SIMPLE") != 0) {
-		if (pswstr == NULL) pswstr = "";
-		defaults = create_sasl_defaults(ld, mech, realm, authcid, pswstr, authzid);
-		if (defaults == NULL) return -1;
-		rc = ldap_sasl_interactive_bind(ld, binddn, mech, sctrlsp, NULL, LDAP_SASL_QUIET, sasl_interact, defaults, result, &rmech, msgidp);
-	} else {
-		if (pswstr == NULL) {
-			passwd.bv_len = 0;
-		} else {
-			passwd.bv_len = strlen(pswstr);
+		if (errormsg != NULL) {
+			PyErr_SetObject(ldaperror, errormsg);
+			Py_DECREF(errormsg);
 		}
-		passwd.bv_val = pswstr;
-		rc = ldap_sasl_bind(ld, binddn, LDAP_SASL_SIMPLE, &passwd, sctrlsp, NULL, msgidp);
+		//TODO: ldap_memfree(opt_errorstr);
+	} else {
+		PyErr_SetString(ldaperror, errorstr);
 	}
-	return rc;
+	Py_DECREF(ldaperror);
 }
 
-int _LDAP_unbind(LDAP *ld) {
-	return ldap_unbind_ext((ld), NULL, NULL);
-}
-
-int _LDAP_abandon(LDAP *ld, int msgid ) {
-	return ldap_abandon_ext(ld, msgid, NULL, NULL);
-}
-
-/*  This function is a copy from the OpenLDAP OpenLDAP liblutil's sasl.c source
-    file for creating a lutilSASLdefaults struct with default values based on
-    the given parameters or client's options. */
-void *
-create_sasl_defaults(LDAP *ld, char *mech, char *realm, char *authcid, char *passwd, char *authzid) {
-	lutilSASLdefaults *defaults;
-
-	defaults = ber_memalloc(sizeof(lutilSASLdefaults));
-	if(defaults == NULL) return (void *)PyErr_NoMemory();
-
-	defaults->mech = mech ? ber_strdup(mech) : NULL;
-	defaults->realm = realm ? ber_strdup(realm) : NULL;
-	defaults->authcid = authcid ? ber_strdup(authcid) : NULL;
-	defaults->passwd = passwd ? ber_strdup(passwd) : NULL;
-	defaults->authzid = authzid ? ber_strdup(authzid) : NULL;
-
-	if (defaults->mech == NULL) {
-		ldap_get_option(ld, LDAP_OPT_X_SASL_MECH, &defaults->mech);
-	}
-	if (defaults->realm == NULL) {
-		ldap_get_option(ld, LDAP_OPT_X_SASL_REALM, &defaults->realm);
-	}
-	if (defaults->authcid == NULL) {
-		ldap_get_option(ld, LDAP_OPT_X_SASL_AUTHCID, &defaults->authcid);
-	}
-	if (defaults->authzid == NULL) {
-		ldap_get_option(ld, LDAP_OPT_X_SASL_AUTHZID, &defaults->authzid);
-	}
-	defaults->resps = NULL;
-	defaults->nresps = 0;
-
-	return defaults;
-}
-
-/*	This function is based on the lutil_sasl_interact() function, which can
-    be found in the OpenLDAP liblutil's sasl.c source. I did some simplification
-    after some google and stackoverflow reasearches, and hoping to not cause
-    any problems. */
+/* Add a pending LDAP operations to a dictionary. The key is the
+ * corresponding message id,  the value depends on the type of operation. */
 int
-sasl_interact(LDAP *ld, unsigned flags, void *defs, void *in) {
-    sasl_interact_t *interact = (sasl_interact_t*)in;
-    const char *dflt = interact->defresult;
-    lutilSASLdefaults *defaults = (lutilSASLdefaults *)defs;
-
-	while (interact->id != SASL_CB_LIST_END) {
-		switch(interact->id) {
-			case SASL_CB_GETREALM:
-				if (defaults) dflt = defaults->realm;
-				break;
-			case SASL_CB_AUTHNAME:
-				if (defaults) dflt = defaults->authcid;
-				break;
-			case SASL_CB_PASS:
-				if (defaults) dflt = defaults->passwd;
-				break;
-			case SASL_CB_USER:
-				if (defaults) dflt = defaults->authzid;
-				break;
-			case SASL_CB_NOECHOPROMPT:
-				break;
-			case SASL_CB_ECHOPROMPT:
-				break;
-		}
-
-		interact->result = (dflt && *dflt) ? dflt : (char*)"";
-		interact->len = strlen( (char*)interact->result );
-
-		interact++;
-	}
-	return LDAP_SUCCESS;
+add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item)  {
+       char msgidstr[8];
+       sprintf(msgidstr, "%d", msgid);
+       if (PyDict_SetItemString(pending_ops, msgidstr, item) != 0) {
+               PyErr_BadInternalCall();
+               return -1;
+       }
+       return 0;
 }
-#endif

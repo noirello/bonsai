@@ -145,7 +145,7 @@ LDAPValueList_Remove(LDAPValueList *self, PyObject *value) {
 	Py_ssize_t i;
 
 	for (i = 0; i < Py_SIZE(self); i++) {
-		cmp = lowerCaseMatch(((PyListObject *)self)->ob_item[i], value);
+		cmp = lower_case_match(((PyListObject *)self)->ob_item[i], value);
 		if (cmp > 0) {
 			if (LDAPValueList_SetSlice(self, i, i+1, (PyObject *)NULL) == 0) return 0;
 			return -1;
