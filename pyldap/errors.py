@@ -27,7 +27,8 @@ class ClosedConnection(LDAPError):
 
 def __get_error(code):
     """ Return an error by code number. """
-    if code == -1:
+    if code == -1 or code == 0x51:
+	    # WinLDAP returns 0x51 for Server Down.
         return ConnectionError
     elif code == 0x22:
         return InvalidDN

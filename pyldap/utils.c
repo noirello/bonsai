@@ -326,7 +326,7 @@ set_exception(LDAP *ld, int code) {
 			PyErr_SetObject(ldaperror, errormsg);
 			Py_DECREF(errormsg);
 		}
-		ldap_memfree(opt_errorstr);
+		//TODO: ldap_memfree(opt_errorstr);
 	} else {
 		PyErr_SetString(ldaperror, errorstr);
 	}
