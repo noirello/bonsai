@@ -154,6 +154,10 @@ class LDAPEntryTest(unittest.TestCase):
                 self.fail("Delete failed.")
     
     def test_async_operations(self):
+        """
+        Test LDAPEntry's add, modify, rename and delete
+        asynchronous operations. 
+        """
         try:
             import asyncio
 
