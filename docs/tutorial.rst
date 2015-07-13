@@ -122,7 +122,7 @@ see the  `official documentation`_.
 
 An example for asynchronous search and modify with `asyncio`:
 
-.. _asyncio documentation: https://docs.python.org/3/library/asyncio.html
+.. _official documentation: https://docs.python.org/3/library/asyncio.html
 
 .. code-block:: python
     
