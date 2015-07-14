@@ -10,6 +10,9 @@ class ConnectionError(LDAPError):
 class AuthenticationError(LDAPError):
     """Raised, when authentication is failed with the server."""
 
+class AuthMethodNotSupported(LDAPError):
+    """Raised, when the chosen authentication method is not supported. """
+
 class ObjectClassViolation(LDAPError):
     """Raised, when try to add or modify an LDAP entry and it violates the
     object class rules."""
@@ -27,9 +30,12 @@ class ClosedConnection(LDAPError):
 
 def __get_error(code):
     """ Return an error by code number. """
-    if code == -1 or code == 0x51:
-	    # WinLDAP returns 0x51 for Server Down.
+    if code == -1 or code == 0x51 or code == -11:
+        # WinLDAP returns 0x51 for Server Down.
+        # OpenLDAP returns -11 for Connection error.
         return ConnectionError
+    elif code == 0x07:
+        return AuthMethodNotSupported
     elif code == 0x22:
         return InvalidDN
     elif code == 0x31:
@@ -38,9 +44,9 @@ def __get_error(code):
         return ObjectClassViolation
     elif code == 0x44:
         return AlreadyExists
-    elif code == -10:
+    elif code == -100:
         return InvalidMessageID
-    elif code == -11:
+    elif code == -101:
         return ClosedConnection
     else:
         return LDAPError
