@@ -8,3 +8,4 @@
 - Feature: Possibility to change LDAPEntry and LDAPValueList to other dict and list based objects.
 - Feature: SASL EXTERNAL authentication.
 - Feature: Client-side validation for entries (with defined schemas).
+- Feature: add enum for search scopes. (enum dependency for Python 3.3)

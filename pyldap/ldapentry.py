@@ -53,6 +53,16 @@ class LDAPEntry(_LDAPEntry):
             for key, value in kwds.items():
                 self.__setitem__(key, value)
 
+    def clear(self):
+        for key in self.keys():
+            del self[key]
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
     def pop(self, *args):
         """
         LDAPEntry.pop(k[,d]) -> v, remove specified key and return the
