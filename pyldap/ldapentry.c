@@ -446,31 +446,6 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
 	return 0;
 }
 
-/* Remove all item from LDAPEntry. */
-static PyObject *
-LDAPEntry_clearitems(LDAPEntry *self) {
-	PyObject *keys = PyDict_Keys((PyObject *)self);
-	PyObject *iter = PyObject_GetIter(keys);
-	PyObject *item;
-
-	Py_DECREF(keys);
-
-	if (iter == NULL) return NULL;
-
-	/* Iterate over all key in the LDAPEntry. */
-	for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
-	    /* Remove item from the LDAPEntry. */
-		if (LDAPEntry_SetItem(self, item, NULL) != 0) {
-			Py_DECREF(item);
-			return NULL;
-		}
-		Py_DECREF(item);
-	}
-	Py_DECREF(iter);
-
-	return Py_None;
-}
-
 /* Remove entry from the directory server,
    change all LDAPValueList status to replaced (2) */
 static PyObject *
@@ -520,23 +495,6 @@ LDAPEntry_delete(LDAPEntry *self) {
 	Py_DECREF(iter);
 
 	return PyLong_FromLong((long int)msgid);
-}
-
-/* Has the same functionality like dict.get(),
-   but with case-insensitive keymatch. */
-static PyObject *
-LDAPEntry_get(LDAPEntry *self, PyObject *args) {
-	PyObject *key;
-	PyObject *failobj = Py_None;
-	PyObject *val = NULL;
-
-	if (!PyArg_UnpackTuple(args, "get", 1, 2, &key, &failobj))
-		return NULL;
-	val = LDAPEntry_GetItem(self, key);
-	if (val == NULL) val = failobj;
-
-	Py_INCREF(val);
-	return val;
 }
 
 /* Sends the modifications of the entry to the directory server. */
@@ -666,10 +624,6 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 static PyMethodDef LDAPEntry_methods[] = {
 	{"delete", 	(PyCFunction)LDAPEntry_delete,	METH_NOARGS,
 			"Delete LDAPEntry on LDAP server."},
-	{"clear",	(PyCFunction)LDAPEntry_clearitems,	METH_NOARGS,
-			"Remove all items from LDAPEntry."},
-	{"get",		(PyCFunction)LDAPEntry_get,		METH_VARARGS,
-			"LDAPEntry.get(k[,d]) -> LDAPEntry[k] if k in D, else d. d defaults to None."},
 	{"modify", 	(PyCFunction)LDAPEntry_modify, 	METH_NOARGS,
 			"Send LDAPEntry's modification to the LDAP server."},
 	{"rename", 	(PyCFunction)LDAPEntry_rename, 	METH_VARARGS | METH_KEYWORDS,
