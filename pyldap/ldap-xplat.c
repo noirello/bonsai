@@ -4,6 +4,40 @@
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
+char *
+convert_to_mbs(wchar_t *tmp, int freeit) {
+	char *str = NULL;
+	size_t len = 0;
+	size_t size;
+	if (tmp == NULL) return NULL;
+
+	len = wcslen(tmp);
+	str = (char *)malloc(sizeof(char) * (len + 1));
+
+	if (wcstombs_s(&size, str, len + 1, tmp, len) != 0) {
+		return NULL;
+	}
+	if (freeit) free(tmp);
+	return str;
+}
+
+wchar_t *
+convert_to_wcs(char *tmp, int freeit) {
+	wchar_t *str = NULL;
+	size_t len = 0;
+	size_t size;
+
+	if (tmp == NULL) return NULL;
+
+	len = strlen(tmp);
+	str = (wchar_t *)malloc(sizeof(wchar_t) * (len + 1));
+	if (mbstowcs_s(&size, str, len + 1, tmp, len) != 0) {
+		return NULL;
+	}
+	if (freeit) free(tmp);
+	return str;
+}
+
 int
 decrypt_response(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int *outLen) {
 	SecBufferDesc buff_desc;
@@ -163,9 +197,9 @@ LDAP_start_init(PyObject *url, int has_tls, int cert_policy, void **thread, void
 	if (hoststr == NULL) return -1;
 
 	if (PyUnicode_CompareWithASCIIString(scheme, "ldaps") == 0) {
-		data->ld = ldap_sslinit(hoststr, portnum, 1);
+		data->ld = ldap_sslinitA(hoststr, portnum, 1);
 	} else {
-		data->ld = ldap_init(hoststr, portnum);
+		data->ld = ldap_initA(hoststr, portnum);
 	}
 	if (data->ld == NULL) return -1;
 
@@ -252,7 +286,7 @@ ldap_thread_bind(void *param) {
 				out_buff.BufferType = SECBUFFER_TOKEN;
 				out_buff.pvBuffer = NULL;
 
-				rc = InitializeSecurityContext(info->credhandle, NULL, info->targetName, ISC_REQ_MUTUAL_AUTH | ISC_REQ_ALLOCATE_MEMORY,
+				rc = InitializeSecurityContextA(info->credhandle, NULL, info->targetName, ISC_REQ_MUTUAL_AUTH | ISC_REQ_ALLOCATE_MEMORY,
 					0, 0, NULL, 0, info->ctxhandle, &out_buff_desc, &contextattr, NULL);
 			} else {
 				/* Set server response as an input buffer. */
@@ -269,7 +303,7 @@ ldap_thread_bind(void *param) {
 					input = output;
 					rc = encrypt_reply(info->ctxhandle, input, len, &output, &len);
 				} else {
-					rc = InitializeSecurityContext(info->credhandle, info->ctxhandle, info->targetName, ISC_REQ_MUTUAL_AUTH |
+					rc = InitializeSecurityContextA(info->credhandle, info->ctxhandle, info->targetName, ISC_REQ_MUTUAL_AUTH |
 						ISC_REQ_ALLOCATE_MEMORY, 0, 0, &in_buff_desc, 0, info->ctxhandle, &out_buff_desc, &contextattr, NULL);
 				}
 			}
@@ -302,12 +336,12 @@ ldap_thread_bind(void *param) {
 			}
 			/* Empty binddn is needed to change "" to avoid param error. */
 			if (info->binddn == NULL) info->binddn = "";
-			rc = ldap_sasl_bind_s(info->ld, info->binddn, info->mech, &cred, NULL, NULL, &response);
+			rc = ldap_sasl_bind_sA(info->ld, info->binddn, info->mech, &cred, NULL, NULL, &response);
 			/* Get the last error code form the LDAP struct. */
 			ldap_get_option(info->ld, LDAP_OPT_ERROR_NUMBER, &rc);
 		} else {
 			/* Use simple bind with bind DN and password. */
-			rc = ldap_simple_bind_s(info->ld, info->binddn, (char *)(info->creds->Password));
+			rc = ldap_simple_bind_sA(info->ld, info->binddn, (char *)(info->creds->Password));
 		}
 	} while (rc == LDAP_SASL_BIND_IN_PROGRESS);
 
@@ -397,13 +431,13 @@ create_conn_info(char *mech, PyObject *creds) {
 		passwd = PyObject2char(tmp);
 	}
 
-	wincreds->User = (unsigned char *)authcid;
+	wincreds->User = (unsigned short *)authcid;
 	if (authcid != NULL) wincreds->UserLength = (unsigned long)strlen(authcid);
 	else wincreds->UserLength = 0;
-	wincreds->Password = (unsigned char *)passwd;
+	wincreds->Password = (unsigned short *)passwd;
 	if (passwd != NULL) wincreds->PasswordLength = (unsigned long)strlen(passwd);
 	else wincreds->PasswordLength = 0;
-	wincreds->Domain = (unsigned char *)realm;
+	wincreds->Domain = (unsigned short *)realm;
 	if (realm != NULL) wincreds->DomainLength = (unsigned long)strlen(realm);
 	else wincreds->DomainLength = 0;
 
@@ -424,7 +458,7 @@ create_conn_info(char *mech, PyObject *creds) {
 		}
 
 		/* Create credential handler. */
-		rc = AcquireCredentialsHandle(NULL, secpack, SECPKG_CRED_OUTBOUND, NULL, wincreds, NULL, NULL, defaults->credhandle, NULL);
+		rc = AcquireCredentialsHandleA(NULL, secpack, SECPKG_CRED_OUTBOUND, NULL, wincreds, NULL, NULL, defaults->credhandle, NULL);
 		if (rc != SEC_E_OK) {
 			PyErr_BadInternalCall();
 			return NULL;

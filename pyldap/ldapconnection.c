@@ -261,7 +261,7 @@ LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr) {
 	int rc = LDAP_SUCCESS;
 
 	if (dnstr != NULL) {
-		rc = ldap_delete_ext(self->ld, dnstr, NULL, NULL, &msgid);
+		rc = ldap_delete_extA(self->ld, dnstr, NULL, NULL, &msgid);
 		if (rc != LDAP_SUCCESS) {
 			set_exception(self->ld, rc);
 			return -1;
@@ -299,16 +299,16 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	int rc;
 	int msgid = -1;
 	int num_of_ctrls = 0;
-	LDAPControl *page_ctrl = NULL;
-	LDAPControl *sort_ctrl = NULL;
-	LDAPControl **server_ctrls = NULL;
+	LDAPControlA *page_ctrl = NULL;
+	LDAPControlA *sort_ctrl = NULL;
+	LDAPControlA **server_ctrls = NULL;
 	LDAPSearchIter *search_iter = (LDAPSearchIter *)iterator;
 
 	/* Check the number of server controls and allocate it. */
 	if (self->page_size > 1) num_of_ctrls++;
 	if (self->sort_list != NULL) num_of_ctrls++;
 	if (num_of_ctrls > 0) {
-		server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *)
+		server_ctrls = (LDAPControlA **)malloc(sizeof(LDAPControlA *)
 				* (num_of_ctrls + 1));
 		if (server_ctrls == NULL) {
 			PyErr_NoMemory();
@@ -319,7 +319,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 
 	if (self->page_size > 1) {
 		/* Create page control and add to the server controls. */
-		rc = ldap_create_page_control(self->ld, self->page_size,
+		rc = ldap_create_page_controlA(self->ld, self->page_size,
 				search_iter->cookie, 0, &page_ctrl);
 		if (rc != LDAP_SUCCESS) {
 			PyErr_BadInternalCall();
@@ -330,7 +330,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	}
 
 	if (self->sort_list != NULL) {
-		rc = ldap_create_sort_control(self->ld, self->sort_list, 0, &sort_ctrl);
+		rc = ldap_create_sort_controlA(self->ld, self->sort_list, 0, &sort_ctrl);
 		if (rc != LDAP_SUCCESS) {
 			PyErr_BadInternalCall();
 			return -1;
@@ -339,7 +339,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 		server_ctrls[num_of_ctrls] = NULL;
 	}
 
-	rc = ldap_search_ext(self->ld, search_iter->base,
+	rc = ldap_search_extA(self->ld, search_iter->base,
 				search_iter->scope,
 				search_iter->filter,
 				search_iter->attrs,
@@ -363,8 +363,8 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	}
 
 	/* Cleanup. */
-	if (page_ctrl != NULL) ldap_control_free(page_ctrl);
-	if (sort_ctrl != NULL) ldap_control_free(sort_ctrl);
+	if (page_ctrl != NULL) ldap_control_freeA(page_ctrl);
+	if (sort_ctrl != NULL) ldap_control_freeA(sort_ctrl);
 	if (server_ctrls != NULL) free(server_ctrls);
 
 	return msgid;
@@ -452,7 +452,7 @@ LDAPConnection_Whoami(LDAPConnection *self) {
 
 	if (LDAPConnection_IsClosed(self) != 0) return NULL;
 	/* Start an LDAP Who Am I operation. */
-	rc = ldap_extended_operation(self->ld, "1.3.6.1.4.1.4203.1.11.3", NULL, NULL, NULL, &msgid);
+	rc = ldap_extended_operationA(self->ld, "1.3.6.1.4.1.4203.1.11.3", NULL, NULL, NULL, &msgid);
 
 	if (rc != LDAP_SUCCESS) {
 		set_exception(self->ld, rc);
@@ -553,7 +553,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 	struct berval *authzid = NULL;
 	char *retoid = NULL;
 
-	rc = ldap_parse_extended_result(self->ld, res, &retoid, &authzid, 1);
+	rc = ldap_parse_extended_resultA(self->ld, res, &retoid, &authzid, 1);
 
 	/* Remove operations from pending_ops. */
 	if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
@@ -575,7 +575,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 			authzid->bv_val = "anonymous";
 			authzid->bv_len = 9;
 		}
-		ldap_memfree(retoid);
+		ldap_memfreeA(retoid);
 		return PyUnicode_FromString(authzid->bv_val);
 	}
 	return NULL;

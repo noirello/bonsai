@@ -56,7 +56,7 @@ LDAPModList_New(PyObject* entry, unsigned short int size) {
 	LDAPModList *self = (LDAPModList *)LDAPModListType.tp_new(&LDAPModListType, NULL, NULL);
 	if (self == NULL) return NULL;
 	/*  Malloc a new `size` length LDAPMod list. */
-	self->mod_list  = (LDAPMod **)malloc(sizeof(LDAPMod *) * (size + 1));
+	self->mod_list  = (LDAPModA **)malloc(sizeof(LDAPModA *) * (size + 1));
 	if (self->mod_list != NULL) self->mod_list[0] = NULL;
 	self->size = size;
 	self->entry = entry;
@@ -65,10 +65,10 @@ LDAPModList_New(PyObject* entry, unsigned short int size) {
 
 int
 LDAPModList_Add(LDAPModList *self, int mod_op, PyObject *key, PyObject *value) {
-	LDAPMod *mod;
+	LDAPModA *mod;
 
 	/* Malloc a new LDAPMod struct. */
-	mod = (LDAPMod *)malloc(sizeof(LDAPMod));
+	mod = (LDAPModA *)malloc(sizeof(LDAPModA));
 	if (mod == NULL) return -1;
 
 	/* Set the values with the parameters. */
@@ -90,7 +90,7 @@ LDAPModList_Add(LDAPModList *self, int mod_op, PyObject *key, PyObject *value) {
 PyObject *
 LDAPModList_Pop(LDAPModList *self) {
 	int i;
-	LDAPMod *mod;
+	LDAPModA *mod;
 	PyObject *berval = NULL;
 	PyObject *ret = NULL;
 	UniqueList *list = NULL;

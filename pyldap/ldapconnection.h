@@ -13,7 +13,7 @@ typedef struct {
 	LDAP *ld;
 	int page_size;
 	int closed;
-	LDAPSortKey **sort_list;
+	LDAPSortKeyA **sort_list;
 } LDAPConnection;
 
 extern PyTypeObject LDAPConnectionType;

@@ -19,7 +19,7 @@ create_berval(char *value) {
 	struct berval *bval = NULL;
 	bval = malloc(sizeof(struct berval));
 	if (bval == NULL) return NULL;
-	bval->bv_len = strlen(value);
+	bval->bv_len = (unsigned long)strlen(value);
 	bval->bv_val = value;
 	return bval;
 }
@@ -186,19 +186,19 @@ PyList2StringList(PyObject *list) {
 
 /*	Create a null delimitered LDAPSortKey list from a Python list which
  	contains tuples of attribute name aad reverse order. */
-LDAPSortKey **
+LDAPSortKeyA **
 PyList2LDAPSortKeyList(PyObject *list) {
 	int i = 0;
 	char *attr = NULL;
-	LDAPSortKey **sortlist;
-	LDAPSortKey *elem;
+	LDAPSortKeyA **sortlist;
+	LDAPSortKeyA *elem;
 	PyObject *iter;
 	PyObject *item;
 	PyObject *tmp = NULL;
 
 	if (list == NULL || !PyList_Check(list)) return NULL;
 
-	sortlist = malloc(sizeof(LDAPSortKey*) * ((int)PyList_Size(list) + 1));
+	sortlist = malloc(sizeof(LDAPSortKeyA*) * ((int)PyList_Size(list) + 1));
 	if (sortlist == NULL) return NULL;
 
 	iter = PyObject_GetIter(list);
@@ -216,7 +216,7 @@ PyList2LDAPSortKeyList(PyObject *list) {
 		if (tmp == NULL) return NULL;
 
 		/* Malloc and set LDAPSortKey struct. */
-		elem = (LDAPSortKey *)malloc(sizeof(LDAPSortKey));
+		elem = (LDAPSortKeyA *)malloc(sizeof(LDAPSortKeyA));
 		elem->attributeType = attr;
 		elem->orderingRule = NULL;
 
@@ -298,8 +298,10 @@ get_error_by_code(int code) {
 void
 set_exception(LDAP *ld, int code) {
 	int err = -1;
-	char *opt_errorstr = NULL;
-	char *errorstr = NULL;
+	size_t len = 0;
+	USTR *opt_errorstr = NULL;
+	USTR *errorstr = NULL;
+	USTR *concat_msg = NULL;
 	PyObject *ldaperror = NULL;
 	PyObject *errormsg = NULL;
 
@@ -315,22 +317,32 @@ set_exception(LDAP *ld, int code) {
 	/* Get additional error message from the session. */
 	ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &opt_errorstr);
 	errorstr = ldap_err2string(err);
-	if (opt_errorstr != NULL) {
-		if (strcmp(errorstr, opt_errorstr) != 0) {
-			errormsg = PyUnicode_FromFormat("%s. %s", errorstr, opt_errorstr);
-		} else {
-			//TODO: Need a better way to convert ASCII or whatever to UTF-8.
-			errormsg = PyUnicode_FromFormat("%s.", errorstr);
-		}
-		if (errormsg != NULL) {
-			PyErr_SetObject(ldaperror, errormsg);
-			Py_DECREF(errormsg);
-		}
+	if (errorstr == NULL) goto error;
+
+	if (opt_errorstr != NULL && ustrcmp(errorstr, opt_errorstr) != 0) {
+		len = (ustrlen(errorstr) + ustrlen(opt_errorstr) + 3);
+		concat_msg = (wchar_t *)malloc(sizeof(wchar_t) * len);
+		concat_msg[0] = TEXT('\0');
+		ustrcat(concat_msg, errorstr);
+		ustrcat(concat_msg, TEXT(". "));
+		ustrcat(concat_msg, opt_errorstr);
+		concat_msg[len - 1] = TEXT('\0');
+		errormsg = PyUnicode_FromUSTR(concat_msg, len);
+		free(concat_msg);
 		//TODO: ldap_memfree(opt_errorstr);
 	} else {
-		PyErr_SetString(ldaperror, errorstr);
+		errormsg = PyUnicode_FromUSTR(errorstr, ustrlen(errorstr));
 	}
+	if (errormsg == NULL) goto error;
+
+	PyErr_SetObject(ldaperror, errormsg);
+	Py_DECREF(errormsg);
 	Py_DECREF(ldaperror);
+	return;
+error:
+	PyErr_BadInternalCall();
+	Py_DECREF(ldaperror);
+	return;
 }
 
 /* Add a pending LDAP operations to a dictionary. The key is the

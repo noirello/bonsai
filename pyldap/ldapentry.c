@@ -118,7 +118,7 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
 
 	/* Create an LDAPModList for the LDAPEntry values and deleted attributes. */
 	mods = LDAPModList_New((PyObject *)self,
-			Py_SIZE(self) + Py_SIZE(self->deleted));
+			(unsigned short)(Py_SIZE(self) + Py_SIZE(self->deleted)));
 	if (mods == NULL) return NULL;
 
 	if (keys == NULL) return NULL;
@@ -254,10 +254,10 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 	LDAPEntry *self;
 
 	/* Create an attribute list for LDAPEntry (which is implemented in Python). */
-	dn = ldap_get_dn(conn->ld, entrymsg);
+	dn = ldap_get_dnA(conn->ld, entrymsg);
 	if (dn != NULL) {
 		args = Py_BuildValue("sO", dn, (PyObject *)conn);
-		ldap_memfree(dn);
+		ldap_memfreeA(dn);
 		if (args == NULL) return NULL;
 	}
 	/* Create a new LDAPEntry, raise PyErr_NoMemory if it's failed. */
@@ -281,12 +281,12 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 	Py_DECREF(tmp);
 
 	/* Iterate over the LDAP attributes. */
-	for (attr = ldap_first_attribute(conn->ld, entrymsg, &ber);
-		attr != NULL; attr = ldap_next_attribute(conn->ld, entrymsg, ber)) {
+	for (attr = ldap_first_attributeA(conn->ld, entrymsg, &ber);
+		attr != NULL; attr = ldap_next_attributeA(conn->ld, entrymsg, ber)) {
 		/* Create a string of attribute's name and add to the attributes list. */
 		attrobj = PyUnicode_FromString(attr);
 		if (attrobj == NULL) goto error;
-		values = ldap_get_values_len(conn->ld, entrymsg, attr);
+		values = ldap_get_values_lenA(conn->ld, entrymsg, attr);
 
 		lvl = LDAPValueList_New();
 		if (lvl == NULL) goto error;
@@ -312,7 +312,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 	}
 	/* Cleaning the mess. */
 	Py_DECREF(rawval_list);
-	ldap_memfree(attr);
+	ldap_memfreeA(attr);
 	if (ber != NULL) {
 		ber_free(ber, 0);
 	}
@@ -322,7 +322,7 @@ error:
 	Py_DECREF(self);
 	Py_DECREF(attrobj);
 	Py_DECREF(rawval_list);
-	ldap_memfree(attr);
+	ldap_memfreeA(attr);
 	if (ber != NULL) {
 		ber_free(ber, 0);
 	}
@@ -352,10 +352,10 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	}
 
 	if (mod == 0) {
-		rc = ldap_add_ext(self->conn->ld, dnstr, mods->mod_list, NULL,
+		rc = ldap_add_extA(self->conn->ld, dnstr, mods->mod_list, NULL,
 				NULL, &msgid);
 	} else {
-		rc = ldap_modify_ext(self->conn->ld, dnstr, mods->mod_list, NULL,
+		rc = ldap_modify_extA(self->conn->ld, dnstr, mods->mod_list, NULL,
 				NULL, &msgid);
 	}
 	free(dnstr);
@@ -603,7 +603,7 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	Py_DECREF(newrdn);
 	Py_DECREF(newparent);
 
-	rc = ldap_rename(self->conn->ld, olddn_str, newrdn_str, newparent_str, 1, NULL, NULL, &msgid);
+	rc = _ldap_rename(self->conn->ld, olddn_str, newrdn_str, newparent_str, 1, NULL, NULL, &msgid);
 	/* Clean up strings. */
 	free(olddn_str);
 	free(newrdn_str);

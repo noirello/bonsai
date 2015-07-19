@@ -13,6 +13,8 @@
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 //MS Windows
 
+#define UNICODE 1
+
 #include <windows.h>
 #include <winldap.h>
 #include <winber.h>
@@ -29,7 +31,17 @@
 #define attributeType sk_attrtype
 #define timeval l_timeval
 
-#define ldap_rename ldap_rename_ext
+#define USTR wchar_t
+#define CONVERTTO(str, x) convert_to_wcs(str, x)
+#define CONVERTFROM(str, x) convert_to_mbs(str, x)
+#define ustrcat(x, y) wcscat(x, y)
+#define ustrcpy(x, y) wcscpy(x, y)
+#define ustrcmp(x, y) wcscmp(x, y)
+#define ustrlen(x) wcslen(x)
+#define PyUnicode_FromUSTR(str, len) PyUnicode_FromKindAndData(sizeof(wchar_t), str, len)
+#define ustrfree(x) free(x)
+
+#define _ldap_rename ldap_rename_extA
 
 typedef struct ldapConnectionInfo_s {
 	char *binddn;
@@ -51,6 +63,9 @@ typedef struct ldap_thread_data_s {
 	int retval;
 } ldapThreadData;
 
+char *convert_to_mbs(wchar_t *tmp, int freeit);
+wchar_t *convert_to_wcs(char *tmp, int freeit);
+
 #else
 //Unix
 #include <ldap.h>
@@ -58,6 +73,19 @@ typedef struct ldap_thread_data_s {
 #include <sasl/sasl.h>
 #include <sys/time.h>
 #include <pthread.h>
+
+#define USTR char
+#define CONVERTTO(str, x) (str)
+#define CONVERTFROM(str, x) (str)
+#define ustrcat(x, y) strcat(x, y)
+#define ustrcpy(x, y) strcpy(x, y)
+#define ustrcmp(x, y) strcmp(x, y)
+#define ustrlen(x) strlen(x)
+#define PyUnicode_FromUSTR(str, len) PyUnicode_FromStringAndSize(str, len)
+#define TEXT(str) (str)
+#define ustrfree(str) ()
+
+#define _ldap_rename ldap_rename
 
 typedef struct ldap_connection_info_s {
 	char *binddn;
