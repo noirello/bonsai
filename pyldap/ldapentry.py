@@ -54,7 +54,8 @@ class LDAPEntry(_LDAPEntry):
                 self.__setitem__(key, value)
 
     def clear(self):
-        for key in self.keys():
+        keys = list(self.keys())
+        for key in keys:
             del self[key]
 
     def get(self, key, default=None):
