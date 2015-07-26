@@ -7,72 +7,56 @@
 char *
 convert_to_mbs(wchar_t *tmp, int freeit) {
 	char *str = NULL;
-	int len = 0;
 	int size = 0;
 	int rc = 0;
 
 	if (tmp == NULL) return NULL;
 
-	len = (int)wcslen(tmp);
-
-	/* Get neccessary size for the new UTF-8 encoded char*. */
-	size = WideCharToMultiByte(CP_UTF8, 0, tmp, len, NULL, 0, NULL, NULL);
-	/* For empty string. */
-	if (len == 0) size = 1;
+	/* Get necessary size for the new UTF-8 encoded char*. */
+	size = WideCharToMultiByte(CP_UTF8, 0, tmp, -1, NULL, 0, NULL, NULL);
 	str = (char *)malloc(sizeof(char) * size);
 	if (str == NULL) {
 		PyErr_NoMemory();
 		return NULL;
 	}
 
-	if (len != 0) {
-		/* It's not an empty string. */
-		rc = WideCharToMultiByte(CP_UTF8, 0, tmp, len, str, size, NULL, NULL);
-		if (rc == 0) {
-			free(str);
-			PyErr_Format(PyExc_UnicodeError, "Converting to UTF-8 is failed.");
-			return NULL;
-		}
+	rc = WideCharToMultiByte(CP_UTF8, 0, tmp, -1, str, size, NULL, NULL);
+	if (rc == 0) {
+		free(str);
+		PyErr_Format(PyExc_UnicodeError, "Converting to UTF-8 is failed.");
+		return NULL;
 	}
-	str[size] = '\0';
 
 	if (freeit) free(tmp);
+
 	return str;
 }
 
 wchar_t *
 convert_to_wcs(char *tmp, int freeit) {
 	wchar_t *str = NULL;
-	int len = 0;
 	int size = 0;
 	int rc = 0;
 
 	if (tmp == NULL) return NULL;
 
-	len = (int)strlen(tmp);
-
-	/* Get neccessary size for the new wchar_t*. */
-	size = MultiByteToWideChar(CP_UTF8, 0, tmp, len, NULL, 0);
-	/* For empty string. */
-	if (len == 0) size = 1;
+	/* Get necessary size for the new wchar_t*. */
+	size = MultiByteToWideChar(CP_UTF8, 0, tmp, -1, NULL, 0);
 	str = (wchar_t *)malloc(sizeof(wchar_t) * size);
 	if (str == NULL) {
 		PyErr_NoMemory();
 		return NULL;
 	}
 
-	if (len != 0) {
-		/* It's not an empty string. */
-		rc = MultiByteToWideChar(CP_UTF8, 0, tmp, len, str, size);
-		if (rc == 0) {
-			free(str);
-			PyErr_Format(PyExc_UnicodeError, "Converting from UTF-8 is failed.");
-			return NULL;
-		}
+	rc = MultiByteToWideChar(CP_UTF8, 0, tmp, -1, str, size);
+	if (rc == 0) {
+		free(str);
+		PyErr_Format(PyExc_UnicodeError, "Converting from UTF-8 is failed.");
+		return NULL;
 	}
-	str[size] = '\0';
 
 	if (freeit) free(tmp);
+
 	return str;
 }
 
