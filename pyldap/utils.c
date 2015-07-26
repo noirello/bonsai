@@ -160,23 +160,23 @@ PyList2BervalList(PyObject *list) {
 }
 
 /*	Converts Python list to a C string list. Returns NULL if it's failed. */
-char **
+USTR **
 PyList2StringList(PyObject *list) {
 	int i = 0;
-	char **strlist;
+	USTR **strlist;
 	PyObject *iter;
 	PyObject *item;
 
 	if (list == NULL || !PyList_Check(list)) return NULL;
 
-	strlist = malloc(sizeof(char*) * ((int)PyList_Size(list) + 1));
+	strlist = malloc(sizeof(USTR*) * ((int)PyList_Size(list) + 1));
 	if (strlist == NULL) return NULL;
 
 	iter = PyObject_GetIter(list);
 	if (iter == NULL) return NULL;
 
 	for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
-		strlist[i++] = PyObject2char(item);
+		strlist[i++] = CONVERTTO(PyObject2char(item), 1);
 		Py_DECREF(item);
 	}
 	Py_DECREF(iter);
@@ -186,19 +186,19 @@ PyList2StringList(PyObject *list) {
 
 /*	Create a null delimitered LDAPSortKey list from a Python list which
  	contains tuples of attribute name aad reverse order. */
-LDAPSortKeyA **
+LDAPSortKey **
 PyList2LDAPSortKeyList(PyObject *list) {
 	int i = 0;
-	char *attr = NULL;
-	LDAPSortKeyA **sortlist;
-	LDAPSortKeyA *elem;
+	USTR *attr = NULL;
+	LDAPSortKey **sortlist;
+	LDAPSortKey *elem;
 	PyObject *iter;
 	PyObject *item;
 	PyObject *tmp = NULL;
 
 	if (list == NULL || !PyList_Check(list)) return NULL;
 
-	sortlist = malloc(sizeof(LDAPSortKeyA*) * ((int)PyList_Size(list) + 1));
+	sortlist = malloc(sizeof(LDAPSortKey*) * ((int)PyList_Size(list) + 1));
 	if (sortlist == NULL) return NULL;
 
 	iter = PyObject_GetIter(list);
@@ -210,13 +210,13 @@ PyList2LDAPSortKeyList(PyObject *list) {
 		/* Get attribute's name and reverse order from the tuple. */
 		tmp = PyTuple_GetItem(item, 0); /* Returns borrowed ref. */
 		if (tmp == NULL) return NULL;
-		attr = PyObject2char(tmp);
+		attr = CONVERTTO(PyObject2char(tmp), 1);
 		if (attr == NULL) return NULL;
 		tmp = PyTuple_GetItem(item, 1);
 		if (tmp == NULL) return NULL;
 
 		/* Malloc and set LDAPSortKey struct. */
-		elem = (LDAPSortKeyA *)malloc(sizeof(LDAPSortKeyA));
+		elem = (LDAPSortKey *)malloc(sizeof(LDAPSortKey));
 		elem->attributeType = attr;
 		elem->orderingRule = NULL;
 
@@ -327,11 +327,11 @@ set_exception(LDAP *ld, int code) {
 		ustrcat(concat_msg, TEXT(". "));
 		ustrcat(concat_msg, opt_errorstr);
 		concat_msg[len - 1] = TEXT('\0');
-		errormsg = PyUnicode_FromUSTR(concat_msg, len);
+		errormsg = PyUnicode_FromUSTR(concat_msg);
 		free(concat_msg);
 		//TODO: ldap_memfree(opt_errorstr);
 	} else {
-		errormsg = PyUnicode_FromUSTR(errorstr, ustrlen(errorstr));
+		errormsg = PyUnicode_FromUSTR(errorstr);
 	}
 	if (errormsg == NULL) goto error;
 

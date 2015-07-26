@@ -7,16 +7,35 @@
 char *
 convert_to_mbs(wchar_t *tmp, int freeit) {
 	char *str = NULL;
-	size_t len = 0;
-	size_t size;
+	int len = 0;
+	int size = 0;
+	int rc = 0;
+
 	if (tmp == NULL) return NULL;
 
-	len = wcslen(tmp);
-	str = (char *)malloc(sizeof(char) * (len + 1));
+	len = (int)wcslen(tmp);
 
-	if (wcstombs_s(&size, str, len + 1, tmp, len) != 0) {
+	/* Get neccessary size for the new UTF-8 encoded char*. */
+	size = WideCharToMultiByte(CP_UTF8, 0, tmp, len, NULL, 0, NULL, NULL);
+	/* For empty string. */
+	if (len == 0) size = 1;
+	str = (char *)malloc(sizeof(char) * size);
+	if (str == NULL) {
+		PyErr_NoMemory();
 		return NULL;
 	}
+
+	if (len != 0) {
+		/* It's not an empty string. */
+		rc = WideCharToMultiByte(CP_UTF8, 0, tmp, len, str, size, NULL, NULL);
+		if (rc == 0) {
+			free(str);
+			PyErr_Format(PyExc_UnicodeError, "Converting to UTF-8 is failed.");
+			return NULL;
+		}
+	}
+	str[size] = '\0';
+
 	if (freeit) free(tmp);
 	return str;
 }
@@ -24,18 +43,51 @@ convert_to_mbs(wchar_t *tmp, int freeit) {
 wchar_t *
 convert_to_wcs(char *tmp, int freeit) {
 	wchar_t *str = NULL;
-	size_t len = 0;
-	size_t size;
+	int len = 0;
+	int size = 0;
+	int rc = 0;
 
 	if (tmp == NULL) return NULL;
 
-	len = strlen(tmp);
-	str = (wchar_t *)malloc(sizeof(wchar_t) * (len + 1));
-	if (mbstowcs_s(&size, str, len + 1, tmp, len) != 0) {
+	len = (int)strlen(tmp);
+
+	/* Get neccessary size for the new wchar_t*. */
+	size = MultiByteToWideChar(CP_UTF8, 0, tmp, len, NULL, 0);
+	/* For empty string. */
+	if (len == 0) size = 1;
+	str = (wchar_t *)malloc(sizeof(wchar_t) * size);
+	if (str == NULL) {
+		PyErr_NoMemory();
 		return NULL;
 	}
+
+	if (len != 0) {
+		/* It's not an empty string. */
+		rc = MultiByteToWideChar(CP_UTF8, 0, tmp, len, str, size);
+		if (rc == 0) {
+			free(str);
+			PyErr_Format(PyExc_UnicodeError, "Converting from UTF-8 is failed.");
+			return NULL;
+		}
+	}
+	str[size] = '\0';
+
 	if (freeit) free(tmp);
 	return str;
+}
+
+PyObject *
+PyUnicode_FromUSTR(USTR *str) {
+	char *tmp = NULL;
+	PyObject *obj = NULL;
+
+	tmp = convert_to_mbs(str, 0);
+	if (tmp == NULL) return NULL;
+
+	obj = PyUnicode_FromString(tmp);
+	free(tmp);
+
+	return obj;
 }
 
 int
@@ -167,7 +219,7 @@ ldap_thread_init(void *param) {
 int
 LDAP_start_init(PyObject *url, int has_tls, int cert_policy, void **thread, void **misc) {
 	int portnum;
-	char *hoststr = NULL;
+	USTR *hoststr = NULL;
 	const int version = LDAP_VERSION3;
 	ldapThreadData *data = NULL;
 	PyObject *scheme = NULL;
@@ -189,7 +241,7 @@ LDAP_start_init(PyObject *url, int has_tls, int cert_policy, void **thread, void
 
 	if (scheme == NULL || host == NULL || port == NULL) return -1;
 
-	hoststr = PyObject2char(host);
+	hoststr = CONVERTTO(PyObject2char(host), 1);
 	portnum = PyLong_AsLong(port);
 	Py_DECREF(host);
 	Py_DECREF(port);
@@ -197,9 +249,9 @@ LDAP_start_init(PyObject *url, int has_tls, int cert_policy, void **thread, void
 	if (hoststr == NULL) return -1;
 
 	if (PyUnicode_CompareWithASCIIString(scheme, "ldaps") == 0) {
-		data->ld = ldap_sslinitA(hoststr, portnum, 1);
+		data->ld = ldap_sslinit(hoststr, portnum, 1);
 	} else {
-		data->ld = ldap_initA(hoststr, portnum);
+		data->ld = ldap_init(hoststr, portnum);
 	}
 	if (data->ld == NULL) return -1;
 
@@ -275,7 +327,7 @@ ldap_thread_bind(void *param) {
 	ldapConnectionInfo *info = (ldapConnectionInfo *)param;
 
 	do {
-		if (strcmp(info->mech, "SIMPLE") != 0) {
+		if (ustrcmp(info->mech, TEXT("SIMPLE")) != 0) {
 			/* Use SASL bind. */
 			if (response == NULL) {
 				/* First function call, no server response. */
@@ -286,7 +338,7 @@ ldap_thread_bind(void *param) {
 				out_buff.BufferType = SECBUFFER_TOKEN;
 				out_buff.pvBuffer = NULL;
 
-				rc = InitializeSecurityContextA(info->credhandle, NULL, info->targetName, ISC_REQ_MUTUAL_AUTH | ISC_REQ_ALLOCATE_MEMORY,
+				rc = InitializeSecurityContext(info->credhandle, NULL, info->targetName, ISC_REQ_MUTUAL_AUTH | ISC_REQ_ALLOCATE_MEMORY,
 					0, 0, NULL, 0, info->ctxhandle, &out_buff_desc, &contextattr, NULL);
 			} else {
 				/* Set server response as an input buffer. */
@@ -303,7 +355,7 @@ ldap_thread_bind(void *param) {
 					input = output;
 					rc = encrypt_reply(info->ctxhandle, input, len, &output, &len);
 				} else {
-					rc = InitializeSecurityContextA(info->credhandle, info->ctxhandle, info->targetName, ISC_REQ_MUTUAL_AUTH |
+					rc = InitializeSecurityContext(info->credhandle, info->ctxhandle, info->targetName, ISC_REQ_MUTUAL_AUTH |
 						ISC_REQ_ALLOCATE_MEMORY, 0, 0, &in_buff_desc, 0, info->ctxhandle, &out_buff_desc, &contextattr, NULL);
 				}
 			}
@@ -314,7 +366,7 @@ ldap_thread_bind(void *param) {
 				CompleteAuthToken(info->ctxhandle, &out_buff_desc);
 				break;
 			case SEC_E_OK:
-				if (strcmp(info->mech, "GSSAPI") == 0) {
+				if (ustrcmp(info->mech, TEXT("GSSAPI")) == 0) {
 					gssapi_decrpyt = 1;
 				}
 				break;
@@ -335,13 +387,13 @@ ldap_thread_bind(void *param) {
 				cred.bv_val = output;
 			}
 			/* Empty binddn is needed to change "" to avoid param error. */
-			if (info->binddn == NULL) info->binddn = "";
-			rc = ldap_sasl_bind_sA(info->ld, info->binddn, info->mech, &cred, NULL, NULL, &response);
+			if (info->binddn == NULL) info->binddn = TEXT("");
+			rc = ldap_sasl_bind_s(info->ld, info->binddn, info->mech, &cred, NULL, NULL, &response);
 			/* Get the last error code form the LDAP struct. */
 			ldap_get_option(info->ld, LDAP_OPT_ERROR_NUMBER, &rc);
 		} else {
 			/* Use simple bind with bind DN and password. */
-			rc = ldap_simple_bind_sA(info->ld, info->binddn, (char *)(info->creds->Password));
+			rc = ldap_simple_bind_s(info->ld, info->binddn, (USTR *)(info->creds->Password));
 		}
 	} while (rc == LDAP_SASL_BIND_IN_PROGRESS);
 
@@ -380,12 +432,12 @@ create_conn_info(char *mech, PyObject *creds) {
 	int rc = -1;
 	ldapConnectionInfo *defaults = NULL;
 	PyObject *tmp = NULL;
-	char *secpack = NULL;
-	char *authcid = NULL;
-	char *authzid = NULL;
-	char *binddn = NULL;
-	char *passwd = NULL;
-	char *realm = NULL;
+	USTR *secpack = NULL;
+	USTR *authcid = NULL;
+	USTR *authzid = NULL;
+	USTR *binddn = NULL;
+	USTR *passwd = NULL;
+	USTR *realm = NULL;
 	SEC_WINNT_AUTH_IDENTITY *wincreds = NULL;
 
 	wincreds = (SEC_WINNT_AUTH_IDENTITY *)malloc(sizeof(SEC_WINNT_AUTH_IDENTITY));
@@ -413,52 +465,51 @@ create_conn_info(char *mech, PyObject *creds) {
 		return (void *)PyErr_NoMemory();
 	}
 
-	defaults->mech = mech;
+	defaults->mech = CONVERTTO(mech, 1);
 
 	/* Get credential information, if it's given. */
 	if (PyTuple_Check(creds) && PyTuple_Size(creds) > 1) {
-		if (strcmp(mech, "SIMPLE") == 0) {
+		if (ustrcmp(defaults->mech, TEXT("SIMPLE")) == 0) {
 			tmp = PyTuple_GetItem(creds, 0);
-			binddn = PyObject2char(tmp);
+			binddn = CONVERTTO(PyObject2char(tmp), 1);
 		}
 		else {
 			tmp = PyTuple_GetItem(creds, 0);
-			authcid = PyObject2char(tmp);
+			authcid = CONVERTTO(PyObject2char(tmp), 1);
 			tmp = PyTuple_GetItem(creds, 2);
-			realm = PyObject2char(tmp);
+			realm = CONVERTTO(PyObject2char(tmp), 1);
 		}
 		tmp = PyTuple_GetItem(creds, 1);
-		passwd = PyObject2char(tmp);
+		passwd = CONVERTTO(PyObject2char(tmp), 1);
 	}
 
 	wincreds->User = (unsigned short *)authcid;
-	if (authcid != NULL) wincreds->UserLength = (unsigned long)strlen(authcid);
+	if (authcid != NULL) wincreds->UserLength = (unsigned long)ustrlen(authcid);
 	else wincreds->UserLength = 0;
 	wincreds->Password = (unsigned short *)passwd;
-	if (passwd != NULL) wincreds->PasswordLength = (unsigned long)strlen(passwd);
+	if (passwd != NULL) wincreds->PasswordLength = (unsigned long)ustrlen(passwd);
 	else wincreds->PasswordLength = 0;
 	wincreds->Domain = (unsigned short *)realm;
-	if (realm != NULL) wincreds->DomainLength = (unsigned long)strlen(realm);
+	if (realm != NULL) wincreds->DomainLength = (unsigned long)ustrlen(realm);
 	else wincreds->DomainLength = 0;
 
-	//TODO: Change it to UNICODE.
-	wincreds->Flags = SEC_WINNT_AUTH_IDENTITY_ANSI;
+	wincreds->Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;
 
 	defaults->authzid = authzid;
 	defaults->binddn = binddn;
 	defaults->creds = wincreds;
 	defaults->targetName = NULL;
 
-	if (strcmp(mech, "SIMPLE") != 0) {
+	if (ustrcmp(defaults->mech, TEXT("SIMPLE")) != 0) {
 		/* Select corresponding security packagename from the mechanism name. */
-		if (strcmp(mech, "DIGEST-MD5") == 0) {
-			secpack = "WDigest";
-		} else if (strcmp(mech, "GSSAPI") == 0) {
-			secpack = "Kerberos";
+		if (ustrcmp(defaults->mech, TEXT("DIGEST-MD5")) == 0) {
+			secpack = TEXT("WDigest");
+		} else if (ustrcmp(defaults->mech, TEXT("GSSAPI")) == 0) {
+			secpack = TEXT("Kerberos");
 		}
 
 		/* Create credential handler. */
-		rc = AcquireCredentialsHandleA(NULL, secpack, SECPKG_CRED_OUTBOUND, NULL, wincreds, NULL, NULL, defaults->credhandle, NULL);
+		rc = AcquireCredentialsHandle(NULL, secpack, SECPKG_CRED_OUTBOUND, NULL, wincreds, NULL, NULL, defaults->credhandle, NULL);
 		if (rc != SEC_E_OK) {
 			PyErr_BadInternalCall();
 			return NULL;
@@ -471,12 +522,12 @@ create_conn_info(char *mech, PyObject *creds) {
 int
 update_conn_info(LDAP *ld, ldapConnectionInfo *info) {
 	/* Copy hostname from LDAP struct to create a valid targetName(SPN). */
-	info->targetName = (char *)malloc(strlen(ld->ld_host) + 6);
+	info->targetName = (USTR *)malloc(strlen(ld->ld_host) + 6);
 	if (info->targetName == NULL) {
 		PyErr_NoMemory();
 		return -1;
 	}
-	sprintf_s(info->targetName, strlen(ld->ld_host) + 6, "ldap/%hs", ld->ld_host);
+	swprintf_s(info->targetName, strlen(ld->ld_host) + 6, TEXT("ldap/%hs"), ld->ld_host);
 	return 0;
 }
 
@@ -484,7 +535,7 @@ update_conn_info(LDAP *ld, ldapConnectionInfo *info) {
 void
 dealloc_conn_info(ldapConnectionInfo* info) {
 	if (info->authzid) free(info->authzid);
-	if (info->binddn && strcmp(info->binddn, "") != 0) free(info->binddn);
+	if (info->binddn && ustrcmp(info->binddn, TEXT("")) != 0) free(info->binddn);
 	if (info->mech) free(info->mech);
 	if (info->targetName) free(info->targetName);
 	if (info->credhandle) free(info->credhandle);

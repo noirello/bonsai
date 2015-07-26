@@ -1,4 +1,5 @@
 #include "utils.h"
+
 #include "uniquelist.h"
 #include "ldapentry.h"
 
@@ -242,22 +243,27 @@ LDAPEntry *
 LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 	int i;
 	int contain = -1;
-	char *dn;
-	char *attr;
+	USTR *dn;
+	USTR *attr;
 	struct berval **values;
 	BerElement *ber;
 	UniqueList *rawval_list;
 	PyObject *val = NULL, *attrobj = NULL, *tmp;
 	PyObject *ldapentry_type = NULL;
 	PyObject *args = NULL;
+	PyObject *dnobj = NULL;
 	LDAPValueList *lvl = NULL;
 	LDAPEntry *self;
 
 	/* Create an attribute list for LDAPEntry (which is implemented in Python). */
-	dn = ldap_get_dnA(conn->ld, entrymsg);
+	dn = ldap_get_dn(conn->ld, entrymsg);
 	if (dn != NULL) {
-		args = Py_BuildValue("sO", dn, (PyObject *)conn);
-		ldap_memfreeA(dn);
+		dnobj = PyUnicode_FromUSTR(dn);
+		ldap_memfree(dn);
+		if (dnobj == NULL) return NULL;
+
+		args = Py_BuildValue("OO", dnobj, (PyObject *)conn);
+
 		if (args == NULL) return NULL;
 	}
 	/* Create a new LDAPEntry, raise PyErr_NoMemory if it's failed. */
@@ -281,12 +287,12 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 	Py_DECREF(tmp);
 
 	/* Iterate over the LDAP attributes. */
-	for (attr = ldap_first_attributeA(conn->ld, entrymsg, &ber);
-		attr != NULL; attr = ldap_next_attributeA(conn->ld, entrymsg, ber)) {
+	for (attr = ldap_first_attribute(conn->ld, entrymsg, &ber);
+		attr != NULL; attr = ldap_next_attribute(conn->ld, entrymsg, ber)) {
 		/* Create a string of attribute's name and add to the attributes list. */
-		attrobj = PyUnicode_FromString(attr);
+		attrobj = PyUnicode_FromUSTR(attr);
 		if (attrobj == NULL) goto error;
-		values = ldap_get_values_lenA(conn->ld, entrymsg, attr);
+		values = ldap_get_values_len(conn->ld, entrymsg, attr);
 
 		lvl = LDAPValueList_New();
 		if (lvl == NULL) goto error;
@@ -312,7 +318,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 	}
 	/* Cleaning the mess. */
 	Py_DECREF(rawval_list);
-	ldap_memfreeA(attr);
+	ldap_memfree(attr);
 	if (ber != NULL) {
 		ber_free(ber, 0);
 	}
@@ -322,7 +328,7 @@ error:
 	Py_DECREF(self);
 	Py_DECREF(attrobj);
 	Py_DECREF(rawval_list);
-	ldap_memfreeA(attr);
+	ldap_memfree(attr);
 	if (ber != NULL) {
 		ber_free(ber, 0);
 	}
@@ -335,12 +341,12 @@ PyObject *
 LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	int rc = -1;
 	int msgid = -1;
-	char *dnstr = NULL;
+	USTR *dnstr = NULL;
 	LDAPModList *mods = NULL;
 
 	/* Get DN string. */
-	dnstr = PyObject2char(self->dn);
-	if (dnstr == NULL || strlen(dnstr) == 0) {
+	dnstr = CONVERTTO(PyObject2char(self->dn), 1);
+	if (dnstr == NULL || ustrlen(dnstr) == 0) {
 		PyErr_SetString(PyExc_AttributeError, "Missing distinguished name.");
 		return NULL;
 	}
@@ -352,10 +358,10 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	}
 
 	if (mod == 0) {
-		rc = ldap_add_extA(self->conn->ld, dnstr, mods->mod_list, NULL,
+		rc = ldap_add_ext(self->conn->ld, dnstr, mods->mod_list, NULL,
 				NULL, &msgid);
 	} else {
-		rc = ldap_modify_extA(self->conn->ld, dnstr, mods->mod_list, NULL,
+		rc = ldap_modify_ext(self->conn->ld, dnstr, mods->mod_list, NULL,
 				NULL, &msgid);
 	}
 	free(dnstr);
@@ -451,7 +457,7 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
 static PyObject *
 LDAPEntry_delete(LDAPEntry *self) {
 	int msgid = -1;
-	char *dnstr;
+	USTR *dnstr;
 	PyObject *keys = PyMapping_Keys((PyObject *)self);
 	PyObject *iter, *key;
 	LDAPValueList *value;
@@ -466,11 +472,12 @@ LDAPEntry_delete(LDAPEntry *self) {
 	if (LDAPConnection_IsClosed(self->conn) != 0) return NULL;
 
 	/* Get DN string. */
-	dnstr = PyObject2char(self->dn);
+	dnstr = CONVERTTO(PyObject2char(self->dn), 1);
 	if (dnstr == NULL) return NULL;
 
 	/* Remove the entry. */
 	msgid = LDAPConnection_DelEntryStringDN(self->conn, dnstr);
+	free(dnstr);
 	if (msgid < 0) return NULL;
 
 	if (keys == NULL) return NULL;

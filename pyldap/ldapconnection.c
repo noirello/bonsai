@@ -256,12 +256,12 @@ LDAPConnection_Add(LDAPConnection *self, PyObject *args) {
 
 /*	Delete an entry with the `dnstr` distinguished name on the server. */
 int
-LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr) {
+LDAPConnection_DelEntryStringDN(LDAPConnection *self, USTR *dnstr) {
 	int msgid = -1;
 	int rc = LDAP_SUCCESS;
 
 	if (dnstr != NULL) {
-		rc = ldap_delete_extA(self->ld, dnstr, NULL, NULL, &msgid);
+		rc = ldap_delete_ext(self->ld, dnstr, NULL, NULL, &msgid);
 		if (rc != LDAP_SUCCESS) {
 			set_exception(self->ld, rc);
 			return -1;
@@ -277,17 +277,20 @@ LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr) {
 
 static PyObject *
 LDAPConnection_DelEntry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
-	char *dnstr = NULL;
+	USTR *dnstr = NULL;
+	PyObject *dnobj = NULL;
 	int msgid = -1;
 	static char *kwlist[] = {"dn", NULL};
 
 	if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist, &dnstr)) {
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!", kwlist,
+		&PyUnicode_Type, &dnobj)) {
 		PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
 		return NULL;
 	}
 
+	dnstr = CONVERTTO(PyObject2char(dnobj), 1);
 	msgid = LDAPConnection_DelEntryStringDN(self, dnstr);
 	if (msgid < 0) return NULL;
 
@@ -299,16 +302,16 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	int rc;
 	int msgid = -1;
 	int num_of_ctrls = 0;
-	LDAPControlA *page_ctrl = NULL;
-	LDAPControlA *sort_ctrl = NULL;
-	LDAPControlA **server_ctrls = NULL;
+	LDAPControl *page_ctrl = NULL;
+	LDAPControl *sort_ctrl = NULL;
+	LDAPControl **server_ctrls = NULL;
 	LDAPSearchIter *search_iter = (LDAPSearchIter *)iterator;
 
 	/* Check the number of server controls and allocate it. */
 	if (self->page_size > 1) num_of_ctrls++;
 	if (self->sort_list != NULL) num_of_ctrls++;
 	if (num_of_ctrls > 0) {
-		server_ctrls = (LDAPControlA **)malloc(sizeof(LDAPControlA *)
+		server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *)
 				* (num_of_ctrls + 1));
 		if (server_ctrls == NULL) {
 			PyErr_NoMemory();
@@ -319,7 +322,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 
 	if (self->page_size > 1) {
 		/* Create page control and add to the server controls. */
-		rc = ldap_create_page_controlA(self->ld, self->page_size,
+		rc = ldap_create_page_control(self->ld, self->page_size,
 				search_iter->cookie, 0, &page_ctrl);
 		if (rc != LDAP_SUCCESS) {
 			PyErr_BadInternalCall();
@@ -330,7 +333,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	}
 
 	if (self->sort_list != NULL) {
-		rc = ldap_create_sort_controlA(self->ld, self->sort_list, 0, &sort_ctrl);
+		rc = ldap_create_sort_control(self->ld, self->sort_list, 0, &sort_ctrl);
 		if (rc != LDAP_SUCCESS) {
 			PyErr_BadInternalCall();
 			return -1;
@@ -339,7 +342,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 		server_ctrls[num_of_ctrls] = NULL;
 	}
 
-	rc = ldap_search_extA(self->ld, search_iter->base,
+	rc = ldap_search_ext(self->ld, search_iter->base,
 				search_iter->scope,
 				search_iter->filter,
 				search_iter->attrs,
@@ -363,8 +366,8 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	}
 
 	/* Cleanup. */
-	if (page_ctrl != NULL) ldap_control_freeA(page_ctrl);
-	if (sort_ctrl != NULL) ldap_control_freeA(sort_ctrl);
+	if (page_ctrl != NULL) ldap_control_free(page_ctrl);
+	if (sort_ctrl != NULL) ldap_control_free(sort_ctrl);
 	if (server_ctrls != NULL) free(server_ctrls);
 
 	return msgid;
@@ -376,19 +379,19 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	int scope = -1;
 	int msgid = -1;
 	int timeout = 0, sizelimit = 0, attrsonly = 0;
-	char *basestr = NULL;
-	char *filterstr = NULL;
-	char **attrs = NULL;
+	USTR **attrs = NULL;
 	PyObject *attrlist  = NULL;
 	PyObject *attrsonlyo = NULL;
+	PyObject *baseobj = NULL;
+	PyObject *filterobj = NULL;
 	LDAPSearchIter *search_iter = NULL;
 	PyObject *page_size = NULL, *sort_list = NULL;
 	static char *kwlist[] = {"base", "scope", "filter", "attrlist", "timeout", "sizelimit", "attrsonly", NULL};
 
 	if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|zizO!iiO!", kwlist, &basestr, &scope, &filterstr,
-			&PyList_Type, &attrlist, &timeout, &sizelimit, &PyBool_Type, &attrsonlyo)) {
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O!iO!O!iiO!", kwlist, &PyUnicode_Type, &baseobj, &scope,
+		&PyUnicode_Type, &filterobj, &PyList_Type, &attrlist, &timeout, &sizelimit, &PyBool_Type, &attrsonlyo)) {
 		PyErr_SetString(PyExc_AttributeError,
 				"Wrong parameters (base<str|LDAPDN>, scope<int>, filter<str>, attrlist<List>, timeout<int>, attrsonly<bool>).");
 		return NULL;
@@ -424,8 +427,8 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	if (attrsonlyo != NULL) attrsonly = PyObject_IsTrue(attrsonlyo);
 	if (attrlist != NULL) attrs = PyList2StringList(attrlist);
 
-	if (LDAPSearchIter_SetParams(search_iter, attrs, attrsonly, basestr,
-			filterstr, scope, sizelimit, timeout) != 0) {
+	if (LDAPSearchIter_SetParams(search_iter, attrs, attrsonly, baseobj,
+			filterobj, scope, sizelimit, timeout) != 0) {
 		Py_DECREF(search_iter);
 		return NULL;
 	}
@@ -452,7 +455,7 @@ LDAPConnection_Whoami(LDAPConnection *self) {
 
 	if (LDAPConnection_IsClosed(self) != 0) return NULL;
 	/* Start an LDAP Who Am I operation. */
-	rc = ldap_extended_operationA(self->ld, "1.3.6.1.4.1.4203.1.11.3", NULL, NULL, NULL, &msgid);
+	rc = ldap_extended_operation(self->ld, TEXT("1.3.6.1.4.1.4203.1.11.3"), NULL, NULL, NULL, &msgid);
 
 	if (rc != LDAP_SUCCESS) {
 		set_exception(self->ld, rc);
@@ -551,9 +554,9 @@ PyObject *
 parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 	int rc = -1;
 	struct berval *authzid = NULL;
-	char *retoid = NULL;
+	USTR *retoid = NULL;
 
-	rc = ldap_parse_extended_resultA(self->ld, res, &retoid, &authzid, 1);
+	rc = ldap_parse_extended_result(self->ld, res, &retoid, &authzid, 1);
 
 	/* Remove operations from pending_ops. */
 	if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
@@ -568,14 +571,14 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 	/* LDAP Who Am I operation. */
 	/* WARNING: OpenLDAP does not send back oid for whoami operations.
 		It's gonna be really messy, if it does for any type of extended op. */
-	if (retoid == NULL || strcmp(retoid, "1.3.6.1.4.1.4203.1.11.3") == 0) {
+	if (retoid == NULL || ustrcmp(retoid, TEXT("1.3.6.1.4.1.4203.1.11.3")) == 0) {
 		if (authzid == NULL) return PyUnicode_FromString("anonymous");
 
 		if(authzid->bv_len == 0) {
 			authzid->bv_val = "anonymous";
 			authzid->bv_len = 9;
 		}
-		ldap_memfreeA(retoid);
+		ldap_memfree(retoid);
 		return PyUnicode_FromString(authzid->bv_val);
 	}
 	return NULL;

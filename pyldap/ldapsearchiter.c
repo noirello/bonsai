@@ -7,6 +7,8 @@
 #include "ldapsearchiter.h"
 #include "ldapconnection.h"
 
+#include "utils.h"
+
 /*	Dealloc the LDAPSearchIter object. */
 static void
 LDAPSearchIter_dealloc(LDAPSearchIter* self) {
@@ -65,23 +67,21 @@ LDAPSearchIter_New(LDAPConnection *conn) {
 }
 
 int
-LDAPSearchIter_SetParams(LDAPSearchIter *self, char **attrs, int attrsonly,
-		char *base, char *filter, int scope, int sizelimit, int timeout) {
+LDAPSearchIter_SetParams(LDAPSearchIter *self, USTR **attrs, int attrsonly,
+		PyObject *base, PyObject *filter, int scope, int sizelimit, int timeout) {
 	self->attrs = attrs;
 	self->attrsonly = attrsonly;
 
 	/* Copying base string and filter string, because there is no
 	 garantee that someone will not free them prematurely. */
-	self->base = (char *)malloc(sizeof(char) * (strlen(base)+1));
-	strcpy(self->base, base);
+	self->base = CONVERTTO(PyObject2char(base), 1);
 
 	/* If empty filter string is given, set to NULL. */
-	if (filter == NULL || strlen(filter) == 0) {
+	self->filter = CONVERTTO(PyObject2char(filter), 1);
+	if (self->filter == NULL || ustrlen(self->filter) == 0) {
 		self->filter = NULL;
-	} else {
-		self->filter = (char *)malloc(sizeof(char) * (strlen(filter)+1));
-		strcpy(self->filter, filter);
 	}
+
 	self->scope = scope;
 	self->sizelimit = sizelimit;
 

@@ -38,19 +38,18 @@
 #define ustrcpy(x, y) wcscpy(x, y)
 #define ustrcmp(x, y) wcscmp(x, y)
 #define ustrlen(x) wcslen(x)
-#define PyUnicode_FromUSTR(str, len) PyUnicode_FromKindAndData(sizeof(wchar_t), str, len)
 #define ustrfree(x) free(x)
 
 #define _ldap_rename ldap_rename_extA
 
 typedef struct ldapConnectionInfo_s {
-	char *binddn;
-	char *mech;
-	char *authzid;
+	USTR *binddn;
+	USTR *mech;
+	USTR *authzid;
 	SEC_WINNT_AUTH_IDENTITY *creds;
 	CredHandle *credhandle;
 	CtxtHandle *ctxhandle;
-	char *targetName;
+	USTR *targetName;
 	/* For the thread. */
 	LDAP *ld;
 	HANDLE thread;
@@ -81,7 +80,6 @@ wchar_t *convert_to_wcs(char *tmp, int freeit);
 #define ustrcpy(x, y) strcpy(x, y)
 #define ustrcmp(x, y) strcmp(x, y)
 #define ustrlen(x) strlen(x)
-#define PyUnicode_FromUSTR(str, len) PyUnicode_FromStringAndSize(str, len)
 #define TEXT(str) (str)
 #define ustrfree(str) ()
 
@@ -120,5 +118,7 @@ int LDAP_abandon(LDAP *ld, int msgid);
 void *create_conn_info(char *mech, PyObject *creds);
 int update_conn_info(LDAP *ld, ldapConnectionInfo *info);
 void dealloc_conn_info(ldapConnectionInfo* info);
+
+PyObject *PyUnicode_FromUSTR(USTR *str);
 
 #endif /* PYLDAP_LDAP_XPLAT_H_ */

@@ -56,7 +56,7 @@ LDAPModList_New(PyObject* entry, unsigned short int size) {
 	LDAPModList *self = (LDAPModList *)LDAPModListType.tp_new(&LDAPModListType, NULL, NULL);
 	if (self == NULL) return NULL;
 	/*  Malloc a new `size` length LDAPMod list. */
-	self->mod_list  = (LDAPModA **)malloc(sizeof(LDAPModA *) * (size + 1));
+	self->mod_list  = (LDAPMod **)malloc(sizeof(LDAPMod *) * (size + 1));
 	if (self->mod_list != NULL) self->mod_list[0] = NULL;
 	self->size = size;
 	self->entry = entry;
@@ -65,15 +65,15 @@ LDAPModList_New(PyObject* entry, unsigned short int size) {
 
 int
 LDAPModList_Add(LDAPModList *self, int mod_op, PyObject *key, PyObject *value) {
-	LDAPModA *mod;
+	LDAPMod *mod;
 
 	/* Malloc a new LDAPMod struct. */
-	mod = (LDAPModA *)malloc(sizeof(LDAPModA));
+	mod = (LDAPMod *)malloc(sizeof(LDAPMod));
 	if (mod == NULL) return -1;
 
 	/* Set the values with the parameters. */
 	mod->mod_op = mod_op;
-	mod->mod_type = PyObject2char(key);
+	mod->mod_type = CONVERTTO(PyObject2char(key), 1);
 	mod->mod_vals.modv_bvals = PyList2BervalList(value);
 
 	/* Add to the next free slot, if there is one. */
@@ -90,15 +90,19 @@ LDAPModList_Add(LDAPModList *self, int mod_op, PyObject *key, PyObject *value) {
 PyObject *
 LDAPModList_Pop(LDAPModList *self) {
 	int i;
-	LDAPModA *mod;
+	LDAPMod *mod;
 	PyObject *berval = NULL;
 	PyObject *ret = NULL;
+	PyObject *mod_type = NULL;
 	UniqueList *list = NULL;
 	struct berval **mod_bvals;
 
 	if (self->last > 0) {
 		mod = self->mod_list[--self->last];
 		mod_bvals = mod->mod_vals.modv_bvals;
+
+		mod_type = PyUnicode_FromUSTR(mod->mod_type);
+		if (mod_type == NULL) return NULL;
 
 		if (mod_bvals != NULL) {
 			list = UniqueList_New();
@@ -117,10 +121,10 @@ LDAPModList_Pop(LDAPModList *self) {
 			}
 			free(mod->mod_vals.modv_bvals);
 			/* Create tuple with return values. */
-			ret = Py_BuildValue("(ziO)", mod->mod_type,
+			ret = Py_BuildValue("(OiO)", mod_type,
 					mod->mod_op ^ LDAP_MOD_BVALUES, (PyObject *)list);
 		} else {
-			ret = Py_BuildValue("(ziO)", mod->mod_type,
+			ret = Py_BuildValue("(OiO)", mod_type,
 					mod->mod_op ^ LDAP_MOD_BVALUES, Py_None);
 		}
 		/* Free LDAPMod and Move NULL to the new end of the LDAPMods. */

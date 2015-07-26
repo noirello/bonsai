@@ -15,7 +15,7 @@
 
 typedef struct {
 	PyObject_HEAD
-	LDAPModA **mod_list;
+	LDAPMod **mod_list;
 	unsigned short int last;
 	unsigned short int size;
 	PyObject *entry;

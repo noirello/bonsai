@@ -1,4 +1,4 @@
-import configparser
+﻿import configparser
 import unittest
 
 from pyldap import LDAPClient
@@ -95,10 +95,10 @@ class LDAPEntryTest(unittest.TestCase):
         """ Test adding entry with special character in its DN. """
         self.client.set_credentials(*self.creds)
         conn = self.client.connect()
-        dname = "cn=test_\u00B5\u010D\u0F57,%s" % self.basedn
+        dname = "cn=test_µčབྷ,%s" % self.basedn
         entry = LDAPEntry(dname)
         entry['objectclass'] = ['top', 'inetOrgPerson']
-        entry['sn'] = "unicode_\u00B5\u010D\u0F57"
+        entry['sn'] = "unicode_µčབྷ"
         conn.add(entry)
         result = conn.search(dname, 0)
         entry.delete()
