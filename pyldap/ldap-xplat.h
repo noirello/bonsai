@@ -43,13 +43,13 @@
 #define _ldap_rename ldap_rename_extA
 
 typedef struct ldapConnectionInfo_s {
-	USTR *binddn;
-	USTR *mech;
-	USTR *authzid;
+	char *binddn;
+	char *mech;
+	char *authzid;
 	SEC_WINNT_AUTH_IDENTITY *creds;
 	CredHandle *credhandle;
 	CtxtHandle *ctxhandle;
-	USTR *targetName;
+	char *targetName;
 	/* For the thread. */
 	LDAP *ld;
 	HANDLE thread;

@@ -311,7 +311,7 @@ ldap_thread_bind(void *param) {
 	ldapConnectionInfo *info = (ldapConnectionInfo *)param;
 
 	do {
-		if (ustrcmp(info->mech, TEXT("SIMPLE")) != 0) {
+		if (strcmp(info->mech, "SIMPLE") != 0) {
 			/* Use SASL bind. */
 			if (response == NULL) {
 				/* First function call, no server response. */
@@ -322,7 +322,7 @@ ldap_thread_bind(void *param) {
 				out_buff.BufferType = SECBUFFER_TOKEN;
 				out_buff.pvBuffer = NULL;
 
-				rc = InitializeSecurityContext(info->credhandle, NULL, info->targetName, ISC_REQ_MUTUAL_AUTH | ISC_REQ_ALLOCATE_MEMORY,
+				rc = InitializeSecurityContextA(info->credhandle, NULL, info->targetName, ISC_REQ_MUTUAL_AUTH | ISC_REQ_ALLOCATE_MEMORY,
 					0, 0, NULL, 0, info->ctxhandle, &out_buff_desc, &contextattr, NULL);
 			} else {
 				/* Set server response as an input buffer. */
@@ -339,7 +339,7 @@ ldap_thread_bind(void *param) {
 					input = output;
 					rc = encrypt_reply(info->ctxhandle, input, len, &output, &len);
 				} else {
-					rc = InitializeSecurityContext(info->credhandle, info->ctxhandle, info->targetName, ISC_REQ_MUTUAL_AUTH |
+					rc = InitializeSecurityContextA(info->credhandle, info->ctxhandle, info->targetName, ISC_REQ_MUTUAL_AUTH |
 						ISC_REQ_ALLOCATE_MEMORY, 0, 0, &in_buff_desc, 0, info->ctxhandle, &out_buff_desc, &contextattr, NULL);
 				}
 			}
@@ -350,7 +350,7 @@ ldap_thread_bind(void *param) {
 				CompleteAuthToken(info->ctxhandle, &out_buff_desc);
 				break;
 			case SEC_E_OK:
-				if (ustrcmp(info->mech, TEXT("GSSAPI")) == 0) {
+				if (strcmp(info->mech, "GSSAPI") == 0) {
 					gssapi_decrpyt = 1;
 				}
 				break;
@@ -371,13 +371,13 @@ ldap_thread_bind(void *param) {
 				cred.bv_val = output;
 			}
 			/* Empty binddn is needed to change "" to avoid param error. */
-			if (info->binddn == NULL) info->binddn = TEXT("");
-			rc = ldap_sasl_bind_s(info->ld, info->binddn, info->mech, &cred, NULL, NULL, &response);
+			if (info->binddn == NULL) info->binddn = "";
+			rc = ldap_sasl_bind_sA(info->ld, info->binddn, info->mech, &cred, NULL, NULL, &response);
 			/* Get the last error code form the LDAP struct. */
 			ldap_get_option(info->ld, LDAP_OPT_ERROR_NUMBER, &rc);
 		} else {
 			/* Use simple bind with bind DN and password. */
-			rc = ldap_simple_bind_s(info->ld, info->binddn, (USTR *)(info->creds->Password));
+			rc = ldap_simple_bind_sA(info->ld, info->binddn, (char *)(info->creds->Password));
 		}
 	} while (rc == LDAP_SASL_BIND_IN_PROGRESS);
 
@@ -416,12 +416,12 @@ create_conn_info(char *mech, PyObject *creds) {
 	int rc = -1;
 	ldapConnectionInfo *defaults = NULL;
 	PyObject *tmp = NULL;
-	USTR *secpack = NULL;
-	USTR *authcid = NULL;
-	USTR *authzid = NULL;
-	USTR *binddn = NULL;
-	USTR *passwd = NULL;
-	USTR *realm = NULL;
+	char *secpack = NULL;
+	char *authcid = NULL;
+	char *authzid = NULL;
+	char *binddn = NULL;
+	char *passwd = NULL;
+	char *realm = NULL;
 	SEC_WINNT_AUTH_IDENTITY *wincreds = NULL;
 
 	wincreds = (SEC_WINNT_AUTH_IDENTITY *)malloc(sizeof(SEC_WINNT_AUTH_IDENTITY));
@@ -449,51 +449,51 @@ create_conn_info(char *mech, PyObject *creds) {
 		return (void *)PyErr_NoMemory();
 	}
 
-	defaults->mech = CONVERTTO(mech, 1);
+	defaults->mech = mech;
 
 	/* Get credential information, if it's given. */
 	if (PyTuple_Check(creds) && PyTuple_Size(creds) > 1) {
-		if (ustrcmp(defaults->mech, TEXT("SIMPLE")) == 0) {
+		if (strcmp(defaults->mech, "SIMPLE") == 0) {
 			tmp = PyTuple_GetItem(creds, 0);
-			binddn = CONVERTTO(PyObject2char(tmp), 1);
+			binddn = PyObject2char(tmp);
 		}
 		else {
 			tmp = PyTuple_GetItem(creds, 0);
-			authcid = CONVERTTO(PyObject2char(tmp), 1);
+			authcid = PyObject2char(tmp);
 			tmp = PyTuple_GetItem(creds, 2);
-			realm = CONVERTTO(PyObject2char(tmp), 1);
+			realm = PyObject2char(tmp);
 		}
 		tmp = PyTuple_GetItem(creds, 1);
-		passwd = CONVERTTO(PyObject2char(tmp), 1);
+		passwd = PyObject2char(tmp);
 	}
 
 	wincreds->User = (unsigned short *)authcid;
-	if (authcid != NULL) wincreds->UserLength = (unsigned long)ustrlen(authcid);
+	if (authcid != NULL) wincreds->UserLength = (unsigned long)strlen(authcid);
 	else wincreds->UserLength = 0;
 	wincreds->Password = (unsigned short *)passwd;
-	if (passwd != NULL) wincreds->PasswordLength = (unsigned long)ustrlen(passwd);
+	if (passwd != NULL) wincreds->PasswordLength = (unsigned long)strlen(passwd);
 	else wincreds->PasswordLength = 0;
 	wincreds->Domain = (unsigned short *)realm;
-	if (realm != NULL) wincreds->DomainLength = (unsigned long)ustrlen(realm);
+	if (realm != NULL) wincreds->DomainLength = (unsigned long)strlen(realm);
 	else wincreds->DomainLength = 0;
 
-	wincreds->Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;
+	wincreds->Flags = SEC_WINNT_AUTH_IDENTITY_ANSI;
 
 	defaults->authzid = authzid;
 	defaults->binddn = binddn;
 	defaults->creds = wincreds;
 	defaults->targetName = NULL;
 
-	if (ustrcmp(defaults->mech, TEXT("SIMPLE")) != 0) {
+	if (strcmp(defaults->mech, "SIMPLE") != 0) {
 		/* Select corresponding security packagename from the mechanism name. */
-		if (ustrcmp(defaults->mech, TEXT("DIGEST-MD5")) == 0) {
-			secpack = TEXT("WDigest");
-		} else if (ustrcmp(defaults->mech, TEXT("GSSAPI")) == 0) {
-			secpack = TEXT("Kerberos");
+		if (strcmp(defaults->mech, "DIGEST-MD5") == 0) {
+			secpack = "WDigest";
+		} else if (strcmp(defaults->mech, "GSSAPI") == 0) {
+			secpack = "Kerberos";
 		}
 
 		/* Create credential handler. */
-		rc = AcquireCredentialsHandle(NULL, secpack, SECPKG_CRED_OUTBOUND, NULL, wincreds, NULL, NULL, defaults->credhandle, NULL);
+		rc = AcquireCredentialsHandleA(NULL, secpack, SECPKG_CRED_OUTBOUND, NULL, wincreds, NULL, NULL, defaults->credhandle, NULL);
 		if (rc != SEC_E_OK) {
 			PyErr_BadInternalCall();
 			return NULL;
@@ -506,12 +506,12 @@ create_conn_info(char *mech, PyObject *creds) {
 int
 update_conn_info(LDAP *ld, ldapConnectionInfo *info) {
 	/* Copy hostname from LDAP struct to create a valid targetName(SPN). */
-	info->targetName = (USTR *)malloc(strlen(ld->ld_host) + 6);
+	info->targetName = (char *)malloc(strlen(ld->ld_host) + 6);
 	if (info->targetName == NULL) {
 		PyErr_NoMemory();
 		return -1;
 	}
-	swprintf_s(info->targetName, strlen(ld->ld_host) + 6, TEXT("ldap/%hs"), ld->ld_host);
+	sprintf_s(info->targetName, strlen(ld->ld_host) + 6, "ldap/%hs", ld->ld_host);
 	return 0;
 }
 
@@ -519,7 +519,7 @@ update_conn_info(LDAP *ld, ldapConnectionInfo *info) {
 void
 dealloc_conn_info(ldapConnectionInfo* info) {
 	if (info->authzid) free(info->authzid);
-	if (info->binddn && ustrcmp(info->binddn, TEXT("")) != 0) free(info->binddn);
+	if (info->binddn && strcmp(info->binddn, "") != 0) free(info->binddn);
 	if (info->mech) free(info->mech);
 	if (info->targetName) free(info->targetName);
 	if (info->credhandle) free(info->credhandle);
