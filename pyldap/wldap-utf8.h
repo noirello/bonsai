@@ -34,6 +34,7 @@
 #undef ldap_parse_extended_result
 #undef ldap_parse_result
 #undef ldap_err2string
+#undef ldap_memfree
 
 #define ldap_get_dn ldap_get_dnU
 #define ldap_add_ext ldap_add_extU
@@ -48,6 +49,7 @@
 #define ldap_parse_extended_result ldap_parse_extended_resultU
 #define ldap_parse_result ldap_parse_resultU
 #define ldap_err2string ldap_err2stringU
+#define ldap_memfree free
 
 typedef struct sasl_defaults_s {
 	SEC_WINNT_AUTH_IDENTITY_W *creds;

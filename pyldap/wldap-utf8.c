@@ -2,6 +2,45 @@
 
 #include "wldap-utf8.h"
 
+/* Get size of a list by reaching the terminating NULL. */
+static int
+get_size(void **list) {
+	int size = 0;
+
+	if (list == NULL) return 0;
+
+	while (list[size] != NULL) size++;
+
+	return size;
+}
+
+static void
+copy_list(void **list, void **newlist, void *copyfunc(void *), int *failed) {
+	int i = 0;
+
+	*failed = 0;
+	for (i = 0; list[i] != NULL; i++) {
+		newlist[i] = (copyfunc)((void *)(list[i]));
+		if (newlist[i] == NULL) {
+			*failed = 1;
+			break;
+		}
+	}
+	newlist[i] = NULL;
+}
+
+static void
+free_list(void **list, void *freefunc(void*)) {
+	int i = 0;
+
+	if (list != NULL) {
+		for (i = 0; list[i] != NULL; i++) {
+			(freefunc)(list[i]);
+		}
+		free(list);
+	}
+}
+
 static char *
 convert_to_mbs(wchar_t *tmp) {
 	char *str = NULL;
@@ -57,12 +96,12 @@ convert_to_wcs(char *tmp) {
 static wchar_t **
 convert_char_list(char **list) {
 	int size = 0;
-	int i = 0;
-	char *tmp = NULL;
+	int failed = 0;
 	wchar_t **wlist = NULL;
 
-	/* Get the size of the list by reaching the terminating NULL. */
-	while (list[size] != NULL) size++;
+	if (list == NULL) return NULL;
+
+	size = get_size((void **)list);
 
 	wlist = (wchar_t **)malloc(sizeof(wchar_t *) * (size + 1));
 	if (wlist == NULL) {
@@ -70,32 +109,24 @@ convert_char_list(char **list) {
 		return NULL;
 	}
 
-	for (tmp = list[i]; tmp != NULL; i++) {
-		wlist[i] = convert_to_wcs(tmp);
-		if (wlist[i] == NULL) return NULL;
+	copy_list((void **)list, (void **)wlist, (void *)convert_to_wcs, &failed);
+
+	if (failed) {
+		/* At least one of the item's conversion is failed,
+		   thus the list is not converted properly. */
+		free_list((void **)wlist, (void *)free);
+		return NULL;
 	}
-	wlist[i] = NULL;
 
 	return wlist;
 }
-
-static void
-free_char_list(wchar_t **list) {
-	int i = 0;
-	wchar_t *tmp = NULL;
-
-	if (list != NULL) {
-		for (tmp = list[i]; tmp != NULL; i++) {
-			free(tmp);
-		}
-	}
-}
-
 
 static LDAPControlW *
 convert_ctrl(LDAPControlA *ctrl) {
 	wchar_t *woid = NULL;
 	LDAPControlW *wctrl = NULL;
+
+	if (ctrl == NULL) return NULL;
 
 	wctrl = (LDAPControlW *)malloc(sizeof(LDAPControlW));
 	if (wctrl == NULL) {
@@ -123,38 +154,28 @@ free_ctrl(LDAPControlW *ctrl) {
 static LDAPControlW **
 convert_ctrl_list(LDAPControlA **ctrls) {
 	int size = 0;
-	int i = 0;
-	LDAPControlA *tmp = NULL;
+	int failed = 0;
 	LDAPControlW **wctrls = NULL;
 
-	/* Get the size of the list by reaching the terminating NULL. */
-	while (ctrls[size] != NULL) size++;
+	if (ctrls == NULL) return NULL;
 
+	size = get_size((void **)ctrls);
 	wctrls = (LDAPControlW **)malloc(sizeof(LDAPControlW *) * (size + 1));
 	if (wctrls == NULL) {
 		PyErr_NoMemory();
 		return NULL;
 	}
 
-	for (tmp = ctrls[i]; tmp != NULL; i++) {
-		wctrls[i] = convert_ctrl(tmp);
-		if (wctrls[i] == NULL) return NULL;
+	copy_list((void **)ctrls, (void **)wctrls, (void *)convert_ctrl, &failed);
+
+	if (failed) {
+		/* At least one of the item's conversion is failed,
+		thus the list is not converted properly. */
+		free_list((void **)wctrls, (void *)free_ctrl);
+		return NULL;
 	}
-	wctrls[i] = NULL;
 
 	return wctrls;
-}
-
-static void
-free_ctrl_list(LDAPControlW **ctrls) {
-	int i = 0;
-	LDAPControlW *tmp = NULL;
-	
-	if (ctrls != NULL) {
-		for (tmp = ctrls[i]; tmp != NULL; i++) {
-			free_ctrl(tmp);
-		}
-	}
 }
 
 static LDAPModW *
@@ -162,6 +183,8 @@ convert_mod(LDAPModA *mod) {
 	wchar_t *wtype = NULL;
 	wchar_t **list = NULL;
 	LDAPModW *wmod = NULL;
+
+	if (mod == NULL) return NULL;
 
 	wmod = (LDAPModW *)malloc(sizeof(LDAPModW));
 	if (wmod == NULL) {
@@ -185,7 +208,7 @@ static void
 free_mod(LDAPModW *mod) {
 	if (mod != NULL) {
 		if (mod->mod_type) free(mod->mod_type);
-		if (mod->mod_vals.modv_strvals) free_char_list(mod->mod_vals.modv_strvals);
+		if (mod->mod_vals.modv_strvals) free_list((void **)(mod->mod_vals.modv_strvals), (void *)free);
 		free(mod);
 	}
 }
@@ -193,38 +216,28 @@ free_mod(LDAPModW *mod) {
 static LDAPModW **
 convert_mod_list(LDAPModA **mods) {
 	int size = 0;
-	int i = 0;
-	LDAPModA *tmp = NULL;
+	int failed = 0;
 	LDAPModW **wmods = NULL;
 
-	/* Get the size of the list by reaching the terminating NULL. */
-	while (mods[size] != NULL) size++;
+	if (mods == NULL) return NULL;
 
+	size = get_size((void **)mods);
 	wmods = (LDAPModW **)malloc(sizeof(LDAPModW *) * (size + 1));
 	if (wmods == NULL) {
 		PyErr_NoMemory();
 		return NULL;
 	}
 
-	for (tmp = mods[i]; tmp != NULL; i++) {
-		wmods[i] = convert_mod(tmp);
-		if (wmods[i] == NULL) return NULL;
+	copy_list((void **)mods, (void **)wmods, (void *)convert_mod, &failed);
+
+	if (failed) {
+		/* At least one of the item's conversion is failed,
+		thus the list is not converted properly. */
+		free_list((void **)wmods, (void *)free_mod);
+		return NULL;
 	}
-	wmods[i] = NULL;
 
 	return wmods;
-}
-
-static void
-free_mod_list(LDAPModW **mods) {
-	int i = 0;
-	LDAPModW *tmp = NULL;
-
-	if (mods != NULL) {
-		for (tmp = mods[i]; tmp != NULL; i++) {
-			free_mod(tmp);
-		}
-	}
 }
 
 static LDAPSortKeyW *
@@ -232,6 +245,8 @@ convert_sortkey(LDAPSortKeyA *sortkey) {
 	wchar_t *attrtype = NULL;
 	wchar_t *ruleoid = NULL;
 	LDAPSortKeyW *wsortkey = NULL;
+
+	if (sortkey == NULL) return NULL;
 
 	wsortkey = (LDAPSortKeyW *)malloc(sizeof(LDAPSortKeyW));
 	if (wsortkey == NULL) {
@@ -261,38 +276,28 @@ free_sortkey(LDAPSortKeyW *sortkey) {
 static LDAPSortKeyW **
 convert_sortkey_list(LDAPSortKeyA **keylist) {
 	int size = 0;
-	int i = 0;
-	LDAPSortKeyA *tmp = NULL;
+	int failed = 0;
 	LDAPSortKeyW **wkeylist = NULL;
+	
+	if (keylist == NULL) return NULL;
 
-	/* Get the size of the list by reaching the terminating NULL. */
-	while (keylist[size] != NULL) size++;
-
+	size = get_size((void **)keylist);
 	wkeylist = (LDAPSortKeyW **)malloc(sizeof(LDAPSortKeyW *) * (size + 1));
 	if (wkeylist == NULL) {
 		PyErr_NoMemory();
 		return NULL;
 	}
 
-	for (tmp = keylist[i]; tmp != NULL; i++) {
-		wkeylist[i] = convert_sortkey(tmp);
-		if (wkeylist[i] == NULL) return NULL;
+	copy_list((void **)keylist, (void **)wkeylist, (void *)convert_sortkey, &failed);
+
+	if (failed) {
+		/* At least one of the item's conversion is failed,
+		thus the list is not converted properly. */
+		free_list((void **)wkeylist, (void *)free_sortkey);
+		return NULL;
 	}
-	wkeylist[i] = NULL;
 
 	return wkeylist;
-}
-
-static void
-free_sortkey_list(LDAPSortKeyW **keylist) {
-	int i = 0;
-	LDAPSortKeyW *tmp = NULL;
-
-	if (keylist != NULL) {
-		for (tmp = keylist[i]; tmp != NULL; i++) {
-			free_sortkey(tmp);
-		}
-	}
 }
 
 int
@@ -335,9 +340,9 @@ ldap_add_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAPCon
 
 	rc = ldap_add_extW(ld, wdn, wattrs, wsctrls, wcctrls, msgidp);
 
-	free_ctrl_list(wsctrls);
-	free_ctrl_list(wcctrls);
-	free_mod_list(wattrs);
+	free_list((void **)wsctrls, (void *)free_ctrl);
+	free_list((void **)wcctrls, (void *)free_ctrl);
+	free_list((void **)wattrs, (void *)free_mod);
 
 	return rc;
 }
@@ -358,9 +363,9 @@ ldap_modify_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAP
 
 	rc = ldap_modify_extW(ld, wdn, wattrs, wsctrls, wcctrls, msgidp);
 
-	free_ctrl_list(wsctrls);
-	free_ctrl_list(wcctrls);
-	free_mod_list(wattrs);
+	free_list((void **)wsctrls, (void *)free_ctrl);
+	free_list((void **)wcctrls, (void *)free_ctrl);
+	free_list((void **)wattrs, (void *)free_mod);
 
 	return rc;
 }
@@ -429,8 +434,8 @@ ldap_renameU(LDAP *ld, char *dn, char *newrdn, char *newSuperior, int deleteoldr
 	if (wdn) free(wdn);
 	if (wnewrdn) free(wnewrdn);
 	if (wnewSuperior) free(wnewSuperior);
-	free_ctrl_list(wsctrls);
-	free_ctrl_list(wcctrls);
+	free_list((void **)wsctrls, (void *)free_ctrl);
+	free_list((void **)wcctrls, (void *)free_ctrl);
 
 	return rc;
 }
@@ -464,9 +469,9 @@ ldap_search_extU(LDAP *ld, char *base, int scope, char *filter, char **attrs, in
 
 	if (wbase) free(wbase);
 	if (wfilter) free(wfilter);
-	free_char_list(wattrs);
-	free_ctrl_list(wsctrls);
-	free_ctrl_list(wcctrls);
+	free_list((void **)wattrs, (void *)free);
+	free_list((void **)wsctrls, (void *)free_ctrl);
+	free_list((void **)wcctrls, (void *)free_ctrl);
 
 	return rc;
 }
@@ -482,7 +487,7 @@ ldap_create_sort_controlU(LDAP *ld, LDAPSortKey **keyList, int iscritical, LDAPC
 
 	rc = ldap_create_sort_controlW(ld, wkeylist, iscritical, &wctrlp);
 
-	free_sortkey_list(wkeylist);
+	free_list((void **)wkeylist, (void *)free_sortkey);
 
 	ret = (LDAPControlA *)malloc(sizeof(LDAPControlA));
 	if (ret == NULL) {
@@ -517,8 +522,8 @@ ldap_extended_operationU(LDAP *ld, char *reqoid, struct berval *reqdata, LDAPCon
 	rc = ldap_extended_operationW(ld, woid, reqdata, wsctrls, wcctrls, msgidp);
 
 	if (woid) free(woid);
-	free_ctrl_list(wsctrls);
-	free_ctrl_list(wcctrls);
+	free_list((void **)wsctrls, (void *)free_ctrl);
+	free_list((void **)wcctrls, (void *)free_ctrl);
 
 	return rc;
 }
@@ -532,12 +537,12 @@ ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct b
 	wchar_t *wretoid = NULL;
 
 	rc = ldap_parse_extended_resultW(ld, res, &wretoid, retdatap, freeit);
-
 	oid = convert_to_mbs(wretoid);
 
 	if (wretoid) ldap_memfreeW(wretoid);
 
 	*retoidp = oid;
+
 	return rc;
 }
 
@@ -724,8 +729,8 @@ ldap_sasl_interactive_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl *
 	
 	if (wdn) free(wdn);
 	if (wmech) free(wmech);
-	free_ctrl_list(wsctrls);
-	free_ctrl_list(wcctrls);
+	free_list((void **)wsctrls, (void *)free_ctrl);
+	free_list((void **)wcctrls, (void *)free_ctrl);
 
 	return rc;
 }
