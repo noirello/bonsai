@@ -54,6 +54,44 @@ convert_to_wcs(char *tmp) {
 	return str;
 }
 
+static wchar_t **
+convert_char_list(char **list) {
+	int size = 0;
+	int i = 0;
+	char *tmp = NULL;
+	wchar_t **wlist = NULL;
+
+	/* Get the size of the list by reaching the terminating NULL. */
+	while (list[size] != NULL) size++;
+
+	wlist = (wchar_t **)malloc(sizeof(wchar_t *) * (size + 1));
+	if (wlist == NULL) {
+		PyErr_NoMemory();
+		return NULL;
+	}
+
+	for (tmp = list[i]; tmp != NULL; i++) {
+		wlist[i] = convert_to_wcs(tmp);
+		if (wlist[i] == NULL) return NULL;
+	}
+	wlist[i] = NULL;
+
+	return wlist;
+}
+
+static void
+free_char_list(wchar_t **list) {
+	int i = 0;
+	wchar_t *tmp = NULL;
+
+	if (list != NULL) {
+		for (tmp = list[i]; tmp != NULL; i++) {
+			free(tmp);
+		}
+	}
+}
+
+
 static LDAPControlW *
 convert_ctrl(LDAPControlA *ctrl) {
 	wchar_t *woid = NULL;
@@ -189,43 +227,6 @@ free_mod_list(LDAPModW **mods) {
 	}
 }
 
-static wchar_t **
-convert_char_list(char **list) {
-	int size = 0;
-	int i = 0;
-	char *tmp = NULL;
-	wchar_t **wlist = NULL;
-
-	/* Get the size of the list by reaching the terminating NULL. */
-	while (list[size] != NULL) size++;
-
-	wlist = (wchar_t **)malloc(sizeof(wchar_t *) * (size + 1));
-	if (wlist == NULL) {
-		PyErr_NoMemory();
-		return NULL;
-	}
-
-	for (tmp = list[i]; tmp != NULL; i++) {
-		wlist[i] = convert_ctrl(tmp);
-		if (wlist[i] == NULL) return NULL;
-	}
-	wlist[i] = NULL;
-
-	return wlist;
-}
-
-static void
-free_char_list(wchar_t **list) {
-	int i = 0;
-	wchar_t *tmp = NULL;
-
-	if (list != NULL) {
-		for (tmp = list[i]; tmp != NULL; i++) {
-			free(tmp);
-		}
-	}
-}
-
 static LDAPSortKeyW *
 convert_sortkey(LDAPSortKeyA *sortkey) {
 	wchar_t *attrtype = NULL;
@@ -267,7 +268,7 @@ convert_sortkey_list(LDAPSortKeyA **keylist) {
 	/* Get the size of the list by reaching the terminating NULL. */
 	while (keylist[size] != NULL) size++;
 
-	wkeylist = (wchar_t **)malloc(sizeof(LDAPSortKeyW *) * (size + 1));
+	wkeylist = (LDAPSortKeyW **)malloc(sizeof(LDAPSortKeyW *) * (size + 1));
 	if (wkeylist == NULL) {
 		PyErr_NoMemory();
 		return NULL;
@@ -323,7 +324,7 @@ ldap_add_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAPCon
 		int *msgidp) {
 	
 	int rc = 0;
-	wchar_t wdn = NULL;
+	wchar_t *wdn = NULL;
 	LDAPModW **wattrs = NULL;
 	LDAPControlW **wsctrls = NULL;
 	LDAPControlW **wcctrls = NULL;
@@ -346,7 +347,7 @@ ldap_modify_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAP
 		int *msgidp) {
 	
 	int rc = 0;
-	wchar_t wdn = NULL;
+	wchar_t *wdn = NULL;
 	LDAPModW **wattrs = NULL;
 	LDAPControlW **wsctrls = NULL;
 	LDAPControlW **wcctrls = NULL;
@@ -367,7 +368,7 @@ ldap_modify_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAP
 char *
 ldap_first_attributeU(LDAP *ld, LDAPMessage *entry, BerElement **ber) {
 	char *attr = NULL;
-	wchar_t wattr = NULL;
+	wchar_t *wattr = NULL;
 
 	wattr = ldap_first_attributeW(ld, entry, ber);
 
@@ -381,7 +382,7 @@ ldap_first_attributeU(LDAP *ld, LDAPMessage *entry, BerElement **ber) {
 char *
 ldap_next_attributeU(LDAP *ld, LDAPMessage *entry, BerElement *ber) {
 	char *attr = NULL;
-	wchar_t wattr = NULL;
+	wchar_t *wattr = NULL;
 
 	wattr = ldap_next_attributeW(ld, entry, ber);
 
@@ -715,7 +716,7 @@ ldap_sasl_interactive_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl *
 		
 		/* NULL binddn is needed to change empty string to avoid param error. */
 		if (wdn == NULL) wdn = L"";
-		rc = ldap_sasl_bind_sW(ld, wdn, wmech, &cred, wsctrls, wcctrls, response);
+		rc = ldap_sasl_bind_sW(ld, wdn, wmech, &cred, wsctrls, wcctrls, &response);
 		
 		/* Get the last error code from the LDAP struct. */
 		ldap_get_option(ld, LDAP_OPT_ERROR_NUMBER, &rc);

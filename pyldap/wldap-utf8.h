@@ -49,13 +49,13 @@
 #define ldap_parse_result ldap_parse_resultU
 #define ldap_err2string ldap_err2stringU
 
-typedef int(LDAP_SASL_INTERACT_PROC) (LDAP *ld, sasl_defaults_t *defaults, struct berval *response, struct berval *cred);
-
 typedef struct sasl_defaults_s {
 	SEC_WINNT_AUTH_IDENTITY_W *creds;
 	CredHandle *credhandle;
 	CtxtHandle *ctxhandle;
 } sasl_defaults_t;
+
+typedef int(LDAP_SASL_INTERACT_PROC) (LDAP *ld, sasl_defaults_t *defaults, struct berval *response, struct berval *cred);
 
 int ldap_unbind_ext(LDAP *ld, LDAPControl **sctrls, LDAPControl	**cctrls);
 int ldap_abandon_ext(LDAP *ld, int msgid, LDAPControl **sctrls, LDAPControl	**cctrls);
