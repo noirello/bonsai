@@ -180,8 +180,6 @@ convert_ctrl_list(LDAPControlA **ctrls) {
 
 static LDAPModW *
 convert_mod(LDAPModA *mod) {
-	wchar_t *wtype = NULL;
-	wchar_t **list = NULL;
 	LDAPModW *wmod = NULL;
 
 	if (mod == NULL) return NULL;
@@ -193,13 +191,13 @@ convert_mod(LDAPModA *mod) {
 	}
 
 	wmod->mod_op = mod->mod_op;
-	wmod->mod_vals.modv_bvals = mod->mod_vals.modv_bvals;
-	
-	list = convert_char_list(mod->mod_vals.modv_strvals);
-	wmod->mod_vals.modv_strvals = list;
 
-	wtype = convert_to_wcs(mod->mod_type);
-	wmod->mod_type = wtype;
+	if ((wmod->mod_op & LDAP_MOD_BVALUES) == LDAP_MOD_BVALUES) {
+		wmod->mod_vals.modv_bvals = mod->mod_vals.modv_bvals;
+	} else {
+		wmod->mod_vals.modv_strvals = convert_char_list(mod->mod_vals.modv_strvals);
+	}
+	wmod->mod_type = convert_to_wcs(mod->mod_type);
 
 	return wmod;
 }
@@ -334,12 +332,14 @@ ldap_add_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAPCon
 	LDAPControlW **wsctrls = NULL;
 	LDAPControlW **wcctrls = NULL;
 
+	wdn = convert_to_wcs(dn);
 	wsctrls = convert_ctrl_list(sctrls);
 	wcctrls = convert_ctrl_list(cctrls);
 	wattrs = convert_mod_list(attrs);
 
 	rc = ldap_add_extW(ld, wdn, wattrs, wsctrls, wcctrls, msgidp);
 
+	if (wdn) free(wdn);
 	free_list((void **)wsctrls, (void *)free_ctrl);
 	free_list((void **)wcctrls, (void *)free_ctrl);
 	free_list((void **)wattrs, (void *)free_mod);
@@ -357,12 +357,14 @@ ldap_modify_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAP
 	LDAPControlW **wsctrls = NULL;
 	LDAPControlW **wcctrls = NULL;
 
+	wdn = convert_to_wcs(dn);
 	wsctrls = convert_ctrl_list(sctrls);
 	wcctrls = convert_ctrl_list(cctrls);
 	wattrs = convert_mod_list(attrs);
 
 	rc = ldap_modify_extW(ld, wdn, wattrs, wsctrls, wcctrls, msgidp);
 
+	if (wdn) free(wdn);
 	free_list((void **)wsctrls, (void *)free_ctrl);
 	free_list((void **)wcctrls, (void *)free_ctrl);
 	free_list((void **)wattrs, (void *)free_mod);
@@ -609,61 +611,62 @@ ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp,
 	int i = 0;
 	int rc = 0;
 	int size = 0;
+	char *err = NULL;
 	char **refs = NULL;
-	wchar_t *tmp = NULL;
 	wchar_t *wmatcheddnp = NULL;
 	wchar_t *werrmsgp = NULL;
 	wchar_t **wreferralsp = NULL;
 	LDAPControlW **wsctrls = NULL;
 	LDAPControlA **ctrls = NULL;
 	LDAPControlA *ctrla = NULL;
-	LDAPControlW *ctmp = NULL;
 
 	rc = ldap_parse_resultW(ld, res, errcodep, &wmatcheddnp, &werrmsgp, &wreferralsp, &wsctrls, freeit);
 
-	*matcheddnp = convert_to_mbs(wmatcheddnp);
-	*errmsgp = convert_to_mbs(werrmsgp);
+	/* Convert and assign parameters just if they are required. */
+	if (matcheddnp != NULL) *matcheddnp = convert_to_mbs(wmatcheddnp);
+	if (errmsgp != NULL) *errmsgp = convert_to_mbs(werrmsgp);
 
-	/* Copy and convert the refreal strings. */
-	while (wreferralsp[size] != NULL) size++;
-
-	refs = (char **)malloc(sizeof(char *) * (size + 1));
-	if (refs == NULL) {
-		PyErr_NoMemory();
-		return -1;
-	}
-
-	for (tmp = wreferralsp[i]; tmp != NULL; i++) {
-		refs[i] = convert_to_mbs(tmp);
-	}
-	refs[i] = NULL;
-
-	*referralsp = refs;
-
-	/* Copy and convert the server controls. */
-	size = 0;
-	while (wsctrls[size] != NULL) size++;
-	ctrls = (LDAPControlA **)malloc(sizeof(LDAPControlA *) * (size + 1));
-	if (ctrls == NULL) {
-		PyErr_NoMemory();
-		return -1;
-	}
-
-	for (ctmp = wsctrls[i]; ctmp != NULL; i++) {
-		ctrla = (LDAPControlA *)malloc(sizeof(LDAPControlA));
-		if (ctrla == NULL) {
+	if (wreferralsp != NULL && referralsp != NULL) {
+		/* Copy and convert the referral strings, if it's required. */
+		size = get_size(wreferralsp);
+		refs = (char **)malloc(sizeof(char *) * (size + 1));
+		if (refs == NULL) {
 			PyErr_NoMemory();
 			return -1;
 		}
-		ctrla->ldctl_iscritical = ctmp->ldctl_iscritical;
-		ctrla->ldctl_oid = convert_to_mbs(ctmp->ldctl_oid);
-		ctrla->ldctl_value = *ber_bvdup(&(ctmp->ldctl_value));
-		ctrls[i] = ctrla;
 
+		for (i = 0; wreferralsp[i] != NULL; i++) {
+			refs[i] = convert_to_mbs(wreferralsp[i]);
+		}
+		refs[i] = NULL;
+		*referralsp = refs;
 	}
-	ctrls[i] = NULL;
 
-	*sctrls = ctrls;
+	if (wsctrls != NULL && sctrls != NULL) {
+		/* Copy and convert the server controls, if it's required. */
+		size = get_size(wsctrls);
+		ctrls = (LDAPControlA **)malloc(sizeof(LDAPControlA *) * (size + 1));
+		if (ctrls == NULL) {
+			PyErr_NoMemory();
+			return -1;
+		}
+
+		for (i = 0; wsctrls[i] != NULL; i++) {
+			ctrla = (LDAPControlA *)malloc(sizeof(LDAPControlA));
+			if (ctrla == NULL) {
+				PyErr_NoMemory();
+				return -1;
+			}
+			ctrla->ldctl_iscritical = wsctrls[i]->ldctl_iscritical;
+			ctrla->ldctl_oid = convert_to_mbs(wsctrls[i]->ldctl_oid);
+			ctrla->ldctl_value = *ber_bvdup(&(wsctrls[i]->ldctl_value));
+			ctrls[i] = ctrla;
+
+		}
+		ctrls[i] = NULL;
+
+		*sctrls = ctrls;
+	}
 
 	ldap_memfreeW(wmatcheddnp);
 	ldap_memfreeW(werrmsgp);
