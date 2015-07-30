@@ -24,6 +24,7 @@
 #undef ldap_get_dn
 #undef ldap_add_ext
 #undef ldap_modify_ext
+#undef ldap_delete_ext
 #undef ldap_first_attribute
 #undef ldap_next_attribute
 #undef ldap_get_values_len
@@ -39,6 +40,7 @@
 #define ldap_get_dn ldap_get_dnU
 #define ldap_add_ext ldap_add_extU
 #define ldap_modify_ext ldap_modify_extU
+#define ldap_delete_ext ldap_delete_extU
 #define ldap_first_attribute ldap_first_attributeU
 #define ldap_next_attribute ldap_next_attributeU
 #define ldap_get_values_len ldap_get_values_lenU
@@ -64,6 +66,7 @@ int ldap_abandon_ext(LDAP *ld, int msgid, LDAPControl **sctrls, LDAPControl	**cc
 char *ldap_get_dnU(LDAP *ld, LDAPMessage *entry);
 int ldap_add_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAPControl **cctrls, int *msgidp);
 int ldap_modify_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAPControl **cctrls, int *msgidp);
+int ldap_delete_extU(LDAP *ld, char *dn, LDAPControl **sctrls, LDAPControl **cctrls, int *msgidp);
 char *ldap_first_attributeU(LDAP *ld, LDAPMessage *entry, BerElement **ber);
 char *ldap_next_attributeU(LDAP *ld, LDAPMessage *entry, BerElement *ber);
 struct berval **ldap_get_values_lenU(LDAP *ld, LDAPMessage *entry, char *target);

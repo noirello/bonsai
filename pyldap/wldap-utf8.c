@@ -372,6 +372,26 @@ ldap_modify_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAP
 	return rc;
 }
 
+int
+ldap_delete_extU(LDAP *ld, char *dn, LDAPControl **sctrls, LDAPControl **cctrls, int *msgidp) {
+	int rc = 0;
+	wchar_t *wdn = NULL;
+	LDAPControlW **wsctrls = NULL;
+	LDAPControlW **wcctrls = NULL;
+
+	wdn = convert_to_wcs(dn);
+	wsctrls = convert_ctrl_list(sctrls);
+	wcctrls = convert_ctrl_list(cctrls);
+
+	rc = ldap_delete_extW(ld, wdn, wsctrls, wcctrls, msgidp);
+
+	if (wdn) free(wdn);
+	free_list((void **)wsctrls, (void *)free_ctrl);
+	free_list((void **)wcctrls, (void *)free_ctrl);
+
+	return rc;
+}
+
 char *
 ldap_first_attributeU(LDAP *ld, LDAPMessage *entry, BerElement **ber) {
 	char *attr = NULL;
