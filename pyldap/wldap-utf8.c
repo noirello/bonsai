@@ -206,7 +206,9 @@ static void
 free_mod(LDAPModW *mod) {
 	if (mod != NULL) {
 		if (mod->mod_type) free(mod->mod_type);
-		if (mod->mod_vals.modv_strvals) free_list((void **)(mod->mod_vals.modv_strvals), (void *)free);
+		if ((mod->mod_op & LDAP_MOD_BVALUES) != LDAP_MOD_BVALUES) {
+			if (mod->mod_vals.modv_strvals) free_list((void **)(mod->mod_vals.modv_strvals), (void *)free);
+		}
 		free(mod);
 	}
 }
@@ -750,7 +752,7 @@ ldap_sasl_interactive_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl *
 		ldap_get_option(ld, LDAP_OPT_ERROR_NUMBER, &rc);
 	} while (rc == LDAP_SASL_BIND_IN_PROGRESS);
 	
-	if (wdn) free(wdn);
+	if (wdn && wcscmp(wdn, L"") != 0) free(wdn);
 	if (wmech) free(wmech);
 	free_list((void **)wsctrls, (void *)free_ctrl);
 	free_list((void **)wcctrls, (void *)free_ctrl);
