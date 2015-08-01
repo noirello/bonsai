@@ -571,23 +571,13 @@ ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct b
 }
 
 int
-ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControl *ctrl, ber_int_t *count,
+ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControl **ctrls, ber_int_t *count,
 		struct berval *cookie) {
 	
 	int rc = 0;
-	LDAPControlW *wctrl = NULL;
-	LDAPControlW **list = NULL;
+	LDAPControlW **wctrls = NULL;
 
-	wctrl = convert_ctrl(ctrl);
-
-	/* Create a NULL terminated list of controls including the page control. */
-	list = (LDAPControlW **)malloc(sizeof(LDAPControlW) * 2);
-	if (list == NULL) {
-		PyErr_NoMemory();
-		return -1;
-	}
-	list[0] = wctrl;
-	list[1] = NULL;
+	wctrls = convert_ctrl_list(ctrls);
 
 	if (cookie != NULL && cookie->bv_val != NULL) {
 		/* Clear the cookie's content for the new data. */
@@ -595,35 +585,17 @@ ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControl *ctrl, ber_int_t *count,
 		cookie = NULL;
 	}
 
-	rc = ldap_parse_page_controlW(ld, list, (unsigned long *)count, &cookie);
+	rc = ldap_parse_page_controlW(ld, wctrls, (unsigned long *)count, &cookie);
 
-	free_ctrl(wctrl);
-	free(list);
+	free_list((void **)wctrls, (void *)free_ctrl);
 
 	return rc;
 }
 
-LDAPControl *
+/* This function is a dummy function for keeping compatibility with OpenLDAP. */
+LDAPControl **
 ldap_control_findU(char *oid, LDAPControl **ctrls, LDAPControl ***nextctrlp) {
-	/* This function is a copy from the OpenLDAP's controls.c source file. */
-	if (oid == NULL || ctrls == NULL || *ctrls == NULL) {
-		return NULL;
-	}
-
-	for (; *ctrls != NULL; ctrls++) {
-		if (strcmp((*ctrls)->ldctl_oid, oid) == 0) {
-			if (nextctrlp != NULL) {
-				*nextctrlp = ctrls + 1;
-			}
-			return *ctrls;
-		}
-	}
-
-	if (nextctrlp != NULL) {
-		*nextctrlp = NULL;
-	}
-
-	return NULL;
+	return ctrls;
 }
 
 int
@@ -702,9 +674,75 @@ char *
 ldap_err2stringU(int err) {
 	wchar_t *werr = NULL;
 
+	/* Mustn't free the returning string. */
 	werr = ldap_err2stringW(err);
 
 	return convert_to_mbs(werr);
+}
+
+int
+ldap_initializeU(LDAP **ldp, char *url) {
+	int err = 0;
+	int chunk_num = 0;
+	int port = 389;
+	int ssl = 0;
+	int size = 0;
+	char *host = NULL;
+	wchar_t *whost = NULL;
+	char *chunk = NULL;
+
+	chunk = strtok(url, ":/");
+	while (chunk != NULL) {
+		switch (chunk_num) {
+		case 0:
+			/* Check scheme. */
+			if (strcmp("ldaps", chunk) == 0) {
+				ssl = 1;
+			} else {
+				ssl = 0;
+			}
+			chunk_num++;
+			break;
+		case 1:
+			/* Copy hostname. */
+			size = strlen(chunk);
+			host = malloc(sizeof(char) * (size + 1));
+			strcpy(host, chunk);
+			chunk_num++;
+			break;
+		case 2:
+			/* Convert the port. */
+			port = (int)strtol(chunk, NULL, 10);
+			if (port <= 0) {
+				if (host) free(host);
+				return LDAP_PARAM_ERROR;
+			}
+			/* Shortcut: no useful data left. */
+			goto init;
+		default:
+			break;
+		}
+		chunk = strtok(NULL, ":/");
+	}
+init:
+	whost = convert_to_wcs(host);
+
+	if (ssl) {
+		*ldp = ldap_sslinitW(whost, port, 1);
+	} else {
+		*ldp = ldap_initW(whost, port);
+	}
+
+	if (host) free(host);
+	if (whost) free(whost);
+
+	if (*ldp == NULL) {
+		err = LdapGetLastError();
+		if (err != 0) return err;
+		else return LDAP_LOCAL_ERROR;
+	}
+
+	return LDAP_SUCCESS;
 }
 
 int
@@ -724,10 +762,8 @@ ldap_simple_bind_sU(LDAP *ld, char *who, char *passwd) {
 	return rc;
 }
 
-int
-ldap_sasl_interactive_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls,
-		LDAPControl **cctrls, unsigned flags, LDAP_SASL_INTERACT_PROC *proc, void *defaults) {
-	
+static int
+ldap_sasl_thread_bind(void *params) {
 	int rc = 0;
 	wchar_t *wdn = NULL;
 	wchar_t *wmech = NULL;
@@ -735,29 +771,57 @@ ldap_sasl_interactive_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl *
 	struct berval *response = NULL;
 	LDAPControlW **wsctrls = NULL;
 	LDAPControlW **wcctrls = NULL;
+	sasl_thread_data_t *data = (sasl_thread_data_t *)params;
 
-	wdn = convert_to_wcs(dn);
-	wmech = convert_to_wcs(mechanism);
-	wsctrls = convert_ctrl_list(sctrls);
-	wcctrls = convert_ctrl_list(cctrls);
+	wdn = convert_to_wcs(data->dn);
+	wmech = convert_to_wcs(data->mechanism);
+	wsctrls = convert_ctrl_list(data->sctrls);
+	wcctrls = convert_ctrl_list(data->cctrls);
 
 	do {
-		rc = (proc)(ld, (sasl_defaults_t *)defaults, response, &cred);
-		
-		/* NULL binddn is needed to change empty string to avoid param error. */
-		if (wdn == NULL) wdn = L"";
-		rc = ldap_sasl_bind_sW(ld, wdn, wmech, &cred, wsctrls, wcctrls, &response);
-		
+		rc = (data->proc)(data->ld, (sasl_defaults_t *)(data->defaults), response, &cred);
+		if (rc != LDAP_SUCCESS) return rc;
+
+		rc = ldap_sasl_bind_sW(data->ld, wdn, wmech, &cred, wsctrls, wcctrls, &response);
+
 		/* Get the last error code from the LDAP struct. */
-		ldap_get_option(ld, LDAP_OPT_ERROR_NUMBER, &rc);
+		ldap_get_option(data->ld, LDAP_OPT_ERROR_NUMBER, &rc);
 	} while (rc == LDAP_SASL_BIND_IN_PROGRESS);
-	
-	if (wdn && wcscmp(wdn, L"") != 0) free(wdn);
+
+	if (wdn) free(wdn);
 	if (wmech) free(wmech);
 	free_list((void **)wsctrls, (void *)free_ctrl);
 	free_list((void **)wcctrls, (void *)free_ctrl);
+	free(data);
 
 	return rc;
 }
+
+int
+ldap_sasl_interactive_bindU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls,
+	LDAPControl **cctrls, unsigned flags, LDAP_SASL_INTERACT_PROC *proc, void *defaults, void **msgidp) {
+
+	HANDLE thread = NULL;
+	sasl_thread_data_t *data = NULL;
+
+	data = (sasl_thread_data_t *)malloc(sizeof(sasl_thread_data_t));
+	if (data == NULL) return LDAP_NO_MEMORY;
+
+	data->cctrls = cctrls;
+	data->defaults = defaults;
+	data->dn = dn;
+	data->ld = ld;
+	data->mechanism = mechanism;
+	data->proc = proc;
+	data->sctrls = sctrls;
+
+	thread = CreateThread(NULL, 0, ldap_sasl_thread_bind, (void *)data, 0, NULL);
+	if (thread == NULL) return LDAP_NO_MEMORY;
+
+	*msgidp = (void *)thread;
+
+	return LDAP_SUCCESS;
+}
+
 
 #endif
