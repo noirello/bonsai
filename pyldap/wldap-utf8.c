@@ -705,7 +705,7 @@ ldap_initializeU(LDAP **ldp, char *url) {
 			break;
 		case 1:
 			/* Copy hostname. */
-			size = strlen(chunk);
+			size = (int)strlen(chunk);
 			host = malloc(sizeof(char) * (size + 1));
 			strcpy(host, chunk);
 			chunk_num++;
@@ -742,7 +742,24 @@ init:
 		else return LDAP_LOCAL_ERROR;
 	}
 
-	return LDAP_SUCCESS;
+	return ldap_connect(*ldp, NULL);
+}
+
+int
+ldap_start_tls_sU(LDAP *ld, LDAPControl **sctrls, LDAPControl **cctrls) {
+	int rc = 0;
+	LDAPControlW **wsctrls = NULL;
+	LDAPControlW **wcctrls = NULL;
+
+	wsctrls = convert_ctrl_list(sctrls);
+	wcctrls = convert_ctrl_list(cctrls);
+
+	rc = ldap_start_tls_sW(ld, NULL, NULL, wsctrls, wcctrls);
+
+	free_list((void **)wsctrls, (void *)free_ctrl);
+	free_list((void **)wcctrls, (void *)free_ctrl);
+
+	return rc;
 }
 
 int
@@ -763,65 +780,269 @@ ldap_simple_bind_sU(LDAP *ld, char *who, char *passwd) {
 }
 
 static int
-ldap_sasl_thread_bind(void *params) {
-	int rc = 0;
-	wchar_t *wdn = NULL;
-	wchar_t *wmech = NULL;
-	struct berval cred;
-	struct berval *response = NULL;
-	LDAPControlW **wsctrls = NULL;
-	LDAPControlW **wcctrls = NULL;
-	sasl_thread_data_t *data = (sasl_thread_data_t *)params;
+decrypt_response(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int *outLen) {
+	SecBufferDesc buff_desc;
+	SecBuffer bufs[2];
+	unsigned long qop = 0;
+	int res;
 
-	wdn = convert_to_wcs(data->dn);
-	wmech = convert_to_wcs(data->mechanism);
-	wsctrls = convert_ctrl_list(data->sctrls);
-	wcctrls = convert_ctrl_list(data->cctrls);
+	buff_desc.ulVersion = SECBUFFER_VERSION;
+	buff_desc.cBuffers = 2;
+	buff_desc.pBuffers = bufs;
 
-	do {
-		rc = (data->proc)(data->ld, (sasl_defaults_t *)(data->defaults), response, &cred);
-		if (rc != LDAP_SUCCESS) return rc;
+	/* This buffer is for SSPI. */
+	bufs[0].BufferType = SECBUFFER_STREAM;
+	bufs[0].pvBuffer = inToken;
+	bufs[0].cbBuffer = inLen;
 
-		rc = ldap_sasl_bind_sW(data->ld, wdn, wmech, &cred, wsctrls, wcctrls, &response);
+	/* This buffer holds the application data. */
+	bufs[1].BufferType = SECBUFFER_DATA;
+	bufs[1].cbBuffer = 0;
+	bufs[1].pvBuffer = NULL;
 
-		/* Get the last error code from the LDAP struct. */
-		ldap_get_option(data->ld, LDAP_OPT_ERROR_NUMBER, &rc);
-	} while (rc == LDAP_SASL_BIND_IN_PROGRESS);
+	res = DecryptMessage(handle, &buff_desc, 0, &qop);
 
-	if (wdn) free(wdn);
-	if (wmech) free(wmech);
-	free_list((void **)wsctrls, (void *)free_ctrl);
-	free_list((void **)wcctrls, (void *)free_ctrl);
-	free(data);
+	if (res == SEC_E_OK) {
+		int maxlen = bufs[1].cbBuffer;
+		char *p = (char *)malloc(maxlen);
+		*outToken = p;
+		*outLen = maxlen;
+		memcpy(p, bufs[1].pvBuffer, bufs[1].cbBuffer);
+	}
 
-	return rc;
+	return res;
 }
 
-int
-ldap_sasl_interactive_bindU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls,
-	LDAPControl **cctrls, unsigned flags, LDAP_SASL_INTERACT_PROC *proc, void *defaults, void **msgidp) {
+static int
+encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int *outLen) {
+	SecBufferDesc buff_desc;
+	SecBuffer bufs[3];
+	SecPkgContext_Sizes sizes;
+	int res;
 
-	HANDLE thread = NULL;
-	sasl_thread_data_t *data = NULL;
+	res = QueryContextAttributes(handle, SECPKG_ATTR_SIZES, &sizes);
 
-	data = (sasl_thread_data_t *)malloc(sizeof(sasl_thread_data_t));
-	if (data == NULL) return LDAP_NO_MEMORY;
+	buff_desc.ulVersion = SECBUFFER_VERSION;
+	buff_desc.cBuffers = 3;
+	buff_desc.pBuffers = bufs;
 
-	data->cctrls = cctrls;
-	data->defaults = defaults;
-	data->dn = dn;
-	data->ld = ld;
-	data->mechanism = mechanism;
-	data->proc = proc;
-	data->sctrls = sctrls;
+	/* This buffer is for SSPI. */
+	bufs[0].BufferType = SECBUFFER_TOKEN;
+	bufs[0].pvBuffer = malloc(sizes.cbSecurityTrailer);
+	bufs[0].cbBuffer = sizes.cbSecurityTrailer;
 
-	thread = CreateThread(NULL, 0, ldap_sasl_thread_bind, (void *)data, 0, NULL);
-	if (thread == NULL) return LDAP_NO_MEMORY;
+	/* This buffer holds the application data. */
+	bufs[1].BufferType = SECBUFFER_DATA;
+	bufs[1].cbBuffer = inLen;
+	bufs[1].pvBuffer = malloc(inLen);
 
-	*msgidp = (void *)thread;
+	memcpy(bufs[1].pvBuffer, inToken, inLen);
+
+	/* This buffer is for SSPI. */
+	bufs[2].BufferType = SECBUFFER_PADDING;
+	bufs[2].cbBuffer = sizes.cbBlockSize;
+	bufs[2].pvBuffer = malloc(sizes.cbBlockSize);
+
+	res = EncryptMessage(handle, SECQOP_WRAP_NO_ENCRYPT, &buff_desc, 0);
+
+	if (res == SEC_E_OK) {
+		int maxlen = bufs[0].cbBuffer + bufs[1].cbBuffer + bufs[2].cbBuffer;
+		char *p = (char *)malloc(maxlen);
+		*outToken = p;
+		*outLen = maxlen;
+		memcpy(p, bufs[0].pvBuffer, bufs[0].cbBuffer);
+		p += bufs[0].cbBuffer;
+		memcpy(p, bufs[1].pvBuffer, bufs[1].cbBuffer);
+		p += bufs[1].cbBuffer;
+		memcpy(p, bufs[2].pvBuffer, bufs[2].cbBuffer);
+	}
+
+	return res;
+}
+
+static int
+sasl_bind_procedure(CredHandle *credhandle, CtxtHandle *ctxhandle, wchar_t *targetName, int gssapi,
+struct berval *response, struct berval *creddata) {
+
+	int rc = 0;
+	int len = 0;
+	int gssapi_decrpyt = 0;
+	unsigned long contextattr;
+	SecBufferDesc out_buff_desc;
+	SecBuffer out_buff;
+	SecBufferDesc in_buff_desc;
+	SecBuffer in_buff;
+	char *data = NULL;
+
+	if (response == NULL) {
+		/* First function call, no server response. */
+		out_buff_desc.ulVersion = 0;
+		out_buff_desc.cBuffers = 1;
+		out_buff_desc.pBuffers = &out_buff;
+
+		out_buff.BufferType = SECBUFFER_TOKEN;
+		out_buff.pvBuffer = NULL;
+
+		rc = InitializeSecurityContextW(credhandle, NULL, targetName, ISC_REQ_MUTUAL_AUTH | ISC_REQ_ALLOCATE_MEMORY,
+			0, 0, NULL, 0, ctxhandle, &out_buff_desc, &contextattr, NULL);
+	} else {
+		/* Set server response as an input buffer. */
+		in_buff_desc.ulVersion = SECBUFFER_VERSION;
+		in_buff_desc.cBuffers = 1;
+		in_buff_desc.pBuffers = &in_buff;
+
+		in_buff.cbBuffer = response->bv_len;
+		in_buff.BufferType = SECBUFFER_TOKEN;
+		in_buff.pvBuffer = response->bv_val;
+		if (gssapi_decrpyt) {
+			/* GSSAPI decrypting and encrypting is needed. */
+			rc = decrypt_response(ctxhandle, response->bv_val, response->bv_len, &data, &len);
+			rc = encrypt_reply(ctxhandle, data, len, &data, &len);
+		} else {
+			rc = InitializeSecurityContextW(credhandle, ctxhandle, targetName, ISC_REQ_MUTUAL_AUTH |
+				ISC_REQ_ALLOCATE_MEMORY, 0, 0, &in_buff_desc, 0, ctxhandle, &out_buff_desc, &contextattr, NULL);
+		}
+	}
+
+	switch (rc) {
+	case SEC_I_COMPLETE_NEEDED:
+	case SEC_I_COMPLETE_AND_CONTINUE:
+		CompleteAuthToken(ctxhandle, &out_buff_desc);
+		break;
+	case SEC_E_OK:
+		if (gssapi == 1) {
+			gssapi_decrpyt = 1;
+		}
+		break;
+	case SEC_I_CONTINUE_NEEDED:
+		break;
+	case SEC_E_INVALID_HANDLE:
+	case SEC_E_INVALID_TOKEN:
+		return -1;
+	default:
+		break;
+	}
+
+	if (gssapi_decrpyt) {
+		creddata->bv_len = len;
+		creddata->bv_val = data;
+	} else {
+		creddata->bv_val = (char *)malloc((out_buff.cbBuffer + 1) * sizeof(char));
+		if (creddata->bv_val == NULL) return LDAP_NO_MEMORY;
+		memcpy(creddata->bv_val, out_buff.pvBuffer, out_buff.cbBuffer);
+		creddata->bv_len = out_buff.cbBuffer;
+	}
 
 	return LDAP_SUCCESS;
 }
 
+static wchar_t *
+get_target_name(LDAP *ld) {
+	size_t len = 0;
+	wchar_t *hostname = NULL;
+	wchar_t *target_name = NULL;
+
+	hostname = convert_to_wcs(ld->ld_host);
+	if (hostname == NULL) return NULL;
+
+	/* The new string starts with ldap/ (5 char) + 1 terminating NULL. */
+	len = wcslen(hostname) + 6;
+	target_name = (wchar_t *)malloc(sizeof(wchar_t) * len);
+	if (target_name == NULL) return NULL;
+	/* Copy hostname from LDAP struct to create a valid targetName(SPN). */
+	wcscat(target_name, L"ldap/");
+	wcscat(target_name, hostname);
+	target_name[len - 1] = '\0';
+
+	return target_name;
+}
+
+ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls,
+	LDAPControl **cctrls, void *defaults) {
+	int i;
+	int rc = 0;
+	int gssapi = 0;
+	wchar_t *secpack = NULL;
+	wchar_t *wdn = NULL;
+	wchar_t *wmech = NULL;
+	wchar_t *wauthcid = NULL;
+	wchar_t *wpasswd = NULL;
+	wchar_t *wrealm = NULL;
+	wchar_t *target_name = NULL;
+	struct berval cred;
+	struct berval *response = NULL;
+	LDAPControlW **wsctrls = NULL;
+	LDAPControlW **wcctrls = NULL;
+	SEC_WINNT_AUTH_IDENTITY_W wincreds;
+	CredHandle credhandle;
+	CtxtHandle ctxhandle;
+	sasl_defaults_t *defs = (sasl_defaults_t *)defaults;
+	/* Supported mechanisms, order matters. */
+	char *mechs[] = { "DIGEST-MD5", "GSSAPI", NULL };
+	wchar_t *secpacks[] = { L"WDigest", L"Kerberos", NULL };
+
+	wdn = convert_to_wcs(dn);
+	wmech = convert_to_wcs(mechanism);
+	wsctrls = convert_ctrl_list(sctrls);
+	wcctrls = convert_ctrl_list(cctrls);
+
+	/* Get security package name from the mechanism. */
+	for (i = 0; mechs[i] != NULL; i++) {
+		if (strcmp(mechanism, mechs[i]) == 0) {
+			secpack = secpacks[i];
+			break;
+		}
+	}
+
+	if (secpack == NULL) return LDAP_PARAM_ERROR;
+	if (wcscmp(secpack, L"Kerberos") == 0) gssapi = 1;
+
+	/* Create credential data. */
+	memset(&wincreds, 0, sizeof(wincreds));
+
+	wauthcid = convert_to_wcs(defs->authcid);
+	wpasswd = convert_to_wcs(defs->passwd);
+	wrealm = convert_to_wcs(defs->realm);
+
+	wincreds.User = (unsigned short *)wauthcid;
+	if (wincreds.User != NULL) wincreds.UserLength = (unsigned long)wcslen(wauthcid);
+	else wincreds.UserLength = 0;
+	wincreds.Password = (unsigned short *)wpasswd;
+	if (wincreds.Password != NULL) wincreds.PasswordLength = (unsigned long)wcslen(wpasswd);
+	else wincreds.PasswordLength = 0;
+	wincreds.Domain = (unsigned short *)wrealm;
+	if (wincreds.Domain != NULL) wincreds.DomainLength = (unsigned long)wcslen(wrealm);
+	else wincreds.DomainLength = 0;
+
+	wincreds.Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;
+
+	/* Create credential handler. */
+	rc = AcquireCredentialsHandleW(NULL, secpack, SECPKG_CRED_OUTBOUND, NULL, &wincreds, NULL, NULL, &credhandle, NULL);
+	if (rc != SEC_E_OK) return LDAP_PARAM_ERROR;
+
+	/* Get the target name (SPN). */
+	target_name = get_target_name(ld);
+	if (target_name == NULL) return LDAP_PARAM_ERROR;
+
+	do {
+		rc = sasl_bind_procedure(&credhandle, &ctxhandle, target_name, gssapi, response, &cred);
+		if (rc != LDAP_SUCCESS) return rc;
+
+		rc = ldap_sasl_bind_sW(ld, wdn, wmech, &cred, wsctrls, wcctrls, &response);
+
+		/* Get the last error code from the LDAP struct. */
+		ldap_get_option(ld, LDAP_OPT_ERROR_NUMBER, &rc);
+	} while (rc == LDAP_SASL_BIND_IN_PROGRESS);
+
+	if (wdn) free(wdn);
+	if (wmech) free(wmech);
+	if (wauthcid) free(wauthcid);
+	if (wpasswd) free(wpasswd);
+	if (wrealm) free(wrealm);
+	free_list((void **)wsctrls, (void *)free_ctrl);
+	free_list((void **)wcctrls, (void *)free_ctrl);
+
+	return rc;
+}
 
 #endif

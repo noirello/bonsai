@@ -38,6 +38,8 @@
 #undef ldap_parse_result
 #undef ldap_err2string
 #undef ldap_memfree
+#undef ldap_start_tls_s
+#undef ldap_simple_bind
 
 #define ldap_get_dn ldap_get_dnU
 #define ldap_add_ext ldap_add_extU
@@ -54,27 +56,20 @@
 #define ldap_parse_result ldap_parse_resultU
 #define ldap_err2string ldap_err2stringU
 #define ldap_memfree free
+#define ldap_start_tls_s ldap_start_tls_sU
+#define ldap_simple_bind_s ldap_simple_bind_sU
 
 #define ldap_parse_pageresponse_control ldap_parse_pageresponse_controlU
 #define ldap_control_find ldap_control_findU
+#define ldap_initialize ldap_initializeU
+#define ldap_sasl_sspi_bind_s ldap_sasl_sspi_bind_sU
 
 typedef struct sasl_defaults_s {
-	SEC_WINNT_AUTH_IDENTITY_W *creds;
-	CredHandle *credhandle;
-	CtxtHandle *ctxhandle;
+	char *authcid;
+	char *passwd;
+	char *realm;
 } sasl_defaults_t;
 
-typedef int(LDAP_SASL_INTERACT_PROC)(LDAP *ld, sasl_defaults_t *defaults, struct berval *response, struct berval *cred);
-
-typedef struct sasl_thread_data_s {
-	LDAP *ld;
-	char *dn;
-	char *mechanism;
-	LDAPControl **sctrls;
-	LDAPControl **cctrls;
-	LDAP_SASL_INTERACT_PROC *proc;
-	void *defaults;
-} sasl_thread_data_t;
 
 int ldap_unbind_ext(LDAP *ld, LDAPControl **sctrls, LDAPControl	**cctrls);
 int ldap_abandon_ext(LDAP *ld, int msgid, LDAPControl **sctrls, LDAPControl	**cctrls);
@@ -95,8 +90,9 @@ LDAPControl **ldap_control_findU(char *oid, LDAPControl **ctrls, LDAPControl ***
 int ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp, char **errmsgp, char ***referralsp, LDAPControl ***sctrls, int freeit);
 char *ldap_err2stringU(int err);
 int ldap_initializeU(LDAP **ldp, char *url);
+int ldap_start_tls_sU(LDAP *ld, LDAPControl **sctrls, LDAPControl **cctrls);
 int ldap_simple_bind_sU(LDAP *ld, char *who, char *passwd);
-int ldap_sasl_interactive_bindU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls, LDAPControl **cctrls, unsigned flags, LDAP_SASL_INTERACT_PROC *proc, void *defaults, void **msgidp);
+int ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls, LDAPControl **cctrls, void *defaults);
 
 #endif
 
