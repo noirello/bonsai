@@ -67,7 +67,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	PyObject *tls = NULL;
 	PyObject *tmp = NULL;
 	PyObject *creds = NULL;
-	ldapConnectionInfo *info = NULL;
+	ldap_conndata_t *info = NULL;
 
 	/* Get URL policy from LDAPClient. */
 	url = PyObject_GetAttrString(self->client, "_LDAPClient__url");
@@ -207,7 +207,7 @@ LDAPConnection_Close(LDAPConnection *self) {
 		/* Skip negatives, cause assertion error. */
 		if (msgid <= 0) continue;
 		/* Abandon the pending operations from the server. */
-		rc = LDAP_abandon(self->ld, msgid);
+		rc = ldap_abandon_ext(self->ld, msgid, NULL, NULL);
 		if (rc != LDAP_SUCCESS) {
 			Py_DECREF(iter);
 			set_exception(self->ld, rc);
@@ -216,7 +216,7 @@ LDAPConnection_Close(LDAPConnection *self) {
 	}
 	Py_DECREF(iter);
 
-	rc = LDAP_unbind(self->ld);
+	rc = ldap_unbind_ext(self->ld, NULL, NULL);
 	if (rc != LDAP_SUCCESS) {
 		set_exception(self->ld, rc);
 		return NULL;
@@ -345,11 +345,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 				search_iter->attrs,
 				search_iter->attrsonly,
 				server_ctrls, NULL,
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-				search_iter->timeout->tv_sec,
-#else
 				search_iter->timeout,
-#endif
 				search_iter->sizelimit, &msgid);
 
 	if (rc != LDAP_SUCCESS) {
@@ -529,18 +525,9 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 		Py_DECREF(search_iter->buffer);
 		return NULL;
 	}
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-
-	if (search_iter->cookie != NULL && search_iter->cookie->bv_val != NULL) {
-		ber_bvfree(search_iter->cookie);
-		search_iter->cookie = NULL;
-	}
-	rc = ldap_parse_page_control(self->ld, returned_ctrls, NULL, &(search_iter->cookie));
-#else
 	rc = ldap_parse_pageresponse_control(self->ld,
 			ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL),
 			NULL, search_iter->cookie);
-#endif
 	/* Cleanup. */
 	if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
 
@@ -710,7 +697,7 @@ LDAPConnection_cancel(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 		return NULL;
 	}
 
-	rc = LDAP_abandon(self->ld, msgid);
+	rc = ldap_abandon_ext(self->ld, msgid, NULL, NULL);
 	if (rc != LDAP_SUCCESS) {
 		set_exception(self->ld, rc);
 		return NULL;

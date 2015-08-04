@@ -15,7 +15,7 @@
 typedef struct {
     PyObject_HEAD
     LDAPConnection *conn;
-    ldapConnectionInfo *info;
+    ldap_conndata_t *info;
     unsigned short int bind_inprogress;
     unsigned short int init_finished;
     int message_id;
@@ -26,6 +26,6 @@ typedef struct {
 
 extern PyTypeObject LDAPConnectIterType;
 
-LDAPConnectIter *LDAPConnectIter_New(LDAPConnection *conn,  ldapConnectionInfo *info,  int async);
+LDAPConnectIter *LDAPConnectIter_New(LDAPConnection *conn,  ldap_conndata_t *info,  int async);
 
 #endif /* PYLDAP_LDAPCONNECTITER_H_ */

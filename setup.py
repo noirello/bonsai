@@ -8,11 +8,12 @@ except ImportError:
 
 sources = ["pyldapmodule.c", "ldapentry.c", "ldapconnectiter.c",
            "ldapconnection.c", "ldapmodlist.c", "ldapvaluelist.c",
-           "ldap-xplat.c", "ldapsearchiter.c", "utils.c", "uniquelist.c"]
+           "ldap-xplat.c", "ldapsearchiter.c", "utils.c", "uniquelist.c",
+		   "wldap-utf8.c"]
 
 depends = ["ldapconnection.h", "ldapentry.h", "ldapconnectiter.h",
            "ldapmodlist.h", "ldapvaluelist.h", "ldapsearchiter.h",
-           "ldap-xplat.h", "uniquelist.h", "utils.h"]
+           "ldap-xplat.h", "uniquelist.h", "utils.h", "wldap-utf8.h"]
 
 sources = [os.path.join('pyldap', x) for x in sources]
 depends = [os.path.join('pyldap', x) for x in depends]

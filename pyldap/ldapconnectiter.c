@@ -170,7 +170,7 @@ LDAPConnectIter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
 /*	Creates a new LDAPConnectIter object for internal use. */
 LDAPConnectIter *
-LDAPConnectIter_New(LDAPConnection *conn, ldapConnectionInfo *info, int async) {
+LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info, int async) {
 	LDAPConnectIter *self =
 			(LDAPConnectIter *)LDAPConnectIterType.tp_new(&LDAPConnectIterType,
 					NULL, NULL);
