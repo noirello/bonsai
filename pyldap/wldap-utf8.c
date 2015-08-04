@@ -1,5 +1,7 @@
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
+#include <stdio.h>
+
 #include "wldap-utf8.h"
 
 /* Get size of a list by reaching the terminating NULL. */
@@ -14,6 +16,7 @@ get_size(void **list) {
 	return size;
 }
 
+/* Copy the items of the list into a new list using the `copyfunc` function. */
 static void
 copy_list(void **list, void **newlist, void *copyfunc(void *), int *failed) {
 	int i = 0;
@@ -29,6 +32,7 @@ copy_list(void **list, void **newlist, void *copyfunc(void *), int *failed) {
 	newlist[i] = NULL;
 }
 
+/* Free the items of the list with calling the `freefunc`. */
 static void
 free_list(void **list, void *freefunc(void*)) {
 	int i = 0;
@@ -41,6 +45,7 @@ free_list(void **list, void *freefunc(void*)) {
 	}
 }
 
+/* Convert a wide character string into an UTF-8 (narrow) string. */
 static char *
 convert_to_mbs(wchar_t *tmp) {
 	char *str = NULL;
@@ -53,20 +58,19 @@ convert_to_mbs(wchar_t *tmp) {
 	size = WideCharToMultiByte(CP_UTF8, 0, tmp, -1, NULL, 0, NULL, NULL);
 	str = (char *)malloc(sizeof(char) * size);
 	if (str == NULL) {
-		PyErr_NoMemory();
 		return NULL;
 	}
 
 	rc = WideCharToMultiByte(CP_UTF8, 0, tmp, -1, str, size, NULL, NULL);
 	if (rc == 0) {
 		free(str);
-		PyErr_Format(PyExc_UnicodeError, "Converting to UTF-8 is failed.");
 		return NULL;
 	}
 
 	return str;
 }
 
+/* Convert a narrow character string into an UTF-16 (wide) string. */
 static wchar_t *
 convert_to_wcs(char *tmp) {
 	wchar_t *str = NULL;
@@ -79,20 +83,20 @@ convert_to_wcs(char *tmp) {
 	size = MultiByteToWideChar(CP_UTF8, 0, tmp, -1, NULL, 0);
 	str = (wchar_t *)malloc(sizeof(wchar_t) * size);
 	if (str == NULL) {
-		PyErr_NoMemory();
 		return NULL;
 	}
 
 	rc = MultiByteToWideChar(CP_UTF8, 0, tmp, -1, str, size);
 	if (rc == 0) {
 		free(str);
-		PyErr_Format(PyExc_UnicodeError, "Converting from UTF-8 is failed.");
 		return NULL;
 	}
 
 	return str;
 }
 
+/* Convert a list of narrow character strings into a list of UTF-16 (narrow)
+   strings. */
 static wchar_t **
 convert_char_list(char **list) {
 	int size = 0;
@@ -105,7 +109,6 @@ convert_char_list(char **list) {
 
 	wlist = (wchar_t **)malloc(sizeof(wchar_t *) * (size + 1));
 	if (wlist == NULL) {
-		PyErr_NoMemory();
 		return NULL;
 	}
 
@@ -121,6 +124,7 @@ convert_char_list(char **list) {
 	return wlist;
 }
 
+/* Convert an "ANSI" LDAPControl struct into an UTF-16 wide LDAPControl. */
 static LDAPControlW *
 convert_ctrl(LDAPControlA *ctrl) {
 	wchar_t *woid = NULL;
@@ -130,7 +134,6 @@ convert_ctrl(LDAPControlA *ctrl) {
 
 	wctrl = (LDAPControlW *)malloc(sizeof(LDAPControlW));
 	if (wctrl == NULL) {
-		PyErr_NoMemory();
 		return NULL;
 	}
 	
@@ -143,6 +146,7 @@ convert_ctrl(LDAPControlA *ctrl) {
 	return wctrl;
 }
 
+/* Free a converted wide LDAPControl. */
 static void 
 free_ctrl(LDAPControlW *ctrl) {
 	if (ctrl != NULL) {
@@ -151,6 +155,8 @@ free_ctrl(LDAPControlW *ctrl) {
 	}
 }
 
+/* Convert a list of "ANSI" LDAPControl struct into a list of UTF-16
+   wide LDAPControl. */
 static LDAPControlW **
 convert_ctrl_list(LDAPControlA **ctrls) {
 	int size = 0;
@@ -162,7 +168,6 @@ convert_ctrl_list(LDAPControlA **ctrls) {
 	size = get_size((void **)ctrls);
 	wctrls = (LDAPControlW **)malloc(sizeof(LDAPControlW *) * (size + 1));
 	if (wctrls == NULL) {
-		PyErr_NoMemory();
 		return NULL;
 	}
 
@@ -178,6 +183,7 @@ convert_ctrl_list(LDAPControlA **ctrls) {
 	return wctrls;
 }
 
+/* Convert an "ANSI" LDAPMod struct into an UTF-16 wide LDAPMod. */
 static LDAPModW *
 convert_mod(LDAPModA *mod) {
 	LDAPModW *wmod = NULL;
@@ -186,7 +192,6 @@ convert_mod(LDAPModA *mod) {
 
 	wmod = (LDAPModW *)malloc(sizeof(LDAPModW));
 	if (wmod == NULL) {
-		PyErr_NoMemory();
 		return NULL;
 	}
 
@@ -202,6 +207,7 @@ convert_mod(LDAPModA *mod) {
 	return wmod;
 }
 
+/* Free a converted wide LDAPMod. */
 static void
 free_mod(LDAPModW *mod) {
 	if (mod != NULL) {
@@ -213,6 +219,8 @@ free_mod(LDAPModW *mod) {
 	}
 }
 
+/* Convert a list of "ANSI" LDAPMod struct into a list of UTF-16
+   wide LDAPMod. */
 static LDAPModW **
 convert_mod_list(LDAPModA **mods) {
 	int size = 0;
@@ -224,7 +232,6 @@ convert_mod_list(LDAPModA **mods) {
 	size = get_size((void **)mods);
 	wmods = (LDAPModW **)malloc(sizeof(LDAPModW *) * (size + 1));
 	if (wmods == NULL) {
-		PyErr_NoMemory();
 		return NULL;
 	}
 
@@ -240,6 +247,7 @@ convert_mod_list(LDAPModA **mods) {
 	return wmods;
 }
 
+/* Convert an "ANSI" LDAPSortKey struct into an UTF-16 wide LDAPSortKey. */
 static LDAPSortKeyW *
 convert_sortkey(LDAPSortKeyA *sortkey) {
 	wchar_t *attrtype = NULL;
@@ -250,7 +258,6 @@ convert_sortkey(LDAPSortKeyA *sortkey) {
 
 	wsortkey = (LDAPSortKeyW *)malloc(sizeof(LDAPSortKeyW));
 	if (wsortkey == NULL) {
-		PyErr_NoMemory();
 		return NULL;
 	}
 
@@ -265,6 +272,7 @@ convert_sortkey(LDAPSortKeyA *sortkey) {
 	return wsortkey;
 }
 
+/* Free a converted wide LDAPSotrKey. */
 static void
 free_sortkey(LDAPSortKeyW *sortkey) {
 	if (sortkey != NULL) {
@@ -273,6 +281,8 @@ free_sortkey(LDAPSortKeyW *sortkey) {
 	}
 }
 
+/* Convert a list of "ANSI" LDAPSortKey struct into a list of UTF-16
+   wide LDAPSortKey. */
 static LDAPSortKeyW **
 convert_sortkey_list(LDAPSortKeyA **keylist) {
 	int size = 0;
@@ -284,7 +294,6 @@ convert_sortkey_list(LDAPSortKeyA **keylist) {
 	size = get_size((void **)keylist);
 	wkeylist = (LDAPSortKeyW **)malloc(sizeof(LDAPSortKeyW *) * (size + 1));
 	if (wkeylist == NULL) {
-		PyErr_NoMemory();
 		return NULL;
 	}
 
@@ -514,10 +523,7 @@ ldap_create_sort_controlU(LDAP *ld, LDAPSortKey **keyList, int iscritical, LDAPC
 	free_list((void **)wkeylist, (void *)free_sortkey);
 
 	ret = (LDAPControlA *)malloc(sizeof(LDAPControlA));
-	if (ret == NULL) {
-		PyErr_NoMemory();
-		return -1;
-	}
+	if (ret == NULL) return LDAP_NO_MEMORY;
 
 	ret->ldctl_iscritical = wctrlp->ldctl_iscritical;
 	ret->ldctl_oid = convert_to_mbs(wctrlp->ldctl_oid);
@@ -570,6 +576,9 @@ ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct b
 	return rc;
 }
 
+/* This function receive a list of LDAPControl instead of one LDAPControl, 
+   because the corresponding WinLDAP function willsearch the page control
+   object internally. */
 int
 ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControl **ctrls, ber_int_t *count,
 		struct berval *cookie) {
@@ -624,10 +633,7 @@ ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp,
 		/* Copy and convert the referral strings, if it's required. */
 		size = get_size(wreferralsp);
 		refs = (char **)malloc(sizeof(char *) * (size + 1));
-		if (refs == NULL) {
-			PyErr_NoMemory();
-			return -1;
-		}
+		if (refs == NULL) return LDAP_NO_MEMORY;
 
 		for (i = 0; wreferralsp[i] != NULL; i++) {
 			refs[i] = convert_to_mbs(wreferralsp[i]);
@@ -640,17 +646,12 @@ ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp,
 		/* Copy and convert the server controls, if it's required. */
 		size = get_size(wsctrls);
 		ctrls = (LDAPControlA **)malloc(sizeof(LDAPControlA *) * (size + 1));
-		if (ctrls == NULL) {
-			PyErr_NoMemory();
-			return -1;
-		}
+		if (ctrls == NULL) return LDAP_NO_MEMORY;
 
 		for (i = 0; wsctrls[i] != NULL; i++) {
 			ctrla = (LDAPControlA *)malloc(sizeof(LDAPControlA));
-			if (ctrla == NULL) {
-				PyErr_NoMemory();
-				return -1;
-			}
+			if (ctrla == NULL) return LDAP_NO_MEMORY;
+
 			ctrla->ldctl_iscritical = wsctrls[i]->ldctl_iscritical;
 			ctrla->ldctl_oid = convert_to_mbs(wsctrls[i]->ldctl_oid);
 			ctrla->ldctl_value = *ber_bvdup(&(wsctrls[i]->ldctl_value));
@@ -690,8 +691,10 @@ ldap_initializeU(LDAP **ldp, char *url) {
 	char *host = NULL;
 	wchar_t *whost = NULL;
 	char *chunk = NULL;
+	char *nxtoken = NULL;
 
-	chunk = strtok(url, ":/");
+	/* Parse string address. */
+	chunk = strtok_s(url, ":/", &nxtoken);
 	while (chunk != NULL) {
 		switch (chunk_num) {
 		case 0:
@@ -705,9 +708,10 @@ ldap_initializeU(LDAP **ldp, char *url) {
 			break;
 		case 1:
 			/* Copy hostname. */
-			size = (int)strlen(chunk);
-			host = malloc(sizeof(char) * (size + 1));
-			strcpy(host, chunk);
+			size = (int)strlen(chunk) + 1;
+			host = (char *)malloc(sizeof(char) * size);
+			if (host == NULL) return LDAP_NO_MEMORY;
+			strcpy_s(host, size, chunk);
 			chunk_num++;
 			break;
 		case 2:
@@ -722,16 +726,12 @@ ldap_initializeU(LDAP **ldp, char *url) {
 		default:
 			break;
 		}
-		chunk = strtok(NULL, ":/");
+		chunk = strtok_s(NULL, ":/", &nxtoken);
 	}
 init:
 	whost = convert_to_wcs(host);
 
-	if (ssl) {
-		*ldp = ldap_sslinitW(whost, port, 1);
-	} else {
-		*ldp = ldap_initW(whost, port);
-	}
+	*ldp = ldap_sslinitW(whost, port, ssl);
 
 	if (host) free(host);
 	if (whost) free(whost);

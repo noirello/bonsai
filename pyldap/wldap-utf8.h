@@ -1,8 +1,6 @@
 #ifndef PYLDAP_WLDAP_UTF8_H_
 #define PYLDAP_WLDAP_UTF8_H_
 
-#include <Python.h>
-
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
 #include <windows.h>
