@@ -861,7 +861,7 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
 }
 
 static int
-sasl_bind_procedure(CredHandle *credhandle, CtxtHandle *ctxhandle, wchar_t *targetName, int gssapi,
+sspi_bind_procedure(CredHandle *credhandle, CtxtHandle *ctxhandle, wchar_t *targetName, int gssapi,
 struct berval *response, struct berval *creddata) {
 
 	int rc = 0;
@@ -874,15 +874,18 @@ struct berval *response, struct berval *creddata) {
 	SecBuffer in_buff;
 	char *data = NULL;
 
+	if (creddata == NULL || credhandle == NULL) return LDAP_PARAM_ERROR;
+
+	/* Init output buffer. */
+	out_buff_desc.ulVersion = 0;
+	out_buff_desc.cBuffers = 1;
+	out_buff_desc.pBuffers = &out_buff;
+
+	out_buff.BufferType = SECBUFFER_TOKEN;
+	out_buff.pvBuffer = NULL;
+
 	if (response == NULL) {
 		/* First function call, no server response. */
-		out_buff_desc.ulVersion = 0;
-		out_buff_desc.cBuffers = 1;
-		out_buff_desc.pBuffers = &out_buff;
-
-		out_buff.BufferType = SECBUFFER_TOKEN;
-		out_buff.pvBuffer = NULL;
-
 		rc = InitializeSecurityContextW(credhandle, NULL, targetName, ISC_REQ_MUTUAL_AUTH | ISC_REQ_ALLOCATE_MEMORY,
 			0, 0, NULL, 0, ctxhandle, &out_buff_desc, &contextattr, NULL);
 	} else {
@@ -924,9 +927,11 @@ struct berval *response, struct berval *creddata) {
 	}
 
 	if (gssapi_decrpyt) {
+		/* Use the encrypted data as a cred output berval struct. */
 		creddata->bv_len = len;
 		creddata->bv_val = data;
 	} else {
+		/* Allocate and copy the local buffer value into the output berval struct. */
 		creddata->bv_val = (char *)malloc((out_buff.cbBuffer + 1) * sizeof(char));
 		if (creddata->bv_val == NULL) return LDAP_NO_MEMORY;
 		memcpy(creddata->bv_val, out_buff.pvBuffer, out_buff.cbBuffer);
@@ -950,9 +955,7 @@ get_target_name(LDAP *ld) {
 	target_name = (wchar_t *)malloc(sizeof(wchar_t) * len);
 	if (target_name == NULL) return NULL;
 	/* Copy hostname from LDAP struct to create a valid targetName(SPN). */
-	wcscat(target_name, L"ldap/");
-	wcscat(target_name, hostname);
-	target_name[len - 1] = '\0';
+	swprintf_s(target_name, len, L"ldap/%ls", hostname);
 
 	return target_name;
 }
@@ -985,6 +988,9 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls
 	wmech = convert_to_wcs(mechanism);
 	wsctrls = convert_ctrl_list(sctrls);
 	wcctrls = convert_ctrl_list(cctrls);
+
+	cred.bv_val = NULL;
+	cred.bv_len = 0;
 
 	/* Get security package name from the mechanism. */
 	for (i = 0; mechs[i] != NULL; i++) {
@@ -1025,11 +1031,15 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls
 	if (target_name == NULL) return LDAP_PARAM_ERROR;
 
 	do {
-		rc = sasl_bind_procedure(&credhandle, &ctxhandle, target_name, gssapi, response, &cred);
+		rc= sspi_bind_procedure(&credhandle, &ctxhandle, target_name, gssapi, response, &cred);
 		if (rc != LDAP_SUCCESS) return rc;
 
 		rc = ldap_sasl_bind_sW(ld, wdn, wmech, &cred, wsctrls, wcctrls, &response);
-
+		/* Free the previously allocated data. */
+		if (cred.bv_val != NULL) {
+			free(cred.bv_val);
+			cred.bv_len = 0;
+		}
 		/* Get the last error code from the LDAP struct. */
 		ldap_get_option(ld, LDAP_OPT_ERROR_NUMBER, &rc);
 	} while (rc == LDAP_SASL_BIND_IN_PROGRESS);
@@ -1039,6 +1049,7 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls
 	if (wauthcid) free(wauthcid);
 	if (wpasswd) free(wpasswd);
 	if (wrealm) free(wrealm);
+	free(target_name);
 	free_list((void **)wsctrls, (void *)free_ctrl);
 	free_list((void **)wcctrls, (void *)free_ctrl);
 
