@@ -49,7 +49,7 @@ typedef struct ldap_conndata_s {
 } ldap_conndata_t;
 
 int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
-
+char *_ldap_get_opt_errormsg(LDAP *ld);
 #endif
 
 typedef struct ldap_thread_data_s {

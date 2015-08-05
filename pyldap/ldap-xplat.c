@@ -217,6 +217,15 @@ sasl_interact(LDAP *ld, unsigned flags, void *defs, void *in) {
 	}
 	return LDAP_SUCCESS;
 }
+
+char *
+_ldap_get_opt_errormsg(LDAP *ld) {
+	char *opt = NULL;
+
+	ldap_get_option(ld, LDAP_OPT_DIAGNOSTIC_MESSAGE, &opt);
+
+	return opt;
+}
 #endif
 
 /*  This function is based on the OpenLDAP liblutil's sasl.c source

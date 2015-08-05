@@ -317,12 +317,12 @@ convert_sortkey_list(LDAPSortKeyA **keylist, LDAPSortKeyW ***wkeylist) {
 }
 
 int
-ldap_unbind_ext(LDAP *ld, LDAPControl **sctrls, LDAPControl	**cctrls) {
+ldap_unbind_ext(LDAP *ld, LDAPControlA **sctrls, LDAPControlA **cctrls) {
 	return ldap_unbind(ld);
 }
 
 int
-ldap_abandon_ext(LDAP *ld, int msgid, LDAPControl **sctrls, LDAPControl	**cctrls) {
+ldap_abandon_ext(LDAP *ld, int msgid, LDAPControlA **sctrls, LDAPControlA **cctrls) {
 	return ldap_abandon(ld, msgid);
 }
 
@@ -341,7 +341,7 @@ ldap_get_dnU(LDAP *ld, LDAPMessage *entry) {
 }
 
 int
-ldap_add_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAPControl **cctrls,
+ldap_add_extU(LDAP *ld, char *dn, LDAPModA **attrs, LDAPControlA **sctrls, LDAPControlA **cctrls,
 		int *msgidp) {
 	
 	int rc = 0;
@@ -367,7 +367,7 @@ clear:
 }
 
 int
-ldap_modify_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAPControl **cctrls,
+ldap_modify_extU(LDAP *ld, char *dn, LDAPModA **attrs, LDAPControlA **sctrls, LDAPControlA **cctrls,
 		int *msgidp) {
 	
 	int rc = 0;
@@ -393,7 +393,7 @@ clear:
 }
 
 int
-ldap_delete_extU(LDAP *ld, char *dn, LDAPControl **sctrls, LDAPControl **cctrls, int *msgidp) {
+ldap_delete_extU(LDAP *ld, char *dn, LDAPControlA **sctrls, LDAPControlA **cctrls, int *msgidp) {
 	int rc = 0;
 	wchar_t *wdn = NULL;
 	LDAPControlW **wsctrls = NULL;
@@ -457,7 +457,7 @@ ldap_get_values_lenU(LDAP *ld, LDAPMessage *entry, char *target) {
 
 int
 ldap_renameU(LDAP *ld, char *dn, char *newrdn, char *newSuperior, int deleteoldrdn,
-		LDAPControl **sctrls, LDAPControl **cctrls, int *msgidp) {
+		LDAPControlA **sctrls, LDAPControlA **cctrls, int *msgidp) {
 	
 	int rc = 0;
 	wchar_t *wdn = NULL; 
@@ -486,7 +486,7 @@ clear:
 
 int
 ldap_search_extU(LDAP *ld, char *base, int scope, char *filter, char **attrs, int attrsonly,
-		LDAPControl **sctrls, LDAPControl **cctrls, struct timeval *timeout, int sizelimit, int *msgidp) {
+		LDAPControlA **sctrls, LDAPControlA **cctrls, struct timeval *timeout, int sizelimit, int *msgidp) {
 	
 	int rc = 0;
 	wchar_t *wbase = NULL;
@@ -522,7 +522,7 @@ clear:
 }
 
 int
-ldap_create_sort_controlU(LDAP *ld, LDAPSortKey **keyList, int iscritical, LDAPControl **ctrlp) {
+ldap_create_sort_controlU(LDAP *ld, LDAPSortKeyA **keyList, int iscritical, LDAPControlA **ctrlp) {
 	int rc = 0;
 	LDAPSortKeyW **wkeylist = NULL;
 	LDAPControlW *wctrlp = NULL;
@@ -551,8 +551,8 @@ ldap_create_sort_controlU(LDAP *ld, LDAPSortKey **keyList, int iscritical, LDAPC
 }
 
 int
-ldap_extended_operationU(LDAP *ld, char *reqoid, struct berval *reqdata, LDAPControl **sctrls,
-		LDAPControl **cctrls, int *msgidp) {
+ldap_extended_operationU(LDAP *ld, char *reqoid, struct berval *reqdata, LDAPControlA **sctrls,
+		LDAPControlA **cctrls, int *msgidp) {
 	
 	int rc = 0;
 	wchar_t *woid = NULL;
@@ -596,7 +596,7 @@ ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct b
    because the corresponding WinLDAP function willsearch the page control
    object internally. */
 int
-ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControl **ctrls, ber_int_t *count,
+ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *count,
 		struct berval *cookie) {
 	
 	int rc = 0;
@@ -619,14 +619,14 @@ clear:
 }
 
 /* This function is a dummy function for keeping compatibility with OpenLDAP. */
-LDAPControl **
-ldap_control_findU(char *oid, LDAPControl **ctrls, LDAPControl ***nextctrlp) {
+LDAPControlA **
+ldap_control_findU(char *oid, LDAPControlA **ctrls, LDAPControlA ***nextctrlp) {
 	return ctrls;
 }
 
 int
 ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp, char **errmsgp,
-		char ***referralsp, LDAPControl ***sctrls, int freeit) {
+		char ***referralsp, LDAPControlA ***sctrls, int freeit) {
 	
 	int i = 0;
 	int rc = 0;
@@ -774,7 +774,7 @@ init:
 }
 
 int
-ldap_start_tls_sU(LDAP *ld, LDAPControl **sctrls, LDAPControl **cctrls) {
+ldap_start_tls_sU(LDAP *ld, LDAPControlA **sctrls, LDAPControlA **cctrls) {
 	int rc = 0;
 	LDAPControlW **wsctrls = NULL;
 	LDAPControlW **wcctrls = NULL;
@@ -850,7 +850,7 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
 	SecPkgContext_Sizes sizes;
 	int res;
 
-	res = QueryContextAttributes(handle, SECPKG_ATTR_SIZES, &sizes);
+	res = QueryContextAttributesW(handle, SECPKG_ATTR_SIZES, &sizes);
 
 	buff_desc.ulVersion = SECBUFFER_VERSION;
 	buff_desc.cBuffers = 3;
@@ -891,12 +891,11 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
 }
 
 static int
-sspi_bind_procedure(CredHandle *credhandle, CtxtHandle *ctxhandle, wchar_t *targetName, int gssapi,
+sspi_bind_procedure(CredHandle *credhandle, CtxtHandle *ctxhandle, wchar_t *targetName, int *gssapi,
 struct berval *response, struct berval *creddata) {
 
 	int rc = 0;
 	int len = 0;
-	int gssapi_decrpyt = 0;
 	unsigned long contextattr;
 	SecBufferDesc out_buff_desc;
 	SecBuffer out_buff;
@@ -927,7 +926,7 @@ struct berval *response, struct berval *creddata) {
 		in_buff.cbBuffer = response->bv_len;
 		in_buff.BufferType = SECBUFFER_TOKEN;
 		in_buff.pvBuffer = response->bv_val;
-		if (gssapi_decrpyt) {
+		if (*gssapi == 2) {
 			/* GSSAPI decrypting and encrypting is needed. */
 			rc = decrypt_response(ctxhandle, response->bv_val, response->bv_len, &data, &len);
 			rc = encrypt_reply(ctxhandle, data, len, &data, &len);
@@ -943,8 +942,10 @@ struct berval *response, struct berval *creddata) {
 		CompleteAuthToken(ctxhandle, &out_buff_desc);
 		break;
 	case SEC_E_OK:
-		if (gssapi == 1) {
-			gssapi_decrpyt = 1;
+		if (*gssapi == 1) {
+			/* This means the encrypt and decrypt functions
+			   should be called in the next round. */
+			*gssapi = 2;
 		}
 		break;
 	case SEC_I_CONTINUE_NEEDED:
@@ -956,7 +957,7 @@ struct berval *response, struct berval *creddata) {
 		break;
 	}
 
-	if (gssapi_decrpyt) {
+	if (*gssapi == 2) {
 		/* Use the encrypted data as a cred output berval struct. */
 		creddata->bv_len = len;
 		creddata->bv_val = data;
@@ -991,8 +992,8 @@ get_target_name(LDAP *ld) {
 }
 
 int
-ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls,
-	LDAPControl **cctrls, void *defaults) {
+ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrls,
+	LDAPControlA **cctrls, void *defaults) {
 	int i;
 	int rc = 0;
 	int gssapi = 0;
@@ -1062,8 +1063,8 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls
 	if (target_name == NULL) return LDAP_PARAM_ERROR;
 
 	do {
-		rc= sspi_bind_procedure(&credhandle, &ctxhandle, target_name, gssapi, response, &cred);
-		if (rc != LDAP_SUCCESS) return rc;
+		rc = sspi_bind_procedure(&credhandle, &ctxhandle, target_name, &gssapi, response, &cred);
+		if (rc != LDAP_SUCCESS) goto clear;
 
 		rc = ldap_sasl_bind_sW(ld, wdn, wmech, &cred, wsctrls, wcctrls, &response);
 		/* Free the previously allocated data. */
@@ -1086,6 +1087,19 @@ clear:
 	free_list((void **)wcctrls, (void *)free_ctrl);
 
 	return rc;
+}
+
+char *
+_ldap_get_opt_errormsgU(LDAP *ld) {
+	char *opt = NULL;
+	wchar_t *wopt = NULL;
+
+	/* Get additional error message from the session. */
+	ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &wopt);
+
+	convert_to_mbs(wopt, &opt);
+
+	return opt;
 }
 
 #endif

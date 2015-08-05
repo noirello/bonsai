@@ -313,7 +313,7 @@ set_exception(LDAP *ld, int code) {
 	}
 	ldaperror = get_error_by_code(err);
 	/* Get additional error message from the session. */
-	ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &opt_errorstr);
+	opt_errorstr = _ldap_get_opt_errormsg(ld);
 	errorstr = ldap_err2string(err);
 	if (opt_errorstr != NULL) {
 		if (strcmp(errorstr, opt_errorstr) != 0) {
@@ -326,7 +326,7 @@ set_exception(LDAP *ld, int code) {
 			PyErr_SetObject(ldaperror, errormsg);
 			Py_DECREF(errormsg);
 		}
-		//TODO: ldap_memfree(opt_errorstr);
+		ldap_memfree(opt_errorstr);
 	} else {
 		PyErr_SetString(ldaperror, errorstr);
 	}

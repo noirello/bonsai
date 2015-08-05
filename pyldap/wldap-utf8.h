@@ -3,6 +3,8 @@
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
+#define UNICODE 1
+
 #include <windows.h>
 #include <winldap.h>
 #include <winber.h>
@@ -21,6 +23,14 @@
 
 #define LDAP_CONTROL_PAGEDRESULTS "1.2.840.113556.1.4.319"
 
+#undef LDAPControl
+#undef LDAPMod
+#undef LDAPSortKey
+
+#undef ldap_create_page_control
+#undef ldap_control_free
+#undef ldap_controls_free
+
 #undef ldap_get_dn
 #undef ldap_add_ext
 #undef ldap_modify_ext
@@ -37,7 +47,15 @@
 #undef ldap_err2string
 #undef ldap_memfree
 #undef ldap_start_tls_s
-#undef ldap_simple_bind
+#undef ldap_simple_bind_s
+
+#define LDAPControl LDAPControlA
+#define LDAPMod LDAPModA
+#define LDAPSortKey LDAPSortKeyA
+
+#define ldap_create_page_control ldap_create_page_controlA
+#define ldap_control_free ldap_control_freeA
+#define ldap_controls_free ldap_controls_freeA
 
 #define ldap_get_dn ldap_get_dnU
 #define ldap_add_ext ldap_add_extU
@@ -61,6 +79,7 @@
 #define ldap_control_find ldap_control_findU
 #define ldap_initialize ldap_initializeU
 #define ldap_sasl_sspi_bind_s ldap_sasl_sspi_bind_sU
+#define _ldap_get_opt_errormsg _ldap_get_opt_errormsgU
 
 typedef struct sasl_defaults_s {
 	char *authcid;
@@ -69,28 +88,29 @@ typedef struct sasl_defaults_s {
 } sasl_defaults_t;
 
 
-int ldap_unbind_ext(LDAP *ld, LDAPControl **sctrls, LDAPControl	**cctrls);
-int ldap_abandon_ext(LDAP *ld, int msgid, LDAPControl **sctrls, LDAPControl	**cctrls);
+int ldap_unbind_ext(LDAP *ld, LDAPControlA **sctrls, LDAPControlA **cctrls);
+int ldap_abandon_ext(LDAP *ld, int msgid, LDAPControlA **sctrls, LDAPControlA **cctrls);
 char *ldap_get_dnU(LDAP *ld, LDAPMessage *entry);
-int ldap_add_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAPControl **cctrls, int *msgidp);
-int ldap_modify_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAPControl **cctrls, int *msgidp);
-int ldap_delete_extU(LDAP *ld, char *dn, LDAPControl **sctrls, LDAPControl **cctrls, int *msgidp);
+int ldap_add_extU(LDAP *ld, char *dn, LDAPModA **attrs, LDAPControlA **sctrls, LDAPControlA **cctrls, int *msgidp);
+int ldap_modify_extU(LDAP *ld, char *dn, LDAPModA **attrs, LDAPControlA **sctrls, LDAPControlA **cctrls, int *msgidp);
+int ldap_delete_extU(LDAP *ld, char *dn, LDAPControlA **sctrls, LDAPControlA **cctrls, int *msgidp);
 char *ldap_first_attributeU(LDAP *ld, LDAPMessage *entry, BerElement **ber);
 char *ldap_next_attributeU(LDAP *ld, LDAPMessage *entry, BerElement *ber);
 struct berval **ldap_get_values_lenU(LDAP *ld, LDAPMessage *entry, char *target);
-int ldap_renameU(LDAP *ld, char *dn, char *newrdn, char *newSuperior, int deleteoldrdn, LDAPControl **sctrls, LDAPControl **cctrls, int *msgidp);
-int ldap_search_extU(LDAP *ld, char *base, int scope, char *filter, char **attrs, int attrsonly, LDAPControl **sctrls, LDAPControl **cctrls, struct timeval *timeout, int sizelimit, int *msgidp);
-int ldap_create_sort_controlU(LDAP *ld, LDAPSortKey **keyList, int iscritical, LDAPControl **ctrlp);
-int ldap_extended_operationU(LDAP *ld, char *reqoid, struct berval *reqdata, LDAPControl **sctrls, LDAPControl **cctrls, int *msgidp);
+int ldap_renameU(LDAP *ld, char *dn, char *newrdn, char *newSuperior, int deleteoldrdn, LDAPControlA **sctrls, LDAPControlA **cctrls, int *msgidp);
+int ldap_search_extU(LDAP *ld, char *base, int scope, char *filter, char **attrs, int attrsonly, LDAPControlA **sctrls, LDAPControlA **cctrls, struct timeval *timeout, int sizelimit, int *msgidp);
+int ldap_create_sort_controlU(LDAP *ld, LDAPSortKeyA **keyList, int iscritical, LDAPControlA **ctrlp);
+int ldap_extended_operationU(LDAP *ld, char *reqoid, struct berval *reqdata, LDAPControlA **sctrls, LDAPControlA **cctrls, int *msgidp);
 int ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct berval **retdatap, int freeit);
-int ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControl **ctrls, ber_int_t *count, struct berval *cookie);
-LDAPControl **ldap_control_findU(char *oid, LDAPControl **ctrls, LDAPControl ***nextctrlp);
-int ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp, char **errmsgp, char ***referralsp, LDAPControl ***sctrls, int freeit);
+int ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *count, struct berval *cookie);
+LDAPControlA **ldap_control_findU(char *oid, LDAPControlA **ctrls, LDAPControlA ***nextctrlp);
+int ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp, char **errmsgp, char ***referralsp, LDAPControlA ***sctrls, int freeit);
 char *ldap_err2stringU(int err);
 int ldap_initializeU(LDAP **ldp, char *url);
-int ldap_start_tls_sU(LDAP *ld, LDAPControl **sctrls, LDAPControl **cctrls);
+int ldap_start_tls_sU(LDAP *ld, LDAPControlA **sctrls, LDAPControlA **cctrls);
 int ldap_simple_bind_sU(LDAP *ld, char *who, char *passwd);
-int ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls, LDAPControl **cctrls, void *defaults);
+int ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrls, LDAPControlA **cctrls, void *defaults);
+char *_ldap_get_opt_errormsgU(LDAP *ld);
 
 #endif
 
