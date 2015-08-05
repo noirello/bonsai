@@ -317,14 +317,15 @@ The thread's pointer and the data struct's pointer that contains the LDAP struct
 passed to the `thread` and `misc` parameters respectively. */
 int
 LDAP_start_init(PyObject *url, int has_tls, int cert_policy, void **thread, void **misc) {
-	char *addrstr;
-	ldapThreadData *data;
+	char *addrstr = NULL;
+	ldapThreadData *data = NULL;
+	PyObject *addr = NULL;
 
 	data = (ldapThreadData *)malloc(sizeof(ldapThreadData));
 	if (data == NULL) return -1;
 
 	/* Get URL address information from the LDAPClient's LDAPURL object. */
-	PyObject *addr = PyObject_CallMethod(url, "get_address", NULL);
+	addr = PyObject_CallMethod(url, "get_address", NULL);
 	if (addr == NULL) return -1;
 	addrstr = PyObject2char(addr);
 	Py_DECREF(addr);
