@@ -16,25 +16,30 @@ get_size(void **list) {
 	return size;
 }
 
-/* Copy the items of the list into a new list using the `copyfunc` function. */
-static void
-copy_list(void **list, void **newlist, void *copyfunc(void *), int *failed) {
+/* Copy the items of a list into a new list using the `copyfunc` function. */
+static int
+copy_list(void **list, void **newlist, int(*copyfunc)(void *, void**)) {
 	int i = 0;
+	int rc = 0;
 
-	*failed = 0;
+	if (list == NULL || newlist == NULL) return LDAP_PARAM_ERROR;
+
 	for (i = 0; list[i] != NULL; i++) {
-		newlist[i] = (copyfunc)((void *)(list[i]));
-		if (newlist[i] == NULL) {
-			*failed = 1;
+		rc = (copyfunc)((void *)(list[i]), (void **)(&newlist[i]));
+		if (rc != LDAP_SUCCESS) {
+			/* Copy is failed, break the cicle and set the failed
+			item to NULL thus the successfuly converted items
+			can be freed without overrunning the list. */
 			break;
 		}
 	}
 	newlist[i] = NULL;
+	return rc;
 }
 
-/* Free the items of the list with calling the `freefunc`. */
+/* Free the list element using the `freefunc` function.  */
 static void
-free_list(void **list, void *freefunc(void*)) {
+free_list(void **list, void freefunc(void*)) {
 	int i = 0;
 
 	if (list != NULL) {
@@ -45,105 +50,101 @@ free_list(void **list, void *freefunc(void*)) {
 	}
 }
 
-/* Convert a wide character string into an UTF-8 (narrow) string. */
-static char *
-convert_to_mbs(wchar_t *tmp) {
-	char *str = NULL;
+
+/* Convert a wide character string into a UTF-8 (narrow) string. */
+static int
+convert_to_mbs(wchar_t *tmp, char **str) {
 	int size = 0;
 	int rc = 0;
 
-	if (tmp == NULL) return NULL;
+	if (tmp == NULL) return LDAP_SUCCESS;
 
 	/* Get necessary size for the new UTF-8 encoded char*. */
 	size = WideCharToMultiByte(CP_UTF8, 0, tmp, -1, NULL, 0, NULL, NULL);
-	str = (char *)malloc(sizeof(char) * size);
-	if (str == NULL) {
-		return NULL;
-	}
+	*str = (char *)malloc(sizeof(char) * size);
+	if (*str == NULL) return LDAP_NO_MEMORY;
 
-	rc = WideCharToMultiByte(CP_UTF8, 0, tmp, -1, str, size, NULL, NULL);
+	rc = WideCharToMultiByte(CP_UTF8, 0, tmp, -1, *str, size, NULL, NULL);
 	if (rc == 0) {
-		free(str);
-		return NULL;
+		free(*str);
+		*str = NULL;
+		return LDAP_ENCODING_ERROR;
 	}
 
-	return str;
+	return LDAP_SUCCESS;
 }
 
-/* Convert a narrow character string into an UTF-16 (wide) string. */
-static wchar_t *
-convert_to_wcs(char *tmp) {
-	wchar_t *str = NULL;
+/* Convert an narrow character string into a UTF-16 (wide) string. */
+static int
+convert_to_wcs(char *tmp, wchar_t **str) {
 	int size = 0;
 	int rc = 0;
 
-	if (tmp == NULL) return NULL;
+	if (tmp == NULL) return LDAP_SUCCESS;
 
 	/* Get necessary size for the new wchar_t*. */
 	size = MultiByteToWideChar(CP_UTF8, 0, tmp, -1, NULL, 0);
-	str = (wchar_t *)malloc(sizeof(wchar_t) * size);
-	if (str == NULL) {
-		return NULL;
-	}
+	*str = (wchar_t *)malloc(sizeof(wchar_t) * size);
+	if (*str == NULL) return LDAP_NO_MEMORY;
 
-	rc = MultiByteToWideChar(CP_UTF8, 0, tmp, -1, str, size);
+	rc = MultiByteToWideChar(CP_UTF8, 0, tmp, -1, *str, size);
 	if (rc == 0) {
-		free(str);
-		return NULL;
+		free(*str);
+		*str = NULL;
+		return LDAP_DECODING_ERROR;
 	}
 
-	return str;
+	return LDAP_SUCCESS;
 }
+
 
 /* Convert a list of narrow character strings into a list of UTF-16 (narrow)
    strings. */
-static wchar_t **
-convert_char_list(char **list) {
+static int
+convert_char_list(char **list, wchar_t ***wlist) {
 	int size = 0;
-	int failed = 0;
-	wchar_t **wlist = NULL;
+	int rc = 0;
 
-	if (list == NULL) return NULL;
+	if (list == NULL) return LDAP_SUCCESS;
 
 	size = get_size((void **)list);
 
-	wlist = (wchar_t **)malloc(sizeof(wchar_t *) * (size + 1));
-	if (wlist == NULL) {
-		return NULL;
-	}
+	*wlist = (wchar_t **)malloc(sizeof(wchar_t*) * (size + 1));
+	if (*wlist == NULL) return LDAP_NO_MEMORY;
 
-	copy_list((void **)list, (void **)wlist, (void *)convert_to_wcs, &failed);
+	rc = copy_list((void **)list, (void **)*wlist, ((int(*)(void*, void**))convert_to_wcs));
 
-	if (failed) {
+	if (rc != LDAP_SUCCESS) {
 		/* At least one of the item's conversion is failed,
-		   thus the list is not converted properly. */
-		free_list((void **)wlist, (void *)free);
-		return NULL;
+		thus the list is not converted properly. */
+		free_list((void **)*wlist, free);
 	}
 
-	return wlist;
+	return rc;
 }
 
 /* Convert an "ANSI" LDAPControl struct into an UTF-16 wide LDAPControl. */
-static LDAPControlW *
-convert_ctrl(LDAPControlA *ctrl) {
+static int
+convert_ctrl(LDAPControlA *ctrl, LDAPControlW **wctrl) {
+	int rc = 0;
 	wchar_t *woid = NULL;
-	LDAPControlW *wctrl = NULL;
 
-	if (ctrl == NULL) return NULL;
+	if (ctrl == NULL) return LDAP_SUCCESS;
 
-	wctrl = (LDAPControlW *)malloc(sizeof(LDAPControlW));
-	if (wctrl == NULL) {
-		return NULL;
+	*wctrl = (LDAPControlW *)malloc(sizeof(LDAPControlW));
+	if (*wctrl == NULL) return LDAP_NO_MEMORY;
+
+	(*wctrl)->ldctl_iscritical = ctrl->ldctl_iscritical;
+	(*wctrl)->ldctl_value = ctrl->ldctl_value;
+
+	if (rc = convert_to_wcs(ctrl->ldctl_oid, &woid) != LDAP_SUCCESS) {
+		free(*wctrl);
+		return rc;
 	}
-	
-	wctrl->ldctl_iscritical = ctrl->ldctl_iscritical;
-	wctrl->ldctl_value = ctrl->ldctl_value;
 
-	woid = convert_to_wcs(ctrl->ldctl_oid);
-	wctrl->ldctl_oid = woid;
+	(*wctrl)->ldctl_oid = woid;
 
-	return wctrl;
+	return LDAP_SUCCESS;
 }
 
 /* Free a converted wide LDAPControl. */
@@ -157,54 +158,59 @@ free_ctrl(LDAPControlW *ctrl) {
 
 /* Convert a list of "ANSI" LDAPControl struct into a list of UTF-16
    wide LDAPControl. */
-static LDAPControlW **
-convert_ctrl_list(LDAPControlA **ctrls) {
+static int
+convert_ctrl_list(LDAPControlA **ctrls, LDAPControlW ***wctrls) {
 	int size = 0;
-	int failed = 0;
-	LDAPControlW **wctrls = NULL;
+	int rc = 0;
 
-	if (ctrls == NULL) return NULL;
+	if (ctrls == NULL) return LDAP_SUCCESS;
 
 	size = get_size((void **)ctrls);
-	wctrls = (LDAPControlW **)malloc(sizeof(LDAPControlW *) * (size + 1));
-	if (wctrls == NULL) {
-		return NULL;
-	}
+	*wctrls = (LDAPControlW **)malloc(sizeof(LDAPControlW*) * (size + 1));
+	if (*wctrls == NULL) return LDAP_NO_MEMORY;
 
-	copy_list((void **)ctrls, (void **)wctrls, (void *)convert_ctrl, &failed);
+	rc = copy_list((void **)ctrls, (void **)wctrls, ((int(*)(void*, void**))convert_ctrl));
 
-	if (failed) {
+	if (rc != LDAP_SUCCESS) {
 		/* At least one of the item's conversion is failed,
 		thus the list is not converted properly. */
-		free_list((void **)wctrls, (void *)free_ctrl);
-		return NULL;
+		free_list((void **)wctrls, (void(*)(void*))(free_ctrl));
 	}
 
-	return wctrls;
+	return rc;
 }
 
 /* Convert an "ANSI" LDAPMod struct into an UTF-16 wide LDAPMod. */
-static LDAPModW *
-convert_mod(LDAPModA *mod) {
-	LDAPModW *wmod = NULL;
+static int
+convert_mod(LDAPModA *mod, LDAPModW **wmod) {
+	int rc = 0;
 
-	if (mod == NULL) return NULL;
+	if (mod == NULL) return LDAP_SUCCESS;
 
-	wmod = (LDAPModW *)malloc(sizeof(LDAPModW));
-	if (wmod == NULL) {
-		return NULL;
-	}
+	*wmod = (LDAPModW *)malloc(sizeof(LDAPModW));
+	if (*wmod == NULL) return LDAP_NO_MEMORY;
 
-	wmod->mod_op = mod->mod_op;
+	(*wmod)->mod_op = mod->mod_op;
 
-	if ((wmod->mod_op & LDAP_MOD_BVALUES) == LDAP_MOD_BVALUES) {
-		wmod->mod_vals.modv_bvals = mod->mod_vals.modv_bvals;
+	if (((*wmod)->mod_op & LDAP_MOD_BVALUES) == LDAP_MOD_BVALUES) {
+		(*wmod)->mod_vals.modv_bvals = mod->mod_vals.modv_bvals;
 	} else {
-		wmod->mod_vals.modv_strvals = convert_char_list(mod->mod_vals.modv_strvals);
+		rc = convert_char_list(mod->mod_vals.modv_strvals, &((*wmod)->mod_vals.modv_strvals));
+		if (rc != LDAP_SUCCESS) {
+			free(*wmod);
+			return rc;
+		}
 	}
-	wmod->mod_type = convert_to_wcs(mod->mod_type);
 
-	return wmod;
+	rc = convert_to_wcs(mod->mod_type, &((*wmod)->mod_type));
+	if (rc != LDAP_SUCCESS) {
+		free(*wmod);
+		if ((mod->mod_op & LDAP_MOD_BVALUES) != LDAP_MOD_BVALUES) {
+			free_list((void **)(*wmod)->mod_vals.modv_strvals, free);
+		}
+	}
+
+	return rc;
 }
 
 /* Free a converted wide LDAPMod. */
@@ -221,55 +227,60 @@ free_mod(LDAPModW *mod) {
 
 /* Convert a list of "ANSI" LDAPMod struct into a list of UTF-16
    wide LDAPMod. */
-static LDAPModW **
-convert_mod_list(LDAPModA **mods) {
+static int
+convert_mod_list(LDAPModA **mods, LDAPModW ***wmods) {
+	int rc = 0;
 	int size = 0;
-	int failed = 0;
-	LDAPModW **wmods = NULL;
 
-	if (mods == NULL) return NULL;
+	if (mods == NULL) return LDAP_SUCCESS;
 
 	size = get_size((void **)mods);
-	wmods = (LDAPModW **)malloc(sizeof(LDAPModW *) * (size + 1));
-	if (wmods == NULL) {
-		return NULL;
-	}
+	*wmods = (LDAPModW **)malloc(sizeof(LDAPModW *) * (size + 1));
+	if (*wmods == NULL) return LDAP_NO_MEMORY;
 
-	copy_list((void **)mods, (void **)wmods, (void *)convert_mod, &failed);
+	rc = copy_list((void **)mods, (void **)*wmods, (void *)convert_mod);
 
-	if (failed) {
+	if (rc != LDAP_SUCCESS) {
 		/* At least one of the item's conversion is failed,
 		thus the list is not converted properly. */
-		free_list((void **)wmods, (void *)free_mod);
-		return NULL;
+		free_list((void **)*wmods, (void *)free_mod);
 	}
 
-	return wmods;
+	return rc;
 }
 
 /* Convert an "ANSI" LDAPSortKey struct into an UTF-16 wide LDAPSortKey. */
-static LDAPSortKeyW *
-convert_sortkey(LDAPSortKeyA *sortkey) {
+static int
+convert_sortkey(LDAPSortKeyA *sortkey, LDAPSortKeyW **wsortkey) {
+	int rc = 0;
 	wchar_t *attrtype = NULL;
 	wchar_t *ruleoid = NULL;
-	LDAPSortKeyW *wsortkey = NULL;
 
-	if (sortkey == NULL) return NULL;
+	if (sortkey == NULL) return LDAP_SUCCESS;
 
-	wsortkey = (LDAPSortKeyW *)malloc(sizeof(LDAPSortKeyW));
-	if (wsortkey == NULL) {
-		return NULL;
+	*wsortkey = (LDAPSortKeyW *)malloc(sizeof(LDAPSortKeyW));
+	if (*wsortkey == NULL) return LDAP_NO_MEMORY;
+
+	rc = convert_to_wcs(sortkey->sk_attrtype, &attrtype);
+	if (rc != LDAP_SUCCESS) {
+		free(*wsortkey);
+		return rc;
 	}
 
-	attrtype = convert_to_wcs(sortkey->sk_attrtype);
-	wsortkey->sk_attrtype = attrtype;
+	(*wsortkey)->sk_attrtype = attrtype;
 	
-	ruleoid = convert_to_wcs(sortkey->sk_matchruleoid);
-	wsortkey->sk_matchruleoid = ruleoid;
+	rc = convert_to_wcs(sortkey->sk_matchruleoid, &ruleoid);
+	if (rc != LDAP_SUCCESS) {
+		if (attrtype) free(attrtype);
+		free(*wsortkey);
+		return rc;
+	}
 
-	wsortkey->sk_reverseorder = sortkey->sk_reverseorder;
+	(*wsortkey)->sk_matchruleoid = ruleoid;
 
-	return wsortkey;
+	(*wsortkey)->sk_reverseorder = sortkey->sk_reverseorder;
+
+	return LDAP_SUCCESS;
 }
 
 /* Free a converted wide LDAPSotrKey. */
@@ -283,30 +294,26 @@ free_sortkey(LDAPSortKeyW *sortkey) {
 
 /* Convert a list of "ANSI" LDAPSortKey struct into a list of UTF-16
    wide LDAPSortKey. */
-static LDAPSortKeyW **
-convert_sortkey_list(LDAPSortKeyA **keylist) {
+static int
+convert_sortkey_list(LDAPSortKeyA **keylist, LDAPSortKeyW ***wkeylist) {
+	int rc = 0;
 	int size = 0;
-	int failed = 0;
-	LDAPSortKeyW **wkeylist = NULL;
 	
-	if (keylist == NULL) return NULL;
+	if (keylist == NULL) return LDAP_SUCCESS;
 
 	size = get_size((void **)keylist);
-	wkeylist = (LDAPSortKeyW **)malloc(sizeof(LDAPSortKeyW *) * (size + 1));
-	if (wkeylist == NULL) {
-		return NULL;
-	}
+	*wkeylist = (LDAPSortKeyW **)malloc(sizeof(LDAPSortKeyW *) * (size + 1));
+	if (*wkeylist == NULL) return LDAP_NO_MEMORY;
 
-	copy_list((void **)keylist, (void **)wkeylist, (void *)convert_sortkey, &failed);
+	rc = copy_list((void **)keylist, (void **)*wkeylist, (void *)convert_sortkey);
 
-	if (failed) {
+	if (rc != LDAP_SUCCESS) {
 		/* At least one of the item's conversion is failed,
 		thus the list is not converted properly. */
 		free_list((void **)wkeylist, (void *)free_sortkey);
-		return NULL;
 	}
 
-	return wkeylist;
+	return rc;
 }
 
 int
@@ -326,7 +333,7 @@ ldap_get_dnU(LDAP *ld, LDAPMessage *entry) {
 
 	wdn = ldap_get_dnW(ld, entry);
 
-	dn = convert_to_mbs(wdn);
+	convert_to_mbs(wdn, &dn);
 
 	ldap_memfreeW(wdn);
 
@@ -343,13 +350,14 @@ ldap_add_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAPCon
 	LDAPControlW **wsctrls = NULL;
 	LDAPControlW **wcctrls = NULL;
 
-	wdn = convert_to_wcs(dn);
-	wsctrls = convert_ctrl_list(sctrls);
-	wcctrls = convert_ctrl_list(cctrls);
-	wattrs = convert_mod_list(attrs);
+	if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_mod_list(attrs, &wattrs) != LDAP_SUCCESS) goto clear;
 
 	rc = ldap_add_extW(ld, wdn, wattrs, wsctrls, wcctrls, msgidp);
 
+clear:
 	if (wdn) free(wdn);
 	free_list((void **)wsctrls, (void *)free_ctrl);
 	free_list((void **)wcctrls, (void *)free_ctrl);
@@ -368,13 +376,14 @@ ldap_modify_extU(LDAP *ld, char *dn, LDAPMod **attrs, LDAPControl **sctrls, LDAP
 	LDAPControlW **wsctrls = NULL;
 	LDAPControlW **wcctrls = NULL;
 
-	wdn = convert_to_wcs(dn);
-	wsctrls = convert_ctrl_list(sctrls);
-	wcctrls = convert_ctrl_list(cctrls);
-	wattrs = convert_mod_list(attrs);
+	if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_mod_list(attrs, &wattrs) != LDAP_SUCCESS) goto clear;
 
 	rc = ldap_modify_extW(ld, wdn, wattrs, wsctrls, wcctrls, msgidp);
 
+clear:
 	if (wdn) free(wdn);
 	free_list((void **)wsctrls, (void *)free_ctrl);
 	free_list((void **)wcctrls, (void *)free_ctrl);
@@ -390,12 +399,13 @@ ldap_delete_extU(LDAP *ld, char *dn, LDAPControl **sctrls, LDAPControl **cctrls,
 	LDAPControlW **wsctrls = NULL;
 	LDAPControlW **wcctrls = NULL;
 
-	wdn = convert_to_wcs(dn);
-	wsctrls = convert_ctrl_list(sctrls);
-	wcctrls = convert_ctrl_list(cctrls);
+	if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
 
 	rc = ldap_delete_extW(ld, wdn, wsctrls, wcctrls, msgidp);
 
+clear:
 	if (wdn) free(wdn);
 	free_list((void **)wsctrls, (void *)free_ctrl);
 	free_list((void **)wcctrls, (void *)free_ctrl);
@@ -410,7 +420,7 @@ ldap_first_attributeU(LDAP *ld, LDAPMessage *entry, BerElement **ber) {
 
 	wattr = ldap_first_attributeW(ld, entry, ber);
 
-	attr = convert_to_mbs(wattr);
+	convert_to_mbs(wattr, &attr);
 
 	ldap_memfreeW(wattr);
 
@@ -424,7 +434,7 @@ ldap_next_attributeU(LDAP *ld, LDAPMessage *entry, BerElement *ber) {
 
 	wattr = ldap_next_attributeW(ld, entry, ber);
 
-	attr = convert_to_mbs(wattr);
+	convert_to_mbs(wattr, &attr);
 
 	ldap_memfreeW(wattr);
 
@@ -436,7 +446,7 @@ ldap_get_values_lenU(LDAP *ld, LDAPMessage *entry, char *target) {
 	struct berval **ret = NULL;
 	wchar_t *wtarget = NULL;
 
-	wtarget = convert_to_wcs(target);
+	convert_to_wcs(target, &wtarget);
 
 	ret = ldap_get_values_lenW(ld, entry, wtarget);
 
@@ -456,14 +466,15 @@ ldap_renameU(LDAP *ld, char *dn, char *newrdn, char *newSuperior, int deleteoldr
 	LDAPControlW **wsctrls = NULL;
 	LDAPControlW **wcctrls = NULL;
 	
-	wdn = convert_to_wcs(dn);
-	wnewrdn = convert_to_wcs(newrdn);
-	wnewSuperior = convert_to_wcs(newSuperior);
-	wsctrls = convert_ctrl_list(sctrls);
-	wcctrls = convert_ctrl_list(cctrls);
+	if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_to_wcs(newrdn, &wnewrdn) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_to_wcs(newSuperior, &wnewSuperior) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
 
 	rc = ldap_rename_extW(ld, wdn, wnewrdn, wnewSuperior, deleteoldrdn, wsctrls, wcctrls, msgidp);
 
+clear:
 	if (wdn) free(wdn);
 	if (wnewrdn) free(wnewrdn);
 	if (wnewSuperior) free(wnewSuperior);
@@ -491,15 +502,16 @@ ldap_search_extU(LDAP *ld, char *base, int scope, char *filter, char **attrs, in
 		timelimit = 0;
 	}
 
-	wbase = convert_to_wcs(base);
-	wfilter = convert_to_wcs(filter);
-	wattrs = convert_char_list(attrs);
-	wsctrls = convert_ctrl_list(sctrls);
-	wcctrls = convert_ctrl_list(cctrls);
+	if (rc = convert_to_wcs(base, &wbase) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_to_wcs(filter, &wfilter) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_char_list(attrs, &wattrs) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
 
 	rc = ldap_search_extW(ld, wbase, scope, wfilter, wattrs, attrsonly, wsctrls, wcctrls, timelimit,
 			sizelimit, msgidp);
 
+clear:
 	if (wbase) free(wbase);
 	if (wfilter) free(wfilter);
 	free_list((void **)wattrs, (void *)free);
@@ -516,7 +528,7 @@ ldap_create_sort_controlU(LDAP *ld, LDAPSortKey **keyList, int iscritical, LDAPC
 	LDAPControlW *wctrlp = NULL;
 	LDAPControlA *ret = NULL;
 
-	wkeylist = convert_sortkey_list(keyList);
+	if (rc = convert_sortkey_list(keyList, &wkeylist) != LDAP_SUCCESS) return rc;
 
 	rc = ldap_create_sort_controlW(ld, wkeylist, iscritical, &wctrlp);
 
@@ -526,7 +538,9 @@ ldap_create_sort_controlU(LDAP *ld, LDAPSortKey **keyList, int iscritical, LDAPC
 	if (ret == NULL) return LDAP_NO_MEMORY;
 
 	ret->ldctl_iscritical = wctrlp->ldctl_iscritical;
-	ret->ldctl_oid = convert_to_mbs(wctrlp->ldctl_oid);
+	if (rc = convert_to_mbs(wctrlp->ldctl_oid, &(ret->ldctl_oid)) != LDAP_SUCCESS) {
+		return rc;
+	}
 	ret->ldctl_value = wctrlp->ldctl_value;
 
 	*ctrlp = ret;
@@ -545,12 +559,13 @@ ldap_extended_operationU(LDAP *ld, char *reqoid, struct berval *reqdata, LDAPCon
 	LDAPControlW **wsctrls = NULL;
 	LDAPControlW **wcctrls = NULL;
 
-	woid = convert_to_wcs(reqoid);
-	wsctrls = convert_ctrl_list(sctrls);
-	wcctrls = convert_ctrl_list(cctrls);
+	if (rc = convert_to_wcs(reqoid, &woid) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
 
 	rc = ldap_extended_operationW(ld, woid, reqdata, wsctrls, wcctrls, msgidp);
 
+clear:
 	if (woid) free(woid);
 	free_list((void **)wsctrls, (void *)free_ctrl);
 	free_list((void **)wcctrls, (void *)free_ctrl);
@@ -567,7 +582,8 @@ ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct b
 	wchar_t *wretoid = NULL;
 
 	rc = ldap_parse_extended_resultW(ld, res, &wretoid, retdatap, freeit);
-	oid = convert_to_mbs(wretoid);
+	if (rc != LDAP_SUCCESS) return rc;
+	if (rc = convert_to_mbs(wretoid, &oid) != LDAP_SUCCESS) return rc;
 
 	if (wretoid) ldap_memfreeW(wretoid);
 
@@ -586,7 +602,7 @@ ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControl **ctrls, ber_int_t *count
 	int rc = 0;
 	LDAPControlW **wctrls = NULL;
 
-	wctrls = convert_ctrl_list(ctrls);
+	if (rc = convert_ctrl_list(ctrls, &wctrls) != LDAP_SUCCESS) goto clear;
 
 	if (cookie != NULL && cookie->bv_val != NULL) {
 		/* Clear the cookie's content for the new data. */
@@ -596,6 +612,7 @@ ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControl **ctrls, ber_int_t *count
 
 	rc = ldap_parse_page_controlW(ld, wctrls, (unsigned long *)count, &cookie);
 
+clear:
 	free_list((void **)wctrls, (void *)free_ctrl);
 
 	return rc;
@@ -624,19 +641,22 @@ ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp,
 	LDAPControlA *ctrla = NULL;
 
 	rc = ldap_parse_resultW(ld, res, errcodep, &wmatcheddnp, &werrmsgp, &wreferralsp, &wsctrls, freeit);
+	if (rc != LDAP_SUCCESS) return rc;
 
 	/* Convert and assign parameters just if they are required. */
-	if (matcheddnp != NULL) *matcheddnp = convert_to_mbs(wmatcheddnp);
-	if (errmsgp != NULL) *errmsgp = convert_to_mbs(werrmsgp);
+	if (matcheddnp != NULL) rc = convert_to_mbs(wmatcheddnp, matcheddnp);
+	if (errmsgp != NULL) rc = convert_to_mbs(werrmsgp, errmsgp);
 
 	if (wreferralsp != NULL && referralsp != NULL) {
 		/* Copy and convert the referral strings, if it's required. */
 		size = get_size(wreferralsp);
-		refs = (char **)malloc(sizeof(char *) * (size + 1));
-		if (refs == NULL) return LDAP_NO_MEMORY;
-
+		refs = (char **)malloc(sizeof(char*) * (size + 1));
+		if (refs == NULL) {
+			rc = LDAP_NO_MEMORY;
+			goto clear;
+		}
 		for (i = 0; wreferralsp[i] != NULL; i++) {
-			refs[i] = convert_to_mbs(wreferralsp[i]);
+			convert_to_mbs(wreferralsp[i], &refs[i]);
 		}
 		refs[i] = NULL;
 		*referralsp = refs;
@@ -646,14 +666,18 @@ ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp,
 		/* Copy and convert the server controls, if it's required. */
 		size = get_size(wsctrls);
 		ctrls = (LDAPControlA **)malloc(sizeof(LDAPControlA *) * (size + 1));
-		if (ctrls == NULL) return LDAP_NO_MEMORY;
+		if (ctrls == NULL) {
+			rc = LDAP_NO_MEMORY;
+			goto clear;
+		}
 
 		for (i = 0; wsctrls[i] != NULL; i++) {
 			ctrla = (LDAPControlA *)malloc(sizeof(LDAPControlA));
 			if (ctrla == NULL) return LDAP_NO_MEMORY;
 
 			ctrla->ldctl_iscritical = wsctrls[i]->ldctl_iscritical;
-			ctrla->ldctl_oid = convert_to_mbs(wsctrls[i]->ldctl_oid);
+			rc = convert_to_mbs(wsctrls[i]->ldctl_oid, &(ctrla->ldctl_oid));
+			if (rc != LDAP_SUCCESS) goto clear;
 			ctrla->ldctl_value = *ber_bvdup(&(wsctrls[i]->ldctl_value));
 			ctrls[i] = ctrla;
 
@@ -663,6 +687,7 @@ ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp,
 		*sctrls = ctrls;
 	}
 
+clear:
 	ldap_memfreeW(wmatcheddnp);
 	ldap_memfreeW(werrmsgp);
 	ldap_value_freeW(wreferralsp);
@@ -673,16 +698,19 @@ ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp,
 
 char *
 ldap_err2stringU(int err) {
+	char *errmsg = NULL;
 	wchar_t *werr = NULL;
 
 	/* Mustn't free the returning string. */
 	werr = ldap_err2stringW(err);
 
-	return convert_to_mbs(werr);
+	convert_to_mbs(werr, &errmsg);
+	return errmsg;
 }
 
 int
 ldap_initializeU(LDAP **ldp, char *url) {
+	int rc = 0;
 	int err = 0;
 	int chunk_num = 0;
 	int port = 389;
@@ -729,7 +757,7 @@ ldap_initializeU(LDAP **ldp, char *url) {
 		chunk = strtok_s(NULL, ":/", &nxtoken);
 	}
 init:
-	whost = convert_to_wcs(host);
+	if (rc = convert_to_wcs(host, &whost) != LDAP_SUCCESS) return rc;
 
 	*ldp = ldap_sslinitW(whost, port, ssl);
 
@@ -751,11 +779,12 @@ ldap_start_tls_sU(LDAP *ld, LDAPControl **sctrls, LDAPControl **cctrls) {
 	LDAPControlW **wsctrls = NULL;
 	LDAPControlW **wcctrls = NULL;
 
-	wsctrls = convert_ctrl_list(sctrls);
-	wcctrls = convert_ctrl_list(cctrls);
+	if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
 
 	rc = ldap_start_tls_sW(ld, NULL, NULL, wsctrls, wcctrls);
 
+clear:
 	free_list((void **)wsctrls, (void *)free_ctrl);
 	free_list((void **)wcctrls, (void *)free_ctrl);
 
@@ -768,11 +797,12 @@ ldap_simple_bind_sU(LDAP *ld, char *who, char *passwd) {
 	wchar_t *wwho = NULL;
 	wchar_t *wpsw = NULL;
 
-	wwho = convert_to_wcs(who);
-	wpsw = convert_to_wcs(passwd);
+	if (rc = convert_to_wcs(who, &wwho) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_to_wcs(passwd, &wpsw) != LDAP_SUCCESS) goto clear;
 
 	rc = ldap_simple_bind_sW(ld, wwho, wpsw);
 
+clear:
 	if (wwho) free(wwho);
 	if (wpsw) free(wpsw);
 
@@ -947,7 +977,7 @@ get_target_name(LDAP *ld) {
 	wchar_t *hostname = NULL;
 	wchar_t *target_name = NULL;
 
-	hostname = convert_to_wcs(ld->ld_host);
+	convert_to_wcs(ld->ld_host, &hostname);
 	if (hostname == NULL) return NULL;
 
 	/* The new string starts with ldap/ (5 char) + 1 terminating NULL. */
@@ -960,6 +990,7 @@ get_target_name(LDAP *ld) {
 	return target_name;
 }
 
+int
 ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls,
 	LDAPControl **cctrls, void *defaults) {
 	int i;
@@ -984,10 +1015,10 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls
 	char *mechs[] = { "DIGEST-MD5", "GSSAPI", NULL };
 	wchar_t *secpacks[] = { L"WDigest", L"Kerberos", NULL };
 
-	wdn = convert_to_wcs(dn);
-	wmech = convert_to_wcs(mechanism);
-	wsctrls = convert_ctrl_list(sctrls);
-	wcctrls = convert_ctrl_list(cctrls);
+	if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_to_wcs(mechanism, &wmech) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
 
 	cred.bv_val = NULL;
 	cred.bv_len = 0;
@@ -1006,9 +1037,9 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls
 	/* Create credential data. */
 	memset(&wincreds, 0, sizeof(wincreds));
 
-	wauthcid = convert_to_wcs(defs->authcid);
-	wpasswd = convert_to_wcs(defs->passwd);
-	wrealm = convert_to_wcs(defs->realm);
+	if (rc = convert_to_wcs(defs->authcid, &wauthcid) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_to_wcs(defs->passwd, &wpasswd) != LDAP_SUCCESS) goto clear;
+	if (rc = convert_to_wcs(defs->realm, &wrealm) != LDAP_SUCCESS) goto clear;
 
 	wincreds.User = (unsigned short *)wauthcid;
 	if (wincreds.User != NULL) wincreds.UserLength = (unsigned long)wcslen(wauthcid);
@@ -1044,6 +1075,7 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControl **sctrls
 		ldap_get_option(ld, LDAP_OPT_ERROR_NUMBER, &rc);
 	} while (rc == LDAP_SASL_BIND_IN_PROGRESS);
 
+clear:
 	if (wdn) free(wdn);
 	if (wmech) free(wmech);
 	if (wauthcid) free(wauthcid);

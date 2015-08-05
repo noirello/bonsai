@@ -288,8 +288,9 @@ dealloc_conn_info(ldap_conndata_t* info) {
 }
 
 /* Thread function. The ldap_initialize function opens the LDAP client's
-config file, thus to avoid the I/O blocking in the main (Python) thread
-the initialisation is done in a separate (POSIX) thread. */
+config file on Unix and ldap_start_tls_s blocks for create SSL context on Windows,
+thus to avoid the I/O blocking in the main (Python) thread the initialisation
+is done in a separate (POSIX and Windows) thread. */
 void *
 ldap_init_thread(void *params) {
 	int rc = -1;
@@ -342,7 +343,7 @@ LDAP_start_init(PyObject *url, int has_tls, int cert_policy, void **thread, void
 	data->cert_policy = cert_policy;
 	/* Create the separate thread. */
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-	*thread = (void *)CreateThread(NULL, 0, ldap_init_thread, (void *)data, 0, NULL);
+	*thread = (void *)CreateThread(NULL, 0, (int(*)(void*))&ldap_init_thread, (void *)data, 0, NULL);
 	if (*thread == NULL) {
 		free(data);
 		PyErr_BadInternalCall();
