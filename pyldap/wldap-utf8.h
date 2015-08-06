@@ -1,6 +1,19 @@
 #ifndef PYLDAP_WLDAP_UTF8_H_
 #define PYLDAP_WLDAP_UTF8_H_
 
+/*****************************************************************************
+* These functions and structs are (mostly) redefinitions of the used WinLDAP
+* functions and structs in the extension, but instead using either ANSI or
+* UTF-16 encoded character string, all of the functions expect and return
+* narrow UTF-8 encoded values. The inputs are encoded to wide UTF-16 format
+* before the corresponding wide function (that supports unicode) is explicitly
+* called. The returned values are decoded back to UTF-8. Some of the functions
+* are renamed or their signatures are changed to match with the ones defined
+* in the OpenLDAP's API. The disadvantage of this approach is that the
+* convertations generate extra overhead for every LDAP operations on Windows,
+* but better platform independent unicode support can be achieved without
+* breaking the rest of the codebase's integrity with platfrom dependent code.
+******************************************************************************/
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
 #define UNICODE 1
@@ -14,6 +27,7 @@
 #include <security.h>
 #include <Sspi.h>
 
+/* These fields are differed from the ones in the OpenLDAP. */
 #define attributeType sk_attrtype
 #define orderingRule sk_matchruleoid
 #define reverseOrder sk_reverseorder
@@ -23,6 +37,7 @@
 
 #define LDAP_CONTROL_PAGEDRESULTS "1.2.840.113556.1.4.319"
 
+/* All of the used WinLDAP macros are redefined. */
 #undef LDAPControl
 #undef LDAPMod
 #undef LDAPSortKey
@@ -71,10 +86,13 @@
 #define ldap_parse_extended_result ldap_parse_extended_resultU
 #define ldap_parse_result ldap_parse_resultU
 #define ldap_err2string ldap_err2stringU
+/* Simple free is sufficed, because no WinLDAP dependent allocation
+   should be kept outside of the scope of the new functions. */
 #define ldap_memfree free
 #define ldap_start_tls_s ldap_start_tls_sU
 #define ldap_simple_bind_s ldap_simple_bind_sU
 
+/* These functions are not represented in the WinLDAP API. */
 #define ldap_parse_pageresponse_control ldap_parse_pageresponse_controlU
 #define ldap_control_find ldap_control_findU
 #define ldap_initialize ldap_initializeU
@@ -86,7 +104,6 @@ typedef struct sasl_defaults_s {
 	char *passwd;
 	char *realm;
 } sasl_defaults_t;
-
 
 int ldap_unbind_ext(LDAP *ld, LDAPControlA **sctrls, LDAPControlA **cctrls);
 int ldap_abandon_ext(LDAP *ld, int msgid, LDAPControlA **sctrls, LDAPControlA **cctrls);

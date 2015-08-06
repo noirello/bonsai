@@ -316,6 +316,12 @@ convert_sortkey_list(LDAPSortKeyA **keylist, LDAPSortKeyW ***wkeylist) {
 	return rc;
 }
 
+/******************************************************************************
+* All of the following functions behave just like they documented in the WinLDAP
+* or OpenLDAP documentations (except where the comment says otherwise), but they
+* can return with encoding or decoding error code, if the convertation is failed.
+******************************************************************************/
+
 int
 ldap_unbind_ext(LDAP *ld, LDAPControlA **sctrls, LDAPControlA **cctrls) {
 	return ldap_unbind(ld);
@@ -593,7 +599,7 @@ ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct b
 }
 
 /* This function receive a list of LDAPControl instead of one LDAPControl, 
-   because the corresponding WinLDAP function willsearch the page control
+   because the corresponding WinLDAP function will search the page control
    object internally. */
 int
 ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *count,
@@ -809,6 +815,12 @@ clear:
 	return rc;
 }
 
+/******************************************************************************
+* The following functions are for SASL binding, using SSPI.
+******************************************************************************/
+
+
+/* Decrypt the message of a GSSAPI (Kerberos) response from the server. */
 static int
 decrypt_response(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int *outLen) {
 	SecBufferDesc buff_desc;
@@ -843,6 +855,7 @@ decrypt_response(CtxtHandle *handle, char *inToken, int inLen, char **outToken, 
 	return res;
 }
 
+/* Encrypt the message of a GSSAPI (Kerberos) reply to the server. */
 static int
 encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int *outLen) {
 	SecBufferDesc buff_desc;
@@ -890,6 +903,7 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
 	return res;
 }
 
+/* Create the replies for the server's responses during the SASL binding procedure. */
 static int
 sspi_bind_procedure(CredHandle *credhandle, CtxtHandle *ctxhandle, wchar_t *targetName, int *gssapi,
 struct berval *response, struct berval *creddata) {
@@ -976,6 +990,7 @@ struct berval *response, struct berval *creddata) {
 	return LDAP_SUCCESS;
 }
 
+/* Get the SPN target name from the LDAP struct's hostname. */
 static wchar_t *
 get_target_name(LDAP *ld) {
 	size_t len = 0;
@@ -995,6 +1010,10 @@ get_target_name(LDAP *ld) {
 	return target_name;
 }
 
+/* Execute a synchronous SASL binding to the directory server.
+   No asynchronous function can be used because there is some bug in the
+   WinLDAP library that makes impossible to process the result of the
+   server with the ldap_result function. */
 int
 ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrls,
 	LDAPControlA **cctrls, void *defaults) {
@@ -1092,6 +1111,7 @@ clear:
 	return rc;
 }
 
+/* Get the optional error message. */
 char *
 _ldap_get_opt_errormsgU(LDAP *ld) {
 	char *opt = NULL;
