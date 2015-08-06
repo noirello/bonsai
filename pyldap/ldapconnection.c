@@ -539,6 +539,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 	int rc = -1;
 	struct berval *authzid = NULL;
 	char *retoid = NULL;
+	PyObject *retval = NULL;
 
 	rc = ldap_parse_extended_result(self->ld, res, &retoid, &authzid, 1);
 
@@ -563,9 +564,10 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 			authzid->bv_len = 9;
 		}
 		ldap_memfree(retoid);
-		return PyUnicode_FromString(authzid->bv_val);
+		retval = PyUnicode_FromString(authzid->bv_val);
+		ber_bvfree(authzid);
 	}
-	return NULL;
+	return retval;
 }
 
 PyObject *

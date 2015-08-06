@@ -114,11 +114,11 @@ PyObject2char(PyObject *obj) {
 		str = PyObject2char(tmpobj);
 		Py_DECREF(tmpobj);
 	} else if (PyBool_Check(obj)) {
-		/* Python boolean converting to TRUE or FALSE ( see RFC4517 3.3.3). */
+		/* Python boolean converting to TRUE or FALSE (see RFC4517 3.3.3). */
 		if (obj == Py_True) {
-			str = "TRUE";
+			str = strdup("TRUE");
 		} else {
-			str = "FALSE";
+			str = strdup("FALSE");
 		}
 	} else {
 		tmpobj = PyObject_Str(obj);
