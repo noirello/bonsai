@@ -101,10 +101,24 @@ class LDAPConnectionTest(unittest.TestCase):
         client = LDAPClient("ldap://invalid")
         self.assertRaises(pyldap.ConnectionError, lambda : client.connect())
 
-    def test_authentication_error(self):
-        """ Test authentication error. """
+    def test_simple_auth_error(self):
+        """ Test simple authentication error. """
         client = LDAPClient(self.url)
         client.set_credentials("SIMPLE", ("cn=wrong", "wronger"))
+        self.assertRaises(pyldap.AuthenticationError, lambda : client.connect())
+
+    def test_digest_auth_error(self):
+        """ Test DIGEST-MD5 authentication error. """
+        if "DIGESTAUTH" not in self.cfg:
+            self.skipTest("No digest authentication is set.")
+        client = LDAPClient(self.url)
+        if self.cfg["DIGESTAUTH"]["realm"] == "None":
+            realm = None
+        else:
+            realm = self.cfg["DIGESTAUTH"]["realm"]
+        client.set_credentials("DIGEST-MD5", (self.cfg["DIGESTAUTH"]["user"], \
+                                        "wrongpassword", \
+                                        realm))
         self.assertRaises(pyldap.AuthenticationError, lambda : client.connect())
 
 if __name__ == '__main__':

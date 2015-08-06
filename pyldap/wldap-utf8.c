@@ -905,6 +905,10 @@ struct berval *response, struct berval *creddata) {
 
 	if (creddata == NULL || credhandle == NULL) return LDAP_PARAM_ERROR;
 
+	/* Set creddata empty. */
+	creddata->bv_len = 0;
+	creddata->bv_val = NULL;
+
 	/* Init output buffer. */
 	out_buff_desc.ulVersion = 0;
 	out_buff_desc.cBuffers = 1;
@@ -1064,7 +1068,6 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
 
 	do {
 		rc = sspi_bind_procedure(&credhandle, &ctxhandle, target_name, &gssapi, response, &cred);
-		if (rc != LDAP_SUCCESS) goto clear;
 
 		rc = ldap_sasl_bind_sW(ld, wdn, wmech, &cred, wsctrls, wcctrls, &response);
 		/* Free the previously allocated data. */
