@@ -1,4 +1,5 @@
 import configparser
+import os.path
 import unittest
 
 from pyldap import LDAPDN
@@ -8,9 +9,10 @@ import pyldap.errors
 class LDAPConnectionTest(unittest.TestCase):
     """ Test LDAPConnection object. """
     def setUp(self):
+        curdir = os.path.abspath(os.path.dirname(__file__))
         """ Set LDAP URL and open connection. """
         self.cfg = configparser.ConfigParser()
-        self.cfg.read('test.ini')
+        self.cfg.read(os.path.join(curdir, 'test.ini'))
         self.url = "ldap://%s:%s/%s?%s?%s" % (self.cfg["SERVER"]["host"], \
                                         self.cfg["SERVER"]["port"], \
                                         self.cfg["SERVER"]["basedn"], \
