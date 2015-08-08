@@ -2,9 +2,29 @@ import os
 import sys
 import re
 try:
-    from setuptools import setup, Extension
+    from setuptools import setup, Extension, Command
 except ImportError:
-    from distutils.core import setup, Extension
+    from distutils.core import setup, Extension, Command
+
+class TestCommand(Command):
+    description = "Run the tests."
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        import unittest
+        del sys.path[0] # Hack for avoid importing the local pyldap
+        tests = unittest.defaultTestLoader.discover("./tests", pattern="*_test.py")
+        suite = unittest.TestSuite()
+        suite.addTests(tests)
+        #result = unittest.TestResult()
+        unittest.TextTestRunner().run(suite)
+        sys.exit(0)
 
 sources = ["pyldapmodule.c", "ldapentry.c", "ldapconnectiter.c",
            "ldapconnection.c", "ldapmodlist.c", "ldapvaluelist.c",
@@ -44,6 +64,7 @@ setup(name="pyldap",
       license="MIT",
       ext_modules=[pyldap_module],
       packages=["pyldap"],
+      cmdclass={"test": TestCommand},
       classifiers=[
           'Development Status :: 4 - Beta',
           'Intended Audience :: Developers',
