@@ -27,7 +27,7 @@ class LDAPURL(object):
 
     def __delattr__(self, attr):
         """ None of the attributions can be deleted. """
-        raise Exception("%s cannot be deleted." % attr)
+        raise AttributeError("%s cannot be deleted." % attr)
 
     def __str2url(self, strurl):
         """ Parsing string url to LDAPURL."""
@@ -74,13 +74,27 @@ class LDAPURL(object):
         """ The hostname. """
         return self.__hostinfo[1]
 
+    @staticmethod
+    def is_valid_hostname(hostname):
+        """"
+        Validate a hostname.
+        Source:
+        http://stackoverflow.com/questions/2532053/validate-a-hostname-string
+        """
+        if len(hostname) > 255:
+            return False
+        if hostname[-1] == ".":
+            # Strip exactly one dot from the right, if present
+            hostname = hostname[:-1]
+        allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$",
+            re.IGNORECASE)
+        return all(allowed.match(x) for x in hostname.split("."))
+
     @host.setter
     def host(self, value):
         """ Setter for hostname. """
         # RegExp for valid hostname.
-        valid = re.compile(r"((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]))", re.IGNORECASE)
-        match = valid.match(value)
-        if match is None:
+        if not self.is_valid_hostname(value):
             raise ValueError("'%s' is not a valid host name." % value)
         else:
             self.__hostinfo[1] = value
