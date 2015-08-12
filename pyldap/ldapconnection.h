@@ -13,6 +13,7 @@ typedef struct {
 	LDAP *ld;
 	int page_size;
 	int closed;
+	char async;
 	LDAPSortKey **sort_list;
 } LDAPConnection;
 

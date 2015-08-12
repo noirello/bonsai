@@ -2,12 +2,11 @@ from pyldap._cpyldap import _LDAPConnection
 from pyldap.ldapdn import LDAPDN
 
 class LDAPConnection(_LDAPConnection):
-    def __init__(self, client, async=False):
+    def __init__(self, client, is_async=False):
         self.__client = client
-        self.__async = async
         self.__page_size = 0
         self.__sort_attrs = []
-        super().__init__(client)
+        super().__init__(client, is_async)
 
     def __enter__(self):
         """ Context manager entry point. """
@@ -39,7 +38,7 @@ class LDAPConnection(_LDAPConnection):
         :param int msg_id: the ID of the LDAP operation.
         :return: generator if the connection async, otherwise the result of the operation.
         """
-        if self.__async:
+        if self.async:
             return self._poll(msg_id)
         else:
             return self.get_result(msg_id, True)
@@ -77,7 +76,7 @@ class LDAPConnection(_LDAPConnection):
         _attrlist = attrlist if attrlist is not None else self.__client.url.attributes
         msg_id = super().search(_base, _scope, _filter, _attrlist,
                                 timeout, sizelimit, attrsonly)
-        if self.__async:
+        if self.async:
             return self._poll(msg_id)
         else:
             if self.__page_size > 1:
