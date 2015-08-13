@@ -8,7 +8,7 @@ from pyldap import LDAPConnection
 
 from pyldap.ldapurl import LDAPURL
 
-class LDAPClient(object):
+class LDAPClient:
     """
     This class is for managing LDAP connections.
 
@@ -132,7 +132,57 @@ class LDAPClient(object):
 
     @property
     def url(self):
+        """ The URL of the directoty server. """
         return self.__url
+
+    @url.setter
+    def url(self, value=None):
+        raise ValueError("URL attribute cannot be set.")
+
+    @property
+    def mechanism(self):
+        """ The choosen mechanism for authentication. """
+        return self.__mechanism
+
+    @mechanism.setter
+    def mechanism(self, value=None):
+        raise ValueError("Mechanism attribute cannot be set.")
+
+    @property
+    def credentials(self):
+        """ A tuple with the credential information. """
+        return self.__credentials
+
+    @credentials.setter
+    def credentials(self, value=None):
+        raise ValueError("Credentials attribute cannot be set.")
+
+    @property
+    def tls(self):
+        """ A bool about TLS connection. """
+        return self.__tls
+
+    @tls.setter
+    def tls(self, value=None):
+        raise ValueError("Tls attribute cannot be set.")
+
+    @property
+    def cert_policy(self):
+        """ The certification policy. """
+        return self.__cert_policy
+
+    @cert_policy.setter
+    def cert_policy(self, value=None):
+        raise ValueError("Cert_policy attribute cannot be set.")
+
+    @property
+    def raw_attributes(self):
+        """ A list of attributes that should be kept in byte format. """
+        return self.__raw_list
+
+    @raw_attributes.setter
+    def raw_attributes(self, value=None):
+        raise ValueError("Raw_attributes attribute cannot be set.")
 
     def connect(self, async=False):
         """

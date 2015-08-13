@@ -271,7 +271,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 
 	/* Get list of attribute's names, whose values have to keep in bytearray.*/
 	rawval_list = UniqueList_New();
-	tmp = PyObject_GetAttrString(conn->client, "_LDAPClient__raw_list");
+	tmp = PyObject_GetAttrString(conn->client, "raw_attributes");
 	if (rawval_list == NULL || tmp == NULL ||
 			UniqueList_Extend(rawval_list, tmp) != 0) {
 		Py_DECREF(self);

@@ -71,20 +71,20 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	ldap_conndata_t *info = NULL;
 
 	/* Get URL policy from LDAPClient. */
-	url = PyObject_GetAttrString(self->client, "_LDAPClient__url");
+	url = PyObject_GetAttrString(self->client, "url");
 	if (url == NULL) return -1;
 
 	/* Get cert policy from LDAPClient. */
-	tmp = PyObject_GetAttrString(self->client, "_LDAPClient__cert_policy");
+	tmp = PyObject_GetAttrString(self->client, "cert_policy");
 	if (tmp == NULL) goto error;
 	tls_option = (int)PyLong_AsLong(tmp);
 	Py_DECREF(tmp);
 
 	/* Get mechanism and credentials. */
-	creds = PyObject_GetAttrString(self->client, "_LDAPClient__credentials");
+	creds = PyObject_GetAttrString(self->client, "credentials");
 	if (creds == NULL) goto error;
 
-	tmp = PyObject_GetAttrString(self->client, "_LDAPClient__mechanism");
+	tmp = PyObject_GetAttrString(self->client, "mechanism");
 	if (tmp == NULL) {
 		Py_DECREF(creds);
 		goto error;
@@ -96,7 +96,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	Py_DECREF(creds);
 	if (info == NULL) goto error;
 
-	tls = PyObject_GetAttrString(self->client, "_LDAPClient__tls");
+	tls = PyObject_GetAttrString(self->client, "tls");
 	if (tls == NULL) goto error;
 
 	*conniter = LDAPConnectIter_New(self, info, self->async);
