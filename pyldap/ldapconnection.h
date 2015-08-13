@@ -12,7 +12,7 @@ typedef struct {
 	PyObject *pending_ops;
 	LDAP *ld;
 	int page_size;
-	int closed;
+	char closed;
 	char async;
 	LDAPSortKey **sort_list;
 } LDAPConnection;

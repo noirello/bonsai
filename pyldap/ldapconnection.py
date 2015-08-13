@@ -83,21 +83,6 @@ class LDAPConnection(_LDAPConnection):
                 return self.__paged_search(self.get_result(msg_id, True))
             return list(self.get_result(msg_id, True))
 
-    def set_page_size(self, page_size):
-        """
-        Set how many entry will be on a page of a search result. Setting the
-        page size will affect the search to use LDAP paged results.
-        :meth:`LDAPConnection.search` will return an iterator instead of a
-        list of entries.
-
-        :param int page_size:
-        :raises ValueError: if the parameter is not an integer, or lesser \
-        than 2.
-        """
-        if type(page_size) != int or page_size < 2:
-            raise ValueError("The page_size parameter must be an integer greater, than 1.")
-        self.__page_size = page_size
-
     def __paged_search(self, res):
         while True:
             yield from res

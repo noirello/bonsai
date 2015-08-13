@@ -33,7 +33,8 @@ LDAPConnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 		self->client = NULL;
 		self->pending_ops = NULL;
 		self->page_size = 0;
-		self->closed = -1;
+		/* The connection should be closed. */
+		self->closed = 1;
 		self->async = 0;
 		self->sort_list = NULL;
 	}
@@ -169,6 +170,7 @@ LDAPConnection_Open(LDAPConnection *self) {
 	if (iter->async) {
 		return (PyObject *)iter;
 	}
+
 	return PyIter_Next((PyObject *)iter);
 }
 
@@ -397,25 +399,9 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 		return NULL;
 	}
 
+	/* Create a SearchIter for storing the search params and result. */
 	search_iter = LDAPSearchIter_New(self);
 	if (search_iter == NULL) return PyErr_NoMemory();
-
-	/* Get page size from the connection object. */
-	page_size = PyObject_GetAttrString((PyObject *)self, "_LDAPConnection__page_size");
-	if (page_size == NULL) return NULL;
-	self->page_size = (int)PyLong_AsLong(page_size);
-	Py_DECREF(page_size);
-	if (PyErr_Occurred()) return NULL;
-
-	/* Get sort list from the client. */
-	sort_list = PyObject_GetAttrString((PyObject *)self, "_LDAPConnection__sort_attrs");
-	if (PyList_Size(sort_list) > 0) {
-		self->sort_list = PyList2LDAPSortKeyList(sort_list);
-		if (self->sort_list == NULL) {
-			PyErr_BadInternalCall();
-			return NULL;
-		}
-	}
 
 	/* Convert Python objects to C types. */
 	if (attrsonlyo != NULL) attrsonly = PyObject_IsTrue(attrsonlyo);
@@ -729,9 +715,55 @@ LDAPConnection_fileno(LDAPConnection *self) {
 	return PyLong_FromLong((long int)desc);
 }
 
+static PyObject *
+LDAPConnection_setPageSize(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+	int page_size = -1;
+	static char *kwlist[] = {"page_size", NULL};
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &page_size)) {
+		PyErr_SetString(PyExc_ValueError,
+				"The page_size parameter must be an integer.");
+		return NULL;
+	}
+
+	if (page_size > 2) {
+		self->page_size = page_size;
+	} else {
+		PyErr_SetString(PyExc_ValueError,
+				"The page_size parameter must be greater, than 1.");
+	}
+
+	return Py_None;
+}
+
+static PyObject *
+LDAPConnection_setSortOrder(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+	PyObject *sort_list = NULL;
+	static char *kwlist[] = {"sort_list", NULL};
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "0!", kwlist, &PyList_Type, &sort_list)) {
+		PyErr_SetString(PyExc_ValueError,
+				"The sort_list parameter must be a tuple.");
+		return NULL;
+	}
+
+	if (PyList_Size(sort_list) > 0) {
+		/* Convert the attribute, reverse order pairs to LDAPSortKey struct. */
+		self->sort_list = PyList2LDAPSortKeyList(sort_list);
+		if (self->sort_list == NULL) {
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+	}
+
+	return Py_None;
+}
+
 static PyMemberDef LDAPConnection_members[] = {
     {"async", T_BOOL, offsetof(LDAPConnection, async), READONLY,
      "Asynchronous connection"},
+	{"closed", T_BOOL, offsetof(LDAPConnection, closed), READONLY,
+	 "Connection is closed"},
     {NULL}  /* Sentinel */
 };
 
@@ -752,6 +784,10 @@ static PyMethodDef LDAPConnection_methods[] = {
 			"Open connection with the LDAP Server."},
 	{"search", (PyCFunction)LDAPConnection_Search, 	METH_VARARGS | METH_KEYWORDS,
 			"Search for LDAP entries."},
+	{"set_page_size", (PyCFunction)LDAPConnection_setPageSize, METH_VARARGS,
+			"Set how many entry will be on a page of a search result."},
+	{"set_sort_order", (PyCFunction)LDAPConnection_setSortOrder, METH_VARARGS,
+			"Set a list of attribute names to sort entries in a search result."},
 	{"whoami", (PyCFunction)LDAPConnection_Whoami, METH_NOARGS,
 			"LDAPv3 Who Am I operation."},
     {NULL, NULL, 0, NULL}  /* Sentinel */
