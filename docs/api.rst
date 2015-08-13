@@ -43,7 +43,17 @@ LDAPClient class is for configuring the connection to the directory server.
    >>> conn = client.connect()
    >>> conn.search("cn=jeff,ou=nerdherd,dc=local", 0, attrlist=['cn', 'sn', 'gn'])
    [{'givenName': ['Jeff'], 'sn': [b'Barnes'], 'cn': [b'jeff']}]         
-        
+
+The following properties are read only, new values can not be assigned to them.
+They can be change only by using the corresponding methods of :class:`LDAPClient`.
+
+.. autoattribute:: LDAPClient.cert_policy
+.. autoattribute:: LDAPClient.credentials
+.. autoattribute:: LDAPClient.mechanism
+.. autoattribute:: LDAPClient.raw_attributes
+.. autoattribute:: LDAPClient.tls
+.. autoattribute:: LDAPClient.url
+
 :class:`LDAPConnection`
 -----------------------
 .. class:: LDAPConnection
@@ -108,7 +118,17 @@ LDAPClient class is for configuring the connection to the directory server.
    'givenName': ['Jeff']}, {'sn': ['Wu'], 'cn': ['anna'], 'givenName': ['Anna']}, 
    {'sn': ['Agent'], 'cn': ['greta'], 'givenName': ['Greta']}]
    
-.. automethod:: LDAPConnection.set_page_size
+.. method:: LDAPConnection.set_page_size(page_size)
+
+   :param int page_size: the number of entries on one page.
+
+   :raises ValueError: if the parameter is not an integer, or lesser than 2.
+
+   Set how many entry will be on a page of a search result. Setting the
+   page size will affect the search to use LDAP paged results.
+   :meth:`LDAPConnection.search` will return an iterator instead of a
+   list of entries.
+
 .. automethod:: LDAPConnection.whoami
 .. seealso::
     RFC about the LDAP Who am I extended operation `RFC4532`_.

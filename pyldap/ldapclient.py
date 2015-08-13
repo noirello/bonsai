@@ -159,7 +159,7 @@ class LDAPClient:
 
     @property
     def tls(self):
-        """ A bool about TLS connection. """
+        """ A bool about TLS connection is required. """
         return self.__tls
 
     @tls.setter
