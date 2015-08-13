@@ -78,19 +78,14 @@ class LDAPDN(object):
         :rtype: str
         """
         if type(idx) == int:
+            if idx >= len(self):
+                raise IndexError("Index is out of range.")
             # Convert integer index to slice, because self.__rdns_to_str()
             # needs an extra tuple/list to convert right.
             idx = slice(idx, idx+1)
         elif type(idx) != slice:
             raise TypeError("Indices must be integers or slices.")
         return self.__rdns_to_str(self.__rdns[idx])
-
-    def __get_ancestors(self):
-        """
-        Returns ancestor RDNs for LDAPEntry rename method.
-        It is used in the LDAPEntry_rename C function.
-        """
-        return self[1:]
 
     def __setitem__(self, idx, value):
         """
@@ -118,6 +113,10 @@ class LDAPDN(object):
     def __str__(self):
         """ Return the full string format of the distinguished name. """
         return self.__rdns_to_str(self.__rdns)
+
+    def __len__(self):
+        """ Return the number of RDNs of the distinguished name. """
+        return len(self.__rdns)
 
     def __repr__(self):
         """ The representation of LDAPDN class. """

@@ -594,8 +594,8 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	if (LDAPEntry_setDN(self, newdn, NULL) != 0) return NULL;
 
 	/* Get rdn and parent strings. */
-	newrdn = PyObject_CallMethod(self->dn, "__getitem__", "(i)", 0);
-	newparent = PyObject_CallMethod(self->dn, "_LDAPDN__get_ancestors", NULL);
+	newrdn = PySequence_GetItem(self->dn, 0);
+	newparent = PySequence_GetSlice(self->dn, 1, PyObject_Size(self->dn));
 	if (newrdn == NULL || newparent == NULL) return NULL;
 
 	newrdn_str = PyObject2char(newrdn);
