@@ -123,5 +123,13 @@ class LDAPConnectionTest(unittest.TestCase):
                                         realm))
         self.assertRaises(pyldap.AuthenticationError, lambda : client.connect())
 
+    def test_sort_order(self):
+        """ Test setting sort order. """
+        self.conn.set_sort_order(["-uidNumber"])
+        obj = self.conn.search(self.basedn, 2, attrlist=['uidNumber'])
+        sort = [o['uidNumber'][0] for o in obj if 'uidNumber' in o]
+        self.assertTrue((all(sort[i] >= sort[i+1]
+                             for i in range(len(sort)-1))), "Not sorted")
+
 if __name__ == '__main__':
     unittest.main()

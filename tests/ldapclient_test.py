@@ -24,5 +24,14 @@ class LDAPClientTest(unittest.TestCase):
         root_dse = self.client.get_rootDSE()
         self.assertEqual(root_dse['supportedLDAPVersion'][0], 3)
 
+    def test_raw_attributes(self):
+        """ Test setting raw attributes to keep in bytearray format. """
+        def value_err():
+            self.client.set_raw_attributes([5])
+        self.assertRaises(ValueError, value_err)
+        self.client.set_raw_attributes(["namingContexts"])
+        if type(self.client.get_rootDSE()["namingContexts"][0]) != bytes:
+            self.fail("The type of the value is not bytes.")
+
 if __name__ == '__main__':
     unittest.main()
