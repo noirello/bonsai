@@ -4,8 +4,6 @@ from pyldap.ldapdn import LDAPDN
 class LDAPConnection(_LDAPConnection):
     def __init__(self, client, is_async=False):
         self.__client = client
-        self.__page_size = 0
-        self.__sort_attrs = []
         super().__init__(client, is_async)
 
     def __enter__(self):
@@ -79,7 +77,7 @@ class LDAPConnection(_LDAPConnection):
         if self.async:
             return self._poll(msg_id)
         else:
-            if self.__page_size > 1:
+            if self.page_size > 1:
                 return self.__paged_search(self.get_result(msg_id, True))
             return list(self.get_result(msg_id, True))
 
@@ -106,12 +104,13 @@ class LDAPConnection(_LDAPConnection):
             if type(attr) != str or len(attr) == 0:
                 raise ValueError("All element of sort_list must be a non empty string.")
             if attr[0] == '-':
+                # Set reverse order.
                 sort_attrs.append((attr[1:], True))
             else:
                 sort_attrs.append((attr, False))
         if len(sort_list) > len(set(map(lambda x: x[0].lower, sort_attrs))):
             raise ValueError("Attribute names must be different from each other.")
-        self.__sort_attrs = sort_attrs
+        super().set_sort_order(sort_attrs)
 
     def whoami(self):
         """

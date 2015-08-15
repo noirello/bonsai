@@ -127,8 +127,9 @@ class LDAPClient:
             root_dse = list(conn.search("", 0, "(objectclass=*)", attrs, 0, False))[0]
         except IndexError:
             return None
-        conn.close()
-        return root_dse
+        finally:
+            conn.close()
+            return root_dse
 
     @property
     def url(self):

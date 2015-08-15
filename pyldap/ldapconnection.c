@@ -381,7 +381,6 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	PyObject *attrlist  = NULL;
 	PyObject *attrsonlyo = NULL;
 	LDAPSearchIter *search_iter = NULL;
-	PyObject *page_size = NULL, *sort_list = NULL;
 	static char *kwlist[] = {"base", "scope", "filter", "attrlist", "timeout", "sizelimit", "attrsonly", NULL};
 
 	if (LDAPConnection_IsClosed(self) != 0) return NULL;
@@ -741,9 +740,9 @@ LDAPConnection_setSortOrder(LDAPConnection *self, PyObject *args, PyObject *kwds
 	PyObject *sort_list = NULL;
 	static char *kwlist[] = {"sort_list", NULL};
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "0!", kwlist, &PyList_Type, &sort_list)) {
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!", kwlist, &PyList_Type, &sort_list)) {
 		PyErr_SetString(PyExc_ValueError,
-				"The sort_list parameter must be a tuple.");
+				"The sort_list parameter must be a list.");
 		return NULL;
 	}
 
@@ -764,6 +763,8 @@ static PyMemberDef LDAPConnection_members[] = {
      "Asynchronous connection"},
 	{"closed", T_BOOL, offsetof(LDAPConnection, closed), READONLY,
 	 "Connection is closed"},
+	{"page_size", T_INT, offsetof(LDAPConnection, page_size), READONLY,
+	 "The number of entries on a page"},
     {NULL}  /* Sentinel */
 };
 
