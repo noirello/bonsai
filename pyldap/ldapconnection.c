@@ -62,7 +62,6 @@ LDAPConnection_IsClosed(LDAPConnection *self) {
 
 static int
 get_socketpair(PyObject *client, PyObject **tup, SOCKET *csock, SOCKET *ssock) {
-	int rc = 0;
 	PyObject *tmp = NULL;
 
 	*tup = PyObject_CallMethod(client, "_create_socketpair", NULL);
@@ -101,7 +100,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	int rc = -1;
 	int tls_option = -1;
 	char *mech = NULL;
-	SOCKET ssock;
+	SOCKET ssock = 0;
 	PyObject *url = NULL;
 	PyObject *tls = NULL;
 	PyObject *tmp = NULL;
@@ -624,7 +623,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 			PyErr_BadInternalCall();
 			return NULL;
 		}
-		ret = LDAPConnectIter_Next(conniter, block);
+		ret = LDAPConnectIter_Next((LDAPConnectIter *)conniter, block);
 		if (ret == NULL) return NULL;
 		if (ret == Py_None) return ret;
 		else {
@@ -635,6 +634,8 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 				return NULL;
 			}
 			Py_DECREF(conniter);
+			/* Return with the open connection object .*/
+			Py_INCREF(self);
 			return (PyObject *)self;
 		}
 	}

@@ -38,7 +38,7 @@ typedef struct ldap_conndata_s {
 #include <sasl/sasl.h>
 #include <sys/time.h>
 #include <pthread.h>
-#include <socket.h>
+#include <sys/socket.h>
 
 #define SOCKET int
 

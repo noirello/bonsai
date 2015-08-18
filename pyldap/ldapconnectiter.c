@@ -105,9 +105,6 @@ binding(LDAPConnectIter *self, int block) {
 	if (self->bind_inprogress == 0) {
 		/* First call of bind. */
 		rc = LDAP_bind(self->conn->ld, self->info, NULL, &(self->message_id));
-		/* Dummy sockets are no longer needed. Dispose. */
-		self->conn->csock = -1;
-		close_socketpair(self->conn->socketpair);
 		if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
 			set_exception(self->conn->ld, rc);
 			return NULL;
@@ -159,6 +156,9 @@ binding(LDAPConnectIter *self, int block) {
 				/* The binding is successfully finished. */
 				self->bind_inprogress = 0;
 				self->conn->closed = 0;
+				/* Dummy sockets are no longer needed. Dispose. */
+				self->conn->csock = -1;
+				close_socketpair(self->conn->socketpair);
 				Py_INCREF((PyObject *)self->conn);
 				return (PyObject *)self->conn;
 			}
@@ -219,7 +219,6 @@ PyObject *
 LDAPConnectIter_Next(LDAPConnectIter *self, int block) {
 	int rc = -1;
 	PyObject *val = NULL;
-	PyObject *wrapper = NULL;
 	char buff[1];
 
 	/* The connection is already binded. */
