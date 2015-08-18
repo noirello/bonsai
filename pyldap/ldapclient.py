@@ -44,9 +44,10 @@ class LDAPClient:
         """
         if hasattr(socket, "socketpair"):
             return socket.socketpair()
-        # Backward compatibility from Python 3.5.
+        # Backward compatibility on Windows from Python 3.5.
         # Origin: https://gist.github.com/4325783, by Geert Jansen.  Public domain.
         def socketpair(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0):
+            import errno
             # We create a connected TCP socket. Note the trick with setblocking(0)
             # that prevents us from having to create a thread.
             lsock = socket.socket(family, type, proto)
