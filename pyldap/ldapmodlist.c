@@ -52,7 +52,7 @@ LDAPModList_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 /*	Create a new LDAPModList object for internal use with a `size` length LDAPMod list,
     that represents the `entry` object modifications. */
 LDAPModList *
-LDAPModList_New(PyObject* entry, unsigned short int size) {
+LDAPModList_New(PyObject* entry, Py_ssize_t size) {
 	LDAPModList *self = (LDAPModList *)LDAPModListType.tp_new(&LDAPModListType, NULL, NULL);
 	if (self == NULL) return NULL;
 	/*  Malloc a new `size` length LDAPMod list. */

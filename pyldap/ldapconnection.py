@@ -63,6 +63,9 @@ class LDAPConnection(_LDAPConnection):
             dnstr = str(dnstr)
         return self._result(super().delete(dnstr))
 
+    def open(self):
+        return self._result(super().open())
+
     def search(self, base=None, scope=None, filter=None, attrlist=None,
                timeout=0, sizelimit=0, attrsonly=False):
         # Documentation in the docs/api.rst with detailed examples.

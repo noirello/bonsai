@@ -10,6 +10,7 @@ LDAPConnection_dealloc(LDAPConnection* self) {
 	int i = 0;
 	Py_XDECREF(self->client);
 	Py_XDECREF(self->pending_ops);
+	Py_XDECREF(self->socketpair);
 
 	/* Free LDAPSortKey list. */
 	if (self->sort_list !=  NULL) {
@@ -37,6 +38,8 @@ LDAPConnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 		self->closed = 1;
 		self->async = 0;
 		self->sort_list = NULL;
+		self->csock = -1;
+		self->socketpair = NULL;
 	}
 
 	return (PyObject *)self;
@@ -50,11 +53,44 @@ LDAPConnection_IsClosed(LDAPConnection *self) {
 	if (self->closed) {
 		/* The connection is closed. */
 		PyObject *ldaperror = get_error_by_code(-101);
-		PyErr_SetString(ldaperror, "The connection is already closed.");
+		PyErr_SetString(ldaperror, "The connection is closed.");
 		Py_DECREF(ldaperror);
 		return -1;
 	}
 	return 0;
+}
+
+static int
+get_socketpair(PyObject *client, PyObject **tup, SOCKET *csock, SOCKET *ssock) {
+	int rc = 0;
+	PyObject *tmp = NULL;
+
+	*tup = PyObject_CallMethod(client, "_create_socketpair", NULL);
+	if (*tup == NULL) return -1;
+
+	/* Sanity check. */
+	if (PyTuple_Check(*tup) && PyTuple_Size(*tup) == 2) {
+		tmp = PyTuple_GetItem(*tup, 0);
+		if (tmp == NULL) goto error;
+
+		/* Get the socket descriptor for the first one. */
+		tmp = PyObject_CallMethod(tmp, "fileno", NULL);
+		if (tmp == NULL) goto error;
+		*ssock = (SOCKET)PyLong_AsLong(tmp);
+		Py_DECREF(tmp);
+
+		tmp = PyTuple_GetItem(*tup, 1);
+		if (tmp == NULL) goto error;
+		/* Get the socket descriptor for the second one. */
+		tmp = PyObject_CallMethod(tmp, "fileno", NULL);
+		if (tmp == NULL) goto error;
+		*csock = (SOCKET)PyLong_AsLong(tmp);
+		Py_DECREF(tmp);
+	}
+	return 0;
+error:
+	Py_DECREF(*tup);
+	return -1;
 }
 
 /*	Open a connection to the LDAP server. Initialises LDAP structure.
@@ -65,6 +101,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	int rc = -1;
 	int tls_option = -1;
 	char *mech = NULL;
+	SOCKET ssock;
 	PyObject *url = NULL;
 	PyObject *tls = NULL;
 	PyObject *tmp = NULL;
@@ -93,17 +130,21 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	mech = PyObject2char(tmp);
 	Py_DECREF(tmp);
 
-	info = create_conn_info(mech, creds);
+	/* Init the socketpair. */
+	rc = get_socketpair(self->client, &(self->socketpair), &(self->csock), &ssock);
+	if (rc != 0) goto error;
+
+	info = create_conn_info(mech, ssock, creds);
 	Py_DECREF(creds);
 	if (info == NULL) goto error;
 
 	tls = PyObject_GetAttrString(self->client, "tls");
 	if (tls == NULL) goto error;
 
-	*conniter = LDAPConnectIter_New(self, info, self->async);
+	*conniter = LDAPConnectIter_New(self, info);
 	if (*conniter == NULL) goto error;
 
-	rc = LDAP_start_init(url, PyObject_IsTrue(tls), tls_option, &((*conniter)->thread), &((*conniter)->data));
+	rc = LDAP_start_init(url, PyObject_IsTrue(tls), tls_option, ssock, &((*conniter)->thread), &((*conniter)->data));
 	Py_DECREF(url);
 	Py_DECREF(tls);
 
@@ -167,11 +208,13 @@ LDAPConnection_Open(LDAPConnection *self) {
 	rc = connecting(self, &iter);
 	if (rc != 0) return NULL;
 
-	if (iter->async) {
-		return (PyObject *)iter;
+	/* Add binding operation to the pending_ops. */
+	if (add_to_pending_ops(self->pending_ops, (int)(self->csock),
+		(PyObject *)iter) != 0) {
+		return NULL;
 	}
 
-	return PyIter_Next((PyObject *)iter);
+	return PyLong_FromLong((long int)(self->csock));
 }
 
 /*	Close connection. */
@@ -566,9 +609,35 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	LDAPModList *mods = NULL;
 	struct timeval zerotime;
 	PyObject *ext_obj = NULL;
+	PyObject *conniter = NULL;
+	PyObject *ret = NULL;
 
 	/*- Create a char* from int message id. */
 	sprintf(msgidstr, "%d", msgid);
+
+	if (self->closed && self->csock == msgid) {
+		/* The function is called on a initialising and binding procedure. */
+		conniter = PyDict_GetItemString(self->pending_ops, msgidstr);
+		if (conniter == NULL) return NULL;
+		/* Check, that we get the right object. */
+		if (!PyObject_IsInstance(conniter, (PyObject *)&LDAPConnectIterType)) {
+			PyErr_BadInternalCall();
+			return NULL;
+		}
+		ret = LDAPConnectIter_Next(conniter, block);
+		if (ret == NULL) return NULL;
+		if (ret == Py_None) return ret;
+		else {
+			/* The init and bind are finished. */
+			/* Remove operations from pending_ops. */
+			if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
+				PyErr_BadInternalCall();
+				return NULL;
+			}
+			Py_DECREF(conniter);
+			return (PyObject *)self;
+		}
+	}
 
 	if (block == 1) {
 		/* The ldap_result will block, and wait for server response. */
@@ -643,8 +712,6 @@ LDAPConnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
 	static char *kwlist[] = {"msgid", "block", NULL};
 
-	if (LDAPConnection_IsClosed(self) != 0) return NULL;
-
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "i|O!", kwlist, &msgid,
 			&PyBool_Type, &block_obj)) {
 		PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
@@ -705,6 +772,12 @@ static PyObject *
 LDAPConnection_fileno(LDAPConnection *self) {
 	int rc = 0;
 	int desc = 0;
+
+	/* For ongoing initialisation return the dummy socket descriptor,
+	that will be pinged when the init thread is finished. */
+	if (self->closed && self->csock != -1) {
+		return PyLong_FromLong((long int)self->csock);
+	}
 
 	rc = ldap_get_option(self->ld, LDAP_OPT_DESC, &desc);
 	if (rc != LDAP_SUCCESS) {

@@ -4,6 +4,8 @@
    :synopsis: For management LDAP connections.
 
 """
+import socket
+
 from pyldap import LDAPConnection
 
 from pyldap.ldapurl import LDAPURL
@@ -33,6 +35,36 @@ class LDAPClient:
         self.__raw_list = []
         self.__mechanism = "SIMPLE"
         self.__cert_policy = -1
+
+    @staticmethod
+    def _create_socketpair():
+        """
+        Create a socketpair that will be used for signaling to select() during
+        the initialisation procedure (and binding on MS Windows).
+        """
+        if hasattr(socket, "socketpair"):
+            return socket.socketpair()
+        # Backward compatibility from Python 3.5.
+        # Origin: https://gist.github.com/4325783, by Geert Jansen.  Public domain.
+        def socketpair(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0):
+            # We create a connected TCP socket. Note the trick with setblocking(0)
+            # that prevents us from having to create a thread.
+            lsock = socket.socket(family, type, proto)
+            lsock.bind(('localhost', 0))
+            lsock.listen(1)
+            addr, port = lsock.getsockname()
+            csock = socket.socket(family, type, proto)
+            csock.setblocking(0)
+            try:
+                csock.connect((addr, port))
+            except socket.error as e:
+                if e.errno != errno.WSAEWOULDBLOCK:
+                    raise
+            ssock, addr = lsock.accept()
+            csock.setblocking(1)
+            lsock.close()
+            return (ssock, csock)
+        return socketpair()
 
     def set_raw_attributes(self, raw_list):
         """

@@ -15,6 +15,8 @@ typedef struct {
 	char closed;
 	char async;
 	LDAPSortKey **sort_list;
+	SOCKET csock;
+	PyObject *socketpair;
 } LDAPConnection;
 
 extern PyTypeObject LDAPConnectionType;

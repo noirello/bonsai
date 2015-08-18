@@ -86,6 +86,8 @@ ldap_thread_bind(void *params) {
 	} else {
 		rc = ldap_simple_bind_s(data->ld, data->binddn, data->passwd);
 	}
+	/* Send a signal through an internal socketpair. */
+	if (send(data->sock, "s", 1, 0) == -1) rc = -1;
 
 	return rc;
 }
@@ -232,7 +234,7 @@ _ldap_get_opt_errormsg(LDAP *ld) {
 file for creating a lutilSASLdefaults struct with default values based on
 the given parameters or client's options. */
 void *
-create_conn_info(char *mech, PyObject *creds) {
+create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
 	ldap_conndata_t *defaults = NULL;
 	PyObject *tmp = NULL;
 	char *authcid = NULL;
@@ -269,6 +271,7 @@ create_conn_info(char *mech, PyObject *creds) {
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 	defaults->thread = NULL;
 	defaults->ld = NULL;
+	defaults->sock = sock;
 #else
 	defaults->resps = NULL;
 	defaults->nresps = 0;
@@ -299,7 +302,9 @@ dealloc_conn_info(ldap_conndata_t* info) {
 /* Thread function. The ldap_initialize function opens the LDAP client's
 config file on Unix and ldap_start_tls_s blocks for create SSL context on Windows,
 thus to avoid the I/O blocking in the main (Python) thread the initialisation
-is done in a separate (POSIX and Windows) thread. */
+is done in a separate (POSIX and Windows) thread. A signal is sent through an
+internal socketpair when the thread is finished, thus select() can be used on
+the socket descriptor. */
 void *
 ldap_init_thread(void *params) {
 	int rc = -1;
@@ -322,6 +327,11 @@ ldap_init_thread(void *params) {
 			rc = ldap_start_tls_s(ldap_params->ld, NULL, NULL);
 		}
 		ldap_params->retval = rc;
+		/* Send a signal through an internal socketpair. */
+		if (send(ldap_params->sock, "s", 1, 0) == -1) {
+			/* Signaling is failed. */
+			ldap_params->retval = -1;
+		}
 	}
 	return NULL;
 }
@@ -330,7 +340,7 @@ ldap_init_thread(void *params) {
 The thread's pointer and the data struct's pointer that contains the LDAP struct is
 passed to the `thread` and `misc` parameters respectively. */
 int
-LDAP_start_init(PyObject *url, int has_tls, int cert_policy, void **thread, void **misc) {
+LDAP_start_init(PyObject *url, int has_tls, int cert_policy, SOCKET sock, void **thread, void **misc) {
 	int rc = 0;
         char *addrstr = NULL;
 	ldapThreadData *data = NULL;
@@ -350,6 +360,7 @@ LDAP_start_init(PyObject *url, int has_tls, int cert_policy, void **thread, void
 	data->url = addrstr;
 	data->tls = has_tls;
 	data->cert_policy = cert_policy;
+	data->sock = sock;
 	/* Create the separate thread. */
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 	*thread = (void *)CreateThread(NULL, 0, (int(*)(void*))&ldap_init_thread, (void *)data, 0, NULL);
