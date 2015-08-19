@@ -18,10 +18,10 @@ def _ready(conn, msg_id, fut, loop):
         res = conn.get_result(msg_id)
         if res is not None:
             fut.set_result(res)
+        else:
+            loop.add_reader(conn.fileno(), _ready, conn, msg_id, fut, loop)
     except LDAPError as exc:
         fut.set_exception(exc)
-    else:
-        loop.add_reader(conn.fileno(), _ready, conn, msg_id, fut, loop)
 
 def _poll(conn, msg_id):
     fut = asyncio.Future()

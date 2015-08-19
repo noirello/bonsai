@@ -135,9 +135,16 @@ class LDAPConnectionTest(unittest.TestCase):
         """ Test fileno method. """
         self.assertIsInstance(self.conn.fileno(), int)
         try:
-            os.fstat(self.conn.fileno())
+            import socket
+            sock = socket.fromfd(self.conn.fileno(),
+                                 socket.AF_INET,
+                                 socket.SOCK_RAW)
+            self.assertEqual(sock.getpeername(),
+                            (self.cfg["SERVER"]["host"],
+                             int(self.cfg["SERVER"]["port"])))
+            sock.close()
         except OSError:
-            self.fail("Not a valid file descriptor.")
+            self.fail("Not a valid socket descriptor.")
 
 if __name__ == '__main__':
     unittest.main()
