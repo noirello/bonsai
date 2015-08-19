@@ -588,7 +588,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 		if (authzid == NULL) return PyUnicode_FromString("anonymous");
 
 		if(authzid->bv_len == 0) {
-			authzid->bv_val = "anonymous";
+			authzid->bv_val = strdup("anonymous");
 			authzid->bv_len = 9;
 		}
 		ldap_memfree(retoid);
@@ -614,7 +614,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	/*- Create a char* from int message id. */
 	sprintf(msgidstr, "%d", msgid);
 
-	if (self->closed && self->csock == msgid) {
+	if (self->closed) {
 		/* The function is called on a initialising and binding procedure. */
 		conniter = PyDict_GetItemString(self->pending_ops, msgidstr);
 		if (conniter == NULL) return NULL;

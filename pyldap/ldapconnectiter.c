@@ -109,6 +109,9 @@ binding(LDAPConnectIter *self, int block) {
 			set_exception(self->conn->ld, rc);
 			return NULL;
 		}
+		/* Dummy sockets are no longer needed. Dispose. */
+		self->conn->csock = -1;
+		close_socketpair(self->conn->socketpair);
 		self->bind_inprogress = 1;
 		Py_RETURN_NONE;
 	} else {
@@ -156,9 +159,6 @@ binding(LDAPConnectIter *self, int block) {
 				/* The binding is successfully finished. */
 				self->bind_inprogress = 0;
 				self->conn->closed = 0;
-				/* Dummy sockets are no longer needed. Dispose. */
-				self->conn->csock = -1;
-				close_socketpair(self->conn->socketpair);
 				Py_INCREF((PyObject *)self->conn);
 				return (PyObject *)self->conn;
 			}
