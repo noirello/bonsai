@@ -1,5 +1,5 @@
 import configparser
-import os.path
+import os
 import unittest
 
 from pyldap import LDAPDN
@@ -130,6 +130,14 @@ class LDAPConnectionTest(unittest.TestCase):
         sort = [o['uidNumber'][0] for o in obj if 'uidNumber' in o]
         self.assertTrue((all(sort[i] >= sort[i+1]
                              for i in range(len(sort)-1))), "Not sorted")
+
+    def test_fileno(self):
+        """ Test fileno method. """
+        self.assertIsInstance(self.conn.fileno(), int)
+        try:
+            os.fstat(self.conn.fileno())
+        except OSError:
+            self.fail("Not a valid file descriptor.")
 
 if __name__ == '__main__':
     unittest.main()
