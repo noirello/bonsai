@@ -14,21 +14,7 @@ class LDAPConnection(_LDAPConnection):
         """ Context manager exit point. """
         self.close()
 
-    def _poll(self, msg_id):
-        """
-        Generator function to poll the result of an LDAP operation.
-
-        :param int msg_id: the ID of the LDAP operation.
-        :return: the result of the operation.
-        :rtype: list, bool or iterator, depending on the operation.
-         """
-        while True:
-            result = self.get_result(msg_id)
-            if result is not None:
-                return result
-            yield
-
-    def _result(self, msg_id):
+    def _evaluate(self, msg_id):
         """
         Depending on the connection's type (asynchronous or synchronous),
         it returns a generator object or the result of the LDAP operation.
@@ -37,7 +23,7 @@ class LDAPConnection(_LDAPConnection):
         :return: generator if the connection async, otherwise the result of the operation.
         """
         if self.async:
-            return self._poll(msg_id)
+            return self.__client.poll(self, msg_id)
         else:
             return self.get_result(msg_id, True)
 
@@ -49,7 +35,7 @@ class LDAPConnection(_LDAPConnection):
         :return: True, if the operation is finished.
         :rtype: bool
         """
-        return self._result(super().add(entry))
+        return self._evaluate(super().add(entry))
 
     def delete(self, dnstr):
         """
@@ -61,10 +47,10 @@ class LDAPConnection(_LDAPConnection):
         """
         if type(dnstr) == LDAPDN:
             dnstr = str(dnstr)
-        return self._result(super().delete(dnstr))
+        return self._evaluate(super().delete(dnstr))
 
     def open(self):
-        return self._result(super().open())
+        return self._evaluate(super().open())
 
     def search(self, base=None, scope=None, filter=None, attrlist=None,
                timeout=0, sizelimit=0, attrsonly=False):
@@ -78,7 +64,7 @@ class LDAPConnection(_LDAPConnection):
         msg_id = super().search(_base, _scope, _filter, _attrlist,
                                 timeout, sizelimit, attrsonly)
         if self.async:
-            return self._poll(msg_id)
+            return self.__client.poll(self, msg_id)
         else:
             if self.page_size > 1:
                 return self.__paged_search(self.get_result(msg_id, True))
@@ -122,5 +108,5 @@ class LDAPConnection(_LDAPConnection):
         :return: the authorization ID.
         :rtype: str
          """
-        return self._result(super().whoami())
+        return self._evaluate(super().whoami())
 

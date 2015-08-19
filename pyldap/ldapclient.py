@@ -5,10 +5,30 @@
 
 """
 import socket
+import asyncio
 
 from pyldap import LDAPConnection
 
 from pyldap.ldapurl import LDAPURL
+from pyldap.errors import LDAPError
+
+def _ready(conn, msg_id, fut, loop):
+    loop.remove_reader(conn.fileno())
+    try:
+        res = conn.get_result(msg_id)
+        if res is not None:
+            fut.set_result(res)
+    except LDAPError as exc:
+        fut.set_exception(exc)
+    else:
+        loop.add_reader(conn.fileno(), _ready, conn, msg_id, fut, loop)
+
+def _poll(conn, msg_id):
+    fut = asyncio.Future()
+    loop = asyncio.get_event_loop()
+    loop.add_reader(conn.fileno(), _ready, conn, msg_id, fut, loop)
+    res = yield from asyncio.wait_for(fut, None)
+    return res
 
 class LDAPClient:
     """
@@ -35,6 +55,7 @@ class LDAPClient:
         self.__raw_list = []
         self.__mechanism = "SIMPLE"
         self.__cert_policy = -1
+        self.poll = _poll
 
     @staticmethod
     def _create_socketpair():
@@ -140,6 +161,9 @@ class LDAPClient:
         if policy not in tls_options.keys():
             raise ValueError("'%s' is an invalid policy.", policy)
         self.__cert_policy = tls_options[policy]
+
+    def set_poll_func(self, func):
+        self.poll = func
 
     def get_rootDSE(self):
         """

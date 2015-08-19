@@ -163,8 +163,8 @@ class LDAPEntryTest(unittest.TestCase):
         try:
             import asyncio
 
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(None)
+            loop = asyncio.get_event_loop()
+            #asyncio.set_event_loop(None)
 
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)
             self.client.set_credentials(*self.creds)

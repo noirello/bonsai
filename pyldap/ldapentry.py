@@ -11,7 +11,7 @@ class LDAPEntry(_LDAPEntry):
         :return: True, if the operation is finished.
         :rtype: bool
         """
-        return self.connection._result(super().delete())
+        return self.connection._evaluate(super().delete())
 
     def modify(self):
         """
@@ -20,7 +20,7 @@ class LDAPEntry(_LDAPEntry):
         :return: True, if the operation is finished.
         :rtype: bool
         """
-        return self.connection._result(super().modify())
+        return self.connection._evaluate(super().modify())
 
     def rename(self, newdn):
         """
@@ -30,7 +30,7 @@ class LDAPEntry(_LDAPEntry):
         :return: True, if the operation is finished.
         :rtype: bool
         """
-        return self.connection._result(super().rename(newdn))
+        return self.connection._evaluate(super().rename(newdn))
 
     def update(self, *args, **kwds):
         """
