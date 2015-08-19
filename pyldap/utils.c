@@ -274,12 +274,6 @@ load_python_object(char *module_name, char *object_name) {
 	return object;
 }
 
-/* Get an error by name from the pyldap.errors Python module. */
-PyObject *
-get_error(char *error_name) {
-	return load_python_object("pyldap.errors", error_name);
-}
-
 /* Get an error by code calling the get_error function from
    the pyldap.errors Python module. */
 PyObject *
