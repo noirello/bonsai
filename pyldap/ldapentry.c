@@ -371,7 +371,6 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 		Py_DECREF(mods);
 		return NULL;
 	}
-	Py_DECREF(mods);
 
 	return PyLong_FromLong((long int)msgid);
 }

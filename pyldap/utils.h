@@ -17,5 +17,6 @@ PyObject *load_python_object(char *module_name, char *object_name);
 PyObject *get_error_by_code(int code);
 void set_exception(LDAP *ld, int code);
 int add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item);
-
+int get_socketpair(PyObject *client, PyObject **tup, SOCKET *csock, SOCKET *ssock);
+void close_socketpair(PyObject *tup);
 #endif /* UTILS_H_ */

@@ -8,6 +8,7 @@
 static void
 LDAPConnection_dealloc(LDAPConnection* self) {
 	int i = 0;
+
 	Py_XDECREF(self->client);
 	Py_XDECREF(self->pending_ops);
 	Py_XDECREF(self->socketpair);
@@ -45,6 +46,46 @@ LDAPConnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	return (PyObject *)self;
 }
 
+/*	Initialise the LDAPConnection. */
+static int
+LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+	PyObject *client = NULL;
+	PyObject *async = NULL;
+	PyObject *ldapclient_type = NULL;
+	PyObject *tmp = NULL;
+	static char *kwlist[] = {"client", "async", NULL};
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO!", kwlist, &client,
+			&PyBool_Type, &async)) {
+		return -1;
+	}
+
+	if (client == NULL || async == NULL) return -1;
+
+	/* Validate that the Python object parameter is type of an LDAPClient. */
+	ldapclient_type = load_python_object("pyldap.ldapclient", "LDAPClient");
+	if (ldapclient_type == NULL ||
+		!PyObject_IsInstance(client, ldapclient_type)) {
+		return -1;
+	}
+	Py_DECREF(ldapclient_type);
+
+	/* Create a dict for pending LDAP operations. */
+	self->pending_ops = PyDict_New();
+	if (self->pending_ops == NULL) return -1;
+
+	/* Convert PyBool to char and set to async. */
+	self->async = (char)PyObject_IsTrue(async);
+
+	/* Set client object to LDAPConnection. */
+	tmp = self->client;
+	Py_INCREF(client);
+	self->client = client;
+	Py_XDECREF(tmp);
+
+	return 0;
+}
+
 /* Check, that the connection is not closed.
    Set Python exception if it is.
 */
@@ -58,38 +99,6 @@ LDAPConnection_IsClosed(LDAPConnection *self) {
 		return -1;
 	}
 	return 0;
-}
-
-static int
-get_socketpair(PyObject *client, PyObject **tup, SOCKET *csock, SOCKET *ssock) {
-	PyObject *tmp = NULL;
-
-	*tup = PyObject_CallMethod(client, "_create_socketpair", NULL);
-	if (*tup == NULL) return -1;
-
-	/* Sanity check. */
-	if (PyTuple_Check(*tup) && PyTuple_Size(*tup) == 2) {
-		tmp = PyTuple_GetItem(*tup, 0);
-		if (tmp == NULL) goto error;
-
-		/* Get the socket descriptor for the first one. */
-		tmp = PyObject_CallMethod(tmp, "fileno", NULL);
-		if (tmp == NULL) goto error;
-		*ssock = (SOCKET)PyLong_AsLong(tmp);
-		Py_DECREF(tmp);
-
-		tmp = PyTuple_GetItem(*tup, 1);
-		if (tmp == NULL) goto error;
-		/* Get the socket descriptor for the second one. */
-		tmp = PyObject_CallMethod(tmp, "fileno", NULL);
-		if (tmp == NULL) goto error;
-		*csock = (SOCKET)PyLong_AsLong(tmp);
-		Py_DECREF(tmp);
-	}
-	return 0;
-error:
-	Py_DECREF(*tup);
-	return -1;
 }
 
 /*	Open a connection to the LDAP server. Initialises LDAP structure.
@@ -151,51 +160,12 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 		set_exception(self->ld, rc);
 		return -1;
 	}
+
 	return 0;
 
 error:
 	Py_DECREF(url);
 	return -1;
-}
-
-/*	Initialise the LDAPConnection. */
-static int
-LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
-	PyObject *client = NULL;
-	PyObject *async = NULL;
-	PyObject *ldapclient_type = NULL;
-	PyObject *tmp = NULL;
-	static char *kwlist[] = {"client", "async", NULL};
-
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO!", kwlist, &client,
-			&PyBool_Type, &async)) {
-		return -1;
-	}
-
-	if (client == NULL || async == NULL) return -1;
-
-	/* Validate that the Python object parameter is type of an LDAPClient. */
-	ldapclient_type = load_python_object("pyldap.ldapclient", "LDAPClient");
-	if (ldapclient_type == NULL ||
-		!PyObject_IsInstance(client, ldapclient_type)) {
-		return -1;
-	}
-	Py_DECREF(ldapclient_type);
-
-	/* Create a dict for pending LDAP operations. */
-	self->pending_ops = PyDict_New();
-	if (self->pending_ops == NULL) return -1;
-
-	/* Convert PyBool to char and set to async. */
-	self->async = (char)PyObject_IsTrue(async);
-
-	/* Set client object to LDAPConnection. */
-	tmp = self->client;
-	Py_INCREF(client);
-	self->client = client;
-	Py_XDECREF(tmp);
-
-	return 0;
 }
 
 /* Open connection. */
@@ -502,7 +472,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 	/* Get SearchIter from pending operations. */
 	search_iter = (LDAPSearchIter *)PyDict_GetItemString(self->pending_ops,
 			msgidstr);
-	Py_XINCREF(search_iter);
+	Py_XINCREF((PyObject *)search_iter);
 
 	if (search_iter == NULL ||
 			PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
@@ -591,10 +561,12 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 			authzid->bv_val = strdup("anonymous");
 			authzid->bv_len = 9;
 		}
+
 		ldap_memfree(retoid);
 		retval = PyUnicode_FromString(authzid->bv_val);
 		ber_bvfree(authzid);
 	}
+
 	return retval;
 }
 
@@ -633,9 +605,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 				PyErr_BadInternalCall();
 				return NULL;
 			}
-			Py_DECREF(conniter);
 			/* Return with the open connection object .*/
-			Py_INCREF(self);
 			return (PyObject *)self;
 		}
 	}

@@ -8,29 +8,6 @@
 
 #include "utils.h"
 
-/* Close and dispose the dummy sockets. */
-static void
-close_socketpair(PyObject *tup) {
-	PyObject *tmp = NULL;
-	PyObject *ret = NULL;
-
-	/* Sanity check. */
-	if (tup != NULL && PyTuple_Check(tup) && PyTuple_Size(tup) == 2) {
-		tmp = PyTuple_GetItem(tup, 0);
-		if (tmp) {
-			ret = PyObject_CallMethod(tmp, "close", NULL);
-			if (ret) Py_DECREF(ret);
-		}
-
-		tmp = PyTuple_GetItem(tup, 1);
-		if (tmp) {
-			ret = PyObject_CallMethod(tmp, "close", NULL);
-			if (ret) Py_DECREF(ret);
-		}
-		Py_DECREF(tup);
-	}
-}
-
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 //MS Windows
 

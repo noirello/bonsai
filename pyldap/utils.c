@@ -19,7 +19,7 @@ create_berval(char *value) {
 	struct berval *bval = NULL;
 	bval = malloc(sizeof(struct berval));
 	if (bval == NULL) return NULL;
-	bval->bv_len = strlen(value);
+	bval->bv_len = (unsigned long)strlen(value);
 	bval->bv_val = value;
 	return bval;
 }
@@ -313,7 +313,6 @@ set_exception(LDAP *ld, int code) {
 		if (strcmp(errorstr, opt_errorstr) != 0) {
 			errormsg = PyUnicode_FromFormat("%s. %s", errorstr, opt_errorstr);
 		} else {
-			//TODO: Need a better way to convert ASCII or whatever to UTF-8.
 			errormsg = PyUnicode_FromFormat("%s.", errorstr);
 		}
 		if (errormsg != NULL) {
@@ -331,11 +330,70 @@ set_exception(LDAP *ld, int code) {
  * corresponding message id,  the value depends on the type of operation. */
 int
 add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item)  {
-       char msgidstr[8];
-       sprintf(msgidstr, "%d", msgid);
-       if (PyDict_SetItemString(pending_ops, msgidstr, item) != 0) {
-               PyErr_BadInternalCall();
-               return -1;
-       }
-       return 0;
+	char msgidstr[8];
+	sprintf(msgidstr, "%d", msgid);
+	if (PyDict_SetItemString(pending_ops, msgidstr, item) != 0) {
+	   PyErr_BadInternalCall();
+		   return -1;
+	}
+	Py_DECREF(item);
+
+	return 0;
+}
+
+/* Get a soketpair in `tup` by calling LDAPClient's _create_socketpair
+   method. The socket descriptors are set to `csock` and `ssock` parameters
+   respectively. If the function call is failed, it returns with -1. */
+int
+get_socketpair(PyObject *client, PyObject **tup, SOCKET *csock, SOCKET *ssock) {
+	PyObject *tmp = NULL;
+
+	*tup = PyObject_CallMethod(client, "_create_socketpair", NULL);
+	if (*tup == NULL) return -1;
+
+	/* Sanity check. */
+	if (PyTuple_Check(*tup) && PyTuple_Size(*tup) == 2) {
+		tmp = PyTuple_GetItem(*tup, 0);
+		if (tmp == NULL) goto error;
+
+		/* Get the socket descriptor for the first one. */
+		tmp = PyObject_CallMethod(tmp, "fileno", NULL);
+		if (tmp == NULL) goto error;
+		*ssock = (SOCKET)PyLong_AsLong(tmp);
+		Py_DECREF(tmp);
+
+		tmp = PyTuple_GetItem(*tup, 1);
+		if (tmp == NULL) goto error;
+		/* Get the socket descriptor for the second one. */
+		tmp = PyObject_CallMethod(tmp, "fileno", NULL);
+		if (tmp == NULL) goto error;
+		*csock = (SOCKET)PyLong_AsLong(tmp);
+		Py_DECREF(tmp);
+	}
+	return 0;
+error:
+	Py_DECREF(*tup);
+	return -1;
+}
+
+/* Close and dispose the dummy sockets in the socketpair. */
+void
+close_socketpair(PyObject *tup) {
+	PyObject *tmp = NULL;
+	PyObject *ret = NULL;
+
+	/* Sanity check. */
+	if (tup != NULL && PyTuple_Check(tup) && PyTuple_Size(tup) == 2) {
+		tmp = PyTuple_GetItem(tup, 0);
+		if (tmp) {
+			ret = PyObject_CallMethod(tmp, "close", NULL);
+			if (ret) Py_DECREF(ret);
+		}
+
+		tmp = PyTuple_GetItem(tup, 1);
+		if (tmp) {
+			ret = PyObject_CallMethod(tmp, "close", NULL);
+			if (ret) Py_DECREF(ret);
+		}
+	}
 }

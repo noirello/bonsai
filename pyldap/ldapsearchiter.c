@@ -14,6 +14,7 @@ LDAPSearchIter_dealloc(LDAPSearchIter* self) {
 
 	Py_XDECREF(self->buffer);
 	Py_XDECREF(self->conn);
+
 	free(self->base);
 	free(self->filter);
 	free(self->timeout);
