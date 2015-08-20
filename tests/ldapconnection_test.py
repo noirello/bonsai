@@ -146,5 +146,11 @@ class LDAPConnectionTest(unittest.TestCase):
         except OSError:
             self.fail("Not a valid socket descriptor.")
 
+    def test_close(self):
+        """ Test close method. """
+        self.conn.close()
+        self.assertTrue(self.conn.closed)
+        self.assertRaises(pyldap.ClosedConnection, self.conn.whoami)
+
 if __name__ == '__main__':
     unittest.main()
