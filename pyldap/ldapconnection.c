@@ -109,7 +109,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	int rc = -1;
 	int tls_option = -1;
 	char *mech = NULL;
-	SOCKET ssock = 0;
+	SOCKET ssock = -1;
 	PyObject *url = NULL;
 	PyObject *tls = NULL;
 	PyObject *tmp = NULL;
@@ -138,9 +138,11 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	mech = PyObject2char(tmp);
 	Py_DECREF(tmp);
 
-	/* Init the socketpair. */
-	rc = get_socketpair(self->client, &(self->socketpair), &(self->csock), &ssock);
-	if (rc != 0) goto error;
+	if (self->async) {
+		/* Init the socketpair. */
+		rc = get_socketpair(self->client, &(self->socketpair), &(self->csock), &ssock);
+		if (rc != 0) goto error;
+	}
 
 	info = create_conn_info(mech, ssock, creds);
 	Py_DECREF(creds);

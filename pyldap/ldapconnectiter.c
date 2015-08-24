@@ -45,11 +45,13 @@ binding(LDAPConnectIter *self, int block) {
 				set_exception(self->conn->ld, rc);
 				return NULL;
 			}
-			/* Read and drop the data from the dummy socket. */
-			if (recv(self->conn->csock, buff, 1, 0) == -1) return NULL;
-			/* Dummy sockets are no longer needed. */
-			self->conn->csock = -1;
-			close_socketpair(self->conn->socketpair);
+			if (self->conn->csock != -1) {
+				/* Read and drop the data from the dummy socket. */
+				if (recv(self->conn->csock, buff, 1, 0) == -1) return NULL;
+				/* Dummy sockets are no longer needed. */
+				self->conn->csock = -1;
+				close_socketpair(self->conn->socketpair);
+			}
 			/* The binding is successfully finished. */
 			self->bind_inprogress = 0;
 			self->conn->closed = 0;
@@ -86,9 +88,11 @@ binding(LDAPConnectIter *self, int block) {
 			set_exception(self->conn->ld, rc);
 			return NULL;
 		}
-		/* Dummy sockets are no longer needed. Dispose. */
-		self->conn->csock = -1;
-		close_socketpair(self->conn->socketpair);
+		if (self->conn->csock != -1) {
+			/* Dummy sockets are no longer needed. Dispose. */
+			self->conn->csock = -1;
+			close_socketpair(self->conn->socketpair);
+		}
 		self->bind_inprogress = 1;
 		Py_RETURN_NONE;
 	} else {
@@ -209,8 +213,10 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int block) {
 		if (rc == 1) {
 			/* Initialisation is finished. */
 			self->init_finished = 1;
-			/* Read and drop the data from the dummy socket. */
-			if (recv(self->conn->csock, buff, 1, 0) == -1) return NULL;
+			if (self->conn->csock != -1) {
+				/* Read and drop the data from the dummy socket. */
+				if (recv(self->conn->csock, buff, 1, 0) == -1) return NULL;
+			}
 			if (update_conn_info(self->conn->ld, self->info) != 0) return NULL;
 		}
 	}

@@ -31,9 +31,9 @@ set_cert_policy(LDAP *ld, int cert_policy) {
 	}
 }
 
-/* Finish the inistialisation by checking the result of the seperate thread for TLS.
-   The `misc` paramater is a pointer to the thread's  data structure that conatins the
-   LDAP struct. The initialised LDAP struct is passed to the `ld` paramater. */
+/* Finish the initialisation by checking the result of the separate thread for TLS.
+   The `misc` parameter is a pointer to the thread's  data structure that contains the
+   LDAP struct. The initialised LDAP struct is passed to the `ld` parameter. */
 int
 LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld) {
 	int rc = -1;
@@ -86,8 +86,10 @@ ldap_thread_bind(void *params) {
 	} else {
 		rc = ldap_simple_bind_s(data->ld, data->binddn, data->passwd);
 	}
-	/* Send a signal through an internal socketpair. */
-	if (send(data->sock, "s", 1, 0) == -1) rc = -1;
+	if (data->sock != -1) {
+		/* Send a signal through an internal socketpair. */
+		if (send(data->sock, "s", 1, 0) == -1) rc = -1;
+	}
 
 	return rc;
 }
@@ -327,10 +329,12 @@ ldap_init_thread(void *params) {
 			rc = ldap_start_tls_s(ldap_params->ld, NULL, NULL);
 		}
 		ldap_params->retval = rc;
-		/* Send a signal through an internal socketpair. */
-		if (send(ldap_params->sock, "s", 1, 0) == -1) {
-			/* Signaling is failed. */
-			ldap_params->retval = -1;
+		if (ldap_params->sock != -1) {
+			/* Send a signal through an internal socketpair. */
+			if (send(ldap_params->sock, "s", 1, 0) == -1) {
+				/* Signaling is failed. */
+				ldap_params->retval = -1;
+			}
 		}
 	}
 	return NULL;
