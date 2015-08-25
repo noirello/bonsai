@@ -10,6 +10,10 @@
 
 #include <Python.h>
 
+#ifdef __APPLE__
+LDAPControl *ldap_control_find(const char *oid, LDAPControl **ctrls, LDAPControl ***nextctrlp);
+#endif
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 //MS Windows
 

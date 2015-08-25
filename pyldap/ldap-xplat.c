@@ -2,6 +2,13 @@
 
 #include "utils.h"
 
+#ifdef __APPLE__
+LDAPControl *
+ldap_control_find(const char *oid, LDAPControl **ctrls, LDAPControl ***nextctrlp) {
+	return ldap_find_control(oid, ctrls);
+}
+#endif
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
 /* It does what it says: no verification on the server cert. */
