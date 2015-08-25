@@ -10,9 +10,6 @@
 
 #include <Python.h>
 
-#ifdef __APPLE__
-LDAPControl *ldap_control_find(const char *oid, LDAPControl **ctrls, LDAPControl ***nextctrlp);
-#endif
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 //MS Windows
@@ -78,5 +75,9 @@ int LDAP_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid);
 void *create_conn_info(char *mech, SOCKET sock, PyObject *creds);
 int update_conn_info(LDAP *ld, ldap_conndata_t *info);
 void dealloc_conn_info(ldap_conndata_t* info);
+
+#ifdef __APPLE__
+LDAPControl *ldap_control_find(const char *oid, LDAPControl **ctrls, LDAPControl ***nextctrlp);
+#endif
 
 #endif /* PYLDAP_LDAP_XPLAT_H_ */
