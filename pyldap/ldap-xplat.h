@@ -18,19 +18,6 @@
 
 #include "wldap-utf8.h"
 
-typedef struct ldap_conndata_s {
-	char *binddn;
-	char *mech;
-	char *realm;
-	char *authcid;
-	char *passwd;
-	char *authzid;
-	/* For the thread. */
-	LDAP *ld;
-	HANDLE thread;
-	SOCKET sock;
-} ldap_conndata_t;
-
 
 #else
 //Unix
@@ -43,6 +30,10 @@ typedef struct ldap_conndata_s {
 
 #define SOCKET int
 
+int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
+char *_ldap_get_opt_errormsg(LDAP *ld);
+#endif
+
 typedef struct ldap_conndata_s {
 	char *binddn;
 	char *mech;
@@ -50,14 +41,17 @@ typedef struct ldap_conndata_s {
 	char *authcid;
 	char *passwd;
 	char *authzid;
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+	/* For the Windows's thread. */
+	LDAP *ld;
+	HANDLE thread;
+	SOCKET sock;
+#else
 	char **resps;
 	int nresps;
 	const char *rmech;
-} ldap_conndata_t;
-
-int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
-char *_ldap_get_opt_errormsg(LDAP *ld);
 #endif
+} ldap_conndata_t;
 
 typedef struct ldap_thread_data_s {
 	LDAP *ld;
@@ -66,6 +60,11 @@ typedef struct ldap_thread_data_s {
 	int cert_policy;
 	int retval;
 	SOCKET sock;
+#if !defined(WIN32) || !defined(_WIN32) || !defined(__WIN32__)
+	/* For the POSIX's thread. */
+	pthread_mutex_t *mux;
+	int flag;
+#endif
 } ldapThreadData;
 
 int LDAP_start_init(PyObject *url, int has_tls, int cert_policy, SOCKET sock, void **thread, void **misc);
@@ -75,9 +74,5 @@ int LDAP_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid);
 void *create_conn_info(char *mech, SOCKET sock, PyObject *creds);
 int update_conn_info(LDAP *ld, ldap_conndata_t *info);
 void dealloc_conn_info(ldap_conndata_t* info);
-
-#ifdef __APPLE__
-LDAPControl *ldap_control_find(const char *oid, LDAPControl **ctrls, LDAPControl ***nextctrlp);
-#endif
 
 #endif /* PYLDAP_LDAP_XPLAT_H_ */

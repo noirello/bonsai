@@ -2,13 +2,6 @@
 
 #include "utils.h"
 
-#ifdef __APPLE__
-LDAPControl *
-ldap_control_find(const char *oid, LDAPControl **ctrls, LDAPControl ***nextctrlp) {
-	return ldap_find_control(oid, ctrls);
-}
-#endif
-
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
 /* It does what it says: no verification on the server cert. */
@@ -127,27 +120,36 @@ set_cert_policy(LDAP *ld, int cert_policy) {
    thread is finished, 0 if it is still in progress, and -1 for error. */
 int
 LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld) {
-	int rc = -1;
+	int rc = 0; /* Must be 0 for sync. */
 	ldapThreadData *val = (ldapThreadData *)misc;
 	struct timespec ts;
+	struct timeval now;
+	const int wait_msec = 100;
 
-	ts.tv_nsec = 100;
-	ts.tv_sec = 0;
+	/* Create absolute time. */
+	gettimeofday(&now, NULL);
+	ts.tv_sec = now.tv_sec;
+	ts.tv_nsec = (now.tv_usec + 1000UL * wait_msec) * 1000UL;
+	if (ts.tv_nsec >= 1000000000) {
+		/* Nanosecs are over 1 second. */
+		ts.tv_sec += 1;
+		ts.tv_nsec -= 1000000000;
+	}
 
 	/* Sanity check. */
 	if (thread == NULL || val == NULL) return -1;
 
 	if (async) {
-		/* Polling thread state. Warning: this function is not portable (_np). */
-		rc = pthread_timedjoin_np(*(pthread_t *)thread, NULL, &ts);
-	} else {
-		/* Block until thread is finished. */
-		rc = pthread_join(*(pthread_t *)thread, NULL);
+		/* Waiting on thread to release the lock. */
+		rc = pthread_mutex_timedlock(val->mux, &ts);
 	}
 	switch (rc) {
 	case ETIMEDOUT:
 		break;
 	case 0:
+		/* Block until thread is finished, but if it's async already
+		   waited enough on releasing the lock. */
+		rc = pthread_join(*(pthread_t *)thread, NULL);
 		/* Thread is finished. */
 		if (val->retval != LDAP_SUCCESS) {
 			set_exception(NULL, val->retval);
@@ -156,6 +158,8 @@ LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld) {
 		/* Set initialised LDAP struct pointer. */
 		*ld = val->ld;
 		if (val->url != NULL) free(val->url);
+		pthread_mutex_destroy(val->mux);
+		free(val->mux);
 		free(val);
 		return 1;
 	default:
@@ -314,17 +318,20 @@ thus to avoid the I/O blocking in the main (Python) thread the initialisation
 is done in a separate (POSIX and Windows) thread. A signal is sent through an
 internal socketpair when the thread is finished, thus select() can be used on
 the socket descriptor. */
-void *
+static void *
 ldap_init_thread(void *params) {
 	int rc = -1;
 	const int version = LDAP_VERSION3;
 	ldapThreadData *ldap_params = (ldapThreadData *)params;
 
 	if (ldap_params != NULL) {
+#if !defined(WIN32) || !defined(_WIN32) || !defined(__WIN32__)
+		pthread_mutex_lock(ldap_params->mux);
+#endif
 		rc = ldap_initialize(&(ldap_params->ld), ldap_params->url);
 		if (rc != LDAP_SUCCESS) {
 			ldap_params->retval = rc;
-			return NULL;
+			goto end;
 		}
 		/* Set version to LDAPv3. */
 		ldap_set_option(ldap_params->ld, LDAP_OPT_PROTOCOL_VERSION, &version);
@@ -339,11 +346,15 @@ ldap_init_thread(void *params) {
 		if (ldap_params->sock != -1) {
 			/* Send a signal through an internal socketpair. */
 			if (send(ldap_params->sock, "s", 1, 0) == -1) {
-				/* Signaling is failed. */
+				/* Signalling is failed. */
 				ldap_params->retval = -1;
 			}
 		}
 	}
+end:
+#if !defined(WIN32) || !defined(_WIN32) || !defined(__WIN32__)
+	pthread_mutex_unlock(ldap_params->mux);
+#endif
 	return NULL;
 }
 
@@ -353,7 +364,7 @@ passed to the `thread` and `misc` parameters respectively. */
 int
 LDAP_start_init(PyObject *url, int has_tls, int cert_policy, SOCKET sock, void **thread, void **misc) {
 	int rc = 0;
-        char *addrstr = NULL;
+	char *addrstr = NULL;
 	ldapThreadData *data = NULL;
 	PyObject *addr = NULL;
 
@@ -381,14 +392,19 @@ LDAP_start_init(PyObject *url, int has_tls, int cert_policy, SOCKET sock, void *
 		return -1;
 	}
 #else
-        *thread = (pthread_t *)malloc(sizeof(pthread_t));
-	if (*thread == NULL) {
-		free(data);
-		PyErr_NoMemory();
-		return -1;
-	}
-	rc = pthread_create((pthread_t *)thread, NULL, ldap_init_thread, data);
+	*thread = (pthread_t *)malloc(sizeof(pthread_t));
+	if (*thread == NULL) goto error;
+
+	data->mux = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+	if (data->mux == NULL) goto error;
+	pthread_mutex_init(data->mux, NULL);
+
+	rc = pthread_create((pthread_t *)thread, NULL, ldap_init_thread, (void *)data);
 #endif
 	*misc = (void *)data;
 	return rc;
+error:
+	free(data);
+	PyErr_NoMemory();
+	return -1;
 }
