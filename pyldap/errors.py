@@ -28,7 +28,7 @@ class InvalidMessageID(LDAPError):
 class ClosedConnection(LDAPError):
     """Raised, when try to perform LDAP operation with closed connection."""
 
-def __get_error(code):
+def _get_error(code):
     """ Return an error by code number. """
     if code == -1 or code == 0x51 or code == -11:
         # WinLDAP returns 0x51 for Server Down.

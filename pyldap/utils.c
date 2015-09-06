@@ -279,7 +279,7 @@ load_python_object(char *module_name, char *object_name) {
 PyObject *
 get_error_by_code(int code) {
 	PyObject *error;
-	PyObject *get_error = load_python_object("pyldap.errors", "__get_error");
+	PyObject *get_error = load_python_object("pyldap.errors", "_get_error");
 	if (get_error == NULL) return NULL;
 
 	error = PyObject_CallFunction(get_error, "(i)", code);
@@ -297,6 +297,9 @@ set_exception(LDAP *ld, int code) {
 	PyObject *ldaperror = NULL;
 	PyObject *errormsg = NULL;
 
+	/* Check that an error is already set. */
+	if (PyErr_Occurred()) return;
+
 	if (code == 0) {
 		/* Getting the error code from the session. */
 		/* 0x31: LDAP_OPT_RESULT_CODE or LDAP_OPT_ERROR_NUMBER */
@@ -305,7 +308,10 @@ set_exception(LDAP *ld, int code) {
 		/* Use the parameter for error code. */
 		err = code;
 	}
+
 	ldaperror = get_error_by_code(err);
+	if (ldaperror == NULL) return;
+
 	/* Get additional error message from the session. */
 	opt_errorstr = _ldap_get_opt_errormsg(ld);
 	errorstr = ldap_err2string(err);
