@@ -58,6 +58,8 @@ typedef struct ldap_thread_data_s {
 	char *url;
 	int tls;
 	int cert_policy;
+	char *ca_cert_dir;
+	char *ca_cert;
 	int retval;
 	SOCKET sock;
 #if !defined(WIN32) || !defined(_WIN32) || !defined(__WIN32__)
@@ -67,12 +69,11 @@ typedef struct ldap_thread_data_s {
 #endif
 } ldapThreadData;
 
-int LDAP_start_init(PyObject *url, int has_tls, int cert_policy, SOCKET sock, void **thread, void **misc);
+int LDAP_start_init(PyObject *client, SOCKET sock, void **thread, void **misc);
 int LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld);
 int LDAP_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid);
 
 void *create_conn_info(char *mech, SOCKET sock, PyObject *creds);
-int update_conn_info(LDAP *ld, ldap_conndata_t *info);
 void dealloc_conn_info(ldap_conndata_t* info);
 
 #endif /* PYLDAP_LDAP_XPLAT_H_ */

@@ -107,33 +107,20 @@ LDAPConnection_IsClosed(LDAPConnection *self) {
 static int
 connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	int rc = -1;
-	int tls_option = -1;
 	char *mech = NULL;
 	SOCKET ssock = -1;
-	PyObject *url = NULL;
-	PyObject *tls = NULL;
 	PyObject *tmp = NULL;
 	PyObject *creds = NULL;
 	ldap_conndata_t *info = NULL;
 
-	/* Get URL policy from LDAPClient. */
-	url = PyObject_GetAttrString(self->client, "url");
-	if (url == NULL) return -1;
-
-	/* Get cert policy from LDAPClient. */
-	tmp = PyObject_GetAttrString(self->client, "cert_policy");
-	if (tmp == NULL) goto error;
-	tls_option = (int)PyLong_AsLong(tmp);
-	Py_DECREF(tmp);
-
 	/* Get mechanism and credentials. */
 	creds = PyObject_GetAttrString(self->client, "credentials");
-	if (creds == NULL) goto error;
+	if (creds == NULL) return -1;
 
 	tmp = PyObject_GetAttrString(self->client, "mechanism");
 	if (tmp == NULL) {
 		Py_DECREF(creds);
-		goto error;
+		return -1;
 	}
 	mech = PyObject2char(tmp);
 	Py_DECREF(tmp);
@@ -141,22 +128,17 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	if (self->async) {
 		/* Init the socketpair. */
 		rc = get_socketpair(self->client, &(self->socketpair), &(self->csock), &ssock);
-		if (rc != 0) goto error;
+		if (rc != 0) return -1;
 	}
 
 	info = create_conn_info(mech, ssock, creds);
 	Py_DECREF(creds);
-	if (info == NULL) goto error;
-
-	tls = PyObject_GetAttrString(self->client, "tls");
-	if (tls == NULL) goto error;
+	if (info == NULL) return -1;
 
 	*conniter = LDAPConnectIter_New(self, info);
-	if (*conniter == NULL) goto error;
+	if (*conniter == NULL) return -1;
 
-	rc = LDAP_start_init(url, PyObject_IsTrue(tls), tls_option, ssock, &((*conniter)->thread), &((*conniter)->data));
-	Py_DECREF(url);
-	Py_DECREF(tls);
+	rc = LDAP_start_init(self->client, ssock, &((*conniter)->thread), &((*conniter)->data));
 
 	if (rc != 0) {
 		set_exception(self->ld, rc);
@@ -164,10 +146,6 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	}
 
 	return 0;
-
-error:
-	Py_DECREF(url);
-	return -1;
 }
 
 /* Open connection. */

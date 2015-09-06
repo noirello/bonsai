@@ -55,6 +55,8 @@ class LDAPClient:
         self.__raw_list = []
         self.__mechanism = "SIMPLE"
         self.__cert_policy = -1
+        self.__ca_cert = ""
+        self.__ca_cert_dir = ""
         self.poll = _poll
 
     @staticmethod
@@ -156,11 +158,21 @@ class LDAPClient:
         """
         tls_options = {'never' : 0, 'demand' : 2, 'allow': 3, 'try' : 4}
         if type(policy) != str:
-            raise ValueError("Policy parameter must be string")
+            raise ValueError("Policy parameter must be string.")
         policy = policy.lower()
         if policy not in tls_options.keys():
             raise ValueError("'%s' is an invalid policy.", policy)
         self.__cert_policy = tls_options[policy]
+
+    def set_ca_cert(self, name):
+        if name is not None and type(name) != str:
+            raise ValueError("Name parameter must be string or None.")
+        self.__ca_cert = name
+
+    def set_ca_cert_dir(self, path):
+        if path is not None and type(path) != str:
+            raise ValueError("Path parameter must be string or None.")
+        self.__ca_cert_dir = path
 
     def set_poll_func(self, func):
         self.poll = func
@@ -231,7 +243,23 @@ class LDAPClient:
 
     @cert_policy.setter
     def cert_policy(self, value=None):
-        raise ValueError("Cert_policy attribute cannot be set.")
+        self.set_cert_policy(value)
+
+    @property
+    def ca_cert(self):
+        return self.__ca_cert
+
+    @ca_cert.setter
+    def ca_cert(self, value):
+        self.set_ca_cert(value)
+
+    @property
+    def ca_cert_dir(self):
+        return self.__ca_cert_dir
+
+    @ca_cert_dir.setter
+    def ca_cert_dir(self, value):
+        self.set_ca_cert_dir(value)
 
     @property
     def raw_attributes(self):

@@ -92,6 +92,8 @@ class LDAPConnectionTest(unittest.TestCase):
             self.skipTest("TLS is not set.")
         client = LDAPClient(self.url, True)
         client.set_cert_policy("ALLOW")
+        client.set_ca_cert(None)
+        client.set_ca_cert_dir(None)
         try:
             conn = client.connect()
             conn.close()

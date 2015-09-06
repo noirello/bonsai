@@ -217,7 +217,6 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int block) {
 				/* Read and drop the data from the dummy socket. */
 				if (recv(self->conn->csock, buff, 1, 0) == -1) return NULL;
 			}
-			if (update_conn_info(self->conn->ld, self->info) != 0) return NULL;
 		}
 	}
 
