@@ -128,6 +128,41 @@ set_ca_cert(LDAP *ld, char *cacertdir, char *cacert) {
 	ldap_set_option(ld, LDAP_OPT_X_TLS_NEWCTX, &true);
 }
 
+#if defined(__APPLE__)
+
+/* Drop in replacement for pthread_mutext_timedlock for Mac OS X system. */
+static int
+_pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
+	int rc = -1;
+	struct timeval timenow;
+	struct timespec rest;
+
+	/* Set 10ms for sleeping time. */
+	rest.tv_sec = 0;
+	rest.tv_nsec = 10000000;
+
+	do {
+		rc = pthread_mutex_trylock(mutex);
+
+		gettimeofday(&timenow, NULL);
+
+		if (timenow.tv_sec >= timeout->tv_sec &&
+				(timenow.tv_usec * 1000) >= timeout->tv_nsec) {
+			return ETIMEDOUT;
+		}
+		/* Little sleep to avoid hammering on the lock. */
+		nanosleep(&rest, NULL);
+	} while (rc == EBUSY);
+
+	return rc;
+}
+#else
+static int
+_pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
+	return pthread_mutex_timedlock(mutex, abs_timeout);
+}
+#endif
+
 /* Check on the initialisation thread and set cert policy. The `misc`
    parameter is never used (on Linux plaform). The pointer of initialised
    LDAP struct is passed to the `ld` parameter. Return 1 if the initialisation
@@ -155,7 +190,7 @@ LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld) {
 
 	if (async) {
 		/* Waiting on thread to release the lock. */
-		rc = pthread_mutex_timedlock(val->mux, &ts);
+		rc = _pthread_mutex_timedlock(val->mux, &ts);
 	}
 	switch (rc) {
 	case ETIMEDOUT:
@@ -340,7 +375,6 @@ ldap_init_thread(void *params) {
 	int rc = -1;
 	const int version = LDAP_VERSION3;
 	ldapThreadData *ldap_params = (ldapThreadData *)params;
-	char *str = NULL;
 
 	if (ldap_params != NULL) {
 #if !defined(WIN32) || !defined(_WIN32) || !defined(__WIN32__)
