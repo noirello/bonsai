@@ -63,7 +63,8 @@ typedef struct ldap_thread_data_s {
 	char *client_cert;
 	int retval;
 	SOCKET sock;
-#if !defined(WIN32) || !defined(_WIN32) || !defined(__WIN32__)
+#if defined(WIN32) || defined(_WIN32) || !defined(__WIN32__)
+#else
 	/* For the POSIX's thread. */
 	pthread_mutex_t *mux;
 	int flag;

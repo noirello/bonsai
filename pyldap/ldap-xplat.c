@@ -31,6 +31,11 @@ set_cert_policy(LDAP *ld, int cert_policy) {
 	}
 }
 
+static void
+set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert) {
+
+}
+
 /* Finish the initialisation by checking the result of the separate thread for TLS.
    The `misc` parameter is a pointer to the thread's  data structure that contains the
    LDAP struct. The initialised LDAP struct is passed to the `ld` parameter. */
@@ -380,7 +385,8 @@ ldap_init_thread(void *params) {
 	ldapThreadData *ldap_params = (ldapThreadData *)params;
 
 	if (ldap_params != NULL) {
-#if !defined(WIN32) || !defined(_WIN32) || !defined(__WIN32__)
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#else
 		pthread_mutex_lock(ldap_params->mux);
 #endif
 		rc = ldap_initialize(&(ldap_params->ld), ldap_params->url);
@@ -410,7 +416,8 @@ ldap_init_thread(void *params) {
 		}
 	}
 end:
-#if !defined(WIN32) || !defined(_WIN32) || !defined(__WIN32__)
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#else
 	pthread_mutex_unlock(ldap_params->mux);
 #endif
 	return NULL;
@@ -496,11 +503,11 @@ LDAP_start_init(PyObject *client, SOCKET sock, void **thread, void **misc) {
 	pthread_mutex_init(data->mux, NULL);
 
 	rc = pthread_create((pthread_t *)thread, NULL, ldap_init_thread, (void *)data);
-#endif
-	*misc = (void *)data;
-	return rc;
 error:
 	free(data);
 	PyErr_NoMemory();
 	return -1;
+#endif
+	*misc = (void *)data;
+	return rc;
 }
