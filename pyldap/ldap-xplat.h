@@ -60,6 +60,7 @@ typedef struct ldap_thread_data_s {
 	int cert_policy;
 	char *ca_cert_dir;
 	char *ca_cert;
+	char *client_cert;
 	int retval;
 	SOCKET sock;
 #if !defined(WIN32) || !defined(_WIN32) || !defined(__WIN32__)

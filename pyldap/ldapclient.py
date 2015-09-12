@@ -57,6 +57,7 @@ class LDAPClient:
         self.__cert_policy = -1
         self.__ca_cert = ""
         self.__ca_cert_dir = ""
+        self.__client_cert = ""
         self.poll = _poll
 
     @staticmethod
@@ -174,6 +175,11 @@ class LDAPClient:
             raise ValueError("Path parameter must be string or None.")
         self.__ca_cert_dir = path
 
+    def set_client_cert(self, name):
+        if name is not None and type(name) != str:
+            raise ValueError("Name parameter must be string or None.")
+        self.__client_cert = name
+
     def set_poll_func(self, func):
         self.poll = func
 
@@ -260,6 +266,14 @@ class LDAPClient:
     @ca_cert_dir.setter
     def ca_cert_dir(self, value):
         self.set_ca_cert_dir(value)
+
+    @property
+    def client_cert(self):
+        return self.__client_cert
+
+    @client_cert.setter
+    def client_cert(self, value):
+        self.set_client_cert(value)
 
     @property
     def raw_attributes(self):

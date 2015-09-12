@@ -115,7 +115,7 @@ set_cert_policy(LDAP *ld, int cert_policy) {
 }
 
 static void
-set_ca_cert(LDAP *ld, char *cacertdir, char *cacert) {
+set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert) {
 	const int true = 1;
 
 	if (cacertdir == NULL || strcmp(cacertdir, "") != 0) {
@@ -123,6 +123,9 @@ set_ca_cert(LDAP *ld, char *cacertdir, char *cacert) {
 	}
 	if (cacert == NULL || strcmp(cacert, "") != 0) {
 		ldap_set_option(ld, LDAP_OPT_X_TLS_CACERTFILE, cacert);
+	}
+	if (clientcert == NULL || strcmp(clientcert, "") != 0) {
+		ldap_set_option(ld, LDAP_OPT_X_TLS_CERTFILE, clientcert);
 	}
 	/* Force libldap to create new context for the connection. */
 	ldap_set_option(ld, LDAP_OPT_X_TLS_NEWCTX, &true);
@@ -390,8 +393,9 @@ ldap_init_thread(void *params) {
 		if (ldap_params->cert_policy != -1) {
 			set_cert_policy(ldap_params->ld, ldap_params->cert_policy);
 		}
-		/* Set CA cert dir and file. */
-		set_ca_cert(ldap_params->ld, ldap_params->ca_cert_dir, ldap_params->ca_cert);
+		/* Set CA cert dir, CA cert and client cert. */
+		set_certificates(ldap_params->ld, ldap_params->ca_cert_dir,
+				ldap_params->ca_cert, ldap_params->client_cert);
 		if (ldap_params->tls == 1) {
 			/* Start TLS if it's required. */
 			rc = ldap_start_tls_s(ldap_params->ld, NULL, NULL);
@@ -463,6 +467,13 @@ LDAP_start_init(PyObject *client, SOCKET sock, void **thread, void **misc) {
 	if (tmp == NULL) return -1;
 	if (tmp == Py_None) data->ca_cert = NULL;
 	else data->ca_cert = PyObject2char(tmp);
+	Py_DECREF(tmp);
+
+	/* Set client cert from LDAPClient. */
+	tmp = PyObject_GetAttrString(client, "client_cert");
+	if (tmp == NULL) return -1;
+	if (tmp == Py_None) data->client_cert = NULL;
+	else data->client_cert = PyObject2char(tmp);
 	Py_DECREF(tmp);
 
 	data->ld = NULL;
