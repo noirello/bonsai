@@ -489,11 +489,7 @@ LDAP_start_init(PyObject *client, SOCKET sock, void **thread, void **misc) {
 	/* Create the separate thread. */
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 	*thread = (void *)CreateThread(NULL, 0, (int(*)(void*))&ldap_init_thread, (void *)data, 0, NULL);
-	if (*thread == NULL) {
-		free(data);
-		PyErr_BadInternalCall();
-		return -1;
-	}
+	if (*thread == NULL) goto error;
 #else
 	*thread = (pthread_t *)malloc(sizeof(pthread_t));
 	if (*thread == NULL) goto error;
@@ -503,11 +499,11 @@ LDAP_start_init(PyObject *client, SOCKET sock, void **thread, void **misc) {
 	pthread_mutex_init(data->mux, NULL);
 
 	rc = pthread_create((pthread_t *)thread, NULL, ldap_init_thread, (void *)data);
+#endif
+	*misc = (void *)data;
+	return rc;
 error:
 	free(data);
 	PyErr_NoMemory();
 	return -1;
-#endif
-	*misc = (void *)data;
-	return rc;
 }
