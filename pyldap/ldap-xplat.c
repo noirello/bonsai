@@ -120,7 +120,7 @@ set_cert_policy(LDAP *ld, int cert_policy) {
 }
 
 static void
-set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert) {
+set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert, char *clientkey) {
 	const int true = 1;
 
 	if (cacertdir == NULL || strcmp(cacertdir, "") != 0) {
@@ -131,6 +131,9 @@ set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert) {
 	}
 	if (clientcert == NULL || strcmp(clientcert, "") != 0) {
 		ldap_set_option(ld, LDAP_OPT_X_TLS_CERTFILE, clientcert);
+	}
+	if (clientkey == NULL || strcmp(clientkey, "") != 0) {
+		ldap_set_option(ld, LDAP_OPT_X_TLS_KEYFILE, clientkey);
 	}
 	/* Force libldap to create new context for the connection. */
 	ldap_set_option(ld, LDAP_OPT_X_TLS_NEWCTX, &true);
@@ -230,6 +233,8 @@ end:
 	if (val->url != NULL) free(val->url);
 	if (val->ca_cert) free(val->ca_cert);
 	if (val->ca_cert_dir) free(val->ca_cert_dir);
+	if (val->client_cert) free(val->client_cert);
+	if (val->client_key) free(val->client_key);
 	pthread_mutex_destroy(val->mux);
 	free(val->mux);
 	free(val);
@@ -401,7 +406,8 @@ ldap_init_thread(void *params) {
 		}
 		/* Set CA cert dir, CA cert and client cert. */
 		set_certificates(ldap_params->ld, ldap_params->ca_cert_dir,
-				ldap_params->ca_cert, ldap_params->client_cert);
+				ldap_params->ca_cert, ldap_params->client_cert,
+				ldap_params->client_key);
 		if (ldap_params->tls == 1) {
 			/* Start TLS if it's required. */
 			rc = ldap_start_tls_s(ldap_params->ld, NULL, NULL);
@@ -481,6 +487,13 @@ LDAP_start_init(PyObject *client, SOCKET sock, void **thread, void **misc) {
 	if (tmp == NULL) return -1;
 	if (tmp == Py_None) data->client_cert = NULL;
 	else data->client_cert = PyObject2char(tmp);
+	Py_DECREF(tmp);
+
+	/* Set client key from LDAPClient. */
+	tmp = PyObject_GetAttrString(client, "client_key");
+	if (tmp == NULL) return -1;
+	if (tmp == Py_None) data->client_key = NULL;
+	else data->client_key = PyObject2char(tmp);
 	Py_DECREF(tmp);
 
 	data->ld = NULL;
