@@ -28,6 +28,9 @@ class InvalidMessageID(LDAPError):
 class ClosedConnection(LDAPError):
     """Raised, when try to perform LDAP operation with closed connection."""
 
+class InsufficientAccess(LDAPError):
+    """Raised, when the user has insufficient access rights."""
+
 def _get_error(code):
     """ Return an error by code number. """
     if code == -1 or code == 0x51 or code == -11:
@@ -40,6 +43,8 @@ def _get_error(code):
         return InvalidDN
     elif code == 0x31:
         return AuthenticationError
+    elif code == 0x32:
+        return InsufficientAccess
     elif code == 0x41:
         return ObjectClassViolation
     elif code == 0x44:
