@@ -32,7 +32,7 @@ set_cert_policy(LDAP *ld, int cert_policy) {
 }
 
 static void
-set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert) {
+set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert, char *clientkey) {
 
 }
 
@@ -83,6 +83,7 @@ ldap_thread_bind(void *params) {
 	defaults.authcid = data->authcid;
 	defaults.passwd = data->passwd;
 	defaults.realm = data->realm;
+	defaults.authzid = data->authzid;
 
 	if (strcmp(data->mech, "SIMPLE") != 0) {
 		if (data->binddn == NULL) binddn = "";

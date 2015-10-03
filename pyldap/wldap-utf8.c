@@ -825,10 +825,53 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
 	return res;
 }
 
+static char *
+create_authzid_digest_str(char *authzid, char *chunk, int *length) {
+	int len = 12;
+	char *concat = NULL;
+
+	if (authzid != NULL) len += (int)strlen(authzid);
+	if (chunk != NULL) len += (int)strlen(chunk);
+
+	concat = (char *)malloc(sizeof(char) * len);
+	if (concat == NULL) return NULL;
+
+	if (sprintf_s(concat, len, "%s,authzid=\"%s\"", chunk, authzid) == -1) {
+		return NULL;
+	}
+
+	*length = len - 1;
+	return concat;
+}
+
+static char *
+create_authzid_gssapi_str(char *authzid, char *chunk, int chunklen, int *length) {
+	int len = chunklen;
+	char *concat = NULL;
+	char *p;
+
+	if (chunk == NULL) return NULL;
+	if (authzid == NULL) return chunk;
+
+	len += (int)strlen(authzid);
+	concat = (char *)malloc(sizeof(char) * len);
+	if (concat == NULL) return NULL;
+	p = concat;
+
+	/* Copy the authzid after the server response. */
+	memcpy(p, chunk, chunklen);
+	p += chunklen;
+	memcpy(p, authzid, strlen(authzid));
+	free(chunk);
+
+	*length = len;
+	return concat;
+}
+
 /* Create the replies for the server's responses during the SASL binding procedure. */
 static int
-sspi_bind_procedure(CredHandle *credhandle, CtxtHandle *ctxhandle, wchar_t *targetName, int *gssapi,
-struct berval *response, struct berval *creddata) {
+sspi_bind_procedure(CredHandle *credhandle, CtxtHandle *ctxhandle, wchar_t *targetName, char *authzid,
+	int *gssapi, struct berval **response, struct berval *creddata) {
 
 	int rc = 0;
 	int len = 0;
@@ -838,6 +881,7 @@ struct berval *response, struct berval *creddata) {
 	SecBufferDesc in_buff_desc;
 	SecBuffer in_buff;
 	char *data = NULL;
+	char *resp_authzid = NULL;
 
 	if (creddata == NULL || credhandle == NULL) return LDAP_PARAM_ERROR;
 
@@ -853,26 +897,46 @@ struct berval *response, struct berval *creddata) {
 	out_buff.BufferType = SECBUFFER_TOKEN;
 	out_buff.pvBuffer = NULL;
 
-	if (response == NULL) {
+	if (*response == NULL) {
 		/* First function call, no server response. */
 		rc = InitializeSecurityContextW(credhandle, NULL, targetName, ISC_REQ_MUTUAL_AUTH | ISC_REQ_ALLOCATE_MEMORY,
 			0, 0, NULL, 0, ctxhandle, &out_buff_desc, &contextattr, NULL);
 	} else {
+		if (*gssapi == 0 && authzid != NULL && (*response)->bv_val != NULL && strlen(authzid) != 0) {
+			/* Authzid for DIGEST-MD5 authentication. */
+			(*response)->bv_val[(*response)->bv_len] = '\0';
+			resp_authzid = create_authzid_digest_str(authzid, (*response)->bv_val, &len);
+			if (resp_authzid == NULL) return -1;
+			ber_bvfree(*response);
+
+			*response = (struct berval *)malloc(sizeof(struct berval));
+			if (response == NULL) return -1;
+			(*response)->bv_val = resp_authzid;
+			(*response)->bv_len = len;
+		}
+
 		/* Set server response as an input buffer. */
 		in_buff_desc.ulVersion = SECBUFFER_VERSION;
 		in_buff_desc.cBuffers = 1;
 		in_buff_desc.pBuffers = &in_buff;
 
-		in_buff.cbBuffer = response->bv_len;
+		in_buff.cbBuffer = (*response)->bv_len;
 		in_buff.BufferType = SECBUFFER_TOKEN;
-		in_buff.pvBuffer = response->bv_val;
+		in_buff.pvBuffer = (*response)->bv_val;
 		if (*gssapi == 2) {
 			/* GSSAPI decrypting and encrypting is needed. */
-			rc = decrypt_response(ctxhandle, response->bv_val, response->bv_len, &data, &len);
+			rc = decrypt_response(ctxhandle, (*response)->bv_val, (*response)->bv_len, &data, &len);
+			data = create_authzid_gssapi_str(authzid, data, len, &len);
 			rc = encrypt_reply(ctxhandle, data, len, &data, &len);
 		} else {
 			rc = InitializeSecurityContextW(credhandle, ctxhandle, targetName, ISC_REQ_MUTUAL_AUTH |
 				ISC_REQ_ALLOCATE_MEMORY, 0, 0, &in_buff_desc, 0, ctxhandle, &out_buff_desc, &contextattr, NULL);
+		}
+		if (*gssapi == 0 && authzid != NULL && (*response)->bv_val != NULL && strlen(authzid) != 0) {
+			/* Cleaning DIGEST-MD5 authzid. */
+			free((*response)->bv_val);
+			free(*response);
+			*response = NULL;
 		}
 	}
 
@@ -1008,8 +1072,10 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
 	if (target_name == NULL) return LDAP_PARAM_ERROR;
 
 	do {
-		rc = sspi_bind_procedure(&credhandle, &ctxhandle, target_name, &gssapi, response, &cred);
 
+		rc = sspi_bind_procedure(&credhandle, &ctxhandle, target_name, defs->authzid, &gssapi, &response, &cred);
+
+		if (response != NULL) ber_bvfree(response);
 		rc = ldap_sasl_bind_sW(ld, wdn, wmech, &cred, wsctrls, wcctrls, &response);
 		/* Free the previously allocated data. */
 		if (cred.bv_val != NULL) {
