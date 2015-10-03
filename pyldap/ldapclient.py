@@ -134,9 +134,10 @@ class LDAPClient:
         if self.__mechanism == "SIMPLE" and len(creds) != 2:
             raise ValueError("Simple mechanism needs 2 "
                              "credential information: (binddn, password).")
-        if self.__mechanism != "SIMPLE" and len(creds) != 3:
-            raise ValueError("Simple mechanism needs 3 "
-                             "credential information: (username, password, realm).")
+        if self.__mechanism != "SIMPLE" and len(creds) != 4:
+            raise ValueError("%s mechanism needs 4 "
+                             "credential information: (username, password, "
+                             "realm, authzid)." % self.__mechanism)
         self.__credentials = creds
 
     def set_cert_policy(self, policy):

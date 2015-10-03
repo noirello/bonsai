@@ -337,6 +337,8 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
 			authcid = PyObject2char(tmp);
 			tmp = PyTuple_GetItem(creds, 2);
 			realm = PyObject2char(tmp);
+			tmp = PyTuple_GetItem(creds, 3);
+			authzid = PyObject2char(tmp);
 		}
 		tmp = PyTuple_GetItem(creds, 1);
 		passwd = PyObject2char(tmp);

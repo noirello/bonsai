@@ -38,9 +38,13 @@ class LDAPConnectionTest(unittest.TestCase):
             realm = None
         else:
             realm = self.cfg["DIGESTAUTH"]["realm"]
+        if self.cfg["DIGESTAUTH"]["authzid"] == "None":
+            authzid = None
+        else:
+            authzid = self.cfg["DIGESTAUTH"]["authzid"]
         client.set_credentials("DIGEST-MD5", (self.cfg["DIGESTAUTH"]["user"], \
                                         self.cfg["DIGESTAUTH"]["password"], \
-                                        realm))
+                                        realm, authzid))
         try:
             conn = client.connect()
         except (pyldap.errors.ConnectionError, \
@@ -122,7 +126,7 @@ class LDAPConnectionTest(unittest.TestCase):
             realm = self.cfg["DIGESTAUTH"]["realm"]
         client.set_credentials("DIGEST-MD5", (self.cfg["DIGESTAUTH"]["user"], \
                                         "wrongpassword", \
-                                        realm))
+                                        realm, None))
         self.assertRaises(pyldap.AuthenticationError, lambda : client.connect())
 
     def test_sort_order(self):
