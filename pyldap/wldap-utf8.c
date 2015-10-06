@@ -825,6 +825,7 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
 	return res;
 }
 
+/* Supplement the DIGEST-MD5 server response with an authorization ID. */
 static char *
 create_authzid_digest_str(char *authzid, char *chunk, int *length) {
 	int len = 12;
@@ -844,6 +845,7 @@ create_authzid_digest_str(char *authzid, char *chunk, int *length) {
 	return concat;
 }
 
+/* Concat the decrypted GSSAPI server response with an authorization ID. */
 static char *
 create_authzid_gssapi_str(char *authzid, char *chunk, int chunklen, int *length) {
 	int len = chunklen;
@@ -883,7 +885,7 @@ sspi_bind_procedure(CredHandle *credhandle, CtxtHandle *ctxhandle, wchar_t *targ
 	char *data = NULL;
 	char *resp_authzid = NULL;
 
-	if (creddata == NULL || credhandle == NULL) return LDAP_PARAM_ERROR;
+	if (creddata == NULL || credhandle == NULL || targetName == NULL) return LDAP_PARAM_ERROR;
 
 	/* Set creddata empty. */
 	creddata->bv_len = 0;
@@ -1005,7 +1007,14 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
 	LDAPControlA **cctrls, void *defaults) {
 	int i;
 	int rc = 0;
-	int gssapi = 0;
+	int authmod = 0;
+	/*
+	Auth mode:
+		0 : DIGEST-MD5;
+		1 : GSSAPI (starting);
+		2 : GSSAPI (ending);
+		3 : EXTERNAL;
+	*/
 	wchar_t *secpack = NULL;
 	wchar_t *wdn = NULL;
 	wchar_t *wmech = NULL;
@@ -1022,8 +1031,8 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
 	CtxtHandle ctxhandle;
 	sasl_defaults_t *defs = (sasl_defaults_t *)defaults;
 	/* Supported mechanisms, order matters. */
-	char *mechs[] = { "DIGEST-MD5", "GSSAPI", NULL };
-	wchar_t *secpacks[] = { L"WDigest", L"Kerberos", NULL };
+	char *mechs[] = { "DIGEST-MD5", "GSSAPI", "EXTERNAL", NULL };
+	wchar_t *secpacks[] = { L"WDigest", L"Kerberos", L"EXTERNAL", NULL };
 
 	if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto clear;
 	if (rc = convert_to_wcs(mechanism, &wmech) != LDAP_SUCCESS) goto clear;
@@ -1042,43 +1051,51 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
 	}
 
 	if (secpack == NULL) return LDAP_PARAM_ERROR;
-	if (wcscmp(secpack, L"Kerberos") == 0) gssapi = 1;
+	if (wcscmp(secpack, L"Kerberos") == 0) authmod = 1;
+	else if (wcscmp(secpack, L"EXTERNAL") == 0) authmod = 3;
 
-	/* Create credential data. */
-	memset(&wincreds, 0, sizeof(wincreds));
+	if (authmod != 3) {
+		/* Set credentials and target name for WDigest and Kerberos. */
+		/* Create credential data. */
+		memset(&wincreds, 0, sizeof(wincreds));
 
-	if (rc = convert_to_wcs(defs->authcid, &wauthcid) != LDAP_SUCCESS) goto clear;
-	if (rc = convert_to_wcs(defs->passwd, &wpasswd) != LDAP_SUCCESS) goto clear;
-	if (rc = convert_to_wcs(defs->realm, &wrealm) != LDAP_SUCCESS) goto clear;
+		if (rc = convert_to_wcs(defs->authcid, &wauthcid) != LDAP_SUCCESS) goto clear;
+		if (rc = convert_to_wcs(defs->passwd, &wpasswd) != LDAP_SUCCESS) goto clear;
+		if (rc = convert_to_wcs(defs->realm, &wrealm) != LDAP_SUCCESS) goto clear;
 
-	wincreds.User = (unsigned short *)wauthcid;
-	if (wincreds.User != NULL) wincreds.UserLength = (unsigned long)wcslen(wauthcid);
-	else wincreds.UserLength = 0;
-	wincreds.Password = (unsigned short *)wpasswd;
-	if (wincreds.Password != NULL) wincreds.PasswordLength = (unsigned long)wcslen(wpasswd);
-	else wincreds.PasswordLength = 0;
-	wincreds.Domain = (unsigned short *)wrealm;
-	if (wincreds.Domain != NULL) wincreds.DomainLength = (unsigned long)wcslen(wrealm);
-	else wincreds.DomainLength = 0;
+		wincreds.User = (unsigned short *)wauthcid;
+		if (wincreds.User != NULL) wincreds.UserLength = (unsigned long)wcslen(wauthcid);
+		else wincreds.UserLength = 0;
+		wincreds.Password = (unsigned short *)wpasswd;
+		if (wincreds.Password != NULL) wincreds.PasswordLength = (unsigned long)wcslen(wpasswd);
+		else wincreds.PasswordLength = 0;
+		wincreds.Domain = (unsigned short *)wrealm;
+		if (wincreds.Domain != NULL) wincreds.DomainLength = (unsigned long)wcslen(wrealm);
+		else wincreds.DomainLength = 0;
 
-	wincreds.Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;
+		wincreds.Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;
 
-	/* Create credential handler. */
-	rc = AcquireCredentialsHandleW(NULL, secpack, SECPKG_CRED_OUTBOUND, NULL, &wincreds, NULL, NULL, &credhandle, NULL);
-	if (rc != SEC_E_OK) return LDAP_PARAM_ERROR;
+		/* Create credential handler. */
+		rc = AcquireCredentialsHandleW(NULL, secpack, SECPKG_CRED_OUTBOUND, NULL, &wincreds, NULL, NULL, &credhandle, NULL);
+		if (rc != SEC_E_OK) return LDAP_PARAM_ERROR;
 
-	/* Get the target name (SPN). */
-	target_name = get_target_name(ld);
-	if (target_name == NULL) return LDAP_PARAM_ERROR;
-
+		/* Get the target name (SPN). */
+		target_name = get_target_name(ld);
+		if (target_name == NULL) return LDAP_PARAM_ERROR;
+	} else {
+		/* Set authorization ID for EXTERNAL. */
+		cred.bv_val = defs->authzid;
+		if (defs->authzid != NULL)  cred.bv_len = strlen(defs->authzid);
+		else cred.bv_len = 0;
+	}
 	do {
 
-		rc = sspi_bind_procedure(&credhandle, &ctxhandle, target_name, defs->authzid, &gssapi, &response, &cred);
+		rc = sspi_bind_procedure(&credhandle, &ctxhandle, target_name, defs->authzid, &authmod, &response, &cred);
 
 		if (response != NULL) ber_bvfree(response);
 		rc = ldap_sasl_bind_sW(ld, wdn, wmech, &cred, wsctrls, wcctrls, &response);
-		/* Free the previously allocated data. */
-		if (cred.bv_val != NULL) {
+		/* Free the previously allocated data (but not for EXTERNAL). */
+		if (cred.bv_val != NULL && authmod != 3) {
 			free(cred.bv_val);
 			cred.bv_len = 0;
 		}
