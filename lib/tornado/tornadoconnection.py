@@ -3,7 +3,7 @@ from functools import partial
 from tornado.ioloop import IOLoop
 from tornado.concurrent import Future
 
-from pyldap import LDAPConnection
+from ..ldapconnection import LDAPConnection
 
 class TornadoLDAPConnection(LDAPConnection):
     def __init__(self, client, ioloop):
