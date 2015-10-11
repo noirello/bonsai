@@ -68,6 +68,7 @@ typedef struct ldap_thread_data_s {
 #else
 	/* For the POSIX's thread. */
 	pthread_mutex_t *mux;
+	int flag;
 #endif
 } ldapThreadData;
 

@@ -208,6 +208,11 @@ LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld) {
 	case ETIMEDOUT:
 		break;
 	case 0:
+		if (val->flag == 0) {
+			/* Premature locking, thread function is not finished. */
+			pthread_mutex_unlock(val->mux);
+			break;
+		}
 		/* Block until thread is finished, but if it's async already
 		   waited enough on releasing the lock. */
 		rc = pthread_join(*(pthread_t *)thread, NULL);
@@ -396,6 +401,8 @@ ldap_init_thread(void *params) {
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 #else
 		pthread_mutex_lock(ldap_params->mux);
+		/* Lock already acquired by this thread, flag can be set now. */
+		ldap_params->flag = 1;
 #endif
 		rc = ldap_initialize(&(ldap_params->ld), ldap_params->url);
 		if (rc != LDAP_SUCCESS) {
@@ -510,6 +517,7 @@ LDAP_start_init(PyObject *client, SOCKET sock, void **thread, void **misc) {
 	*thread = (pthread_t *)malloc(sizeof(pthread_t));
 	if (*thread == NULL) goto error;
 
+	data->flag = 0;
 	data->mux = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
 	if (data->mux == NULL) goto error;
 	pthread_mutex_init(data->mux, NULL);
