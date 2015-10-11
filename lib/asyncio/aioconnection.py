@@ -1,7 +1,7 @@
 import asyncio
 
-from pyldap import LDAPConnection
-from pyldap.errors import LDAPError
+from ..ldapconnection import LDAPConnection
+from ..errors import LDAPError
 
 class AIOLDAPConnection(LDAPConnection):
     def __init__(self, client, loop=None):

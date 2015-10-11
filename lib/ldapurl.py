@@ -1,6 +1,6 @@
 import re
 import urllib.parse
-from pyldap.ldapdn import LDAPDN
+from .ldapdn import LDAPDN
 
 class LDAPURL(object):
     """

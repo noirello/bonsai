@@ -1,4 +1,4 @@
-import pyldap.errors
+from .errors import InvalidDN
 
 class LDAPDN(object):
     """
@@ -19,7 +19,7 @@ class LDAPDN(object):
             self.__rdns = []
         if str(self) != strdn and \
         self.__escape_special_char(str(self)) != strdn:
-            raise pyldap.errors.InvalidDN(strdn)
+            raise InvalidDN(strdn)
 
     def __escape_special_char(self, strdn, reverse=False):
         """ Escaping special characters."""
@@ -56,7 +56,7 @@ class LDAPDN(object):
                 rdn.append((atype, avalue))
             except ValueError:
                 # Expected when the splitting returns more, then 2 component.
-                raise pyldap.errors.InvalidDN(str_rdn)
+                raise InvalidDN(str_rdn)
         return tuple(rdn)
 
     def __rdns_to_str(self, rdns):

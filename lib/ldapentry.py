@@ -1,4 +1,4 @@
-from pyldap._cpyldap import _LDAPEntry
+from ._cpyldap import _LDAPEntry
 
 class LDAPEntry(_LDAPEntry):
     def __init__(self, dn, conn=None):

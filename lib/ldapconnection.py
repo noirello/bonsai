@@ -1,5 +1,5 @@
-from pyldap._cpyldap import _LDAPConnection
-from pyldap.ldapdn import LDAPDN
+from ._cpyldap import _LDAPConnection
+from .ldapdn import LDAPDN
 
 class LDAPConnection(_LDAPConnection):
     def __init__(self, client, is_async=False):

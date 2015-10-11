@@ -18,7 +18,6 @@ class TestCommand(Command):
 
     def run(self):
         import unittest
-        del sys.path[0] # Hack for avoid importing the local pyldap
         tests = unittest.defaultTestLoader.discover("./tests", pattern="*_test.py")
         suite = unittest.TestSuite()
         suite.addTests(tests)
@@ -28,18 +27,19 @@ class TestCommand(Command):
 
 sources = ["pyldapmodule.c", "ldapentry.c", "ldapconnectiter.c",
            "ldapconnection.c", "ldapmodlist.c", "ldapvaluelist.c",
-           "ldap-xplat.c", "ldapsearchiter.c", "utils.c", "uniquelist.c",
-		   "wldap-utf8.c"]
+           "ldap-xplat.c", "ldapsearchiter.c", "utils.c", "uniquelist.c"]
 
 depends = ["ldapconnection.h", "ldapentry.h", "ldapconnectiter.h",
            "ldapmodlist.h", "ldapvaluelist.h", "ldapsearchiter.h",
-           "ldap-xplat.h", "uniquelist.h", "utils.h", "wldap-utf8.h"]
+           "ldap-xplat.h", "uniquelist.h", "utils.h"]
 
-sources = [os.path.join('pyldap', x) for x in sources]
-depends = [os.path.join('pyldap', x) for x in depends]
+sources = [os.path.join('src', x) for x in sources]
+depends = [os.path.join('src', x) for x in depends]
 
 if sys.platform == "win32":
     libs = ["wldap32", "secur32", "Ws2_32"]
+    sources.append("wldap-utf8.c")
+    depends.append("wldap-utf8.h")
 else:
     libs = ["ldap", "lber"]
 
@@ -63,7 +63,8 @@ setup(name="pyldap",
       long_description=long_descr,
       license="MIT",
       ext_modules=[pyldap_module],
-      packages=["pyldap"],
+      package_dir = {"pyldap": "lib"},
+      packages=["pyldap", "pyldap.asyncio", "pyldap.gevent"],
       cmdclass={"test": TestCommand},
       classifiers=[
           'Development Status :: 4 - Beta',

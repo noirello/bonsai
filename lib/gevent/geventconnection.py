@@ -1,6 +1,6 @@
 from gevent.socket import wait_readwrite
 
-from pyldap import LDAPConnection
+from ..ldapconnection import LDAPConnection
 
 class GeventLDAPConnection(LDAPConnection):
     def __init__(self, client):

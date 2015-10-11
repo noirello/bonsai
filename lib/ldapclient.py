@@ -6,14 +6,10 @@
 """
 import socket
 
-from pyldap import LDAPConnection
-
-from pyldap.ldapurl import LDAPURL
-from pyldap.errors import LDAPError
-from pyldap.aioldapconnection import AIOLDAPConnection
-from lxml.html.builder import INS
-from sphinx.ext.autodoc import INSTANCEATTR
-from builtins import issubclass
+from .ldapurl import LDAPURL
+from .errors import LDAPError
+from .ldapconnection import LDAPConnection
+from .asyncio import AIOLDAPConnection
 
 class LDAPClient:
     """
