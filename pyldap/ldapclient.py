@@ -5,30 +5,15 @@
 
 """
 import socket
-import asyncio
 
 from pyldap import LDAPConnection
 
 from pyldap.ldapurl import LDAPURL
 from pyldap.errors import LDAPError
-
-def _ready(conn, msg_id, fut, loop):
-    loop.remove_reader(conn.fileno())
-    try:
-        res = conn.get_result(msg_id)
-        if res is not None:
-            fut.set_result(res)
-        else:
-            loop.add_reader(conn.fileno(), _ready, conn, msg_id, fut, loop)
-    except LDAPError as exc:
-        fut.set_exception(exc)
-
-def _poll(conn, msg_id):
-    fut = asyncio.Future()
-    loop = asyncio.get_event_loop()
-    loop.add_reader(conn.fileno(), _ready, conn, msg_id, fut, loop)
-    res = yield from asyncio.wait_for(fut, None)
-    return res
+from pyldap.aioldapconnection import AIOLDAPConnection
+from lxml.html.builder import INS
+from sphinx.ext.autodoc import INSTANCEATTR
+from builtins import issubclass
 
 class LDAPClient:
     """
@@ -59,7 +44,7 @@ class LDAPClient:
         self.__ca_cert_dir = ""
         self.__client_cert = ""
         self.__client_key = ""
-        self.poll = _poll
+        self.__async_conn = AIOLDAPConnection
 
     @staticmethod
     def _create_socketpair():
@@ -193,8 +178,10 @@ class LDAPClient:
             raise ValueError("Name parameter must be string or None.")
         self.__client_key = name
 
-    def set_poll_func(self, func):
-        self.poll = func
+    def set_async_connection_class(self, conn):
+        if not issubclass(conn, LDAPConnection):
+            raise ValueError("Class must be a subclass of LDAPConnection. ")
+        self.__async_conn = conn
 
     def get_rootDSE(self):
         """
@@ -305,7 +292,7 @@ class LDAPClient:
     def raw_attributes(self, value=None):
         raise ValueError("Raw_attributes attribute cannot be set.")
 
-    def connect(self, async=False):
+    def connect(self, async=False, **kwargs):
         """
         Open a connection to the LDAP server.
 
@@ -313,4 +300,7 @@ class LDAPClient:
         :return: an LDAP connection.
         :rtype: :class:`LDAPConnection`
         """
-        return LDAPConnection(self, async).open()
+        if async:
+            return self.__async_conn(self, **kwargs).open()
+        else:
+            return LDAPConnection(self, async).open()

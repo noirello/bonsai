@@ -17,13 +17,13 @@ class LDAPConnection(_LDAPConnection):
     def _evaluate(self, msg_id):
         """
         Depending on the connection's type (asynchronous or synchronous),
-        it returns a generator object or the result of the LDAP operation.
+        it returns a message ID or the result of the LDAP operation.
 
         :param int msg_id: the ID of the LDAP operation.
         :return: generator if the connection async, otherwise the result of the operation.
         """
         if self.async:
-            return self.__client.poll(self, msg_id)
+            return msg_id
         else:
             return self.get_result(msg_id, True)
 
@@ -55,7 +55,7 @@ class LDAPConnection(_LDAPConnection):
     def search(self, base=None, scope=None, filter=None, attrlist=None,
                timeout=0, sizelimit=0, attrsonly=False):
         # Documentation in the docs/api.rst with detailed examples.
-        # Load values from the LDAPURL, if it is not present on the
+        # Load values from the LDAPURL, if it is not presented on the
         # parameter list.
         _base = str(base) if base is not None else str(self.__client.url.basedn)
         _scope = scope if scope is not None else self.__client.url.scope_num
@@ -64,7 +64,7 @@ class LDAPConnection(_LDAPConnection):
         msg_id = super().search(_base, _scope, _filter, _attrlist,
                                 timeout, sizelimit, attrsonly)
         if self.async:
-            return self.__client.poll(self, msg_id)
+            return msg_id
         else:
             if self.page_size > 1:
                 return self.__paged_search(self.get_result(msg_id, True))
