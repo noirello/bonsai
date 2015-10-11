@@ -1,11 +1,10 @@
 - Change module name from PyLDAP to avoid confusion with python-ldap.
 - Rearrange source code into folders.
 - Upload to PyPI.
-- Complete Unicode support on Windows (while keeping compatibility with Linux).
 - Improve sort control.
+- Add timeout function to all of the LDAP operations.
 - Feature: Add LDIF reader and writer function.
 - Feature: Add password modify extended operation.
 - Feature: Possibility to change LDAPEntry and LDAPValueList to other dict and list based objects.
-- Feature: SASL EXTERNAL authentication.
 - Feature: Client-side validation for entries (with defined schemas).
 - Feature: add enum for search scopes. (enum dependency for Python 3.3)
