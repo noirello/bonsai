@@ -1,7 +1,7 @@
 import unittest
 
-from pyldap import LDAPDN
-from pyldap import errors
+from bonsai import LDAPDN
+from bonsai import errors
 
 class LDAPDNTest(unittest.TestCase):
     """ Testing LDAP DN object. """

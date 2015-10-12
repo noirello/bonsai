@@ -1,7 +1,7 @@
 import unittest
 
-from pyldap import LDAPURL
-from pyldap import LDAPDN
+from bonsai import LDAPURL
+from bonsai import LDAPDN
 
 class LDAPURLTest(unittest.TestCase):
     """ Testing LDAPURL object. """

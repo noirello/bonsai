@@ -6,7 +6,7 @@
 
 /*	Dealloc the LDAPConnection object. */
 static void
-LDAPConnection_dealloc(LDAPConnection* self) {
+ldapconnection_dealloc(LDAPConnection* self) {
 	int i = 0;
 
 	Py_XDECREF(self->client);
@@ -27,7 +27,7 @@ LDAPConnection_dealloc(LDAPConnection* self) {
 
 /*	Create a new LDAPConnection object. */
 static PyObject *
-LDAPConnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+ldapconnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	LDAPConnection *self = NULL;
 
 	self = (LDAPConnection *)type->tp_alloc(type, 0);
@@ -48,7 +48,7 @@ LDAPConnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
 /*	Initialise the LDAPConnection. */
 static int
-LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+ldapconnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	PyObject *client = NULL;
 	PyObject *async = NULL;
 	PyObject *ldapclient_type = NULL;
@@ -63,7 +63,7 @@ LDAPConnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	if (client == NULL || async == NULL) return -1;
 
 	/* Validate that the Python object parameter is type of an LDAPClient. */
-	ldapclient_type = load_python_object("pyldap.ldapclient", "LDAPClient");
+	ldapclient_type = load_python_object("bonsai.ldapclient", "LDAPClient");
 	if (ldapclient_type == NULL ||
 		!PyObject_IsInstance(client, ldapclient_type)) {
 		return -1;
@@ -148,9 +148,9 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	return 0;
 }
 
-/* Open connection. */
+/* Open the LDAP connection. */
 static PyObject *
-LDAPConnection_Open(LDAPConnection *self) {
+ldapconnection_open(LDAPConnection *self) {
 	int rc = 0;
 	LDAPConnectIter *iter = NULL;
 
@@ -166,9 +166,9 @@ LDAPConnection_Open(LDAPConnection *self) {
 	return PyLong_FromLong((long int)(self->csock));
 }
 
-/*	Close connection. */
+/*	Close the LDAP connection. */
 static PyObject *
-LDAPConnection_Close(LDAPConnection *self) {
+ldapconnection_close(LDAPConnection *self) {
 	int rc;
 	int msgid;
 	PyObject *keys = PyDict_Keys(self->pending_ops);
@@ -222,7 +222,7 @@ LDAPConnection_Close(LDAPConnection *self) {
 
 /* Add new LDAPEntry to the server. */
 static PyObject *
-LDAPConnection_Add(LDAPConnection *self, PyObject *args) {
+ldapconnection_add(LDAPConnection *self, PyObject *args) {
 	PyObject *param = NULL;
 	PyObject *msgid = NULL;
 
@@ -270,8 +270,9 @@ LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr) {
 	return -1;
 }
 
+/* Delete an entry on the server. */
 static PyObject *
-LDAPConnection_DelEntry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+ldapconnection_delentry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	char *dnstr = NULL;
 	int msgid = -1;
 	static char *kwlist[] = {"dn", NULL};
@@ -289,6 +290,8 @@ LDAPConnection_DelEntry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	return PyLong_FromLong((long int)msgid);
 }
 
+/* Perform an LDAP search using an LDAPSearchIter object that contains
+   the parameters of the search. */
 int
 LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	int rc;
@@ -363,7 +366,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 
 /* Search for LDAP entries. */
 static PyObject *
-LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	int scope = -1;
 	int msgid = -1;
 	int timeout = 0, sizelimit = 0, attrsonly = 0;
@@ -419,8 +422,9 @@ LDAPConnection_Search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	return PyLong_FromLong((long int)msgid);
 }
 
+/* Perform an LDAP Who Am I operation. */
 static PyObject *
-LDAPConnection_Whoami(LDAPConnection *self) {
+ldapconnection_whoami(LDAPConnection *self) {
 	int rc = -1;
 	int msgid = -1;
 
@@ -440,7 +444,8 @@ LDAPConnection_Whoami(LDAPConnection *self) {
 	return PyLong_FromLong((long int)msgid);
 }
 
-PyObject *
+/* Process the server result after a search request. */
+static PyObject *
 parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 	int rc = -1;
 	int err = 0;
@@ -512,7 +517,8 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 	return (PyObject *)search_iter;
 }
 
-PyObject *
+/* Process the server response after an extended operation. */
+static PyObject *
 parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 	int rc = -1;
 	struct berval *authzid = NULL;
@@ -550,6 +556,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 	return retval;
 }
 
+/* Poll and process the result of an ongoing asynchronous LDAP operation. */
 PyObject *
 LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	int rc = -1;
@@ -651,8 +658,9 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 	Py_RETURN_NONE;
 }
 
+/* Check the result of an ongoing asynchronous LDAP operation. */
 static PyObject *
-LDAPConnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	int msgid = 0;
 	int block = 0;
 	char msgidstr[8];
@@ -691,8 +699,9 @@ LDAPConnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	return res;
 }
 
+/* Cancel an ongoing LDAP operation. */
 static PyObject *
-LDAPConnection_cancel(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+ldapconnection_cancel(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	int msgid = -1;
 	char msgidstr[8];
 	int rc = 0;
@@ -719,8 +728,9 @@ LDAPConnection_cancel(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	return Py_None;
 }
 
+/* Get the underlying socket descriptor of the LDAP connection. */
 static PyObject *
-LDAPConnection_fileno(LDAPConnection *self) {
+ldapconnection_fileno(LDAPConnection *self) {
 	int rc = 0;
 	int desc = 0;
 
@@ -738,8 +748,9 @@ LDAPConnection_fileno(LDAPConnection *self) {
 	return PyLong_FromLong((long int)desc);
 }
 
+/* Set the page size for a paged search. */
 static PyObject *
-LDAPConnection_setPageSize(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+ldapconnection_setpagesize(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	int page_size = -1;
 	static char *kwlist[] = {"page_size", NULL};
 
@@ -759,8 +770,9 @@ LDAPConnection_setPageSize(LDAPConnection *self, PyObject *args, PyObject *kwds)
 	return Py_None;
 }
 
+/* Set sort order for a search. */
 static PyObject *
-LDAPConnection_setSortOrder(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+ldapconnection_setsortorder(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	PyObject *sort_list = NULL;
 	static char *kwlist[] = {"sort_list", NULL};
 
@@ -782,7 +794,7 @@ LDAPConnection_setSortOrder(LDAPConnection *self, PyObject *args, PyObject *kwds
 	return Py_None;
 }
 
-static PyMemberDef LDAPConnection_members[] = {
+static PyMemberDef ldapconnection_members[] = {
     {"async", T_BOOL, offsetof(LDAPConnection, async), READONLY,
      "Asynchronous connection"},
 	{"closed", T_BOOL, offsetof(LDAPConnection, closed), READONLY,
@@ -792,38 +804,38 @@ static PyMemberDef LDAPConnection_members[] = {
     {NULL}  /* Sentinel */
 };
 
-static PyMethodDef LDAPConnection_methods[] = {
-	{"add", (PyCFunction)LDAPConnection_Add, METH_VARARGS,
+static PyMethodDef ldapconnection_methods[] = {
+	{"add", (PyCFunction)ldapconnection_add, METH_VARARGS,
 			"Add new LDAPEntry to the LDAP server."},
-	{"cancel", (PyCFunction)LDAPConnection_cancel, METH_VARARGS,
+	{"cancel", (PyCFunction)ldapconnection_cancel, METH_VARARGS,
 			"Cancel ongoing operations associated with the given message id."},
-	{"close", (PyCFunction)LDAPConnection_Close, METH_NOARGS,
+	{"close", (PyCFunction)ldapconnection_close, METH_NOARGS,
 			"Close connection with the LDAP Server."},
-	{"delete", (PyCFunction)LDAPConnection_DelEntry, METH_VARARGS,
+	{"delete", (PyCFunction)ldapconnection_delentry, METH_VARARGS,
 			"Delete an LDAPEntry with the given distinguished name."},
-	{"fileno", (PyCFunction)LDAPConnection_fileno, METH_NOARGS,
+	{"fileno", (PyCFunction)ldapconnection_fileno, METH_NOARGS,
 			"Get the socket descriptor that belongs to the connection."},
-	{"get_result", (PyCFunction)LDAPConnection_result, METH_VARARGS | METH_KEYWORDS,
+	{"get_result", (PyCFunction)ldapconnection_result, METH_VARARGS | METH_KEYWORDS,
 			"Poll the status of the operation associated with the given message id from LDAP server."},
-	{"open", (PyCFunction)LDAPConnection_Open, METH_NOARGS,
+	{"open", (PyCFunction)ldapconnection_open, METH_NOARGS,
 			"Open connection with the LDAP Server."},
-	{"search", (PyCFunction)LDAPConnection_Search, 	METH_VARARGS | METH_KEYWORDS,
+	{"search", (PyCFunction)ldapconnection_search, 	METH_VARARGS | METH_KEYWORDS,
 			"Search for LDAP entries."},
-	{"set_page_size", (PyCFunction)LDAPConnection_setPageSize, METH_VARARGS,
+	{"set_page_size", (PyCFunction)ldapconnection_setpagesize, METH_VARARGS,
 			"Set how many entry will be on a page of a search result."},
-	{"set_sort_order", (PyCFunction)LDAPConnection_setSortOrder, METH_VARARGS,
+	{"set_sort_order", (PyCFunction)ldapconnection_setsortorder, METH_VARARGS,
 			"Set a list of attribute names to sort entries in a search result."},
-	{"whoami", (PyCFunction)LDAPConnection_Whoami, METH_NOARGS,
+	{"whoami", (PyCFunction)ldapconnection_whoami, METH_NOARGS,
 			"LDAPv3 Who Am I operation."},
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
 PyTypeObject LDAPConnectionType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "pyldap._LDAPConnection",       /* tp_name */
+    "_bonsai.ldapconnection",       /* tp_name */
     sizeof(LDAPConnection),        /* tp_basicsize */
     0,                         /* tp_itemsize */
-    (destructor)LDAPConnection_dealloc, /* tp_dealloc */
+    (destructor)ldapconnection_dealloc, /* tp_dealloc */
     0,                         /* tp_print */
     0,                         /* tp_getattr */
     0,                         /* tp_setattr */
@@ -840,22 +852,22 @@ PyTypeObject LDAPConnectionType = {
     0,                         /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT |
         Py_TPFLAGS_BASETYPE,   /* tp_flags */
-    "LDAPConnection object",   /* tp_doc */
+    "ldapconnection object, implemented in C.",   /* tp_doc */
     0,                         /* tp_traverse */
     0,                         /* tp_clear */
     0,                         /* tp_richcompare */
     0,                         /* tp_weaklistoffset */
     0,  					   /* tp_iter */
     0,						   /* tp_iternext */
-    LDAPConnection_methods,    /* tp_methods */
-	LDAPConnection_members,	   /* tp_members */
+    ldapconnection_methods,    /* tp_methods */
+	ldapconnection_members,	   /* tp_members */
     0,                         /* tp_getset */
     0,                         /* tp_base */
     0,                         /* tp_dict */
     0,                         /* tp_descr_get */
     0,                         /* tp_descr_set */
     0,                         /* tp_dictoffset */
-    (initproc)LDAPConnection_init, /* tp_init */
+    (initproc)ldapconnection_init, /* tp_init */
     0,                         /* tp_alloc */
-    LDAPConnection_new,            /* tp_new */
+    ldapconnection_new,            /* tp_new */
 };

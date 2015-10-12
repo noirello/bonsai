@@ -1,7 +1,7 @@
-from ._cpyldap import _LDAPConnection
+from ._bonsai import ldapconnection
 from .ldapdn import LDAPDN
 
-class LDAPConnection(_LDAPConnection):
+class LDAPConnection(ldapconnection):
     def __init__(self, client, is_async=False):
         self.__client = client
         super().__init__(client, is_async)

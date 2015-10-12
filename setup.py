@@ -25,16 +25,13 @@ class TestCommand(Command):
         unittest.TextTestRunner().run(suite)
         sys.exit(0)
 
-sources = ["pyldapmodule.c", "ldapentry.c", "ldapconnectiter.c",
+sources = ["bonsaimodule.c", "ldapentry.c", "ldapconnectiter.c",
            "ldapconnection.c", "ldapmodlist.c", "ldapvaluelist.c",
            "ldap-xplat.c", "ldapsearchiter.c", "utils.c", "uniquelist.c"]
 
 depends = ["ldapconnection.h", "ldapentry.h", "ldapconnectiter.h",
            "ldapmodlist.h", "ldapvaluelist.h", "ldapsearchiter.h",
            "ldap-xplat.h", "uniquelist.h", "utils.h"]
-
-sources = [os.path.join('src', x) for x in sources]
-depends = [os.path.join('src', x) for x in depends]
 
 if sys.platform == "win32":
     libs = ["wldap32", "secur32", "Ws2_32"]
@@ -43,7 +40,10 @@ if sys.platform == "win32":
 else:
     libs = ["ldap", "lber"]
 
-pyldap_module = Extension("pyldap._cpyldap",
+sources = [os.path.join('src', x) for x in sources]
+depends = [os.path.join('src', x) for x in depends]
+
+pyldap_module = Extension("bonsai._bonsai",
                           libraries=libs,
                           sources=sources,
                           depends=depends)
@@ -54,8 +54,8 @@ with open('README.md') as file:
     pat = r"\[([a-zA-Z_ ]*)\]\(([a-zA-Z_:/.]*)\)"
     long_descr = re.sub(pat, r"`\g<1> <\g<2>>`_", long_descr)
 
-setup(name="pyldap",
-      version="0.7.5",
+setup(name="bonsai",
+      version="0.8.0",
       description="Module for Python 3 to access LDAP directory servers.",
       author="noirello",
       author_email="noirello@gmail.com",
@@ -63,8 +63,8 @@ setup(name="pyldap",
       long_description=long_descr,
       license="MIT",
       ext_modules=[pyldap_module],
-      package_dir = {"pyldap": "lib"},
-      packages=["pyldap", "pyldap.asyncio", "pyldap.gevent"],
+      package_dir = {"bonsai": "lib"},
+      packages=["bonsai", "bonsai.asyncio", "bonsai.gevent"],
       cmdclass={"test": TestCommand},
       classifiers=[
           'Development Status :: 4 - Beta',

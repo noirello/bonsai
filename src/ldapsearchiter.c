@@ -9,7 +9,7 @@
 
 /*	Dealloc the LDAPSearchIter object. */
 static void
-LDAPSearchIter_dealloc(LDAPSearchIter* self) {
+ldapsearchiter_dealloc(LDAPSearchIter* self) {
 	int i;
 
 	Py_XDECREF(self->buffer);
@@ -31,7 +31,7 @@ LDAPSearchIter_dealloc(LDAPSearchIter* self) {
 
 /*	Create a new LDAPSearchIter object. */
 static PyObject *
-LDAPSearchIter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	LDAPSearchIter *self = NULL;
 
 	//self = (LDAPSearchIter *)PyType_GenericAlloc(type, 0);
@@ -65,6 +65,7 @@ LDAPSearchIter_New(LDAPConnection *conn) {
 	return self;
 }
 
+/* Set the parameters of an LDAPSEarchIter object. */
 int
 LDAPSearchIter_SetParams(LDAPSearchIter *self, char **attrs, int attrsonly,
 		char *base, char *filter, int scope, int sizelimit, int timeout) {
@@ -101,8 +102,9 @@ LDAPSearchIter_SetParams(LDAPSearchIter *self, char **attrs, int attrsonly,
 	return 0;
 }
 
+/* Get the next page of a paged LDAP search. */
 static PyObject *
-LDAPSearchIter_AcquireNextPage(LDAPSearchIter *self) {
+ldapsearchiter_acquirenextpage(LDAPSearchIter *self) {
 	int msgid = -1;
 
 	/* If paged LDAP search is in progress. */
@@ -120,14 +122,16 @@ LDAPSearchIter_AcquireNextPage(LDAPSearchIter *self) {
 	}
 }
 
-PyObject*
-LDAPSearchIter_getiter(LDAPSearchIter *self) {
+/* Return with the LDAPSerachIter object. */
+static PyObject*
+ldapsearchiter_getiter(LDAPSearchIter *self) {
 	Py_INCREF(self);
 	return (PyObject*)self;
 }
 
-PyObject *
-LDAPSearchIter_iternext(LDAPSearchIter *self) {
+/* Step the LDAPSearchIter iterator. */
+static PyObject *
+ldapsearchiter_iternext(LDAPSearchIter *self) {
 	PyObject *item = NULL;
 
 	if (self->buffer == NULL) return NULL;
@@ -153,18 +157,18 @@ LDAPSearchIter_iternext(LDAPSearchIter *self) {
 	return NULL;
 }
 
-static PyMethodDef LDAPSearchIter_methods[] = {
-	{"acquire_next_page", (PyCFunction)LDAPSearchIter_AcquireNextPage,
+static PyMethodDef ldapsearchiter_methods[] = {
+	{"acquire_next_page", (PyCFunction)ldapsearchiter_acquirenextpage,
 			METH_NOARGS, "Get next page of paged LDAP search."},
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
 PyTypeObject LDAPSearchIterType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "pyldap.LDAPSearchIter",       /* tp_name */
+    "_bonsai.LDAPSearchIter",       /* tp_name */
     sizeof(LDAPSearchIter),        /* tp_basicsize */
     0,                         /* tp_itemsize */
-    (destructor)LDAPSearchIter_dealloc, /* tp_dealloc */
+    (destructor)ldapsearchiter_dealloc, /* tp_dealloc */
     0,                         /* tp_print */
     0,                         /* tp_getattr */
     0,                         /* tp_setattr */
@@ -186,9 +190,9 @@ PyTypeObject LDAPSearchIterType = {
     0,                         /* tp_clear */
     0,                         /* tp_richcompare */
     0,                         /* tp_weaklistoffset */
-    (getiterfunc)LDAPSearchIter_getiter,  /* tp_iter */
-    (iternextfunc)LDAPSearchIter_iternext,/* tp_iternext */
-    LDAPSearchIter_methods,   	/* tp_methods */
+    (getiterfunc)ldapsearchiter_getiter,  /* tp_iter */
+    (iternextfunc)ldapsearchiter_iternext,/* tp_iternext */
+    ldapsearchiter_methods,   	/* tp_methods */
     0,        				   /* tp_members */
     0,                         /* tp_getset */
     0,                         /* tp_base */
@@ -198,5 +202,5 @@ PyTypeObject LDAPSearchIterType = {
     0,                         /* tp_dictoffset */
     0,							/* tp_init */
     0,                         /* tp_alloc */
-    LDAPSearchIter_new,			/* tp_new */
+    ldapsearchiter_new,			/* tp_new */
 };

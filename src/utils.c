@@ -279,7 +279,7 @@ load_python_object(char *module_name, char *object_name) {
 PyObject *
 get_error_by_code(int code) {
 	PyObject *error;
-	PyObject *get_error = load_python_object("pyldap.errors", "_get_error");
+	PyObject *get_error = load_python_object("bonsai.errors", "_get_error");
 	if (get_error == NULL) return NULL;
 
 	error = PyObject_CallFunction(get_error, "(i)", code);

@@ -2,9 +2,9 @@ import configparser
 import os
 import unittest
 
-from pyldap import LDAPDN
-from pyldap import LDAPClient
-import pyldap.errors
+from bonsai import LDAPDN
+from bonsai import LDAPClient
+import bonsai.errors
 
 class LDAPConnectionTest(unittest.TestCase):
     """ Test LDAPConnection object. """
@@ -47,8 +47,8 @@ class LDAPConnectionTest(unittest.TestCase):
                                         realm, authzid))
         try:
             conn = client.connect()
-        except (pyldap.errors.ConnectionError, \
-                pyldap.errors.AuthenticationError):
+        except (bonsai.errors.ConnectionError, \
+                bonsai.errors.AuthenticationError):
             self.fail()
         finally:
             self.assertNotEqual("anonymous", conn.whoami(), "Digest "
@@ -76,12 +76,12 @@ class LDAPConnectionTest(unittest.TestCase):
             self.fail()
 
     def test_add_and_delete(self):
-        entry = pyldap.LDAPEntry("cn=example,%s" % self.cfg["SERVER"]["basedn"])
+        entry = bonsai.LDAPEntry("cn=example,%s" % self.cfg["SERVER"]["basedn"])
         entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "example", "sn" : "example"})
         try:
             self.conn.add(entry)
             self.conn.delete("cn=example,%s" % self.cfg["SERVER"]["basedn"])
-        except pyldap.LDAPError:
+        except bonsai.LDAPError:
             self.fail("Add and delete new entry is failed.")
 
     def test_whoami(self):
@@ -107,13 +107,13 @@ class LDAPConnectionTest(unittest.TestCase):
     def test_connection_error(self):
         """ Test connection error. """
         client = LDAPClient("ldap://invalid")
-        self.assertRaises(pyldap.ConnectionError, lambda : client.connect())
+        self.assertRaises(bonsai.ConnectionError, lambda : client.connect())
 
     def test_simple_auth_error(self):
         """ Test simple authentication error. """
         client = LDAPClient(self.url)
         client.set_credentials("SIMPLE", ("cn=wrong", "wronger"))
-        self.assertRaises(pyldap.AuthenticationError, lambda : client.connect())
+        self.assertRaises(bonsai.AuthenticationError, lambda : client.connect())
 
     def test_digest_auth_error(self):
         """ Test DIGEST-MD5 authentication error. """
@@ -127,7 +127,7 @@ class LDAPConnectionTest(unittest.TestCase):
         client.set_credentials("DIGEST-MD5", (self.cfg["DIGESTAUTH"]["user"], \
                                         "wrongpassword", \
                                         realm, None))
-        self.assertRaises(pyldap.AuthenticationError, lambda : client.connect())
+        self.assertRaises(bonsai.AuthenticationError, lambda : client.connect())
 
     def test_sort_order(self):
         """ Test setting sort order. """
@@ -156,7 +156,7 @@ class LDAPConnectionTest(unittest.TestCase):
         """ Test close method. """
         self.conn.close()
         self.assertTrue(self.conn.closed)
-        self.assertRaises(pyldap.ClosedConnection, self.conn.whoami)
+        self.assertRaises(bonsai.ClosedConnection, self.conn.whoami)
 
 if __name__ == '__main__':
     unittest.main()

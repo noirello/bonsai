@@ -2,7 +2,7 @@ import configparser
 import os.path
 import unittest
 
-from pyldap import LDAPClient
+from bonsai import LDAPClient
 
 class LDAPClientTest(unittest.TestCase):
     """ Testing LDAPClient object. """

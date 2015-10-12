@@ -1,17 +1,17 @@
 #include "uniquelist.h"
 #include "utils.h"
 /*
- A special type of list to store unique case-insesitive elements.
+ A special type of list to store unique case-insensitive elements.
  The element cannot be and instance of Python dict or list.
  */
 static void
-UniqueList_dealloc(UniqueList *self) {
+uniquelist_dealloc(UniqueList *self) {
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 /*	Create a new UniqueList object. */
 static PyObject *
-UniqueList_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+uniquelist_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	UniqueList *self;
 
 	self = (UniqueList *)PyList_Type.tp_new(type, args, kwds);
@@ -60,9 +60,9 @@ get_lowercase_tuple(PyObject *list) {
 	return tup;
 }
 
-/*	Initializing UniqueList. */
+/*	Initialising UniqueList. */
 static int
-UniqueList_init(UniqueList *self, PyObject *args, PyObject *kwds) {
+uniquelist_init(UniqueList *self, PyObject *args, PyObject *kwds) {
 	Py_ssize_t i;
 	PyObject *tmp;
 	PyObject *item, *obj = NULL;
@@ -262,7 +262,7 @@ UniqueList_SetSlice(UniqueList *self, Py_ssize_t ilow, Py_ssize_t ihigh, PyObjec
 }
 
 static PyObject *
-UL_append(UniqueList *self, PyObject *newitem) {
+uniquelist_append(UniqueList *self, PyObject *newitem) {
     if (UniqueList_Append(self, newitem) == 0) {
     	return Py_None;
     }
@@ -270,7 +270,7 @@ UL_append(UniqueList *self, PyObject *newitem) {
 }
 
 static PyObject *
-UL_extend(UniqueList *self, PyObject *b) {
+uniquelist_extend(UniqueList *self, PyObject *b) {
 	if (UniqueList_Extend(self, b) == 0) {
 		return Py_None;
 	}
@@ -278,7 +278,7 @@ UL_extend(UniqueList *self, PyObject *b) {
 }
 
 static PyObject *
-UL_insert(UniqueList *self, PyObject *args) {
+uniquelist_insert(UniqueList *self, PyObject *args) {
     Py_ssize_t i;
     PyObject *v;
 
@@ -290,35 +290,39 @@ UL_insert(UniqueList *self, PyObject *args) {
 }
 
 static PyObject *
-UL_remove(UniqueList *self, PyObject *value) {
+uniquelist_remove(UniqueList *self, PyObject *value) {
 	if (UniqueList_Remove(self, value) == 0) {
 		return Py_None;
 	}
 	return NULL;
 }
 
-static PyMethodDef UniqueList_methods[] = {
-    {"append", 	(PyCFunction)UL_append, 	METH_O, "Append new item to the UniqueList." },
-    {"extend",  (PyCFunction)UL_extend,  	METH_O, "Extend UniqueList."},
-    {"insert", 	(PyCFunction)UL_insert,	METH_VARARGS, "Insert new item in the UniqueList."},
-    {"remove", 	(PyCFunction)UL_remove, 	METH_O, "Remove item from UniqueList."},
+static PyMethodDef uniquelist_methods[] = {
+    {"append", 	(PyCFunction)uniquelist_append,
+    		METH_O, "Append new item to the UniqueList." },
+    {"extend",  (PyCFunction)uniquelist_extend,
+    		METH_O, "Extend UniqueList."},
+    {"insert", 	(PyCFunction)uniquelist_insert,
+    		METH_VARARGS, "Insert new item in the UniqueList."},
+    {"remove", 	(PyCFunction)uniquelist_remove,
+    		METH_O, "Remove item from UniqueList."},
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
 static PyObject *
-UL_concat(UniqueList *self, PyObject *bb) {
+uniquelist_concat(UniqueList *self, PyObject *bb) {
 	UniqueList *np = UniqueList_New();
 
 	if (np == NULL) return PyErr_NoMemory();
 
-	if (UL_extend(np, (PyObject *)self) == NULL) return NULL;
-	if (UL_extend(np, bb) == NULL) return NULL;
+	if (uniquelist_extend(np, (PyObject *)self) == NULL) return NULL;
+	if (uniquelist_extend(np, bb) == NULL) return NULL;
 
 	return (PyObject *)np;
 }
 
 static int
-UL_ass_item(UniqueList *self, Py_ssize_t i, PyObject *v) {
+uniquelist_ass_item(UniqueList *self, Py_ssize_t i, PyObject *v) {
     if (i < 0 || i >= Py_SIZE(self)) {
         PyErr_SetString(PyExc_IndexError,
                         "list assignment index out of range");
@@ -329,7 +333,7 @@ UL_ass_item(UniqueList *self, Py_ssize_t i, PyObject *v) {
 }
 
 static int
-UL_contains(UniqueList *self, PyObject *el) {
+uniquelist_contains(UniqueList *self, PyObject *el) {
     int cmp;
 	Py_ssize_t i;
 	PyObject *tup;
@@ -344,10 +348,10 @@ UL_contains(UniqueList *self, PyObject *el) {
 }
 
 static PyObject *
-UL_inplace_concat(UniqueList *self, PyObject *other) {
+uniquelist_inplace_concat(UniqueList *self, PyObject *other) {
     PyObject *result;
 
-    result = UL_extend(self, other);
+    result = uniquelist_extend(self, other);
     if (result == NULL)
         return result;
     Py_DECREF(result);
@@ -356,22 +360,22 @@ UL_inplace_concat(UniqueList *self, PyObject *other) {
 }
 
 static PyObject *
-UL_dummy(UniqueList *self, Py_ssize_t n) {
+uniquelist_dummy(UniqueList *self, Py_ssize_t n) {
 	PyErr_SetString(PyExc_TypeError, "unsupported operand.");
 	return NULL;
 }
 
-static PySequenceMethods UL_as_sequence = {
+static PySequenceMethods uniquelist_as_sequence = {
     0,                      		/* sq_length */
-    (binaryfunc)UL_concat,			/* sq_concat */
-    (ssizeargfunc)UL_dummy,        	/* sq_repeat */
+    (binaryfunc)uniquelist_concat,			/* sq_concat */
+    (ssizeargfunc)uniquelist_dummy,        	/* sq_repeat */
     0,                    			/* sq_item */
     0,                             	/* sq_slice */
-    (ssizeobjargproc)UL_ass_item,	/* sq_ass_item */
+    (ssizeobjargproc)uniquelist_ass_item,	/* sq_ass_item */
     0,                              /* sq_ass_slice */
-    (objobjproc)UL_contains,       	/* sq_contains */
-    (binaryfunc)UL_inplace_concat,	/* sq_inplace_concat */
-    (ssizeargfunc)UL_dummy,        	/* sq_inplace_repeat */
+    (objobjproc)uniquelist_contains,       	/* sq_contains */
+    (binaryfunc)uniquelist_inplace_concat,	/* sq_inplace_concat */
+    (ssizeargfunc)uniquelist_dummy,        	/* sq_inplace_repeat */
 };
 
 /*	This function is based on list_ass_subscript from Python source listobject.c.
@@ -379,7 +383,7 @@ static PySequenceMethods UL_as_sequence = {
 	It is probably a much more slower, but cleaner (easier) solution.
 */
 static int
-UL_ass_subscript(UniqueList *self, PyObject *item, PyObject *value) {
+uniquelist_ass_subscript(UniqueList *self, PyObject *item, PyObject *value) {
     size_t cur;
 	Py_ssize_t i;
 	Py_ssize_t start, stop, step, slicelength;
@@ -390,7 +394,7 @@ UL_ass_subscript(UniqueList *self, PyObject *item, PyObject *value) {
 		i = PyNumber_AsSsize_t(item, PyExc_IndexError);
 		if (i == -1 && PyErr_Occurred()) return -1;
 		if (i < 0) i += PyList_GET_SIZE(self);
-		return UL_ass_item(self, i, value);
+		return uniquelist_ass_item(self, i, value);
     } else if (PySlice_Check(item)) {
     	if (PySlice_GetIndicesEx(item, Py_SIZE(self), &start, &stop, &step, &slicelength) < 0) {
     		return -1;
@@ -457,26 +461,26 @@ UL_ass_subscript(UniqueList *self, PyObject *item, PyObject *value) {
     }
 }
 
-static PyMappingMethods UL_as_mapping = {
+static PyMappingMethods uniquelist_as_mapping = {
     0,									/* mp_length */
     0,									/* mp_subscript */
-    (objobjargproc)UL_ass_subscript,	/* mp_ass_subscript */
+    (objobjargproc)uniquelist_ass_subscript,	/* mp_ass_subscript */
 };
 
 PyTypeObject UniqueListType = {
     PyObject_HEAD_INIT(NULL)
-    "pyldap.UniqueList",      /* tp_name */
+    "_bonsai.uniquelist",      /* tp_name */
     sizeof(UniqueList),       /* tp_basicsize */
     0,                       /* tp_itemsize */
-    (destructor)UniqueList_dealloc,/* tp_dealloc */
+    (destructor)uniquelist_dealloc,/* tp_dealloc */
     0,                       /* tp_print */
     0,                       /* tp_getattr */
     0,                       /* tp_setattr */
     0,                       /* tp_reserved */
     0,                       /* tp_repr */
     0,                       /* tp_as_number */
-    &UL_as_sequence,        /* tp_as_sequence */
-    &UL_as_mapping,		 /* tp_as_mapping */
+    &uniquelist_as_sequence,        /* tp_as_sequence */
+    &uniquelist_as_mapping,		 /* tp_as_mapping */
     0,                       /* tp_hash */
     0,                       /* tp_call */
     0,                       /* tp_str */
@@ -492,7 +496,7 @@ PyTypeObject UniqueListType = {
     0,                       /* tp_weaklistoffset */
     0,                       /* tp_iter */
     0,                       /* tp_iternext */
-    UniqueList_methods,   /* tp_methods */
+    uniquelist_methods,   /* tp_methods */
     0,       				 /* tp_members */
     0,    					 /* tp_getset */
     0,            			/* tp_base */
@@ -500,7 +504,7 @@ PyTypeObject UniqueListType = {
     0,                       /* tp_descr_get */
     0,                       /* tp_descr_set */
     0,                       /* tp_dictoffset */
-    (initproc)UniqueList_init,/* tp_init */
+    (initproc)uniquelist_init,/* tp_init */
     0,                       /* tp_alloc */
-    UniqueList_new,      /* tp_new */
+    uniquelist_new,      /* tp_new */
 };

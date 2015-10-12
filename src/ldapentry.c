@@ -4,7 +4,7 @@
 
 /* Clear all object in the LDAPEntry. */
 static int
-LDAPEntry_clear(LDAPEntry *self) {
+ldapentry_clear(LDAPEntry *self) {
     PyObject *tmp;
 
     tmp = (PyObject *)self->conn;
@@ -25,13 +25,13 @@ LDAPEntry_clear(LDAPEntry *self) {
 
 /*	Deallocate the LDAPEntry. */
 static void
-LDAPEntry_dealloc(LDAPEntry *self) {
-    LDAPEntry_clear(self);
+ldapentry_dealloc(LDAPEntry *self) {
+    ldapentry_clear(self);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 static int
-LDAPEntry_traverse(LDAPEntry *self, visitproc visit, void *arg) {
+ldapentry_traverse(LDAPEntry *self, visitproc visit, void *arg) {
 	Py_VISIT(self->dn);
     Py_VISIT(self->deleted);
     return 0;
@@ -39,7 +39,7 @@ LDAPEntry_traverse(LDAPEntry *self, visitproc visit, void *arg) {
 
 /*	Create a new LDAPEntry object. */
 static PyObject *
-LDAPEntry_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+ldapentry_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	LDAPEntry *self;
 
 	self = (LDAPEntry *)PyDict_Type.tp_new(type, args, kwds);
@@ -60,9 +60,9 @@ LDAPEntry_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     return (PyObject *)self;
 }
 
-/*	Initializing LDAPEntry. */
+/*	Initialising LDAPEntry. */
 static int
-LDAPEntry_init(LDAPEntry *self, PyObject *args, PyObject *kwds) {
+ldapentry_init(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	PyObject *conn = NULL;
 	PyObject *tmp;
 	static char *kwlist[] = {"dn", "conn", NULL};
@@ -191,7 +191,7 @@ error:
 }
 
 static PyObject *
-LDAPEntry_status(LDAPEntry *self) {
+ldapentry_status(LDAPEntry *self) {
 	PyObject *keys = PyMapping_Keys((PyObject *)self);
 	PyObject *iter, *key;
 	PyObject *status_dict = NULL;
@@ -261,7 +261,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 		if (args == NULL) return NULL;
 	}
 	/* Create a new LDAPEntry, raise PyErr_NoMemory if it's failed. */
-	ldapentry_type = load_python_object("pyldap.ldapentry", "LDAPEntry");
+	ldapentry_type = load_python_object("bonsai.ldapentry", "LDAPEntry");
 	if (ldapentry_type == NULL) return NULL;
 	self = (LDAPEntry *)PyObject_CallObject(ldapentry_type, args);
 	if (self == NULL) {
@@ -375,6 +375,7 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	return PyLong_FromLong((long int)msgid);
 }
 
+/* Rollback the status of an ldapentry after a failed operation. */
 int
 LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
 	int mod_op = -1;
@@ -448,7 +449,7 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
 /* Remove entry from the directory server,
    change all LDAPValueList status to replaced (2) */
 static PyObject *
-LDAPEntry_delete(LDAPEntry *self) {
+ldapentry_delete(LDAPEntry *self) {
 	int msgid = -1;
 	char *dnstr;
 	PyObject *keys = PyMapping_Keys((PyObject *)self);
@@ -498,7 +499,7 @@ LDAPEntry_delete(LDAPEntry *self) {
 
 /* Sends the modifications of the entry to the directory server. */
 static PyObject *
-LDAPEntry_modify(LDAPEntry *self) {
+ldapentry_modify(LDAPEntry *self) {
 	/* Connection must be set. */
 	if (self->conn == NULL) {
 		PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
@@ -513,7 +514,7 @@ LDAPEntry_modify(LDAPEntry *self) {
 
 /*	Set distinguished name for a LDAPEntry. */
 static int
-LDAPEntry_setDN(LDAPEntry *self, PyObject *value, void *closure) {
+ldapentry_setdn(LDAPEntry *self, PyObject *value, void *closure) {
 	PyObject *dn = NULL;
 	PyObject *dntype = NULL;
 
@@ -523,7 +524,7 @@ LDAPEntry_setDN(LDAPEntry *self, PyObject *value, void *closure) {
     }
 
 	/* Import LDAPDN object. */
-	dntype = load_python_object("pyldap.ldapdn", "LDAPDN");
+	dntype = load_python_object("bonsai.ldapdn", "LDAPDN");
 	if (dntype == NULL) return -1;
 
     if (PyUnicode_Check(value)) {
@@ -553,7 +554,7 @@ LDAPEntry_setDN(LDAPEntry *self, PyObject *value, void *closure) {
 
 /* Returns the DN of the LDAPEntry. */
 static PyObject *
-LDAPEntry_getDN(LDAPEntry *self, void *closure) {
+ldapentry_getdn(LDAPEntry *self, void *closure) {
     Py_INCREF(self->dn);
     return self->dn;
 }
@@ -561,7 +562,7 @@ LDAPEntry_getDN(LDAPEntry *self, void *closure) {
 /* Renames the entry object on the directory server, which means changing
    the DN of the entry. */
 static PyObject *
-LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
+ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	int rc;
 	int msgid = -1;
 	char *newparent_str, *newrdn_str, *olddn_str;
@@ -590,7 +591,7 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	if (olddn_str == NULL) return NULL;
 
 	/* Validate and set new LDAP DN. */
-	if (LDAPEntry_setDN(self, newdn, NULL) != 0) return NULL;
+	if (ldapentry_setdn(self, newdn, NULL) != 0) return NULL;
 
 	/* Get rdn and parent strings. */
 	newrdn = PySequence_GetItem(self->dn, 0);
@@ -620,14 +621,14 @@ LDAPEntry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	return PyLong_FromLong((long int)msgid);
 }
 
-static PyMethodDef LDAPEntry_methods[] = {
-	{"delete", 	(PyCFunction)LDAPEntry_delete,	METH_NOARGS,
+static PyMethodDef ldapentry_methods[] = {
+	{"delete", 	(PyCFunction)ldapentry_delete,	METH_NOARGS,
 			"Delete LDAPEntry on LDAP server."},
-	{"modify", 	(PyCFunction)LDAPEntry_modify, 	METH_NOARGS,
+	{"modify", 	(PyCFunction)ldapentry_modify, 	METH_NOARGS,
 			"Send LDAPEntry's modification to the LDAP server."},
-	{"rename", 	(PyCFunction)LDAPEntry_rename, 	METH_VARARGS | METH_KEYWORDS,
+	{"rename", 	(PyCFunction)ldapentry_rename, 	METH_VARARGS | METH_KEYWORDS,
 			"Rename or remove LDAPEntry on the LDAP server."},
-	{"_status", 	(PyCFunction)LDAPEntry_status, 	METH_NOARGS,
+	{"_status", 	(PyCFunction)ldapentry_status, 	METH_NOARGS,
 				"Get LDAPEntry's modifcation status." },
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
@@ -635,7 +636,7 @@ static PyMethodDef LDAPEntry_methods[] = {
 /*	Searches among lower-cased keystrings to find a match with the key.
  	if `del` set to 1, then also search among the deleted keys.
   	Sets the `found` parameter's value to 1 if key found in the list, 0 otherwise. */
-PyObject *
+static PyObject *
 searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int del, int* found) {
 	PyObject *keys = PyDict_Keys((PyObject *)self);
 	PyObject *iter = PyObject_GetIter(keys);
@@ -748,7 +749,7 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
 
 /* Checks that `key` is in the LDAPEntry. */
 static int
-LDAPEntry_contains(PyObject *op, PyObject *key) {
+ldapentry_contains(PyObject *op, PyObject *key) {
     int found = -1;
     PyObject *obj = NULL;
     LDAPEntry *self = (LDAPEntry *)op;
@@ -759,7 +760,7 @@ LDAPEntry_contains(PyObject *op, PyObject *key) {
     return found;
 }
 
-static PySequenceMethods LDAPEntry_as_sequence = {
+static PySequenceMethods ldapentry_as_sequence = {
     0,                          /* sq_length */
     0,                          /* sq_concat */
     0,                          /* sq_repeat */
@@ -767,14 +768,13 @@ static PySequenceMethods LDAPEntry_as_sequence = {
     0,                          /* sq_slice */
     0,                          /* sq_ass_item */
     0,                          /* sq_ass_slice */
-    LDAPEntry_contains,         /* sq_contains */
+    ldapentry_contains,         /* sq_contains */
     0,                          /* sq_inplace_concat */
     0,                          /* sq_inplace_repeat */
 };
 
-
 static PyObject *
-LDAPEntry_subscript(LDAPEntry *self, PyObject *key) {
+ldapentry_subscript(LDAPEntry *self, PyObject *key) {
 	PyObject *v = LDAPEntry_GetItem(self, key);
 	if (v == NULL) {
 		PyErr_Format(PyExc_KeyError, "Key %R is not in the LDAPEntry.", key);
@@ -785,15 +785,15 @@ LDAPEntry_subscript(LDAPEntry *self, PyObject *key) {
 }
 
 static int
-LDAPEntry_ass_sub(LDAPEntry *self, PyObject *key, PyObject *value) {
+ldapentry_ass_sub(LDAPEntry *self, PyObject *key, PyObject *value) {
     if (key == NULL) return PyDict_DelItem((PyObject *)self, key);
     else return LDAPEntry_SetItem(self, key, value);
 }
 
-static PyMappingMethods LDAPEntry_mapping_meths = {
+static PyMappingMethods ldapentry_mapping_meths = {
 	0, 									/* mp_length */
-	(binaryfunc)LDAPEntry_subscript,	/* mp_subscript */
-	(objobjargproc)LDAPEntry_ass_sub, 	/* mp_ass_subscript */
+	(binaryfunc)ldapentry_subscript,	/* mp_subscript */
+	(objobjargproc)ldapentry_ass_sub, 	/* mp_ass_subscript */
 };
 
 /* Set LDAPConnection for a LDAPEntry. */
@@ -814,7 +814,7 @@ LDAPEntry_SetConnection(LDAPEntry *self, LDAPConnection *conn) {
 
 /*	Setter for connection attribute. */
 static int
-LDAPEntry_setConnection(LDAPEntry *self, PyObject *value, void *closure) {
+ldapentry_setconnection(LDAPEntry *self, PyObject *value, void *closure) {
     if (value == NULL) {
         PyErr_SetString(PyExc_TypeError, "Cannot delete the connection attribute.");
         return -1;
@@ -832,7 +832,7 @@ LDAPEntry_setConnection(LDAPEntry *self, PyObject *value, void *closure) {
 
 /*	Getter for connection attribute. */
 static PyObject *
-LDAPEntry_getConnection(LDAPEntry *self, void *closure) {
+ldapentry_getconnection(LDAPEntry *self, void *closure) {
 	if (self->conn == NULL) {
 		PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
 		return NULL;
@@ -841,37 +841,38 @@ LDAPEntry_getConnection(LDAPEntry *self, void *closure) {
     return (PyObject *)self->conn;
 }
 
+/* Set char* `value` as a DN for an LDAP entry. */
 int
 LDAPEntry_SetStringDN(LDAPEntry *self, char *value) {
 	PyObject *dn = PyUnicode_FromString(value);
 	if (dn == NULL) return -1;
-	return LDAPEntry_setDN(self, dn, NULL);
+	return ldapentry_setdn(self, dn, NULL);
 }
 
-static PyGetSetDef LDAPEntry_getsetters[] = {
-	{"connection", 	(getter)LDAPEntry_getConnection,
-					(setter)LDAPEntry_setConnection,
+static PyGetSetDef ldapentry_getsetters[] = {
+	{"connection", 	(getter)ldapentry_getconnection,
+					(setter)ldapentry_setconnection,
 					"LDAP connection.", NULL},
-	{"dn", 			(getter)LDAPEntry_getDN,
-					(setter)LDAPEntry_setDN,
+	{"dn", 			(getter)ldapentry_getdn,
+					(setter)ldapentry_setdn,
 					"Distinguished name", NULL},
     {NULL}  /* Sentinel */
 };
 
 PyTypeObject LDAPEntryType = {
     PyObject_HEAD_INIT(NULL)
-    "pyldap._LDAPEntry",      /* tp_name */
+    "_bonsai.ldapentry",      /* tp_name */
     sizeof(LDAPEntry),       /* tp_basicsize */
     0,                       /* tp_itemsize */
-    (destructor)LDAPEntry_dealloc,       /* tp_dealloc */
+    (destructor)ldapentry_dealloc,       /* tp_dealloc */
     0,                       /* tp_print */
     0,                       /* tp_getattr */
     0,                       /* tp_setattr */
     0,                       /* tp_reserved */
     0,                       /* tp_repr */
     0,                       /* tp_as_number */
-    &LDAPEntry_as_sequence,  /* tp_as_sequence */
-    &LDAPEntry_mapping_meths,/* tp_as_mapping */
+    &ldapentry_as_sequence,  /* tp_as_sequence */
+    &ldapentry_mapping_meths,/* tp_as_mapping */
     0,                       /* tp_hash */
     0,                       /* tp_call */
     0,                       /* tp_str */
@@ -882,21 +883,21 @@ PyTypeObject LDAPEntryType = {
         Py_TPFLAGS_BASETYPE |
         Py_TPFLAGS_HAVE_GC, /* tp_flags */
     0,                       /* tp_doc */
-    (traverseproc)LDAPEntry_traverse,/* tp_traverse */
-    (inquiry)LDAPEntry_clear, /* tp_clear */
+    (traverseproc)ldapentry_traverse,/* tp_traverse */
+    (inquiry)ldapentry_clear, /* tp_clear */
     0,                       /* tp_richcompare */
     0,                       /* tp_weaklistoffset */
     0,                       /* tp_iter */
     0,                       /* tp_iternext */
-    LDAPEntry_methods,       /* tp_methods */
+    ldapentry_methods,       /* tp_methods */
     0,       				 /* tp_members */
-    LDAPEntry_getsetters,    /* tp_getset */
+    ldapentry_getsetters,    /* tp_getset */
     0,            			 /* tp_base */
     0,                       /* tp_dict */
     0,                       /* tp_descr_get */
     0,                       /* tp_descr_set */
     0,                       /* tp_dictoffset */
-    (initproc)LDAPEntry_init,/* tp_init */
+    (initproc)ldapentry_init,/* tp_init */
     0,                       /* tp_alloc */
-    LDAPEntry_new,           /* tp_new */
+    ldapentry_new,           /* tp_new */
 };

@@ -156,7 +156,7 @@ binding(LDAPConnectIter *self, int block) {
 
 /*	Dealloc the LDAPConnectIter object. */
 static void
-LDAPConnectIter_dealloc(LDAPConnectIter* self) {
+ldapconnectiter_dealloc(LDAPConnectIter* self) {
 	Py_XDECREF(self->conn);
 	if (self->info != NULL) dealloc_conn_info(self->info);
 	Py_TYPE(self)->tp_free((PyObject*)self);
@@ -164,7 +164,7 @@ LDAPConnectIter_dealloc(LDAPConnectIter* self) {
 
 /*	Create a new LDAPConnectIter object. */
 static PyObject *
-LDAPConnectIter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+ldapconnectiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	LDAPConnectIter *self = NULL;
 
 	self = (LDAPConnectIter *)type->tp_alloc(type, 0);
@@ -180,7 +180,7 @@ LDAPConnectIter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	return (PyObject *)self;
 }
 
-/*	Creates a new LDAPConnectIter object for internal use. */
+/* Creates a new LDAPConnectIter object for internal use. */
 LDAPConnectIter *
 LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info) {
 	LDAPConnectIter *self =
@@ -196,6 +196,7 @@ LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info) {
 	return self;
 }
 
+/* Step the connection process into the next stage. */
 PyObject *
 LDAPConnectIter_Next(LDAPConnectIter *self, int block) {
 	int rc = -1;
@@ -238,10 +239,10 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int block) {
 
 PyTypeObject LDAPConnectIterType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "pyldap.LDAPConnectIter",       /* tp_name */
+    "_bonsai.ldapconnectiter",       /* tp_name */
     sizeof(LDAPConnectIter),        /* tp_basicsize */
     0,                         /* tp_itemsize */
-    (destructor)LDAPConnectIter_dealloc, /* tp_dealloc */
+    (destructor)ldapconnectiter_dealloc, /* tp_dealloc */
     0,                         /* tp_print */
     0,                         /* tp_getattr */
     0,                         /* tp_setattr */
@@ -258,7 +259,7 @@ PyTypeObject LDAPConnectIterType = {
     0,                         /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT |
         Py_TPFLAGS_BASETYPE,   /* tp_flags */
-    "LDAPConnectIter object",   	   /* tp_doc */
+    "ldapconnectiter object, implemented in C.",   	   /* tp_doc */
     0,                         /* tp_traverse */
     0,                         /* tp_clear */
     0,                         /* tp_richcompare */
@@ -275,5 +276,5 @@ PyTypeObject LDAPConnectIterType = {
     0,                         /* tp_dictoffset */
     0,							/* tp_init */
     0,                         /* tp_alloc */
-    LDAPConnectIter_new,			/* tp_new */
+    ldapconnectiter_new,			/* tp_new */
 };

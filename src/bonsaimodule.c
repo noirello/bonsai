@@ -9,14 +9,14 @@
 
 static PyModuleDef pyldap2module = {
     PyModuleDef_HEAD_INIT,
-    "_cpyldap",
-    "Module to access directory servers using LDAP.",
+    "_bonsai",
+    "Python C extension to access directory servers using LDAP.",
     -1,
     NULL, NULL, NULL, NULL, NULL
 };
 
 PyMODINIT_FUNC
-PyInit__cpyldap(void) {
+PyInit__bonsai(void) {
     PyObject* m;
 
     UniqueListType.tp_base = &PyList_Type;
@@ -34,13 +34,13 @@ PyInit__cpyldap(void) {
     if (m == NULL) return NULL;
 
     Py_INCREF(&LDAPEntryType);
-    PyModule_AddObject(m, "_LDAPEntry", (PyObject *)&LDAPEntryType);
+    PyModule_AddObject(m, "ldapentry", (PyObject *)&LDAPEntryType);
 
     Py_INCREF(&LDAPConnectionType);
-    PyModule_AddObject(m, "_LDAPConnection", (PyObject *)&LDAPConnectionType);
+    PyModule_AddObject(m, "ldapconnection", (PyObject *)&LDAPConnectionType);
 
     Py_INCREF(&LDAPValueListType);
-    PyModule_AddObject(m, "LDAPValueList", (PyObject *)&LDAPValueListType);
+    PyModule_AddObject(m, "ldapvaluelist", (PyObject *)&LDAPValueListType);
 
     return m;
 }

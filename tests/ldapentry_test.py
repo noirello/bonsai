@@ -2,9 +2,9 @@ import configparser
 import os.path
 import unittest
 
-from pyldap import LDAPClient
-from pyldap import LDAPEntry
-import pyldap.errors
+from bonsai import LDAPClient
+from bonsai import LDAPEntry
+import bonsai.errors
 
 class LDAPEntryTest(unittest.TestCase):
     def setUp(self):
@@ -127,12 +127,12 @@ class LDAPEntryTest(unittest.TestCase):
         with self.client.connect() as conn:
             entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
                                     'organizationalPerson']
-            self.assertRaises(pyldap.ObjectClassViolation,
+            self.assertRaises(bonsai.ObjectClassViolation,
                               lambda: conn.add(entry))
             entry['sn'] = 'test'
             try:
                 conn.add(entry)
-            except pyldap.AlreadyExists:
+            except bonsai.AlreadyExists:
                 conn.delete(entry.dn)
                 conn.add(entry)
             except:
@@ -184,7 +184,7 @@ class LDAPEntryTest(unittest.TestCase):
                 with (yield from self.client.connect(True)) as conn:
                     try:
                         yield from conn.add(entry)
-                    except pyldap.AlreadyExists:
+                    except bonsai.AlreadyExists:
                         yield from conn.delete(entry.dn)
                         yield from conn.add(entry)
                     except Exception as ex:
@@ -212,7 +212,7 @@ class LDAPEntryTest(unittest.TestCase):
                     except:
                         self.fail("Delete failed.")
 
-            self.assertRaises(pyldap.ObjectClassViolation,
+            self.assertRaises(bonsai.ObjectClassViolation,
                               lambda: loop.run_until_complete(test1()))
             loop.run_until_complete(test2())
         except ImportError:

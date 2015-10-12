@@ -1,6 +1,6 @@
-from ._cpyldap import _LDAPEntry
+from ._bonsai import ldapentry
 
-class LDAPEntry(_LDAPEntry):
+class LDAPEntry(ldapentry):
     def __init__(self, dn, conn=None):
         super().__init__(str(dn), conn)
 

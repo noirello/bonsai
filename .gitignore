@@ -12,3 +12,4 @@ docs/_static
 docs/_templates
 MANIFEST
 Debug
+bonsai.egg-info

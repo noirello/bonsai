@@ -2,7 +2,7 @@
 #include "utils.h"
 
 static int
-LDAPValueList_clear(LDAPValueList *self) {
+ldapvaluelist_clear(LDAPValueList *self) {
     PyObject *tmp;
 
     tmp = (PyObject *)self->added;
@@ -20,13 +20,13 @@ LDAPValueList_clear(LDAPValueList *self) {
 
 /*	Deallocate the LDAPValueList. */
 static void
-LDAPValueList_dealloc(LDAPValueList *self) {
-	LDAPValueList_clear(self);
+ldapvaluelist_dealloc(LDAPValueList *self) {
+	ldapvaluelist_clear(self);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 static int
-LDAPValueList_traverse(LDAPValueList *self, visitproc visit, void *arg) {
+ldapvaluelist_traverse(LDAPValueList *self, visitproc visit, void *arg) {
     Py_VISIT(self->deleted);
 	Py_VISIT(self->added);
     return 0;
@@ -36,7 +36,7 @@ LDAPValueList_traverse(LDAPValueList *self, visitproc visit, void *arg) {
 	one for addition and an other for deletion.
 */
 static PyObject *
-LDAPValueList_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+ldapvaluelist_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	LDAPValueList *self;
 
 	self = (LDAPValueList *)UniqueListType.tp_new(type, args, kwds);
@@ -53,9 +53,9 @@ LDAPValueList_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	return (PyObject *)self;
 }
 
-/*	Initializing LDAPValueList. */
+/*	Initialising LDAPValueList. */
 static int
-LDAPValueList_init(LDAPValueList *self, PyObject *args, PyObject *kwds) {
+ldapvaluelist_init(LDAPValueList *self, PyObject *args, PyObject *kwds) {
 	if (UniqueListType.tp_init((PyObject *)self, args, kwds) < 0)
 		return -1;
 	return 0;
@@ -254,7 +254,7 @@ LDAPValueList_SetSlice(LDAPValueList *self, Py_ssize_t ilow, Py_ssize_t ihigh, P
 }
 
 static PyObject *
-LVL_append(LDAPValueList *self, PyObject *newitem) {
+ldapvaluelist_append(LDAPValueList *self, PyObject *newitem) {
     if (LDAPValueList_Append(self, newitem) == 0) {
     	self->status = 1;
     	return Py_None;
@@ -263,7 +263,7 @@ LVL_append(LDAPValueList *self, PyObject *newitem) {
 }
 
 static PyObject *
-LVL_extend(LDAPValueList *self, PyObject *b) {
+ldapvaluelist_extend(LDAPValueList *self, PyObject *b) {
 	if (LDAPValueList_Extend(self, b) == 0) {
 		self->status = 1;
 		return Py_None;
@@ -272,7 +272,7 @@ LVL_extend(LDAPValueList *self, PyObject *b) {
 }
 
 static PyObject *
-LVL_insert(LDAPValueList *self, PyObject *args) {
+ldapvaluelist_insert(LDAPValueList *self, PyObject *args) {
     Py_ssize_t i;
     PyObject *v;
 
@@ -285,7 +285,7 @@ LVL_insert(LDAPValueList *self, PyObject *args) {
 }
 
 static PyObject *
-LVL_pop(LDAPValueList *self, PyObject *args) {
+ldapvaluelist_pop(LDAPValueList *self, PyObject *args) {
 	int status;
 	Py_ssize_t i = -1;
 	PyObject *value;
@@ -313,7 +313,7 @@ LVL_pop(LDAPValueList *self, PyObject *args) {
 }
 
 static PyObject *
-LVL_remove(LDAPValueList *self, PyObject *value) {
+ldapvaluelist_remove(LDAPValueList *self, PyObject *value) {
 	if (LDAPValueList_Remove(self, value) == 0) {
 		self->status = 2;
 		return Py_None;
@@ -321,17 +321,22 @@ LVL_remove(LDAPValueList *self, PyObject *value) {
 	return NULL;
 }
 
-static PyMethodDef LDAPValueList_methods[] = {
-    {"append", 	(PyCFunction)LVL_append, 	METH_O, "Append new item to the LDAPValueList." },
-    {"extend",  (PyCFunction)LVL_extend,  	METH_O, "Extend LDAPValueList."},
-    {"insert", 	(PyCFunction)LVL_insert,	METH_VARARGS, "Insert new item in the LDAPValueList."},
-    {"pop",		(PyCFunction)LVL_pop, 		METH_VARARGS, "Pop-pop."},
-    {"remove", 	(PyCFunction)LVL_remove, 	METH_O, "Remove item from LDAPValueList."},
+static PyMethodDef ldapvaluelist_methods[] = {
+    {"append", 	(PyCFunction)ldapvaluelist_append,
+    		METH_O, "Append new item to the LDAPValueList." },
+    {"extend",  (PyCFunction)ldapvaluelist_extend,
+    		METH_O, "Extend LDAPValueList."},
+    {"insert", 	(PyCFunction)ldapvaluelist_insert,
+    		METH_VARARGS, "Insert new item in the LDAPValueList."},
+    {"pop",		(PyCFunction)ldapvaluelist_pop,
+    		METH_VARARGS, "Pop-pop."},
+    {"remove", 	(PyCFunction)ldapvaluelist_remove,
+    		METH_O, "Remove item from LDAPValueList."},
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
 static int
-LVL_ass_item(LDAPValueList *self, Py_ssize_t i, PyObject *v) {
+ldapvaluelist_ass_item(LDAPValueList *self, Py_ssize_t i, PyObject *v) {
     if (i < 0 || i >= Py_SIZE(self)) {
         PyErr_SetString(PyExc_IndexError,
                         "list assignment index out of range");
@@ -341,13 +346,13 @@ LVL_ass_item(LDAPValueList *self, Py_ssize_t i, PyObject *v) {
     return LDAPValueList_SetItem(self, i, v);
 }
 
-static PySequenceMethods LVL_as_sequence = {
+static PySequenceMethods ldapvaluelist_as_sequence = {
     0,                      		/* sq_length */
     0,			/* sq_concat */
     0,        /* sq_repeat */
     0,                    			/* sq_item */
     0,                             	/* sq_slice */
-    (ssizeobjargproc)LVL_ass_item,	/* sq_ass_item */
+    (ssizeobjargproc)ldapvaluelist_ass_item,	/* sq_ass_item */
     0,                              /* sq_ass_slice */
     0,       /* sq_contains */
     0,	/* sq_inplace_concat */
@@ -359,7 +364,7 @@ static PySequenceMethods LVL_as_sequence = {
 	It is probably a much more slower, but cleaner solution.
 */
 static int
-LVL_ass_subscript(LDAPValueList *self, PyObject *item, PyObject *value) {
+ldapvaluelist_ass_subscript(LDAPValueList *self, PyObject *item, PyObject *value) {
     size_t cur;
 	Py_ssize_t i;
 	Py_ssize_t start, stop, step, slicelength;
@@ -370,7 +375,7 @@ LVL_ass_subscript(LDAPValueList *self, PyObject *item, PyObject *value) {
 		i = PyNumber_AsSsize_t(item, PyExc_IndexError);
 		if (i == -1 && PyErr_Occurred()) return -1;
 		if (i < 0) i += PyList_GET_SIZE(self);
-		return LVL_ass_item(self, i, value);
+		return ldapvaluelist_ass_item(self, i, value);
     } else if (PySlice_Check(item)) {
     	if (PySlice_GetIndicesEx(item, Py_SIZE(self), &start, &stop, &step, &slicelength) < 0) {
     		return -1;
@@ -437,26 +442,26 @@ LVL_ass_subscript(LDAPValueList *self, PyObject *item, PyObject *value) {
     }
 }
 
-static PyMappingMethods LVL_as_mapping = {
+static PyMappingMethods ldapvaluelist_as_mapping = {
     0,									/* mp_length */
     0,									/* mp_subscript */
-    (objobjargproc)LVL_ass_subscript,	/* mp_ass_subscript */
+    (objobjargproc)ldapvaluelist_ass_subscript,	/* mp_ass_subscript */
 };
 
 PyTypeObject LDAPValueListType = {
     PyObject_HEAD_INIT(NULL)
-    "pyldap.LDAPValueList",      /* tp_name */
+    "_bonsai.ldapvaluelist",      /* tp_name */
     sizeof(LDAPValueList),       /* tp_basicsize */
     0,                       /* tp_itemsize */
-    (destructor)LDAPValueList_dealloc,       /* tp_dealloc */
+    (destructor)ldapvaluelist_dealloc,       /* tp_dealloc */
     0,                       /* tp_print */
     0,                       /* tp_getattr */
     0,                       /* tp_setattr */
     0,                       /* tp_reserved */
     0,                       /* tp_repr */
     0,                       /* tp_as_number */
-    &LVL_as_sequence,        /* tp_as_sequence */
-    &LVL_as_mapping,		 /* tp_as_mapping */
+    &ldapvaluelist_as_sequence,        /* tp_as_sequence */
+    &ldapvaluelist_as_mapping,		 /* tp_as_mapping */
     0,                       /* tp_hash */
     0,                       /* tp_call */
     0,                       /* tp_str */
@@ -467,13 +472,13 @@ PyTypeObject LDAPValueListType = {
         Py_TPFLAGS_BASETYPE |
         Py_TPFLAGS_HAVE_GC, /* tp_flags */
     0,                       /* tp_doc */
-    (traverseproc)LDAPValueList_traverse, /* tp_traverse */
-    (inquiry)LDAPValueList_clear, /* tp_clear */
+    (traverseproc)ldapvaluelist_traverse, /* tp_traverse */
+    (inquiry)ldapvaluelist_clear, /* tp_clear */
     0,                       /* tp_richcompare */
     0,                       /* tp_weaklistoffset */
     0,                       /* tp_iter */
     0,                       /* tp_iternext */
-    LDAPValueList_methods,   /* tp_methods */
+    ldapvaluelist_methods,   /* tp_methods */
     0,       				 /* tp_members */
     0,    					 /* tp_getset */
     0,			            /* tp_base */
@@ -481,7 +486,7 @@ PyTypeObject LDAPValueListType = {
     0,                       /* tp_descr_get */
     0,                       /* tp_descr_set */
     0,                       /* tp_dictoffset */
-    (initproc)LDAPValueList_init,/* tp_init */
+    (initproc)ldapvaluelist_init,/* tp_init */
     0,                       /* tp_alloc */
-    LDAPValueList_new,      /* tp_new */
+    ldapvaluelist_new,      /* tp_new */
 };

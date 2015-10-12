@@ -12,7 +12,7 @@
 
 /*	Dealloc the LDAPModList object. */
 static void
-LDAPModList_dealloc(LDAPModList* self) {
+ldapmodlist_dealloc(LDAPModList* self) {
 	int i, j;
 	struct berval **bvals;
 
@@ -36,7 +36,7 @@ LDAPModList_dealloc(LDAPModList* self) {
 
 /*	Create a new LDAPModList object. */
 static PyObject *
-LDAPModList_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
+ldapmodlist_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 	LDAPModList *self = NULL;
 
 	self = (LDAPModList *)type->tp_alloc(type, 0);
@@ -63,6 +63,7 @@ LDAPModList_New(PyObject* entry, Py_ssize_t size) {
 	return self;
 }
 
+/* Add new LDAPMod to the list. */
 int
 LDAPModList_Add(LDAPModList *self, int mod_op, PyObject *key, PyObject *value) {
 	LDAPMod *mod;
@@ -87,6 +88,9 @@ LDAPModList_Add(LDAPModList *self, int mod_op, PyObject *key, PyObject *value) {
 	return 0;
 }
 
+/* Remove an return with the last element as a tuple of
+   (mod_type, mod_op, value) of the list. The value can be None
+   or a list of the modified attribute values. */
 PyObject *
 LDAPModList_Pop(LDAPModList *self) {
 	int i;
@@ -145,10 +149,10 @@ LDAPModList_Empty(LDAPModList *self) {
 
 PyTypeObject LDAPModListType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "pyldap._LDAPModList",       /* tp_name */
+    "_bonsai.ldapmodlist",       /* tp_name */
     sizeof(LDAPModList),        /* tp_basicsize */
     0,                         /* tp_itemsize */
-    (destructor)LDAPModList_dealloc, /* tp_dealloc */
+    (destructor)ldapmodlist_dealloc, /* tp_dealloc */
     0,                         /* tp_print */
     0,                         /* tp_getattr */
     0,                         /* tp_setattr */
@@ -182,5 +186,5 @@ PyTypeObject LDAPModListType = {
     0,                         /* tp_dictoffset */
     0,						 /* tp_init */
     0,                         /* tp_alloc */
-    LDAPModList_new,            /* tp_new */
+    ldapmodlist_new,            /* tp_new */
 };
