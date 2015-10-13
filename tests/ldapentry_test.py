@@ -62,6 +62,11 @@ class LDAPEntryTest(unittest.TestCase):
         entry[item[0]] = item[1]
         self.assertEqual(entry[item[0]], item[1])
 
+    def test_popitem_empty(self):
+        """ Test LDAPEntry's popitem raises KeyError if it is empty. """
+        entry = LDAPEntry("cn=test")
+        self.assertRaises(KeyError, entry.popitem)
+
     def test_clear(self):
         """ Test LDAPEntry's clear method. """
         entry = LDAPEntry("cn=test")
@@ -76,9 +81,12 @@ class LDAPEntryTest(unittest.TestCase):
         entry = LDAPEntry("cn=test")
         entry.update({"GivenName": "test2", "mail" : "test@mail"})
         entry.update([("sn", "test")])
+        entry.update(uidnumber=1, gidnumber=1)
         self.assertEqual(entry['mail'], ['test@mail'])
         self.assertEqual(entry['givenname'], ['test2'])
         self.assertEqual(entry['sn'][0], 'test')
+        self.assertEqual(entry['uidnumber'], [1])
+        self.assertEqual(entry['gidnumber'], [1])
 
     def test_special_char(self):
         """ Test adding entry with special character in its DN. """

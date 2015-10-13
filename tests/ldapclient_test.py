@@ -33,5 +33,28 @@ class LDAPClientTest(unittest.TestCase):
         if type(self.client.get_rootDSE()["namingContexts"][0]) != bytes:
             self.fail("The type of the value is not bytes.")
 
+    def test_set_credentials(self):
+        """
+        Test setcredentials method, mechanism and credentials properties.
+        """
+        self.assertRaises(ValueError,
+                          lambda: self.client.set_credentials(2323, (None,)))
+        self.assertRaises(ValueError,
+                          lambda: self.client.set_credentials("Simple",
+                                                              "pass"))
+        self.assertRaises(ValueError, lambda: self.client
+                          .set_credentials("Simple",("Name", 2, None, None)))
+        self.assertRaises(ValueError, lambda: self.client
+                         .set_credentials("EXTERNAL", (None, None)))
+        self.assertRaises(ValueError, lambda: self.client
+                         .set_credentials("SIMPLE", (None, None, None)))
+        self.assertRaises(ValueError, lambda: self.client
+                         .set_credentials("DIGEST-MD5", (None, None)))
+        self.client.set_credentials("SIMPLE", ("cn=admin", "password"))
+        self.assertEqual(self.client.mechanism, "SIMPLE")
+        self.assertEqual(self.client.credentials, ("cn=admin", "password"))
+        self.client.set_credentials("EXTERNAL", ("authzid",))
+        self.assertEqual(self.client.credentials, (None, None, None, "authzid"))
+
 if __name__ == '__main__':
     unittest.main()

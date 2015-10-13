@@ -111,7 +111,8 @@ class LDAPClient:
         if type(creds) != tuple:
             raise ValueError("The credential information must be in a tuple.")
         if list(filter(lambda x: type(x) != str and x != None, creds)) != []:
-            raise ValueError("All element must be a string in the tuple.")
+            raise ValueError("All element must be a string or None in the"
+                             " tuple.")
         if self.__mechanism == "EXTERNAL":
             if len(creds) != 1:
                 raise ValueError("External mechanism needs only one credential"
