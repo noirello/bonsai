@@ -25,14 +25,20 @@ from unittest.mock import MagicMock
 class Mock(MagicMock):
     @classmethod
     def __getattr__(cls, name):
+        # A hack to get the objects implemented in C.
+        if name == 'ldapconnection':
+            return object
+        if name == 'ldapentry':
+            return object
         return Mock()
 
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+#on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 MOCK_MODULES = ['lib._bonsai']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 import lib as bonsai
+sys.modules['bonsai'] = bonsai
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
