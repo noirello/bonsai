@@ -18,7 +18,7 @@ import os
 
 sys.path[0:0] = [os.path.abspath('..')]
 
-# For read-the-docs: mocking the _cpyldap module.
+# For read-the-docs: mocking the _bonsai module.
 
 class Mock(object):
 
@@ -41,12 +41,12 @@ class Mock(object):
         else:
             return Mock()
 
-MOCK_MODULES = ['bonsai._bonsai']
+MOCK_MODULES = ['lib._bonsai']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
 
 
-import bonsai
+import lib as bonsai
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
