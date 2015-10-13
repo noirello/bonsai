@@ -4,13 +4,14 @@ import unittest
 
 from bonsai import LDAPDN
 from bonsai import LDAPClient
+from bonsai import LDAPConnection
 import bonsai.errors
 
 class LDAPConnectionTest(unittest.TestCase):
     """ Test LDAPConnection object. """
     def setUp(self):
-        curdir = os.path.abspath(os.path.dirname(__file__))
         """ Set LDAP URL and open connection. """
+        curdir = os.path.abspath(os.path.dirname(__file__))
         self.cfg = configparser.ConfigParser()
         self.cfg.read(os.path.join(curdir, 'test.ini'))
         self.url = "ldap://%s:%s/%s?%s?%s" % (self.cfg["SERVER"]["host"], \
@@ -23,6 +24,7 @@ class LDAPConnectionTest(unittest.TestCase):
         client.set_credentials("SIMPLE", (self.cfg["SIMPLEAUTH"]["user"],
                                           self.cfg["SIMPLEAUTH"]["password"]))
         self.conn = client.connect()
+        self.async_conn = LDAPConnection(client, True)
 
     def tearDown(self):
         """ Close connection. """
@@ -157,6 +159,15 @@ class LDAPConnectionTest(unittest.TestCase):
         self.conn.close()
         self.assertTrue(self.conn.closed)
         self.assertRaises(bonsai.ClosedConnection, self.conn.whoami)
+
+    def test_cancel(self):
+        """ Test cancel method. """
+        msgid = self.async_conn.open()
+        self.async_conn.get_result(msgid, True)
+        msgid = self.async_conn.search(self.basedn, 2)
+        self.async_conn.cancel(msgid)
+        self.assertRaises(bonsai.InvalidMessageID,
+                          lambda: self.async_conn.get_result(msgid, True))
 
 if __name__ == '__main__':
     unittest.main()
