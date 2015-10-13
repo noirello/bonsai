@@ -20,31 +20,15 @@ sys.path[0:0] = [os.path.abspath('..')]
 
 # For read-the-docs: mocking the _bonsai module.
 
-class Mock(object):
+from unittest.mock import MagicMock
 
-    __all__ = []
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def __call__(self, *args, **kwargs):
-        return Mock()
-
+class Mock(MagicMock):
     @classmethod
     def __getattr__(cls, name):
-        if name in ('__file__', '__path__'):
-            return '/dev/null'
-        elif name[0] == name[0].upper():
-            mockType = type(name, (), {})
-            mockType.__module__ = __name__
-            return mockType
-        else:
             return Mock()
 
 MOCK_MODULES = ['lib._bonsai']
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = Mock()
-
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 import lib as bonsai
 
@@ -213,7 +197,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'pyldapdoc'
+htmlhelp_basename = 'bonsaidoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
