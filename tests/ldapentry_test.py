@@ -40,7 +40,7 @@ class LDAPEntryTest(unittest.TestCase):
         entry['givenname'].append("test2")
         self.assertListEqual(entry['givenname'], ["test", "test2"])
         self.assertEqual(entry['givenname'][0], "test")
-        self.assertRaises(TypeError,
+        self.assertRaises(ValueError,
                           lambda: entry['GivenName']
                           .extend(['teSt', "test3"]))
 

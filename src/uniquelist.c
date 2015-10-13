@@ -148,11 +148,11 @@ UniqueList_Extend(UniqueList *self, PyObject *b) {
 	if (iter != NULL) {
 		for (newitem = PyIter_Next(iter); newitem != NULL; newitem = PyIter_Next(iter)) {
 			if (PyDict_Check(newitem) || PyList_Check(newitem) || PyTuple_Check(newitem)) {
-				PyErr_SetString(PyExc_ValueError, "This type of list can not contain instances of Python tuple, list or dict.");
+				PyErr_SetString(PyExc_TypeError, "This type of list can not contain instances of Python tuple, list or dict.");
 				return -1;
 			}
 			if (UniqueList_Contains(self, newitem) == 1){
-				PyErr_SetString(PyExc_TypeError, "List is containing non-unique values.");
+				PyErr_SetString(PyExc_ValueError, "List is containing non-unique values.");
 				return -1;
 			}
 			Py_DECREF(newitem);

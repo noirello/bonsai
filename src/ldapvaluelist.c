@@ -81,10 +81,7 @@ LDAPValueList_Append(LDAPValueList *self, PyObject *newitem) {
 	rc = UniqueList_Remove_wFlg(self->deleted, newitem);
 	if (rc == -1) return -1;
 	if (rc == 0) {
-		if (UniqueList_Append(self->added, newitem) == -1) {
-			PyErr_BadInternalCall();
-			return -1;
-		}
+		if (UniqueList_Append(self->added, newitem) == -1) return -1;
 	}
 	return 0;
 }
@@ -131,10 +128,7 @@ LDAPValueList_Insert(LDAPValueList *self, Py_ssize_t where, PyObject *newitem) {
 	rc = UniqueList_Remove_wFlg(self->deleted, newitem);
 	if (rc == -1) return -1;
 	if (rc == 0) {
-		if (UniqueList_Append(self->added, newitem) == -1) {
-			PyErr_BadInternalCall();
-			return -1;
-		}
+		if (UniqueList_Append(self->added, newitem) == -1) return -1;
 	}
     return UniqueList_Insert((UniqueList *)self, where, newitem);
 }
@@ -205,19 +199,13 @@ LDAPValueList_SetItem(LDAPValueList *self, Py_ssize_t i, PyObject *newitem) {
 	rc = UniqueList_Remove_wFlg(self->added, olditem);
 	if (rc == -1) return -1;
 	if (rc == 0) {
-		if (UniqueList_Append(self->deleted, olditem) == -1) {
-			PyErr_BadInternalCall();
-			return -1;
-		}
+		if (UniqueList_Append(self->deleted, olditem) == -1) return -1;
 	}
 
 	rc = UniqueList_Remove_wFlg(self->deleted, newitem);
 	if (rc == -1) return -1;
 	if (rc == 0) {
-		if (UniqueList_Append(self->added, newitem) == -1) {
-			PyErr_BadInternalCall();
-			return -1;
-		}
+		if (UniqueList_Append(self->added, newitem) == -1) return -1;
 	}
 	return 0;
 }
