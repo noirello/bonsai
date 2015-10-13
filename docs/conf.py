@@ -25,7 +25,9 @@ from unittest.mock import MagicMock
 class Mock(MagicMock):
     @classmethod
     def __getattr__(cls, name):
-            return Mock()
+        return Mock()
+
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 MOCK_MODULES = ['lib._bonsai']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
@@ -118,7 +120,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'classic'
+#html_theme = 'classic'
 #html_theme = 'alabaster'
 
 # Theme options are theme-specific and customize the look and feel of a theme
