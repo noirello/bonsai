@@ -96,9 +96,10 @@ class LDAPClient:
         """
         Set binding mechanism and credential information. The credential
         information must be in a tuple. If the binding mechanism is ``SIMPLE``,
-        then the tuple must have two elements: (binddn, password), every other
-        case: (username, password, realm). If there is no need to specify realm
-        use None for the third element.
+        then the tuple must have two elements: (binddn, password), if \
+        ``EXTERNAL`` then only one element is needed: (authzid,). Every other
+        case: (username, password, realm, authzid). If there is no need to \
+        specify realm or authorization ID then use None for these elements.
 
         :param str mechanism: the name of the binding mechanism:
         :param tuple creds: the credential information.
@@ -156,26 +157,98 @@ class LDAPClient:
         self.__cert_policy = tls_options[policy]
 
     def set_ca_cert(self, name):
+        """
+        Set the name of CA certificate. If the underlying libldap library \
+        uses the Mozilla NSS as TLS implementation library the `name` \
+        should be the same one in the cert/key database (that specified with \
+        :meth:`LDAPClient.set_ca_cert_dir`), otherwise it can be the name \
+        of the CA cert file.
+        
+        .. note::
+           This method has no effect on MS Windows, because WinLDAP \
+           searches for the corresponding CA certificate in the cert \
+           store. This means that the necessery certificates have to be \
+           installed manually in to the cert store.  
+
+        :param str name: the name of the CA cert.
+        :raises ValueError: if `name` parameter is not a string or not None.
+        """
         if name is not None and type(name) != str:
             raise ValueError("Name parameter must be string or None.")
         self.__ca_cert = name
 
     def set_ca_cert_dir(self, path):
+        """
+        Set the directory of the CA cert. If the underlying libldap library \
+        uses the Mozilla NSS as TLS implementation library the `path` \
+        should be the path to the existing cert/key database, otherwise it \
+        can be the path of the CA cert file.
+        
+        .. note::
+           This method has no effect on MS Windows, because WinLDAP \
+           searches for the corresponding CA certificate in the cert \
+           store. This means that the necessery certifications have to be \
+           installed manually in to the cert store.            
+
+        :param str path: the path to the CA directory.
+        :raises ValueError: if `path` parameter is not a string or not None.
+        """
         if path is not None and type(path) != str:
             raise ValueError("Path parameter must be string or None.")
         self.__ca_cert_dir = path
 
     def set_client_cert(self, name):
+        """
+        Set the name of client certificate. If the underlying libldap library \
+        uses the Mozilla NSS as TLS implementation library the `name` \
+        should be the same one in the cert/key database (that specified with \
+        :meth:`LDAPClient.set_ca_cert_dir`), otherwise it can be the name \
+        of the client certificate file.
+        
+        .. note::
+           This method has no effect on MS Windows, because WinLDAP \
+           searches for the corresponding client certificate based on \
+           the servert's CA cert in the cert store. This means that the \
+           necessery certificates have to be installed manually in to \
+           the cert store.  
+
+        :param str name: the name of the client cert.
+        :raises ValueError: if `name` parameter is not a string or not None.
+        """
         if name is not None and type(name) != str:
             raise ValueError("Name parameter must be string or None.")
         self.__client_cert = name
 
     def set_client_key(self, name):
+        """
+        Set the file that contains the private key that matches the \
+        certificate of the client that specified with \
+        :meth:`LDAPClient.set_client_cert`).
+        
+        .. note::
+           This method has no effect on MS Windows, because WinLDAP \
+           searches for the corresponding client certificate based on \
+           the servert's CA cert in the cert store. This means that the \
+           necessery certificates have to be installed manually in to \
+           the cert store.  
+
+        :param str name: the name of the CA cert.
+        :raises ValueError: if `name` parameter is not a string or not None.
+        """
         if name is not None and type(name) != str:
             raise ValueError("Name parameter must be string or None.")
         self.__client_key = name
 
     def set_async_connection_class(self, conn):
+        """
+        Set the LDAP connection class for asynchronous connection. The \
+        default connection class is `AIOLDAPConnection` that uses the
+        asyncio event loop.
+        
+        :param class conn:
+        :raises ValueError: if `conn` parameter is not a subclass \
+        of :class:`LDAPConnection`.
+        """
         if not issubclass(conn, LDAPConnection):
             raise ValueError("Class must be a subclass of LDAPConnection. ")
         self.__async_conn = conn
@@ -205,7 +278,7 @@ class LDAPClient:
 
     @property
     def url(self):
-        """ The URL of the directoty server. """
+        """ The URL of the directoty server. It cannot be set. """
         return self.__url
 
     @url.setter
@@ -214,7 +287,7 @@ class LDAPClient:
 
     @property
     def mechanism(self):
-        """ The choosen mechanism for authentication. """
+        """ The choosen mechanism for authentication. It cannot be set. """
         return self.__mechanism
 
     @mechanism.setter
@@ -223,7 +296,7 @@ class LDAPClient:
 
     @property
     def credentials(self):
-        """ A tuple with the credential information. """
+        """ A tuple with the credential information. It cannot be set. """
         return self.__credentials
 
     @credentials.setter
@@ -232,7 +305,7 @@ class LDAPClient:
 
     @property
     def tls(self):
-        """ A bool about TLS connection is required. """
+        """ A bool about TLS connection is required. It cannot be set."""
         return self.__tls
 
     @tls.setter
@@ -250,6 +323,7 @@ class LDAPClient:
 
     @property
     def ca_cert(self):
+        """ The name of the CA certificate. """
         return self.__ca_cert
 
     @ca_cert.setter
@@ -258,6 +332,7 @@ class LDAPClient:
 
     @property
     def ca_cert_dir(self):
+        """ The path to the CA certificate. """ 
         return self.__ca_cert_dir
 
     @ca_cert_dir.setter
@@ -266,6 +341,7 @@ class LDAPClient:
 
     @property
     def client_cert(self):
+        """ The name of the client certificate. """
         return self.__client_cert
 
     @client_cert.setter
@@ -274,6 +350,7 @@ class LDAPClient:
 
     @property
     def client_key(self):
+        """ The key file to the client's certificate. """
         return self.__client_key
 
     @client_key.setter
@@ -287,7 +364,7 @@ class LDAPClient:
 
     @raw_attributes.setter
     def raw_attributes(self, value=None):
-        raise ValueError("Raw_attributes attribute cannot be set.")
+        self.set_raw_attributes(value)
 
     def connect(self, async=False, **kwargs):
         """

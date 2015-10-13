@@ -29,11 +29,16 @@ LDAPClient class is for configuring the connection to the directory server.
    >>> client.set_credentials("SIMPLE", ("cn=user,dc=local", "secret")) 
    >>> client.connect()
    <bonsai.LDAPConnection object at 0x7fadf8976440>
-   >>> client.set_credentials("DIGEST-MD5", ("user", "secret", None)) 
+   >>> client.set_credentials("DIGEST-MD5", ("user", "secret", None, None)) 
    >>> client.connect()
    <bonsai.LDAPConnection object at 0x7fadf892d3a0>
 
 .. automethod:: LDAPClient.set_cert_policy
+.. automethod:: LDAPClient.set_ca_cert
+.. automethod:: LDAPClient.set_ca_cert_dir
+.. automethod:: LDAPClient.set_client_cert
+.. automethod:: LDAPClient.set_client_key
+.. automethod:: LDAPClient.set_async_connection_class
 .. automethod:: LDAPClient.set_raw_attributes
 
    An example:
@@ -42,17 +47,19 @@ LDAPClient class is for configuring the connection to the directory server.
    >>> client.set_raw_attributes(["cn", "sn"])
    >>> conn = client.connect()
    >>> conn.search("cn=jeff,ou=nerdherd,dc=local", 0, attrlist=['cn', 'sn', 'gn'])
-   [{'givenName': ['Jeff'], 'sn': [b'Barnes'], 'cn': [b'jeff']}]         
-
-The following properties are read only, new values can not be assigned to them.
-They can be change only by using the corresponding methods of :class:`LDAPClient`.
+   [{'givenName': ['Jeff'], 'sn': [b'Barnes'], 'cn': [b'jeff']}]
 
 .. autoattribute:: LDAPClient.cert_policy
+.. autoattribute:: LDAPClient.ca_cert
+.. autoattribute:: LDAPClient.ca_cert_dir
+.. autoattribute:: LDAPClient.client_cert
+.. autoattribute:: LDAPClient.client_key
 .. autoattribute:: LDAPClient.credentials
 .. autoattribute:: LDAPClient.mechanism
 .. autoattribute:: LDAPClient.raw_attributes
 .. autoattribute:: LDAPClient.tls
 .. autoattribute:: LDAPClient.url
+
 
 :class:`LDAPConnection`
 -----------------------
