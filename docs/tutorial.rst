@@ -1,21 +1,16 @@
 Tutorial
 ========
 
-.. module:: pyldap
+.. module:: bonsai
 
-After we installed the PyLDAP module, let's see the basic functions to communicate with an LDAP server.
-
-.. note::
-   Make sure, that you left the root directory of the module's source before you started the python 
-   interpreter. If you don't, the interpreter will try to import the local source files and fail with
-   ImportError: No module named 'pyldap._cpyldap' error message. 
+After we installed the Bonsai module, let's see the basic functions to communicate with an LDAP server.
 
 Connecting
 ----------
 
 First we are connecting to the LDAP server at "example.org" using an :class:`LDAPClient` object:
 
-    >>> from pyldap import LDAPClient
+    >>> from bonsai import LDAPClient
     >>> client = LDAPClient("ldap://example.org")
     >>> conn = client.connect()
 
@@ -78,7 +73,7 @@ Add, modify, delete LDAP entry
 
 To add a new entry to our dictionary we need to create an LDAPEntry object with a valid new LDAP DN:
 
-    >>> from pyldap import LDAPEntry
+    >>> from bonsai import LDAPEntry
     >>> anna = LDAPEntry("cn=anna,ou=nerdherd,dc=local")
     >>> anna['objectClass'] = ['top', 'inetOrgPerson'] # Must set schemas to get a valid LDAP entry.
     >>> anna['sn'] = "Wu" # Must set a surname attribute because inetOrgPerson shema requires.
@@ -91,7 +86,7 @@ then call :meth:`LDAPConnection.add` to add to the server:
     >>> conn.add(anna)
     
 It's important, that we must set the schemas and every other attributes, that the shemas require. If we miss 
-a required attribute, the server will not finish the opertion and return an :class:`pyldap.ObjectClassViolation` error.
+a required attribute, the server will not finish the opertion and return an :class:`bonsai.ObjectClassViolation` error.
 
 To modify an entry we need to have one that is already in the dictionary (got it back after a search or added 
 it by ourself previously), then we can easly add new attributes or modify already existing ones like we usually do
@@ -127,11 +122,11 @@ An example for asynchronous search and modify with `asyncio`:
 .. code-block:: python
     
     import asyncio
-    import pyldap
+    import bonsai
 
     @asyncio.coroutine
     def do():
-        cli = pyldap.LDAPClient("ldap://localhost")
+        cli = bonsai.LDAPClient("ldap://localhost")
         with (yield from cli.connect(async=True)) as conn:
             results = yield from conn.search("ou=nerdherd,dc=local", 1)
             for res in results:
@@ -145,4 +140,4 @@ An example for asynchronous search and modify with `asyncio`:
     loop.run_until_complete(do())
  
     
-To find out more about the PyLDAP module functionality read the :doc:`api`. 
+To find out more about the Bonsai module functionality read the :doc:`api`.

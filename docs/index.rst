@@ -1,12 +1,12 @@
-.. pyldap documentation master file, created by
+.. bonsai documentation master file, created by
    sphinx-quickstart on Sat Jan 18 21:30:25 2014.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-PyLDAP's documentation
+Bonsai's documentation
 ======================
 
-PyLDAP is an LDAP module for Python 3, using OpenLDAP's libldap2 library on Linux, and the WinLDAP 
+Bonsai is an LDAP module for Python 3, using OpenLDAP's libldap2 library on Linux, and the WinLDAP
 library on Microsoft Windows to handle communications with LDAP capable directory servers.
 The module main goal is to give a simple way to use the LDAP protocol as pythonic as it can be.
 
@@ -42,7 +42,7 @@ fork or report issue on the project's `GitHub site`_.
 You can also help in improving the documentation. My English is far from perfect, so if you find 
 any grammatically incorrect sentence, please report to me (with suggestion).   
 
-.. _github site: https://github.com/Noirello/PyLDAP
+.. _github site: https://github.com/Noirello/bonsai
 
 Indices and tables
 ------------------

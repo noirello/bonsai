@@ -1,7 +1,7 @@
 API documentation
 =================
 
-.. automodule:: pyldap
+.. automodule:: bonsai
 
 :class:`LDAPClient`
 -------------------
@@ -13,7 +13,7 @@ LDAPClient class is for configuring the connection to the directory server.
 
    An example of getting the root DSE:
     
-   >>> client = pyldap.LDAPClient()
+   >>> client = bonsai.LDAPClient()
    >>> client.get_rootDSE()
    {'namingContexts': ['dc=local'], 'supportedControl': ['2.16.840.1.113730.3.4.18', 
    '2.16.840.1.113730.3.4.2', '1.3.6.1.4.1.4203.1.10.1', '1.2.840.113556.1.4.319', 
@@ -24,21 +24,21 @@ LDAPClient class is for configuring the connection to the directory server.
 
 .. automethod:: LDAPClient.set_credentials
     
-   >>> from pyldap import LDAPClient
+   >>> from bonsai import LDAPClient
    >>> client = LDAPClient()
    >>> client.set_credentials("SIMPLE", ("cn=user,dc=local", "secret")) 
    >>> client.connect()
-   <pyldap.LDAPConnection object at 0x7fadf8976440>
+   <bonsai.LDAPConnection object at 0x7fadf8976440>
    >>> client.set_credentials("DIGEST-MD5", ("user", "secret", None)) 
    >>> client.connect()
-   <pyldap.LDAPConnection object at 0x7fadf892d3a0>
+   <bonsai.LDAPConnection object at 0x7fadf892d3a0>
 
 .. automethod:: LDAPClient.set_cert_policy
 .. automethod:: LDAPClient.set_raw_attributes
 
    An example:
     
-   >>> client = pyldap.LDAPClient()
+   >>> client = bonsai.LDAPClient()
    >>> client.set_raw_attributes(["cn", "sn"])
    >>> conn = client.connect()
    >>> conn.search("cn=jeff,ou=nerdherd,dc=local", 0, attrlist=['cn', 'sn', 'gn'])
@@ -91,7 +91,7 @@ They can be change only by using the corresponding methods of :class:`LDAPClient
    :class:`LDAPClient` LDAP URL parameter. The parameters, which are passed to the :meth:`LDAPConnection.search`
    method will overrule the previously set ones with the LDAP URL. 
    
-   >>> from pyldap import LDAPClient
+   >>> from bonsai import LDAPClient
    >>> client = LDAPClient("ldap://localhost") # without additional parameters
    >>> conn = client.connect()
    >>> conn.search("ou=nerdherd,dc=local", 1, "(cn=ch*)", ["cn", "sn", "gn"])
@@ -111,7 +111,7 @@ They can be change only by using the corresponding methods of :class:`LDAPClient
    >>> conn.set_page_size(4)
    >>> res = conn.search("ou=nerdherd,dc=local", 1, attrlist=["cn", "sn", "gn"])
    >>> res
-   <pyldap.LDAPSearchIter object at 0x7f2e5714b190>
+   <bonsai.LDAPSearchIter object at 0x7f2e5714b190>
    >>> [entry for entry in res]
    [{'sn': ['Bartowski'], 'cn': ['chuck'], 'givenName': ['Chuck']}, {'sn': ['Patel'], 
    'cn': ['lester'], 'givenName': ['Laster']}, {'sn': ['Barnes'], 'cn': ['jeff'], 
@@ -148,8 +148,8 @@ Class for representing LDAP distinguished names.
 
 Example for working with LDAPDN objects.
 
-    >>> import pyldap
-    >>> dn = pyldap.LDAPDN("cn=testuser,dc=local")
+    >>> import bonsai
+    >>> dn = bonsai.LDAPDN("cn=testuser,dc=local")
     >>> dn
     <LDAPDN cn=testuser,dc=local>
     >>> dn.rdns # Get RDNs in tuple format.
@@ -163,7 +163,7 @@ Example for working with LDAPDN objects.
     >>> dn[1] = "ou=nerdherd,dc=local" # Change the second RDN.
     >>> dn
     <LDAPDN cn=testuser,ou=nerdherd,dc=local>
-    >>> other_dn = pyldap.LDAPDN("cn=testuser,ou=nerdherd,dc=local")
+    >>> other_dn = bonsai.LDAPDN("cn=testuser,ou=nerdherd,dc=local")
     >>> dn == other_dn
     True
     >>> dn[1:3] # Get the second and third RDN.
@@ -190,7 +190,7 @@ Example for working with LDAPDN objects.
 
     The distinguished name of the entry.
     
-    >>> from pyldap import LDAPEntry
+    >>> from bonsai import LDAPEntry
     >>> anna = LDAPEntry('cn=anna,ou=nerdherd,dc=local')
     >>> anna.dn
     <LDAPDN cn=anna,ou=nerdherd,dc=local>
@@ -215,7 +215,7 @@ Example for working with LDAPDN objects.
     An example of a valid LDAP URL with port number, base DN, list of 
     attributes and search filter:
     
-    >>> from pyldap import LDAPURL
+    >>> from bonsai import LDAPURL
     >>> url = LDAPURL("ldap://localhost:789/ou=nerdherd,dc=local?cn,sn,gn?sub?(cn=c*)")
     >>> url
     <LDAPURL ldap://localhost:789/ou=nerdherd,dc=local?cn,sn,gn?sub?(cn=c*)>
@@ -226,8 +226,8 @@ Example for working with LDAPDN objects.
 
 .. automethod:: LDAPURL.get_address
 
-   >>> import pyldap
-   >>> url = pyldap.LDAPURL("ldaps://example.com/cn=test,dc=local??sub")
+   >>> import bonsai
+   >>> url = bonsai.LDAPURL("ldaps://example.com/cn=test,dc=local??sub")
    >>> url
    <LDAPURL ldaps://example.com:636/cn=test,dc=local??sub>
    >>> url.get_address()
@@ -245,11 +245,11 @@ Example for working with LDAPDN objects.
 
 Errors
 ------
-.. autoclass:: pyldap.LDAPError
-.. autoclass:: pyldap.AlreadyExists
-.. autoclass:: pyldap.AuthenticationError
-.. autoclass:: pyldap.ConnectionError
-.. autoclass:: pyldap.ClosedConnection
-.. autoclass:: pyldap.InvalidDN
-.. autoclass:: pyldap.InvalidMessageID
-.. autoclass:: pyldap.ObjectClassViolation
+.. autoclass:: bonsai.LDAPError
+.. autoclass:: bonsai.AlreadyExists
+.. autoclass:: bonsai.AuthenticationError
+.. autoclass:: bonsai.ConnectionError
+.. autoclass:: bonsai.ClosedConnection
+.. autoclass:: bonsai.InvalidDN
+.. autoclass:: bonsai.InvalidMessageID
+.. autoclass:: bonsai.ObjectClassViolation
