@@ -99,7 +99,7 @@ class LDAPClient:
         then the tuple must have two elements: (binddn, password), if \
         ``EXTERNAL`` then only one element is needed: (authzid,). Every other
         case: (username, password, realm, authzid). If there is no need to \
-        specify realm or authorization ID then use None for these elements.
+        specify realm or authorisation ID then use None for these elements.
 
         :param str mechanism: the name of the binding mechanism:
         :param tuple creds: the credential information.
@@ -159,15 +159,15 @@ class LDAPClient:
     def set_ca_cert(self, name):
         """
         Set the name of CA certificate. If the underlying libldap library \
-        uses the Mozilla NSS as TLS implementation library the `name` \
-        should be the same one in the cert/key database (that specified with \
+        uses the Mozilla NSS as TLS library the `name` should be the same \
+        one in the cert/key database (that specified with \
         :meth:`LDAPClient.set_ca_cert_dir`), otherwise it can be the name \
         of the CA cert file.
         
         .. note::
            This method has no effect on MS Windows, because WinLDAP \
            searches for the corresponding CA certificate in the cert \
-           store. This means that the necessery certificates have to be \
+           store. This means that the necessary certificates have to be \
            installed manually in to the cert store.  
 
         :param str name: the name of the CA cert.
@@ -180,14 +180,14 @@ class LDAPClient:
     def set_ca_cert_dir(self, path):
         """
         Set the directory of the CA cert. If the underlying libldap library \
-        uses the Mozilla NSS as TLS implementation library the `path` \
-        should be the path to the existing cert/key database, otherwise it \
-        can be the path of the CA cert file.
+        uses the Mozilla NSS as TLS library the `path` should be the path to \
+        the existing cert/key database, otherwise it can be the path of the \
+        CA cert file.
         
         .. note::
            This method has no effect on MS Windows, because WinLDAP \
            searches for the corresponding CA certificate in the cert \
-           store. This means that the necessery certifications have to be \
+           store. This means that the necessary certifications have to be \
            installed manually in to the cert store.            
 
         :param str path: the path to the CA directory.
@@ -200,8 +200,8 @@ class LDAPClient:
     def set_client_cert(self, name):
         """
         Set the name of client certificate. If the underlying libldap library \
-        uses the Mozilla NSS as TLS implementation library the `name` \
-        should be the same one in the cert/key database (that specified with \
+        uses the Mozilla NSS as TLS library the `name` should be the same one \
+        in the cert/key database (that specified with \
         :meth:`LDAPClient.set_ca_cert_dir`), otherwise it can be the name \
         of the client certificate file.
         
@@ -209,7 +209,7 @@ class LDAPClient:
            This method has no effect on MS Windows, because WinLDAP \
            searches for the corresponding client certificate based on \
            the servert's CA cert in the cert store. This means that the \
-           necessery certificates have to be installed manually in to \
+           necessary certificates have to be installed manually in to \
            the cert store.  
 
         :param str name: the name of the client cert.
@@ -229,7 +229,7 @@ class LDAPClient:
            This method has no effect on MS Windows, because WinLDAP \
            searches for the corresponding client certificate based on \
            the servert's CA cert in the cert store. This means that the \
-           necessery certificates have to be installed manually in to \
+           necessary certificates have to be installed manually in to \
            the cert store.  
 
         :param str name: the name of the CA cert.
@@ -278,7 +278,7 @@ class LDAPClient:
 
     @property
     def url(self):
-        """ The URL of the directoty server. It cannot be set. """
+        """ The URL of the directory server. It cannot be set. """
         return self.__url
 
     @url.setter
