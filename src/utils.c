@@ -95,8 +95,7 @@ PyObject2char(PyObject *obj) {
 
 	/* If Python object is a None return an empty("") char*. */
 	if (obj == Py_None) {
-		str = (char *)malloc(sizeof(char));
-		str[0] = '\0';
+		str = strdup("");
 		return str;
 	}
 

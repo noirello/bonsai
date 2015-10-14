@@ -287,6 +287,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 		attrobj = PyUnicode_FromString(attr);
 		if (attrobj == NULL) goto error;
 		values = ldap_get_values_len(conn->ld, entrymsg, attr);
+		ldap_memfree(attr);
 
 		lvl = LDAPValueList_New();
 		if (lvl == NULL) goto error;
@@ -312,7 +313,6 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 	}
 	/* Cleaning the mess. */
 	Py_DECREF(rawval_list);
-	ldap_memfree(attr);
 	if (ber != NULL) {
 		ber_free(ber, 0);
 	}
@@ -699,6 +699,11 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
 	char *newkey = lowercase(PyObject2char(key));
 	LDAPValueList *list;
 
+	if (newkey == NULL) {
+		PyErr_BadInternalCall();
+		return -1;
+	}
+
 	/* Search for a match. */
 	key = searchLowerCaseKeyMatch(self, key, 1, &found);
 	if (found == 1) {
@@ -707,6 +712,7 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
 	if (value != NULL) {
 		/* If theres an item with a `dn` key, and with a string value set to the dn attribute. */
 		if (strcmp(newkey, "dn") == 0) {
+			free(newkey);
 			if (PyUnicode_Check(value)) {
 				char *dnstr = PyObject2char(value);
 				LDAPEntry_SetStringDN(self, dnstr);
@@ -717,6 +723,7 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
 				return -1;
 			}
 		} else {
+			free(newkey);
 			/* Set the new value to the item. */
 			if (LDAPValueList_Check(value) == 0) {
 				/* Convert value to LDAPValueList object. */
@@ -740,6 +747,7 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
 			if (rc != 0) return rc;
 		}
 	} else {
+		free(newkey);
 		/* This means, it has to remove the item. */
 		if (PyDict_DelItem((PyObject *)self, key) != 0) return -1;
 		if (UniqueList_Append(self->deleted, key) != 0) return -1;

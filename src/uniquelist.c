@@ -344,6 +344,7 @@ uniquelist_contains(UniqueList *self, PyObject *el) {
     for (i = 0, cmp = 0; cmp == 0 && i < Py_SIZE(tup); ++i) {
     	cmp = lower_case_match(PyTuple_GetItem(tup, i), el);
     }
+    Py_DECREF(tup);
     return cmp;
 }
 

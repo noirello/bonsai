@@ -122,17 +122,21 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 		Py_DECREF(creds);
 		return -1;
 	}
-	mech = PyObject2char(tmp);
+	mech = PyObject2char(tmp);;
 	Py_DECREF(tmp);
 
 	if (self->async) {
 		/* Init the socketpair. */
 		rc = get_socketpair(self->client, &(self->socketpair), &(self->csock), &ssock);
-		if (rc != 0) return -1;
+		if (rc != 0) {
+			if (mech != NULL) free(mech);
+			return -1;
+		}
 	}
 
 	info = create_conn_info(mech, ssock, creds);
 	Py_DECREF(creds);
+	if (mech != NULL) free(mech);
 	if (info == NULL) return -1;
 
 	*conniter = LDAPConnectIter_New(self, info);
@@ -583,7 +587,15 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 			return NULL;
 		}
 		ret = LDAPConnectIter_Next((LDAPConnectIter *)conniter, block);
-		if (ret == NULL) return NULL;
+		if (ret == NULL) {
+			/* An error is happened. */
+			/* Remove operations from pending_ops. */
+			if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
+				PyErr_BadInternalCall();
+				return NULL;
+			}
+			return NULL;
+		}
 		if (ret == Py_None) return ret;
 		else {
 			/* The init and bind are finished. */

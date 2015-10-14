@@ -219,7 +219,7 @@ LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld) {
 		/* Thread is finished. */
 		if (val->retval != LDAP_SUCCESS) {
 			set_exception(NULL, val->retval);
-			if (val->ld)free(val->ld);
+			if (val->ld) free(val->ld);
 			rc = -1;
 			goto end;
 		}

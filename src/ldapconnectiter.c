@@ -209,7 +209,7 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int block) {
 	}
 
 	if (self->init_finished == 0) {
-		rc = LDAP_finish_init(!block, (void *)self->thread, (void *)self->data, &(self->conn->ld));
+		rc = LDAP_finish_init(!block, self->thread, self->data, &(self->conn->ld));
 		if (rc == -1) return NULL; /* Error is happened. */
 		if (rc == 1) {
 			/* Initialisation is finished. */
@@ -229,7 +229,7 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int block) {
 	}
 
 	if (block) {
-		/* If the functiion is blocking, then call next() */
+		/* If the function is blocking, then call next() */
 		/* automatically, until an error or the LDAPConnection occurs.  */
 		return LDAPConnectIter_Next(self, block);
 	} else {
