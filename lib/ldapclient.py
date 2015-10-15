@@ -1,7 +1,7 @@
 """
 .. module:: LDAPClient
    :platform: Unix, Windows
-   :synopsis: For management LDAP connections.
+   :synopsis: For managing LDAP connections.
 
 """
 import socket
@@ -13,7 +13,7 @@ from .asyncio import AIOLDAPConnection
 
 class LDAPClient:
     """
-    This class is for managing LDAP connections.
+    A class for configuring the connection to the directory server.
 
     :param str|LDAPURL url: an LDAP URL.
     :param bool tls: Set `True` to use TLS connection.
@@ -99,9 +99,9 @@ class LDAPClient:
         then the tuple must have two elements: (binddn, password), if \
         ``EXTERNAL`` then only one element is needed: (authzid,). Every other
         case: (username, password, realm, authzid). If there is no need to \
-        specify realm or authorisation ID then use None for these elements.
+        specify realm or authorization ID then use None for these elements.
 
-        :param str mechanism: the name of the binding mechanism:
+        :param str mechanism: the name of the binding mechanism.
         :param tuple creds: the credential information.
         :raises ValueError: if the `mechanism` parameter is not a string, or \
         the `creds` is not a tuple, or the tuple has wrong length.
@@ -371,6 +371,9 @@ class LDAPClient:
         Open a connection to the LDAP server.
 
         :param bool async: Set `True` to use asynchronous connection.
+        :param **kwargs: additional keyword arguments that are passed to \
+        the async connection object (e.g. an eventloop object as `loop` \
+        parameter).
         :return: an LDAP connection.
         :rtype: :class:`LDAPConnection`
         """

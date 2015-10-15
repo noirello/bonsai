@@ -2,6 +2,15 @@ from ._bonsai import ldapconnection
 from .ldapdn import LDAPDN
 
 class LDAPConnection(ldapconnection):
+    """
+    Handles the connection to an LDAP server.
+    If `is_async` is set to True, then all LDAP operations that belong \
+    to this connection will return a message ID. This ID can be used to \
+    poll the status of the operation.
+
+    :param LDAPClient client: a client object.
+    :param bool is_async: set True to create an asynchronous connection.
+    """
     def __init__(self, client, is_async=False):
         self.__client = client
         super().__init__(client, is_async)
@@ -20,7 +29,8 @@ class LDAPConnection(ldapconnection):
         it returns a message ID or the result of the LDAP operation.
 
         :param int msg_id: the ID of the LDAP operation.
-        :return: generator if the connection async, otherwise the result of the operation.
+        :return: msg_id if the connection is async, otherwise the result \
+        of the operation.
         """
         if self.async:
             return msg_id

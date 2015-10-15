@@ -5,8 +5,6 @@ API documentation
 
 :class:`LDAPClient`
 -------------------
-LDAPClient class is for configuring the connection to the directory server.
-
 .. autoclass:: LDAPClient
 .. automethod:: LDAPClient.connect
 .. automethod:: LDAPClient.get_rootDSE
@@ -39,6 +37,16 @@ LDAPClient class is for configuring the connection to the directory server.
 .. automethod:: LDAPClient.set_client_cert
 .. automethod:: LDAPClient.set_client_key
 .. automethod:: LDAPClient.set_async_connection_class
+
+   An example to change the default async cconnection class to a Gevent-based one:
+
+   >>> import bonsai
+   >>> from bonsai.gevent import GeventLDAPConnection
+   >>> client = bonsai.LDAPClient()
+   >>> client.set_async_connection_class(GeventLDAPConnection)
+   >>> client.connect(True)
+   <bonsai.gevent.geventconnection.GeventLDAPConnection object at 0x7f9b1789c6d8>
+
 .. automethod:: LDAPClient.set_raw_attributes
 
    An example:
@@ -63,7 +71,7 @@ LDAPClient class is for configuring the connection to the directory server.
 
 :class:`LDAPConnection`
 -----------------------
-.. class:: LDAPConnection
+.. autoclass:: LDAPConnection
 .. automethod:: LDAPConnection.add
 
 .. method:: LDAPConnection.close()
@@ -76,7 +84,7 @@ LDAPClient class is for configuring the connection to the directory server.
 
    Open LDAP connection.
 
-   :return: The :class:`LDAPConnection` object itself, if it is a synchronous or an iterator if it's an asynchronous connection.
+   :return: The :class:`LDAPConnection` object itself, if it is a synchronous or a message ID if it's an asynchronous connection.
    :rtype: :class:`LDAPConnection` or iterator.
 
 .. method:: LDAPConnection.search(base=None, scope=None, filter=None, attrlist=[], timeout=0, sizelimit=0, attrsonly=False)
@@ -255,8 +263,10 @@ Errors
 .. autoclass:: bonsai.LDAPError
 .. autoclass:: bonsai.AlreadyExists
 .. autoclass:: bonsai.AuthenticationError
+.. autoclass:: bonsai.AuthMethodNotSupported
 .. autoclass:: bonsai.ConnectionError
 .. autoclass:: bonsai.ClosedConnection
+.. autoclass:: bonsai.InsufficientAccess
 .. autoclass:: bonsai.InvalidDN
 .. autoclass:: bonsai.InvalidMessageID
 .. autoclass:: bonsai.ObjectClassViolation

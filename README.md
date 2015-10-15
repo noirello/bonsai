@@ -18,10 +18,27 @@ Requirements for building
 Features
 --------
 
-- Uses LDAP libraries (OpenLDAP and WinLDAP) written in C for faster processing. 
-- Implements an own dictionary-like object for mapping LDAP entries that makes easier to add and modify them.
-- Works with asyncio for asynchronous operations.
+* Uses LDAP libraries (OpenLDAP and WinLDAP) written in C for faster processing.
+* Simple pythonic design.
+* Implements an own dictionary-like object for mapping LDAP entries that makes easier to add and modify them.
+* Works with various asynchronous library (like asnycio, gevent).
 
+Example
+-------
+
+```python
+
+    import bonsai
+
+    client = bonsai.LDAPClient("ldap://localhost")
+    client.set_credentials("SIMPLE", ("cn=admin,dc=local", "secret"))
+    conn = client.connect()
+    res = conn.search("ou=nerdherd,dc=local", 2, "(cn=chuck)")
+    res[0]['givenname'] = "Charles"
+    res[0]['sn'] = "Carmichael"
+    res[0].modify()
+
+```
 
 Documentation
 -------------

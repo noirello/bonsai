@@ -19,9 +19,10 @@ The module main goal is to give a simple way to use the LDAP protocol as pythoni
 Features
 --------
 
-* Uses LDAP libraries (OpenLDAP and WinLDAP) written in C for faster processing. 
+* Uses LDAP libraries (OpenLDAP and WinLDAP) written in C for faster processing.
+* Simple pythonic design.
 * Implements an own dictionary-like object for mapping LDAP entries that makes easier to add and modify them.
-* Works with asyncio for asynchronous operations.
+* Works with various asynchronous library (like asnycio, gevent).
 
 
 Contents
@@ -37,10 +38,8 @@ Contents
 Contribution
 ------------
 
-Any contributions are welcome. If you would like to help in development
-fork or report issue on the project's `GitHub site`_. 
-You can also help in improving the documentation. My English is far from perfect, so if you find 
-any grammatically incorrect sentence, please report to me (with suggestion).   
+Any contributions are welcome. If you would like to help in development fork or report issue on the project's `GitHub site`_.
+You can also help in improving the documentation.
 
 .. _github site: https://github.com/Noirello/bonsai
 

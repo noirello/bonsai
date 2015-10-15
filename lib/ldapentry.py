@@ -71,7 +71,7 @@ class LDAPEntry(ldapentry):
         otherwise KeyError is raised.
 
         :param key: the key.
-        :patam dflt: if key is not found, d is returned.
+        :param dflt: if key is not found, d is returned.
         :return: the value from the LDAPEntry.
         """
         if len(args) > 2:

@@ -48,7 +48,8 @@ dictionary tree, the second parameter - the search scope - can have the followin
     - 1 (one): searching only one tree level under the Base DN.
     - 2 (sub): searching of all entries at all levels under and th Base DN.
 
-The third parameter is a standard LDAP filter string. 
+The third parameter is a standard LDAP filter string.
+
 The result will be a list of LDAPEntry objects or an empty list, if no object is found. 
 
     >>> conn = client.connect()
@@ -62,6 +63,8 @@ The result will be a list of LDAPEntry objects or an empty list, if no object is
     >>> conn.search("ou=nerdherd,dc=local", 0, "(objectclass=*)")
     [{'objectClass': ['organizationalUnit', 'top'], 'ou': ['nerdherd']}]
     
+The other possible parameters are listed on the API page of :meth:`LDAPConnection.search`.
+
 .. note:: 
           As you can see every key - or LDAP attribute - in the entry has a list for clarity, even 
           if only one value belongs to the attribute. As most of the attributes could have more 
@@ -107,13 +110,26 @@ To delete an entry we've got two options:
 After we finished our work with the directory server we should close the connection:
 
     >>> conn.close()
+
+The :class:`LDAPConnection` object can be used with a context manager that will call
+the :meth:`LDAPConnection.close` method implicit:
+
+.. code-block:: python
+
+	import bonsai
+
+	cli = bonsai.LDAPClient("ldap://localhost")
+	with cli.connect() as conn:
+	    res = conn.search("ou=nerdherd,dc=local", 1)
+	    print(res)
+	    print(conn.whoami())
     
 Asynchronous operations
 -----------------------
 
 It is possible to start asynchronous operations, if the :meth:`LDAPClient.connect` method's async parameter is set to True.
-The module is designed to be used with Python's `asyncio` library. For further details about how to use the asyncio library
-see the  `official documentation`_.
+By default the returned connection object can be used with Python's `asyncio` library. For further details about how to use
+the asyncio library see the  `official documentation`_.
 
 An example for asynchronous search and modify with `asyncio`:
 
@@ -138,6 +154,11 @@ An example for asynchronous search and modify with `asyncio`:
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(do())
- 
+
+It is also possible to change this class to a different one with :meth:`LDAPClient.set_async_connection_class` that is able
+to work with other non-blocking I/O modules like `Gevent`_ or `Tornado`_.
+
+.. _Gevent: http://www.gevent.org/
+.. _Tornado: http://www.tornadoweb.org/en/stable/
     
 To find out more about the Bonsai module functionality read the :doc:`api`.

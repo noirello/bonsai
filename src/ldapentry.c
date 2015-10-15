@@ -629,7 +629,7 @@ static PyMethodDef ldapentry_methods[] = {
 	{"rename", 	(PyCFunction)ldapentry_rename, 	METH_VARARGS | METH_KEYWORDS,
 			"Rename or remove LDAPEntry on the LDAP server."},
 	{"_status", 	(PyCFunction)ldapentry_status, 	METH_NOARGS,
-				"Get LDAPEntry's modifcation status." },
+				"Get LDAPEntry's modification status." },
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
