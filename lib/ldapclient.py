@@ -269,7 +269,8 @@ class LDAPClient:
         conn = LDAPConnection(self, False).open()
         try:
             # Convert to list to avoid possible LDAPSearchIter object.
-            root_dse = list(conn.search("", 0, "(objectclass=*)", attrs, 0, False))[0]
+            root_dse = list(conn.search("", 0, "(objectclass=*)", attrs,
+                                        None, False))[0]
         except IndexError:
             return None
         finally:

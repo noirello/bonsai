@@ -31,6 +31,9 @@ class ClosedConnection(LDAPError):
 class InsufficientAccess(LDAPError):
     """Raised, when the user has insufficient access rights."""
 
+class TimeoutError(LDAPError):
+    """Raised, when the specified timeout is exceeded. """
+
 def _get_error(code):
     """ Return an error by code number. """
     if code == -1 or code == 0x51 or code == -11:
@@ -49,6 +52,8 @@ def _get_error(code):
         return ObjectClassViolation
     elif code == 0x44:
         return AlreadyExists
+    elif code == -5 or code == 0x55:
+        return TimeoutError
     elif code == -100:
         return InvalidMessageID
     elif code == -101:

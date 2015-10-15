@@ -15,7 +15,7 @@
 Returns NULL in case of error, Py_None for timeout, and the LDAPConnection
 object if successfully finished the binding. */
 static PyObject *
-binding(LDAPConnectIter *self, int block) {
+binding(LDAPConnectIter *self) {
 	int rc;
 	char buff[1];
 
@@ -29,7 +29,7 @@ binding(LDAPConnectIter *self, int block) {
 		self->bind_inprogress = 1;
 		Py_RETURN_NONE;
 	} else {
-		if (block) {
+		if (self->conn->async == 0) {
 			rc = WaitForSingleObject(self->info->thread, INFINITE);
 		} else {
 			rc = WaitForSingleObject(self->info->thread, 10);
@@ -71,7 +71,7 @@ binding(LDAPConnectIter *self, int block) {
  Returns NULL in case of error, Py_None for timeout, and the LDAPConnection
  object if successfully finished the binding. */
 static PyObject *
-binding(LDAPConnectIter *self, int block) {
+binding(LDAPConnectIter *self) {
 	int rc = -1;
 	int err = 0;
 	struct timeval polltime;
@@ -85,6 +85,7 @@ binding(LDAPConnectIter *self, int block) {
 		/* First call of bind. */
 		rc = LDAP_bind(self->conn->ld, self->info, NULL, &(self->message_id));
 		if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
+			close_socketpair(self->conn->socketpair);
 			set_exception(self->conn->ld, rc);
 			return NULL;
 		}
@@ -96,7 +97,7 @@ binding(LDAPConnectIter *self, int block) {
 		self->bind_inprogress = 1;
 		Py_RETURN_NONE;
 	} else {
-		if (block) {
+		if (self->conn->async == 0) {
 			/* Block until the server response. */
 			rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, NULL, &res);
 		} else {
@@ -198,7 +199,7 @@ LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info) {
 
 /* Step the connection process into the next stage. */
 PyObject *
-LDAPConnectIter_Next(LDAPConnectIter *self, int block) {
+LDAPConnectIter_Next(LDAPConnectIter *self) {
 	int rc = -1;
 	PyObject *val = NULL;
 	char buff[1];
@@ -209,7 +210,7 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int block) {
 	}
 
 	if (self->init_finished == 0) {
-		rc = LDAP_finish_init(!block, self->thread, self->data, &(self->conn->ld));
+		rc = LDAP_finish_init((int)(self->conn->async), self->thread, self->data, &(self->conn->ld));
 		if (rc == -1) return NULL; /* Error is happened. */
 		if (rc == 1) {
 			/* Initialisation is finished. */
@@ -223,15 +224,15 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int block) {
 
 	if (self->init_finished == 1) {
 		/* Init for the LDAP structure is finished, TLS (if it is needed) already set, start binding. */
-		val = binding(self, block);
+		val = binding(self);
 		if (val == NULL) return NULL; /* It is an error. */
 		if (val != Py_None) return val;
 	}
 
-	if (block) {
+	if (self->conn->async == 0) {
 		/* If the function is blocking, then call next() */
 		/* automatically, until an error or the LDAPConnection occurs.  */
-		return LDAPConnectIter_Next(self, block);
+		return LDAPConnectIter_Next(self);
 	} else {
 		Py_RETURN_NONE;
 	}

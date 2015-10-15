@@ -11,7 +11,7 @@ class AIOLDAPConnection(LDAPConnection):
     def _ready(self, msg_id, fut):
         self._loop.remove_reader(self.fileno())
         try:
-            res = super().get_result(msg_id, False)
+            res = super().get_result(msg_id)
             if res is not None:
                 fut.set_result(res)
             else:

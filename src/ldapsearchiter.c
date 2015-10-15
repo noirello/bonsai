@@ -68,12 +68,14 @@ LDAPSearchIter_New(LDAPConnection *conn) {
 /* Set the parameters of an LDAPSEarchIter object. */
 int
 LDAPSearchIter_SetParams(LDAPSearchIter *self, char **attrs, int attrsonly,
-		char *base, char *filter, int scope, int sizelimit, int timeout) {
+		char *base, char *filter, int scope, int sizelimit, double timeout) {
+	int tout_ms = (int)(timeout * 1000);
+
 	self->attrs = attrs;
 	self->attrsonly = attrsonly;
 
 	/* Copying base string and filter string, because there is no
-	 garantee that someone will not free them prematurely. */
+	 guarantee that someone will not free them prematurely. */
 	self->base = (char *)malloc(sizeof(char) * (strlen(base)+1));
 	strcpy(self->base, base);
 
@@ -88,11 +90,11 @@ LDAPSearchIter_SetParams(LDAPSearchIter *self, char **attrs, int attrsonly,
 	self->sizelimit = sizelimit;
 
 	/* Create a timeval, and set tv_sec to timeout, if timeout greater than 0. */
-	if (timeout > 0) {
+	if (tout_ms > 0) {
 		self->timeout = malloc(sizeof(struct timeval));
 		if (self->timeout != NULL) {
-			self->timeout->tv_sec = timeout;
-			self->timeout->tv_usec = 0;
+			self->timeout->tv_sec = tout_ms / 1000;
+			self->timeout->tv_usec = (tout_ms % 1000) * 1000;
 		} else {
 			return -1;
 		}

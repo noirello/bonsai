@@ -26,6 +26,6 @@ typedef struct {
 extern PyTypeObject LDAPConnectIterType;
 
 LDAPConnectIter *LDAPConnectIter_New(LDAPConnection *conn,  ldap_conndata_t *info);
-PyObject *LDAPConnectIter_Next(LDAPConnectIter *self, int block);
+PyObject *LDAPConnectIter_Next(LDAPConnectIter *self);
 
 #endif /* PYLDAP_LDAPCONNECTITER_H_ */

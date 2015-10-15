@@ -14,7 +14,7 @@ class TornadoLDAPConnection(LDAPConnection):
     def _io_callback(self, fut, msg_id, fd=None, events=None):
         try:
             self._ioloop.remove_handler(self._fileno)
-            res = super().get_result(msg_id, False)
+            res = super().get_result(msg_id)
             if res is not None:
                 fut.set_result(res)
             else:

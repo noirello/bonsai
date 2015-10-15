@@ -30,6 +30,6 @@ extern PyTypeObject LDAPSearchIterType;
 
 LDAPSearchIter *LDAPSearchIter_New(LDAPConnection *conn);
 int LDAPSearchIter_SetParams(LDAPSearchIter *self, char **attrs, int attrsonly,
-		char *base, char *filter, int scope, int sizelimit, int timeout);
+		char *base, char *filter, int scope, int sizelimit, double timeout);
 
 #endif /* LDAPSEARCHITER_H_ */

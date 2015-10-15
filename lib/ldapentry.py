@@ -4,25 +4,25 @@ class LDAPEntry(ldapentry):
     def __init__(self, dn, conn=None):
         super().__init__(str(dn), conn)
 
-    def delete(self):
+    def delete(self, timeout=None):
         """
         Remove LDAP entry from the dictionary server.
 
         :return: True, if the operation is finished.
         :rtype: bool
         """
-        return self.connection._evaluate(super().delete())
+        return self.connection._evaluate(super().delete(), timeout)
 
-    def modify(self):
+    def modify(self, timeout=None):
         """
         Send entry's modifications to the dictionary server.
 
         :return: True, if the operation is finished.
         :rtype: bool
         """
-        return self.connection._evaluate(super().modify())
+        return self.connection._evaluate(super().modify(), timeout)
 
-    def rename(self, newdn):
+    def rename(self, newdn, timeout=None):
         """
         Change the entry's distinguished name.
 
@@ -30,7 +30,7 @@ class LDAPEntry(ldapentry):
         :return: True, if the operation is finished.
         :rtype: bool
         """
-        return self.connection._evaluate(super().rename(newdn))
+        return self.connection._evaluate(super().rename(newdn), timeout)
 
     def update(self, *args, **kwds):
         """

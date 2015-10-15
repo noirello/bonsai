@@ -23,7 +23,7 @@ class LDAPConnection(ldapconnection):
         """ Context manager exit point. """
         self.close()
 
-    def _evaluate(self, msg_id):
+    def _evaluate(self, msg_id, timeout=None):
         """
         Depending on the connection's type (asynchronous or synchronous),
         it returns a message ID or the result of the LDAP operation.
@@ -35,9 +35,9 @@ class LDAPConnection(ldapconnection):
         if self.async:
             return msg_id
         else:
-            return self.get_result(msg_id, True)
+            return self.get_result(msg_id, timeout)
 
-    def add(self, entry):
+    def add(self, entry, timeout=None):
         """
         Add new entry to the directory server.
 
@@ -45,9 +45,9 @@ class LDAPConnection(ldapconnection):
         :return: True, if the operation is finished.
         :rtype: bool
         """
-        return self._evaluate(super().add(entry))
+        return self._evaluate(super().add(entry), timeout)
 
-    def delete(self, dnstr):
+    def delete(self, dnstr, timeout=None):
         """
         Remove entry from the directory server.
 
@@ -57,13 +57,13 @@ class LDAPConnection(ldapconnection):
         """
         if type(dnstr) == LDAPDN:
             dnstr = str(dnstr)
-        return self._evaluate(super().delete(dnstr))
+        return self._evaluate(super().delete(dnstr), timeout)
 
-    def open(self):
-        return self._evaluate(super().open())
+    def open(self, timeout=None):
+        return self._evaluate(super().open(), timeout)
 
     def search(self, base=None, scope=None, filter=None, attrlist=None,
-               timeout=0, sizelimit=0, attrsonly=False):
+               timeout=None, sizelimit=0, attrsonly=False):
         # Documentation in the docs/api.rst with detailed examples.
         # Load values from the LDAPURL, if it is not presented on the
         # parameter list.
@@ -71,14 +71,15 @@ class LDAPConnection(ldapconnection):
         _scope = scope if scope is not None else self.__client.url.scope_num
         _filter = filter if filter is not None else self.__client.url.filter
         _attrlist = attrlist if attrlist is not None else self.__client.url.attributes
+        _timeout = timeout if timeout is not None else 0.0
         msg_id = super().search(_base, _scope, _filter, _attrlist,
-                                timeout, sizelimit, attrsonly)
+                                _timeout, sizelimit, attrsonly)
         if self.async:
             return msg_id
         else:
             if self.page_size > 1:
-                return self.__paged_search(self.get_result(msg_id, True))
-            return list(self.get_result(msg_id, True))
+                return self.__paged_search(self.get_result(msg_id, timeout))
+            return list(self.get_result(msg_id, timeout))
 
     def __paged_search(self, res):
         while True:
@@ -86,7 +87,7 @@ class LDAPConnection(ldapconnection):
             msg_id = res.acquire_next_page()
             if msg_id is None:
                 break
-            res = self.get_result(msg_id, True)
+            res = self.get_result(msg_id)
 
     def set_sort_order(self, sort_list):
         """
@@ -111,12 +112,12 @@ class LDAPConnection(ldapconnection):
             raise ValueError("Attribute names must be different from each other.")
         super().set_sort_order(sort_attrs)
 
-    def whoami(self):
+    def whoami(self, timeout=None):
         """
         This method can be used to obtain authorization identity.
 
         :return: the authorization ID.
         :rtype: str
          """
-        return self._evaluate(super().whoami())
+        return self._evaluate(super().whoami(), timeout)
 

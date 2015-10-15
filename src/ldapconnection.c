@@ -11,7 +11,7 @@ ldapconnection_dealloc(LDAPConnection* self) {
 
 	Py_XDECREF(self->client);
 	Py_XDECREF(self->pending_ops);
-	Py_XDECREF(self->socketpair);
+	//Py_XDECREF(self->socketpair); // Cause invalid freeing random occasion.
 
 	/* Free LDAPSortKey list. */
 	if (self->sort_list !=  NULL) {
@@ -122,7 +122,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 		Py_DECREF(creds);
 		return -1;
 	}
-	mech = PyObject2char(tmp);;
+	mech = PyObject2char(tmp);
 	Py_DECREF(tmp);
 
 	if (self->async) {
@@ -373,7 +373,8 @@ static PyObject *
 ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	int scope = -1;
 	int msgid = -1;
-	int timeout = 0, sizelimit = 0, attrsonly = 0;
+	int sizelimit = 0, attrsonly = 0;
+	double timeout = 0;
 	char *basestr = NULL;
 	char *filterstr = NULL;
 	char **attrs = NULL;
@@ -384,10 +385,10 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
 	if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|zizO!iiO!", kwlist, &basestr, &scope, &filterstr,
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|zizO!diO!", kwlist, &basestr, &scope, &filterstr,
 			&PyList_Type, &attrlist, &timeout, &sizelimit, &PyBool_Type, &attrsonlyo)) {
 		PyErr_SetString(PyExc_AttributeError,
-				"Wrong parameters (base<str|LDAPDN>, scope<int>, filter<str>, attrlist<List>, timeout<int>, attrsonly<bool>).");
+				"Wrong parameters (base<str|LDAPDN>, scope<int>, filter<str>, attrlist<List>, timeout<float>, attrsonly<bool>).");
 		return NULL;
 	}
 
@@ -562,14 +563,14 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 
 /* Poll and process the result of an ongoing asynchronous LDAP operation. */
 PyObject *
-LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
+LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
 	int rc = -1;
 	int err = 0;
 	char msgidstr[8];
 	LDAPMessage *res;
 	LDAPControl **returned_ctrls = NULL;
 	LDAPModList *mods = NULL;
-	struct timeval zerotime;
+	struct timeval timeout;
 	PyObject *ext_obj = NULL;
 	PyObject *conniter = NULL;
 	PyObject *ret = NULL;
@@ -586,7 +587,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 			PyErr_BadInternalCall();
 			return NULL;
 		}
-		ret = LDAPConnectIter_Next((LDAPConnectIter *)conniter, block);
+		ret = LDAPConnectIter_Next((LDAPConnectIter *)conniter);
 		if (ret == NULL) {
 			/* An error is happened. */
 			/* Remove operations from pending_ops. */
@@ -609,15 +610,21 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 		}
 	}
 
-	if (block == 1) {
-		/* The ldap_result will block, and wait for server response. */
+	if (self->async == 0) {
+		/* The ldap_result will block, and wait for server response or timeout. */
 		Py_BEGIN_ALLOW_THREADS
-		rc = ldap_result(self->ld, msgid, LDAP_MSG_ALL, NULL, &res);
+		if (millisec >= 0)  {
+			timeout.tv_sec = millisec / 1000;
+			timeout.tv_usec = (millisec % 1000) * 1000;
+			rc = ldap_result(self->ld, msgid, LDAP_MSG_ALL, &timeout, &res);
+		} else {
+			rc = ldap_result(self->ld, msgid, LDAP_MSG_ALL, NULL, &res);
+		}
 		Py_END_ALLOW_THREADS
 	} else {
-		zerotime.tv_sec = 0L;
-		zerotime.tv_usec = 0L;
-		rc = ldap_result(self->ld, msgid, LDAP_MSG_ALL, &zerotime, &res);
+		timeout.tv_sec = 0L;
+		timeout.tv_usec = 0L;
+		rc = ldap_result(self->ld, msgid, LDAP_MSG_ALL, &timeout, &res);
 	}
 
 	switch (rc) {
@@ -628,6 +635,11 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 		return NULL;
 	case 0:
 		/* Timeout exceeded.*/
+		if (self->async == 0) {
+			/* Set TimeoutError. */
+			set_exception(self->ld, -5);
+			return NULL;
+		}
 		break;
 	case LDAP_RES_SEARCH_ENTRY:
 		/* Received one of the entries from the server. */
@@ -674,23 +686,34 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int block) {
 static PyObject *
 ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	int msgid = 0;
-	int block = 0;
+	int timeout = -1;
 	char msgidstr[8];
 	PyObject *msgid_obj = NULL;
 	PyObject *res = NULL;
-	PyObject *block_obj = NULL;
+	PyObject *timeout_obj = NULL;
 	PyObject *keys = PyDict_Keys(self->pending_ops);
+	PyObject *tmp = NULL;
 
-	static char *kwlist[] = {"msgid", "block", NULL};
+	static char *kwlist[] = {"msgid", "timeout", NULL};
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "i|O!", kwlist, &msgid,
-			&PyBool_Type, &block_obj)) {
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "i|O", kwlist, &msgid,
+			&timeout_obj)) {
 		PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
 		return NULL;
 	}
 
-	/* Convert Python bool object to int. */
-	if (block_obj != NULL) block = PyObject_IsTrue(block_obj);
+	if (timeout_obj == Py_None || timeout_obj == NULL) {
+		timeout = -1;
+	} else if (PyNumber_Check(timeout_obj) && !PyBool_Check(timeout_obj)) {
+		tmp = PyNumber_Float(timeout_obj);
+		if (tmp == NULL) return NULL;
+
+		timeout = (int)(PyFloat_AsDouble(tmp) * 1000);
+		Py_DECREF(tmp);
+	} else {
+		PyErr_SetString(PyExc_AttributeError, "Wrong timeout parameter.");
+		return NULL;
+	}
 
 	sprintf(msgidstr, "%d", msgid);
 	msgid_obj = PyUnicode_FromString(msgidstr);
@@ -703,7 +726,7 @@ ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 		Py_DECREF(ldaperror);
 		res = NULL;
 	} else {
-		res = LDAPConnection_Result(self, msgid, block);
+		res = LDAPConnection_Result(self, msgid, timeout);
 	}
 
 	Py_DECREF(keys);

@@ -8,7 +8,7 @@ class GeventLDAPConnection(LDAPConnection):
     
     def _poll(self, msg_id, timeout=None):
         while True:
-            res = self.get_result(msg_id, False)
+            res = self.get_result(msg_id)
             if res is not None:
                 return res
             wait_readwrite(self.fileno(), timeout=timeout)
