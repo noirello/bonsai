@@ -29,7 +29,10 @@ class LDAPConnectionTest(unittest.TestCase):
     def tearDown(self):
         """ Close connection. """
         self.conn.close()
+        if (not self.async_conn.closed):
+            self.async_conn.close()
         del self.conn
+        del self.async_conn
 
     def test_bind_digest(self):
         """ Test DIGEST-MD5 connection. """

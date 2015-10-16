@@ -105,3 +105,17 @@ class LDAPEntry(ldapentry):
             return (key, value)
         except IndexError:
             raise KeyError("popitem(): LDAPEntry is empty")
+
+
+    def __eq__(self, other):
+        """
+        Two LDAPEntry objects are considered equals, if their DN is the same.
+        
+        :param other: the other comparable object.
+        :return: True if the two object are equals.
+        :rtyype: bool
+        """
+        if isinstance(other, self.__class__):
+            return self.dn == other.dn
+        else:
+            return super().__eq__(other)
