@@ -236,10 +236,17 @@ PyList2LDAPSortKeyList(PyObject *list) {
 int
 lower_case_match(PyObject *o1, PyObject *o2) {
 	int match = 0;
-	char *str1 = lowercase(PyObject2char(o1));
-	char *str2 = lowercase(PyObject2char(o2));
+	char *str1 = NULL;
+	char *str2 = NULL;
 
-	if (str1 == NULL || str2 == NULL) return -1;
+	str1 = lowercase(PyObject2char(o1));
+	if (str1 == NULL) return -1;
+
+	str2 = lowercase(PyObject2char(o2));
+	if (str2 == NULL) {
+		free(str1);
+		return -1;
+	}
 
 	if (strcmp(str1, str2) == 0) match = 1;
 
