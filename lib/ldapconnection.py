@@ -29,6 +29,7 @@ class LDAPConnection(ldapconnection):
         it returns a message ID or the result of the LDAP operation.
 
         :param int msg_id: the ID of the LDAP operation.
+        :param float timeout: time limit in seconds for the operation.
         :return: msg_id if the connection is async, otherwise the result \
         of the operation.
         """
@@ -42,6 +43,7 @@ class LDAPConnection(ldapconnection):
         Add new entry to the directory server.
 
         :param LDAPEntry entry: the new entry.
+        :param float timeout: time limit in seconds for the operation.
         :return: True, if the operation is finished.
         :rtype: bool
         """
@@ -52,6 +54,7 @@ class LDAPConnection(ldapconnection):
         Remove entry from the directory server.
 
         :param str dnstr: the string format of the entry's DN.
+        :param float timeout: time limit in seconds for the operation.
         :return: True, if the operation is finished.
         :rtype: bool
         """
@@ -60,6 +63,14 @@ class LDAPConnection(ldapconnection):
         return self._evaluate(super().delete(dnstr), timeout)
 
     def open(self, timeout=None):
+        """
+        Open the LDAP connection.
+
+        :param float timeout: time limit in seconds for the operation.
+        :return: The :class:`LDAPConnection` object itself, if \
+        it is a synchronous or a message ID if it's an asynchronous connection.
+        :rtype: :class:`LDAPConnection` or iterator.
+        """
         return self._evaluate(super().open(), timeout)
 
     def search(self, base=None, scope=None, filter=None, attrlist=None,
@@ -115,6 +126,8 @@ class LDAPConnection(ldapconnection):
     def whoami(self, timeout=None):
         """
         This method can be used to obtain authorization identity.
+        
+        :param float timeout: time limit in seconds for the operation.
 
         :return: the authorization ID.
         :rtype: str

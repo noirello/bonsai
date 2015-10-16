@@ -8,6 +8,7 @@ class LDAPEntry(ldapentry):
         """
         Remove LDAP entry from the dictionary server.
 
+        :param float timeout: time limit in seconds for the operation.        
         :return: True, if the operation is finished.
         :rtype: bool
         """
@@ -17,6 +18,7 @@ class LDAPEntry(ldapentry):
         """
         Send entry's modifications to the dictionary server.
 
+        :param float timeout: time limit in seconds for the operation.
         :return: True, if the operation is finished.
         :rtype: bool
         """
@@ -26,6 +28,7 @@ class LDAPEntry(ldapentry):
         """
         Change the entry's distinguished name.
 
+        :param float timeout: time limit in seconds for the operation.
         :param str newdn: the new DN of the entry.
         :return: True, if the operation is finished.
         :rtype: bool

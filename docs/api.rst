@@ -80,21 +80,16 @@ API documentation
     
 .. automethod:: LDAPConnection.delete
 
-.. method:: LDAPConnection.open()
+.. automethod:: LDAPConnection.open
 
-   Open LDAP connection.
-
-   :return: The :class:`LDAPConnection` object itself, if it is a synchronous or a message ID if it's an asynchronous connection.
-   :rtype: :class:`LDAPConnection` or iterator.
-
-.. method:: LDAPConnection.search(base=None, scope=None, filter=None, attrlist=[], timeout=0, sizelimit=0, attrsonly=False)
+.. method:: LDAPConnection.search(base=None, scope=None, filter=None, attrlist=[], timeout=None, sizelimit=0, attrsonly=False)
 
    :param str base: the base DN of the search.
    :param int scope: the scope of the search.
    :param str filter: string to filter the search in LDAP search filter syntax. 
    :param list attrlist: list of attribute's names to receive only those 
                          attributes from the directory server.
-   :param int timeout: time limit in seconds for the search.
+   :param float timeout: time limit in seconds for the search.
    :param int sizelimit: the number of entries to limit the search.
    :param bool attrsonly: if it's set True, search result will contain only 
                           the name of the attributes without their values.
@@ -270,3 +265,4 @@ Errors
 .. autoclass:: bonsai.InvalidDN
 .. autoclass:: bonsai.InvalidMessageID
 .. autoclass:: bonsai.ObjectClassViolation
+.. autoclass:: bonsai.TimeoutError
