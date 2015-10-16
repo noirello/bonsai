@@ -18,7 +18,7 @@ class TestCommand(Command):
 
     def run(self):
         import unittest
-        tests = unittest.defaultTestLoader.discover("./tests", pattern="*_test.py")
+        tests = unittest.defaultTestLoader.discover("./tests")
         suite = unittest.TestSuite()
         suite.addTests(tests)
         #result = unittest.TestResult()
