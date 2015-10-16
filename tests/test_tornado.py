@@ -1,22 +1,24 @@
 import configparser
 import os
 import unittest
+from functools import wraps
 
 from bonsai import LDAPClient
 from bonsai import LDAPEntry
 import bonsai.errors
 
 try:
-    import gevent
-    from bonsai.gevent import GeventLDAPConnection 
+    import tornado
+    from tornado.testing import AsyncTestCase
+    from bonsai.tornado import TornadoLDAPConnection 
     modinstalled = True
 except ImportError:
     modinstalled = False
     pass
 
-@unittest.skipIf(not modinstalled, "Gevent is not installed.")
-class GeventLDAPConnectionTest(unittest.TestCase):
-    """ Test GeventLDAPConnection object. """
+@unittest.skipIf(not modinstalled, "Tornado is not installed.")
+class TornadoLDAPConnectionTest(AsyncTestCase):
+    """ Test TornadoLDAPConnection object. """
     def setUp(self):
         """ Set LDAP URL and open connection. """
         curdir = os.path.abspath(os.path.dirname(__file__))
@@ -31,72 +33,84 @@ class GeventLDAPConnectionTest(unittest.TestCase):
         self.client = LDAPClient(self.url)
         self.client.set_credentials("SIMPLE", (self.cfg["SIMPLEAUTH"]["user"],
                                           self.cfg["SIMPLEAUTH"]["password"]))
-        self.client.set_async_connection_class(GeventLDAPConnection)
+        self.client.set_async_connection_class(TornadoLDAPConnection)
+        self.io_loop = self.get_new_ioloop()
         
+    @tornado.testing.gen_test
     def test_connection(self):
-        conn = self.client.connect(True)
+        conn = yield self.client.connect(True, ioloop=self.io_loop)
         self.assertIsNotNone(conn)
         self.assertFalse(conn.closed)
+        conn.close()
     
+    @tornado.testing.gen_test
     def test_search(self):
-        with self.client.connect(True) as conn:
-            res = conn.search()
+        with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
+            res = yield conn.search()
             self.assertIsNotNone(res)
    
+    @tornado.testing.gen_test
     def test_add_and_delete(self):
-        with self.client.connect(True) as conn:
+        with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)
             entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
                                     'organizationalPerson']
             entry['sn'] = "async_test"
             try:
-                conn.add(entry)
+                yield conn.add(entry)
             except bonsai.errors.AlreadyExists:
-                conn.delete(entry.dn)
-                conn.add(entry)
+                yield conn.delete(entry.dn)
+                yield conn.add(entry)
             except:
                 self.fail("Unexcepected error.")
-            res = conn.search()
+            res = yield conn.search()
             self.assertIn(entry, res)
             entry.delete()
-            res = conn.search()
+            res = yield conn.search()
             self.assertNotIn(entry, res)
 
+    @tornado.testing.gen_test
     def test_modify_and_rename(self):
-        with self.client.connect(True) as conn:
+        with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)
             entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
                                     'organizationalPerson']
             entry['sn'] = "async_test"
             try:
-                conn.add(entry)
+                yield conn.add(entry)
             except bonsai.errors.AlreadyExists:
-                conn.delete(entry.dn)
-                conn.add(entry)
+                yield conn.delete(entry.dn)
+                yield conn.add(entry)
             except:
                 self.fail("Unexcepected error.")
             entry['sn'] = "async_test2"
-            entry.modify()
-            entry.rename("cn=async_test2,%s" % self.basedn)
-            res = conn.search(entry.dn, 0, attrlist=['sn'])
+            yield entry.modify()
+            yield entry.rename("cn=async_test2,%s" % self.basedn)
+            res = yield conn.search(entry.dn, 0, attrlist=['sn'])
             self.assertEqual(entry['sn'], res[0]['sn'])
-            res = conn.search("cn=async_test,%s" % self.basedn, 0)
+            res = yield conn.search("cn=async_test,%s" % self.basedn, 0)
             self.assertEqual(res, [])
-            conn.delete(entry.dn)
-
+            yield conn.delete(entry.dn)
+    
+    @tornado.testing.gen_test
     def test_obj_err(self):
         entry = LDAPEntry("cn=async_test,%s" % self.basedn)
         entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
                                 'organizationalPerson']
-        def err():
-            with self.client.connect(True) as conn:
-                conn.add(entry)
-        self.assertRaises(bonsai.errors.ObjectClassViolation, err)
+        try:
+            with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
+                yield conn.add(entry)
+        except bonsai.errors.ObjectClassViolation:
+            return
+        except Exception as exc:
+            self.fail("test_obj_err failed with %s" % exc)
+        self.fail("test_obj_err failed without the right exception.")
 
+    @tornado.testing.gen_test
     def test_whoami(self):
         """ Test whoami. """
-        with self.client.connect(True) as conn:
-            obj = conn.whoami()
+        with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
+            obj = yield conn.whoami()
             expected_res = "dn:%s" % self.cfg["SIMPLEAUTH"]["user"]
             self.assertEqual(obj, expected_res)
             

@@ -4,10 +4,11 @@ from tornado.ioloop import IOLoop
 from tornado.concurrent import Future
 
 from ..ldapconnection import LDAPConnection
+from ..errors import LDAPError
 
 class TornadoLDAPConnection(LDAPConnection):
     def __init__(self, client, ioloop):
-        suprt().__init__(self, is_async=True)
+        super().__init__(client, is_async=True)
         self._ioloop = ioloop or IOLoop.instance()
         self._fileno = None
         
@@ -19,7 +20,13 @@ class TornadoLDAPConnection(LDAPConnection):
                 fut.set_result(res)
             else:
                 self._fileno = self.fileno()
-                self.ioloop.add_handler(self._fileno, callback, IOLoop.WRITE | IOLoop.READ)
+                callback = partial(self._io_callback, fut, msg_id)
+                try:
+                    self._ioloop.add_handler(self._fileno, callback,
+                                             IOLoop.WRITE | IOLoop.READ)
+                except FileExistsError as exc:
+                    if exc.errno != 17:
+                        raise exc
         except LDAPError as exc:
             fut.set_exception(exc)
     
@@ -27,7 +34,14 @@ class TornadoLDAPConnection(LDAPConnection):
         fut = Future()
         callback = partial(self._io_callback, fut, msg_id)
         self._fileno = self.fileno()
-        self.ioloop.add_handler(self._fileno, callback, IOLoop.WRITE | IOLoop.READ)
+        try:
+            self._ioloop.add_handler(self._fileno, callback,
+                                     IOLoop.WRITE | IOLoop.READ)
+        except FileExistsError as exc:
+            # Avoid concurrency problems by registring with
+            # the same fileno more than once.
+            if exc.errno != 17:
+                raise exc
         return fut
     
     def search(self, base=None, scope=None, filter=None, attrlist=None,

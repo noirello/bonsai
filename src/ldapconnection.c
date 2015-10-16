@@ -66,6 +66,7 @@ ldapconnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	ldapclient_type = load_python_object("bonsai.ldapclient", "LDAPClient");
 	if (ldapclient_type == NULL ||
 		!PyObject_IsInstance(client, ldapclient_type)) {
+		PyErr_SetString(PyExc_TypeError, "Type of the client parameter must be an LDAPClient.");
 		return -1;
 	}
 	Py_DECREF(ldapclient_type);
@@ -651,7 +652,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
 				set_exception(self->ld, rc);
 			}
 			mods = (LDAPModList *)PyDict_GetItemString(self->pending_ops, msgidstr);
-			if (mods != NULL && mods != Py_None) {
+			if (mods != NULL && (PyObject *)mods != Py_None) {
 				/* LDAP add or modify operation is failed,
 				   then rollback the changes. */
 				if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0) {

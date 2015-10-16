@@ -64,7 +64,7 @@ setup(name="bonsai",
       license="MIT",
       ext_modules=[pyldap_module],
       package_dir = {"bonsai": "lib"},
-      packages=["bonsai", "bonsai.asyncio", "bonsai.gevent"],
+      packages=["bonsai", "bonsai.asyncio", "bonsai.gevent", "bonsai.tornado"],
       cmdclass={"test": TestCommand},
       classifiers=[
           'Development Status :: 4 - Beta',
