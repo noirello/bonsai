@@ -519,6 +519,13 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 	/* Cleanup. */
 	if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
 
+	if (self->page_size == 0) {
+		/* No page size set, return a list instead of an iterator. */
+		Py_INCREF(search_iter->buffer);
+		Py_DECREF(search_iter);
+		return search_iter->buffer;
+	}
+
 	return (PyObject *)search_iter;
 }
 
@@ -643,10 +650,19 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
 			if (rc != LDAP_SUCCESS) {
 				set_exception(self->ld, rc);
 			}
+			mods = (LDAPModList *)PyDict_GetItemString(self->pending_ops, msgidstr);
+			if (mods != NULL && mods != Py_None) {
+				/* LDAP add or modify operation is failed,
+				   then rollback the changes. */
+				if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0) {
+					return NULL;
+				}
+			}
 			/* Remove operations from pending_ops. */
 			if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
 				PyErr_BadInternalCall();
 			}
+
 			return NULL;
 		}
 		break;
@@ -679,8 +695,9 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
 		if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
 			/* LDAP add or modify operation is failed,
 			   then rollback the changes. */
-			if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0)
+			if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0) {
 				return NULL;
+			}
 			/* Set Python error. */
 			set_exception(self->ld, err);
 			return NULL;

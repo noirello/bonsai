@@ -167,7 +167,7 @@ static PyMethodDef ldapsearchiter_methods[] = {
 
 PyTypeObject LDAPSearchIterType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "_bonsai.LDAPSearchIter",       /* tp_name */
+    "_bonsai.ldapsearchiter",       /* tp_name */
     sizeof(LDAPSearchIter),        /* tp_basicsize */
     0,                         /* tp_itemsize */
     (destructor)ldapsearchiter_dealloc, /* tp_dealloc */
@@ -187,7 +187,7 @@ PyTypeObject LDAPSearchIterType = {
     0,                         /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT |
         Py_TPFLAGS_BASETYPE,   /* tp_flags */
-    "LDAPSearchIter object",   	   /* tp_doc */
+    "ldapsearchiter object",   	   /* tp_doc */
     0,                         /* tp_traverse */
     0,                         /* tp_clear */
     0,                         /* tp_richcompare */
