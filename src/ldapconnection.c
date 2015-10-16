@@ -638,6 +638,15 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
 		if (self->async == 0) {
 			/* Set TimeoutError. */
 			set_exception(self->ld, -5);
+			/* Abandon the operation on the server. */
+			rc = ldap_abandon_ext(self->ld, msgid, NULL, NULL);
+			if (rc != LDAP_SUCCESS) {
+				set_exception(self->ld, rc);
+			}
+			/* Remove operations from pending_ops. */
+			if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
+				PyErr_BadInternalCall();
+			}
 			return NULL;
 		}
 		break;
