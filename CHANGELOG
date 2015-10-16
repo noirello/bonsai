@@ -11,6 +11,7 @@ LDAPConnection.
 - Default async class can be change to other class implementation that
 can work with non-asyncio based approaches (e.g. like Gevent).
 - Names of the objects implemented in C are all lower-cased.
+
 ### Added
 - Full unicode (UTF-8) support on MS Windows with WinLDAP.
 - LDAPConnection.fileno() method to get the socket descriptor of the
@@ -18,7 +19,9 @@ connection.
 - New methods for LDAPClient to set CA cert, client cert and client key.
 - EXTERNAL SASL mechanism for binding.
 - Use of authorization ID during SASL binding.
-- New classes for supporting Gevent and Tornado asynchronous modules. 
+- New classes for supporting Gevent and Tornado asynchronous modules.
+- Timeout parameter for LDAP operations.
+
 ### Fixed
 - Own error codes start from -100 to avoid overlap with OpenLDAP's and
 WinLDAP's error codes.

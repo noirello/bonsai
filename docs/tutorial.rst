@@ -111,8 +111,8 @@ After we finished our work with the directory server we should close the connect
 
     >>> conn.close()
 
-The :class:`LDAPConnection` object can be used with a context manager that will call
-the :meth:`LDAPConnection.close` method implicit:
+The :class:`LDAPConnection` object can be used with a context manager that will implicitly call the
+:meth:`LDAPConnection.close` method:
 
 .. code-block:: python
 
