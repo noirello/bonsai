@@ -7,17 +7,23 @@ from bonsai import LDAPClient
 from bonsai import LDAPEntry
 import bonsai.errors
 
+def dummy(f):
+    return f
+
 try:
-    import tornado
+    from tornado.testing import gen_test
     from tornado.testing import AsyncTestCase
-    from bonsai.tornado import TornadoLDAPConnection 
+    from bonsai.tornado import TornadoLDAPConnection
+    TestCaseClass = AsyncTestCase
     modinstalled = True
 except ImportError:
+    TestCaseClass = unittest.TestCase
+    gen_test = dummy
     modinstalled = False
     pass
 
 @unittest.skipIf(not modinstalled, "Tornado is not installed.")
-class TornadoLDAPConnectionTest(AsyncTestCase):
+class TornadoLDAPConnectionTest(TestCaseClass):
     """ Test TornadoLDAPConnection object. """
     def setUp(self):
         """ Set LDAP URL and open connection. """
@@ -36,20 +42,20 @@ class TornadoLDAPConnectionTest(AsyncTestCase):
         self.client.set_async_connection_class(TornadoLDAPConnection)
         self.io_loop = self.get_new_ioloop()
         
-    @tornado.testing.gen_test
+    @gen_test
     def test_connection(self):
         conn = yield self.client.connect(True, ioloop=self.io_loop)
         self.assertIsNotNone(conn)
         self.assertFalse(conn.closed)
         conn.close()
     
-    @tornado.testing.gen_test
+    @gen_test
     def test_search(self):
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             res = yield conn.search()
             self.assertIsNotNone(res)
    
-    @tornado.testing.gen_test
+    @gen_test
     def test_add_and_delete(self):
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)
@@ -69,7 +75,7 @@ class TornadoLDAPConnectionTest(AsyncTestCase):
             res = yield conn.search()
             self.assertNotIn(entry, res)
 
-    @tornado.testing.gen_test
+    @gen_test
     def test_modify_and_rename(self):
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)
@@ -92,7 +98,7 @@ class TornadoLDAPConnectionTest(AsyncTestCase):
             self.assertEqual(res, [])
             yield conn.delete(entry.dn)
     
-    @tornado.testing.gen_test
+    @gen_test
     def test_obj_err(self):
         entry = LDAPEntry("cn=async_test,%s" % self.basedn)
         entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
@@ -106,7 +112,7 @@ class TornadoLDAPConnectionTest(AsyncTestCase):
             self.fail("test_obj_err failed with %s" % exc)
         self.fail("test_obj_err failed without the right exception.")
 
-    @tornado.testing.gen_test
+    @gen_test
     def test_whoami(self):
         """ Test whoami. """
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
