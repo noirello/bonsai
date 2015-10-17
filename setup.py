@@ -53,19 +53,24 @@ with open('README.md') as file:
     # Change linking format from GitHub style to PyPI compatible format.
     pat = r"\[([a-zA-Z_ ]*)\]\(([a-zA-Z_:/.]*)\)"
     long_descr = re.sub(pat, r"`\g<1> <\g<2>>`_", long_descr)
+    # Change codeblock format
+    long_descr = long_descr.replace("```python", ".. code-block:: python")
+    long_descr = long_descr.replace("```\n", "")
 
 setup(name="bonsai",
       version="0.8.0",
       description="Module for Python 3 to access LDAP directory servers.",
       author="noirello",
       author_email="noirello@gmail.com",
-      url="https://github.com/Noirello/PyLDAP",
+      url="https://github.com/noirello/bonsai",
       long_description=long_descr,
       license="MIT",
       ext_modules=[pyldap_module],
       package_dir = {"bonsai": "lib"},
       packages=["bonsai", "bonsai.asyncio", "bonsai.gevent", "bonsai.tornado"],
+      include_package_data=True,
       cmdclass={"test": TestCommand},
+      keywords=["python3", "ldap", "libldap", "winldap"],
       classifiers=[
           'Development Status :: 4 - Beta',
           'Intended Audience :: Developers',

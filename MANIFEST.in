@@ -4,3 +4,6 @@ recursive-include tests *.py
 recursive-include docs *.rst *.py *.css Makefile make.bat
 include README.md
 include LICENSE
+include CHANGELOG
+include tests/test.ini
+recursive-exclude docs/_build *

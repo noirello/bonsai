@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.8.0] - 2015-10-14
+## [0.8.0] - 2015-10-17
 ### Changed
 - New module name (from PyLDAP) to avoid confusion with other Python LDAP
 packages.

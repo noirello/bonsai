@@ -45,6 +45,10 @@ Documentation
 
 Documentation is available [online](http://bonsai.readthedocs.org/en/latest/) with a simple tutorial.
 
+Changelog
+---------
+
+Currently, you can read the changelog [here](https://github.com/noirello/bonsai/blob/master/CHANGELOG). 
 
 Contribution
 ------------

@@ -148,7 +148,7 @@ An example for asynchronous search and modify with `asyncio`:
             for res in results:
                 print(res['givenName'][0])
             search = yield from conn.search("cn=chuck,ou=nerdherd,dc=local", 0)
-            entry = list(search)[0]
+            entry = search[0]
             entry['mail'] = "chuck@nerdherd.com"
             yield from entry.modify()
 
@@ -157,6 +157,30 @@ An example for asynchronous search and modify with `asyncio`:
 
 It is also possible to change this class to a different one with :meth:`LDAPClient.set_async_connection_class` that is able
 to work with other non-blocking I/O modules like `Gevent`_ or `Tornado`_.
+
+For example using the module with Gevent:
+
+.. code-block:: python
+
+    import gevent
+
+    import bonsai
+    from bonsai.gevent import GeventLDAPConnection
+
+    def do():
+        cli = bonsai.LDAPClient("ldap://localhost")
+        # Change the default async conn class.
+        cli.set_async_connection_class(GeventLDAPConnection)
+        with cli.connect(True) as conn:
+            results = conn.search("ou=nerdherd,dc=local", 1)
+            for res in results:
+                print(res['givenName'][0])
+            search = conn.search("cn=chuck,ou=nerdherd,dc=local", 0)
+            entry = search[0]
+            entry['mail'] = "chuck@nerdherd.com"
+            entry.modify()
+
+    gevent.joinall([gevent.spawn(do)])
 
 .. _Gevent: http://www.gevent.org/
 .. _Tornado: http://www.tornadoweb.org/en/stable/
