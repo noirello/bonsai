@@ -73,7 +73,7 @@ LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld) {
 	return 0;
 }
 
-static int
+static int WINAPI
 ldap_thread_bind(void *params) {
 	int rc = 0;
 	char *binddn = NULL;
@@ -391,7 +391,11 @@ thus to avoid the I/O blocking in the main (Python) thread the initialisation
 is done in a separate (POSIX and Windows) thread. A signal is sent through an
 internal socketpair when the thread is finished, thus select() can be used on
 the socket descriptor. */
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+static int WINAPI
+#else
 static void *
+#endif
 ldap_init_thread(void *params) {
 	int rc = -1;
 	const int version = LDAP_VERSION3;
@@ -433,10 +437,11 @@ ldap_init_thread(void *params) {
 	}
 end:
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+	return 0;
 #else
 	pthread_mutex_unlock(ldap_params->mux);
-#endif
 	return NULL;
+#endif
 }
 
 /* Initialise an LDAP struct, and create a separate thread for building up TLS connection.
@@ -511,7 +516,7 @@ LDAP_start_init(PyObject *client, SOCKET sock, void **thread, void **misc) {
 	data->sock = sock;
 	/* Create the separate thread. */
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-	*thread = (void *)CreateThread(NULL, 0, (int(*)(void*))&ldap_init_thread, (void *)data, 0, NULL);
+	*thread = (void *)CreateThread(NULL, 0, ldap_init_thread, (void *)data, 0, NULL);
 	if (*thread == NULL) goto error;
 #else
 	*thread = (pthread_t *)malloc(sizeof(pthread_t));

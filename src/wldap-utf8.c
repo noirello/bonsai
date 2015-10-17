@@ -1085,7 +1085,7 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
 	} else {
 		/* Set authorization ID for EXTERNAL. */
 		cred.bv_val = defs->authzid;
-		if (defs->authzid != NULL)  cred.bv_len = strlen(defs->authzid);
+		if (defs->authzid != NULL) cred.bv_len = (unsigned long)strlen(defs->authzid);
 		else cred.bv_len = 0;
 	}
 	do {
