@@ -277,14 +277,13 @@ LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr) {
 
 /* Delete an entry on the server. */
 static PyObject *
-ldapconnection_delentry(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+ldapconnection_delentry(LDAPConnection *self, PyObject *args) {
 	char *dnstr = NULL;
 	int msgid = -1;
-	static char *kwlist[] = {"dn", NULL};
 
 	if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist, &dnstr)) {
+	if (!PyArg_ParseTuple(args, "s", &dnstr)) {
 		PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
 		return NULL;
 	}
@@ -763,13 +762,12 @@ ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
 /* Cancel an ongoing LDAP operation. */
 static PyObject *
-ldapconnection_cancel(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+ldapconnection_cancel(LDAPConnection *self, PyObject *args) {
 	int msgid = -1;
 	char msgidstr[8];
 	int rc = 0;
-	static char *kwlist[] = {"msgid", NULL};
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &msgid)) {
+	if (!PyArg_ParseTuple(args, "i", &msgid)) {
 		PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
 		return NULL;
 	}
@@ -812,11 +810,10 @@ ldapconnection_fileno(LDAPConnection *self) {
 
 /* Set the page size for a paged search. */
 static PyObject *
-ldapconnection_setpagesize(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+ldapconnection_setpagesize(LDAPConnection *self, PyObject *args) {
 	int page_size = -1;
-	static char *kwlist[] = {"page_size", NULL};
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &page_size)) {
+	if (!PyArg_ParseTuple(args, "i", &page_size)) {
 		PyErr_SetString(PyExc_ValueError,
 				"The page_size parameter must be an integer.");
 		return NULL;
@@ -834,13 +831,12 @@ ldapconnection_setpagesize(LDAPConnection *self, PyObject *args, PyObject *kwds)
 
 /* Set sort order for a search. */
 static PyObject *
-ldapconnection_setsortorder(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+ldapconnection_setsortorder(LDAPConnection *self, PyObject *args) {
 	PyObject *sort_list = NULL;
-	static char *kwlist[] = {"sort_list", NULL};
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!", kwlist, &PyList_Type, &sort_list)) {
+	if (!PyArg_ParseTuple(args, "O!", &PyList_Type, &sort_list)) {
 		PyErr_SetString(PyExc_ValueError,
-				"The sort_list parameter must be a list.");
+			"The sort_list parameter must be a list.");
 		return NULL;
 	}
 
