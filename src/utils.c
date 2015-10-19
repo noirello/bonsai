@@ -333,7 +333,8 @@ set_exception(LDAP *ld, int code) {
 		}
 		ldap_memfree(opt_errorstr);
 	} else {
-		PyErr_SetString(ldaperror, errorstr);
+		if (errorstr != NULL) PyErr_SetString(ldaperror, errorstr);
+		else PyErr_SetString(ldaperror, "");
 	}
 	Py_DECREF(ldaperror);
 }

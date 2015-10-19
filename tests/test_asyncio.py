@@ -63,7 +63,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
                 self.fail("Unexcepected error.")
             res = yield from conn.search()
             self.assertIn(entry, res)
-            entry.delete()
+            yield from entry.delete()
             res = yield from conn.search()
             self.assertNotIn(entry, res)
 
