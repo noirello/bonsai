@@ -210,7 +210,7 @@ LDAPConnectIter_Next(LDAPConnectIter *self) {
 	}
 
 	if (self->init_finished == 0) {
-		rc = LDAP_finish_init((int)(self->conn->async), self->thread, self->data, &(self->conn->ld));
+		rc = LDAP_finish_init(self->conn->async, self->thread, self->data, &(self->conn->ld));
 		if (rc == -1) return NULL; /* Error is happened. */
 		if (rc == 1) {
 			/* Initialisation is finished. */

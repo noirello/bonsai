@@ -71,7 +71,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
                 self.fail("Unexcepected error.")
             res = yield conn.search()
             self.assertIn(entry, res)
-            entry.delete()
+            yield entry.delete()
             res = yield conn.search()
             self.assertNotIn(entry, res)
 

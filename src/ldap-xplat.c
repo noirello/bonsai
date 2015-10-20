@@ -40,7 +40,7 @@ set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert, char
    The `misc` parameter is a pointer to the thread's  data structure that contains the
    LDAP struct. The initialised LDAP struct is passed to the `ld` parameter. */
 int
-LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld) {
+LDAP_finish_init(char async, void *thread, void *misc, LDAP **ld) {
 	int rc = -1;
 
 	/* Sanity check. */
@@ -180,38 +180,44 @@ _pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
    LDAP struct is passed to the `ld` parameter. Return 1 if the initialisation
    thread is finished, 0 if it is still in progress, and -1 for error. */
 int
-LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld) {
+LDAP_finish_init(char async, void *thread, void *misc, LDAP **ld) {
 	int rc = 0; /* Must be 0 for sync. */
 	ldapThreadData *val = (ldapThreadData *)misc;
 	struct timespec ts;
 	struct timeval now;
 	const int wait_msec = 100;
-
-	/* Create absolute time. */
-	gettimeofday(&now, NULL);
-	ts.tv_sec = now.tv_sec;
-	ts.tv_nsec = (now.tv_usec + 1000UL * wait_msec) * 1000UL;
-	if (ts.tv_nsec >= 1000000000) {
-		/* Nanosecs are over 1 second. */
-		ts.tv_sec += 1;
-		ts.tv_nsec -= 1000000000;
-	}
+	int retval = 0;
 
 	/* Sanity check. */
 	if (thread == NULL || val == NULL) return -1;
 
 	if (async) {
+		/* Create absolute time. */
+		rc = gettimeofday(&now, NULL);
+		if (rc != 0) {
+			PyErr_BadInternalCall();
+			retval = -1;
+			goto end;
+		}
+
+		ts.tv_sec = now.tv_sec;
+		ts.tv_nsec = (now.tv_usec + 1000UL * wait_msec) * 1000UL;
+		if (ts.tv_nsec >= 1000000000) {
+			/* Nanosecs are over 1 second. */
+			ts.tv_sec += 1;
+			ts.tv_nsec -= 1000000000;
+		}
 		/* Waiting on thread to release the lock. */
 		rc = _pthread_mutex_timedlock(val->mux, &ts);
 	}
 	switch (rc) {
 	case ETIMEDOUT:
-		break;
+		return 0;
 	case 0:
 		if (val->flag == 0) {
 			/* Premature locking, thread function is not finished. */
 			pthread_mutex_unlock(val->mux);
-			break;
+			return 0;
 		}
 		/* Block until thread is finished, but if it's async already
 		   waited enough on releasing the lock. */
@@ -225,15 +231,14 @@ LDAP_finish_init(int async, void *thread, void *misc, LDAP **ld) {
 		}
 		/* Set initialised LDAP struct pointer. */
 		*ld = val->ld;
-		rc = 1;
+		retval = 1;
 		goto end;
 	default:
 		/* The thread is failed. */
 		PyErr_BadInternalCall();
-		rc = -1;
+		retval = -1;
 		goto end;
 	}
-	return 0;
 end:
 	/* Clean-up. */
 	if (val->url != NULL) free(val->url);
@@ -244,7 +249,7 @@ end:
 	pthread_mutex_destroy(val->mux);
 	free(val->mux);
 	free(val);
-	return rc;
+	return retval;
 }
 
 int
@@ -525,7 +530,8 @@ LDAP_start_init(PyObject *client, SOCKET sock, void **thread, void **misc) {
 	data->flag = 0;
 	data->mux = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
 	if (data->mux == NULL) goto error;
-	pthread_mutex_init(data->mux, NULL);
+
+	rc = pthread_mutex_init(data->mux, NULL);
 
 	rc = pthread_create((pthread_t *)thread, NULL, ldap_init_thread, (void *)data);
 #endif
