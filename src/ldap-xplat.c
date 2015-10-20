@@ -185,6 +185,7 @@ LDAP_finish_init(char async, void *thread, void *misc, LDAP **ld) {
 	ldapThreadData *val = (ldapThreadData *)misc;
 	struct timespec ts;
 	struct timeval now;
+	struct timespec rest;
 	const int wait_msec = 100;
 	int retval = 0;
 
@@ -217,6 +218,11 @@ LDAP_finish_init(char async, void *thread, void *misc, LDAP **ld) {
 		if (val->flag == 0) {
 			/* Premature locking, thread function is not finished. */
 			pthread_mutex_unlock(val->mux);
+			/* Set 5ms for sleeping time. */
+			rest.tv_sec = 0;
+			rest.tv_nsec = 5000000;
+			/* Take a nap, try to avoid constantly locking from the main thread. */
+			nanosleep(&rest, NULL);
 			return 0;
 		}
 		/* Block until thread is finished, but if it's async already
