@@ -20,20 +20,22 @@ def asyncio_test(func):
 
 class AIOLDAPConnectionTest(unittest.TestCase):
     """ Test AIOLDAPConnection object. """
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         """ Set LDAP URL and open connection. """
         curdir = os.path.abspath(os.path.dirname(__file__))
-        self.cfg = configparser.ConfigParser()
-        self.cfg.read(os.path.join(curdir, 'test.ini'))
-        self.url = "ldap://%s:%s/%s?%s?%s" % (self.cfg["SERVER"]["host"], \
-                                        self.cfg["SERVER"]["port"], \
-                                        self.cfg["SERVER"]["basedn"], \
-                                        self.cfg["SERVER"]["search_attr"], \
-                                        self.cfg["SERVER"]["search_scope"])
-        self.basedn = self.cfg["SERVER"]["basedn"]
-        self.client = LDAPClient(self.url)
-        self.client.set_credentials("SIMPLE", (self.cfg["SIMPLEAUTH"]["user"],
-                                          self.cfg["SIMPLEAUTH"]["password"]))
+        cfg = configparser.ConfigParser()
+        cfg.read(os.path.join(curdir, 'test.ini'))
+        cls.url = "ldap://%s:%s/%s?%s?%s" % (cfg["SERVER"]["host"], \
+                                             cfg["SERVER"]["port"], \
+                                             cfg["SERVER"]["basedn"], \
+                                             cfg["SERVER"]["search_attr"], \
+                                             cfg["SERVER"]["search_scope"])
+        cls.basedn = cfg["SERVER"]["basedn"]
+        cls.client = LDAPClient(cls.url)
+        cls.client.set_credentials("SIMPLE", (cfg["SIMPLEAUTH"]["user"],
+                                              cfg["SIMPLEAUTH"]["password"]))
+        cls.user = cfg["SIMPLEAUTH"]["user"]
         
     @asyncio_test
     def test_connection(self):
@@ -74,6 +76,11 @@ class AIOLDAPConnectionTest(unittest.TestCase):
             entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
                                     'organizationalPerson']
             entry['sn'] = "async_test"
+            oldname = "cn=async_test,%s" % self.basedn
+            newname = "cn=async_test2,%s" % self.basedn
+            res = yield from conn.search(newname, 0)
+            if res:
+                yield from res[0].delete()
             try:
                 yield from conn.add(entry)
             except bonsai.errors.AlreadyExists:
@@ -83,10 +90,10 @@ class AIOLDAPConnectionTest(unittest.TestCase):
                 self.fail("Unexcepected error.")
             entry['sn'] = "async_test2"
             yield from entry.modify()
-            yield from entry.rename("cn=async_test2,%s" % self.basedn)
+            yield from entry.rename(newname)
             res = yield from conn.search(entry.dn, 0, attrlist=['sn'])
             self.assertEqual(entry['sn'], res[0]['sn'])
-            res = yield from conn.search("cn=async_test,%s" % self.basedn, 0)
+            res = yield from conn.search(oldname, 0)
             self.assertEqual(res, [])
             yield from conn.delete(entry.dn)
 
@@ -105,7 +112,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
         """ Test whoami. """
         with (yield from self.client.connect(True)) as conn:
             obj = yield from conn.whoami()
-            expected_res = "dn:%s" % self.cfg["SIMPLEAUTH"]["user"]
+            expected_res = "dn:%s" % self.user
             self.assertEqual(obj, expected_res)
             
 if __name__ == '__main__':

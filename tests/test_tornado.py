@@ -82,6 +82,11 @@ class TornadoLDAPConnectionTest(TestCaseClass):
             entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
                                     'organizationalPerson']
             entry['sn'] = "async_test"
+            oldname = "cn=async_test,%s" % self.basedn
+            newname = "cn=async_test2,%s" % self.basedn
+            res = yield conn.search(newname, 0)
+            if res:
+                yield res[0].delete()
             try:
                 yield conn.add(entry)
             except bonsai.errors.AlreadyExists:
@@ -91,10 +96,10 @@ class TornadoLDAPConnectionTest(TestCaseClass):
                 self.fail("Unexcepected error.")
             entry['sn'] = "async_test2"
             yield entry.modify()
-            yield entry.rename("cn=async_test2,%s" % self.basedn)
+            yield entry.rename(newname)
             res = yield conn.search(entry.dn, 0, attrlist=['sn'])
             self.assertEqual(entry['sn'], res[0]['sn'])
-            res = yield conn.search("cn=async_test,%s" % self.basedn, 0)
+            res = yield conn.search(oldname, 0)
             self.assertEqual(res, [])
             yield conn.delete(entry.dn)
     

@@ -7,17 +7,18 @@ from bonsai import LDAPEntry
 import bonsai.errors
 
 class LDAPEntryTest(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         curdir = os.path.abspath(os.path.dirname(__file__))
         """ Set LDAP client, get config parameters. """
         cfg = configparser.ConfigParser()
         cfg.read(os.path.join(curdir, 'test.ini'))
         url = "ldap://%s:%s" % (cfg["SERVER"]["host"],
                                 cfg["SERVER"]["port"])
-        self.client = LDAPClient(url)
-        self.creds = ("SIMPLE", (cfg["SIMPLEAUTH"]["user"],
+        cls.client = LDAPClient(url)
+        cls.creds = ("SIMPLE", (cfg["SIMPLEAUTH"]["user"],
                                  cfg["SIMPLEAUTH"]["password"]))
-        self.basedn = cfg["SERVER"]["basedn"]
+        cls.basedn = cfg["SERVER"]["basedn"]
 
     def test_set_get(self):
         """ Test LDAPEntry's SetItem, GetItem and get methods. """  
