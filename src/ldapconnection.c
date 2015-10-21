@@ -143,7 +143,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	*conniter = LDAPConnectIter_New(self, info);
 	if (*conniter == NULL) return -1;
 
-	rc = LDAP_start_init(self->client, ssock, &((*conniter)->thread), &((*conniter)->data));
+	rc = _ldap_start_init_thread(self->client, ssock, &((*conniter)->thread), &((*conniter)->data));
 
 	if (rc != 0) {
 		set_exception(self->ld, rc);
@@ -324,6 +324,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 		rc = ldap_create_page_control(self->ld, self->page_size,
 				search_iter->cookie, 0, &page_ctrl);
 		if (rc != LDAP_SUCCESS) {
+			free(server_ctrls);
 			PyErr_BadInternalCall();
 			return -1;
 		}
@@ -334,6 +335,8 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	if (self->sort_list != NULL) {
 		rc = ldap_create_sort_control(self->ld, self->sort_list, 0, &sort_ctrl);
 		if (rc != LDAP_SUCCESS) {
+			if (page_ctrl != NULL) ldap_control_free(page_ctrl);
+			free(server_ctrls);
 			PyErr_BadInternalCall();
 			return -1;
 		}
@@ -352,14 +355,16 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 
 	if (rc != LDAP_SUCCESS) {
 		set_exception(self->ld, rc);
-		return -1;
+		msgid = -1;
+		goto error;
 	}
 
 	if (add_to_pending_ops(self->pending_ops, msgid,
 			(PyObject *)search_iter) != 0) {
-		return -1;
+		msgid = -1;
+		goto error;
 	}
-
+error:
 	/* Cleanup. */
 	if (page_ctrl != NULL) ldap_control_free(page_ctrl);
 	if (sort_ctrl != NULL) ldap_control_free(sort_ctrl);

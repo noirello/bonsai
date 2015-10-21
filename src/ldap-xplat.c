@@ -40,7 +40,7 @@ set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert, char
    The `misc` parameter is a pointer to the thread's  data structure that contains the
    LDAP struct. The initialised LDAP struct is passed to the `ld` parameter. */
 int
-LDAP_finish_init(char async, void *thread, void *misc, LDAP **ld) {
+_ldap_finish_init_thread(char async, void *thread, void *misc, LDAP **ld) {
 	int rc = -1;
 
 	/* Sanity check. */
@@ -103,7 +103,7 @@ ldap_thread_bind(void *params) {
 /* Create a separate thread for binding to the server. Results of asynchronous
 SASL function call cannot be parsed (because of some kind of bug in WinLDAP). */
 int
-LDAP_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid) {
+_ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid) {
 
 	info->ld = ld;
 	info->thread = (void *)CreateThread(NULL, 0, ldap_thread_bind, (void *)info, 0, NULL);
@@ -180,7 +180,7 @@ _pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
    LDAP struct is passed to the `ld` parameter. Return 1 if the initialisation
    thread is finished, 0 if it is still in progress, and -1 for error. */
 int
-LDAP_finish_init(char async, void *thread, void *misc, LDAP **ld) {
+_ldap_finish_init_thread(char async, void *thread, void *misc, LDAP **ld) {
 	int rc = 0; /* Must be 0 for sync. */
 	ldapThreadData *val = (ldapThreadData *)misc;
 	struct timespec ts;
@@ -259,7 +259,7 @@ end:
 }
 
 int
-LDAP_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid) {
+_ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid) {
 	int rc;
 	LDAPControl	**sctrlsp = NULL;
 	struct berval passwd;
@@ -412,38 +412,44 @@ ldap_init_thread(void *params) {
 	const int version = LDAP_VERSION3;
 	ldapThreadData *ldap_params = (ldapThreadData *)params;
 
-	if (ldap_params != NULL) {
+	if (ldap_params == NULL) {
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+		return 0;
+#else
+		return NULL;
+#endif
+	}
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 #else
-		pthread_mutex_lock(ldap_params->mux);
-		/* Lock already acquired by this thread, flag can be set now. */
-		ldap_params->flag = 1;
+	pthread_mutex_lock(ldap_params->mux);
+	/* Lock already acquired by this thread, flag can be set now. */
+	ldap_params->flag = 1;
 #endif
-		rc = ldap_initialize(&(ldap_params->ld), ldap_params->url);
-		if (rc != LDAP_SUCCESS) {
-			ldap_params->retval = rc;
-			goto end;
-		}
-		/* Set version to LDAPv3. */
-		ldap_set_option(ldap_params->ld, LDAP_OPT_PROTOCOL_VERSION, &version);
-		if (ldap_params->cert_policy != -1) {
-			set_cert_policy(ldap_params->ld, ldap_params->cert_policy);
-		}
-		/* Set CA cert dir, CA cert and client cert. */
-		set_certificates(ldap_params->ld, ldap_params->ca_cert_dir,
-				ldap_params->ca_cert, ldap_params->client_cert,
-				ldap_params->client_key);
-		if (ldap_params->tls == 1) {
-			/* Start TLS if it's required. */
-			rc = ldap_start_tls_s(ldap_params->ld, NULL, NULL);
-		}
+	rc = ldap_initialize(&(ldap_params->ld), ldap_params->url);
+	if (rc != LDAP_SUCCESS) {
 		ldap_params->retval = rc;
-		if (ldap_params->sock != -1) {
-			/* Send a signal through an internal socketpair. */
-			if (send(ldap_params->sock, "s", 1, 0) == -1) {
-				/* Signalling is failed. */
-				ldap_params->retval = -1;
-			}
+		goto end;
+	}
+	/* Set version to LDAPv3. */
+	ldap_set_option(ldap_params->ld, LDAP_OPT_PROTOCOL_VERSION, &version);
+	if (ldap_params->cert_policy != -1) {
+		set_cert_policy(ldap_params->ld, ldap_params->cert_policy);
+	}
+	/* Set CA cert dir, CA cert and client cert. */
+	set_certificates(ldap_params->ld, ldap_params->ca_cert_dir,
+			ldap_params->ca_cert, ldap_params->client_cert,
+			ldap_params->client_key);
+	if (ldap_params->tls == 1) {
+		/* Start TLS if it's required. */
+		rc = ldap_start_tls_s(ldap_params->ld, NULL, NULL);
+	}
+	ldap_params->retval = rc;
+	if (ldap_params->sock != -1) {
+		/* Send a signal through an internal socketpair. */
+		if (send(ldap_params->sock, "s", 1, 0) == -1) {
+			/* Signalling is failed. */
+			ldap_params->retval = -1;
 		}
 	}
 end:
@@ -459,71 +465,90 @@ end:
 The thread's pointer and the data struct's pointer that contains the LDAP struct is
 passed to the `thread` and `misc` parameters respectively. */
 int
-LDAP_start_init(PyObject *client, SOCKET sock, void **thread, void **misc) {
+_ldap_start_init_thread(PyObject *client, SOCKET sock, void **thread, void **misc) {
 	int rc = 0;
-	char *addrstr = NULL;
 	ldapThreadData *data = NULL;
 	PyObject *url = NULL;
 	PyObject *tmp = NULL;
 	PyObject *tls = NULL;
 
 	data = (ldapThreadData *)malloc(sizeof(ldapThreadData));
-	if (data == NULL) return -1;
+	if (data == NULL) {
+		PyErr_NoMemory();
+		return -1;
+	}
 
 	/* Get URL policy from LDAPClient. */
 	url = PyObject_GetAttrString(client, "url");
-	if (url == NULL) return -1;
+	if (url == NULL) {
+		free(data);
+		return -1;
+	}
 
 	/* Get URL address information from the LDAPClient's LDAPURL object. */
 	tmp = PyObject_CallMethod(url, "get_address", NULL);
 	Py_DECREF(url);
 	if (tmp == NULL) return -1;
-	addrstr = PyObject2char(tmp);
+	data->url = PyObject2char(tmp);
 	Py_DECREF(tmp);
-	if (addrstr == NULL) return -1;
+	if (data->url == NULL) {
+		free(data);
+		return -1;
+	}
 
 	/* Check the TLS state. */
 	tls = PyObject_GetAttrString(client, "tls");
-	if (tls == NULL) return -1;
+	if (tls == NULL) goto error;
 	data->tls = PyObject_IsTrue(tls);
 	Py_DECREF(tls);
 
 	/* Set cert policy from LDAPClient. */
 	tmp = PyObject_GetAttrString(client, "cert_policy");
-	if (tmp == NULL) return -1;
+	if (tmp == NULL) goto error;
 	data->cert_policy = (int)PyLong_AsLong(tmp);
 	Py_DECREF(tmp);
 
 	/* Set CA cert directory from LDAPClient. */
 	tmp = PyObject_GetAttrString(client, "ca_cert_dir");
-	if (tmp == NULL) return -1;
+	if (tmp == NULL) goto error;
 	if (tmp == Py_None) data->ca_cert_dir = NULL;
 	else data->ca_cert_dir = PyObject2char(tmp);
 	Py_DECREF(tmp);
 
 	/* Set CA cert from LDAPClient. */
 	tmp = PyObject_GetAttrString(client, "ca_cert");
-	if (tmp == NULL) return -1;
+	if (tmp == NULL) {
+		if (data->ca_cert_dir != NULL) free(data->ca_cert_dir);
+		goto error;
+	}
 	if (tmp == Py_None) data->ca_cert = NULL;
 	else data->ca_cert = PyObject2char(tmp);
 	Py_DECREF(tmp);
 
 	/* Set client cert from LDAPClient. */
 	tmp = PyObject_GetAttrString(client, "client_cert");
-	if (tmp == NULL) return -1;
+	if (tmp == NULL) {
+		if (data->ca_cert_dir != NULL) free(data->ca_cert_dir);
+		if (data->ca_cert != NULL) free(data->ca_cert);
+		goto error;
+	}
 	if (tmp == Py_None) data->client_cert = NULL;
 	else data->client_cert = PyObject2char(tmp);
 	Py_DECREF(tmp);
 
 	/* Set client key from LDAPClient. */
 	tmp = PyObject_GetAttrString(client, "client_key");
-	if (tmp == NULL) return -1;
+	if (tmp == NULL) {
+		if (data->ca_cert_dir != NULL) free(data->ca_cert_dir);
+		if (data->ca_cert != NULL) free(data->ca_cert);
+		if (data->client_cert != NULL) free(data->client_cert);
+		goto error;
+	}
 	if (tmp == Py_None) data->client_key = NULL;
 	else data->client_key = PyObject2char(tmp);
 	Py_DECREF(tmp);
 
 	data->ld = NULL;
-	data->url = addrstr;
 	data->sock = sock;
 	/* Create the separate thread. */
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
@@ -531,20 +556,30 @@ LDAP_start_init(PyObject *client, SOCKET sock, void **thread, void **misc) {
 	if (*thread == NULL) goto error;
 #else
 	*thread = (pthread_t *)malloc(sizeof(pthread_t));
-	if (*thread == NULL) goto error;
+	if (*thread == NULL) {
+		PyErr_NoMemory();
+		goto error;
+	}
 
 	data->flag = 0;
 	data->mux = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
-	if (data->mux == NULL) goto error;
+	if (data->mux == NULL) {
+		PyErr_NoMemory();
+		goto error;
+	}
 
 	rc = pthread_mutex_init(data->mux, NULL);
+	if (rc != 0) {
+		PyErr_BadInternalCall();
+		goto error;
+	}
 
 	rc = pthread_create((pthread_t *)thread, NULL, ldap_init_thread, (void *)data);
 #endif
 	*misc = (void *)data;
 	return rc;
 error:
+	free(data->url);
 	free(data);
-	PyErr_NoMemory();
 	return -1;
 }

@@ -21,7 +21,7 @@ binding(LDAPConnectIter *self) {
 
 	if (self->bind_inprogress == 0) {
 		/* First call of bind. */
-		rc = LDAP_bind(self->conn->ld, self->info, NULL, &(self->message_id));
+		rc = _ldap_bind(self->conn->ld, self->info, NULL, &(self->message_id));
 		if (rc != LDAP_SUCCESS) {
 			set_exception(self->conn->ld, rc);
 			return NULL;
@@ -83,7 +83,7 @@ binding(LDAPConnectIter *self) {
 
 	if (self->bind_inprogress == 0) {
 		/* First call of bind. */
-		rc = LDAP_bind(self->conn->ld, self->info, NULL, &(self->message_id));
+		rc = _ldap_bind(self->conn->ld, self->info, NULL, &(self->message_id));
 		if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
 			close_socketpair(self->conn->socketpair);
 			set_exception(self->conn->ld, rc);
@@ -125,7 +125,7 @@ binding(LDAPConnectIter *self) {
 
 			if (strcmp(self->info->mech, "SIMPLE") != 0) {
 				/* Continue SASL binding procedure. */
-				rc = LDAP_bind(self->conn->ld, self->info, res, &(self->message_id));
+				rc = _ldap_bind(self->conn->ld, self->info, res, &(self->message_id));
 
 				if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
 					set_exception(self->conn->ld, rc);
@@ -210,7 +210,7 @@ LDAPConnectIter_Next(LDAPConnectIter *self) {
 	}
 
 	if (self->init_finished == 0) {
-		rc = LDAP_finish_init(self->conn->async, self->thread, self->data, &(self->conn->ld));
+		rc = _ldap_finish_init_thread(self->conn->async, self->thread, self->data, &(self->conn->ld));
 		if (rc == -1) return NULL; /* Error is happened. */
 		if (rc == 1) {
 			/* Initialisation is finished. */

@@ -145,8 +145,13 @@ PyList2BervalList(PyObject *list) {
 	if (list == NULL || !PyList_Check(list)) return NULL;
 
 	berval_arr = (struct berval **)malloc(sizeof(struct berval *) * ((int)PyList_Size(list) + 1));
+	if (berval_arr == NULL) return NULL;
+
 	iter = PyObject_GetIter(list);
-	if (iter == NULL) return NULL;
+	if (iter == NULL) {
+		free(berval_arr);
+		return NULL;
+	}
 
 	for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
 		strvalue = PyObject2char(item);
@@ -172,7 +177,10 @@ PyList2StringList(PyObject *list) {
 	if (strlist == NULL) return NULL;
 
 	iter = PyObject_GetIter(list);
-	if (iter == NULL) return NULL;
+	if (iter == NULL) {
+		free(strlist);
+		return NULL;
+	}
 
 	for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
 		strlist[i++] = PyObject2char(item);
@@ -201,21 +209,31 @@ PyList2LDAPSortKeyList(PyObject *list) {
 	if (sortlist == NULL) return NULL;
 
 	iter = PyObject_GetIter(list);
-	if (iter == NULL) return NULL;
+	if (iter == NULL) {
+		free(sortlist);
+		return NULL;
+	}
 
 	for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
-		if (!PyTuple_Check(item) || PyTuple_Size(item) != 2) return NULL;
+		/* Mark the end of the list first, it's important for error-handling. */
+		sortlist[i] = NULL;
+		if (!PyTuple_Check(item) || PyTuple_Size(item) != 2) goto error;
 
 		/* Get attribute's name and reverse order from the tuple. */
 		tmp = PyTuple_GetItem(item, 0); /* Returns borrowed ref. */
-		if (tmp == NULL) return NULL;
+		if (tmp == NULL) goto error;
 		attr = PyObject2char(tmp);
-		if (attr == NULL) return NULL;
+		if (attr == NULL) goto error;
 		tmp = PyTuple_GetItem(item, 1);
-		if (tmp == NULL) return NULL;
+		if (tmp == NULL) {
+			free(attr);
+			goto error;
+		}
 
 		/* Malloc and set LDAPSortKey struct. */
 		elem = (LDAPSortKey *)malloc(sizeof(LDAPSortKey));
+		if (elem == NULL) goto error;
+
 		elem->attributeType = attr;
 		elem->orderingRule = NULL;
 
@@ -229,6 +247,16 @@ PyList2LDAPSortKeyList(PyObject *list) {
 	Py_DECREF(iter);
 	sortlist[i] = NULL;
 	return sortlist;
+error:
+	Py_DECREF(iter);
+	Py_XDECREF(item);
+	/* Free all successfully allocated item. */
+	for (i = 0; sortlist[i] != NULL; i++) {
+		free(sortlist[i]->attributeType);
+		free(sortlist[i]);
+	}
+	free(sortlist);
+	return NULL;
 }
 
 /*	Compare lower-case representations of two Python objects.
