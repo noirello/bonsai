@@ -55,13 +55,13 @@ _ldap_finish_init_thread(char async, void *thread, void *misc, LDAP **ld) {
 	case WAIT_TIMEOUT:
 		break;
 	case WAIT_OBJECT_0:
-		if (((ldapThreadData *)misc)->retval != LDAP_SUCCESS) {
+		if (((ldapInitThreadData *)misc)->retval != LDAP_SUCCESS) {
 			/* The ldap_connect is failed. Set a Python error. */
-			set_exception(NULL, ((ldapThreadData *)misc)->retval);
+			set_exception(NULL, ((ldapInitThreadData *)misc)->retval);
 			return -1;
 		}
 		/* Set the new LDAP struct and clean up the mess. */
-		*ld = ((ldapThreadData *)misc)->ld;
+		*ld = ((ldapInitThreadData *)misc)->ld;
 		free(misc);
 		CloseHandle((HANDLE)thread);
 		return 1;
@@ -180,9 +180,9 @@ _pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
    LDAP struct is passed to the `ld` parameter. Return 1 if the initialisation
    thread is finished, 0 if it is still in progress, and -1 for error. */
 int
-_ldap_finish_init_thread(char async, void *thread, void *misc, LDAP **ld) {
+_ldap_finish_init_thread(char async, XTHREAD thread, void *misc, LDAP **ld) {
 	int rc = 0; /* Must be 0 for sync. */
-	ldapThreadData *val = (ldapThreadData *)misc;
+	ldapInitThreadData *val = (ldapInitThreadData *)misc;
 	struct timespec ts;
 	struct timeval now;
 	struct timespec rest;
@@ -190,7 +190,7 @@ _ldap_finish_init_thread(char async, void *thread, void *misc, LDAP **ld) {
 	int retval = 0;
 
 	/* Sanity check. */
-	if (thread == NULL || val == NULL) return -1;
+	if (val == NULL) return -1;
 
 	if (async) {
 		/* Create absolute time. */
@@ -227,7 +227,7 @@ _ldap_finish_init_thread(char async, void *thread, void *misc, LDAP **ld) {
 		}
 		/* Block until thread is finished, but if it's async already
 		   waited enough on releasing the lock. */
-		rc = pthread_join(*(pthread_t *)thread, NULL);
+		rc = pthread_join(thread, NULL);
 		/* Thread is finished. */
 		if (val->retval != LDAP_SUCCESS) {
 			set_exception(NULL, val->retval);
@@ -329,6 +329,47 @@ _ldap_get_opt_errormsg(LDAP *ld) {
 
 	return opt;
 }
+
+static void *
+ldap_timeout_thread_func(void *params){
+	struct timeval timenow;
+	struct timespec rest;
+	ldapTimeoutThreadData *data = (ldapTimeoutThreadData *)params;
+
+	if (data == NULL) return NULL;
+
+	/* Set 10ms for sleeping time. */
+	rest.tv_sec = 0;
+	rest.tv_nsec = 10000000;
+
+	do {
+		gettimeofday(&timenow, NULL);
+
+		if (timenow.tv_sec >= data->timeout->tv_sec
+				&& timenow.tv_usec >= data->timeout->tv_usec) {
+			/* The timeout is exceeded for the initialisation thread. */
+			pthread_cancel(data->thread);
+			return NULL;
+		}
+		nanosleep(&rest, NULL);
+	} while (1);
+}
+
+XTHREAD
+create_timeout_thread(void *param, int *error) {
+	int rc = 0;
+	XTHREAD thread;
+	ldapTimeoutThreadData *data = (ldapTimeoutThreadData *)param;
+
+	*error = 0;
+
+	rc = pthread_create(&thread, NULL, ldap_timeout_thread_func, data);
+	if (rc != 0) *error = rc;
+
+	return thread;
+}
+
+
 #endif
 
 /*  This function is based on the OpenLDAP liblutil's sasl.c source
@@ -407,10 +448,10 @@ static int WINAPI
 #else
 static void *
 #endif
-ldap_init_thread(void *params) {
+ldap_init_thread_func(void *params) {
 	int rc = -1;
 	const int version = LDAP_VERSION3;
-	ldapThreadData *ldap_params = (ldapThreadData *)params;
+	ldapInitThreadData *ldap_params = (ldapInitThreadData *)params;
 
 	if (ldap_params == NULL) {
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
@@ -461,125 +502,30 @@ end:
 #endif
 }
 
-/* Initialise an LDAP struct, and create a separate thread for building up TLS connection.
-The thread's pointer and the data struct's pointer that contains the LDAP struct is
-passed to the `thread` and `misc` parameters respectively. */
-int
-_ldap_start_init_thread(PyObject *client, SOCKET sock, void **thread, void **misc) {
+XTHREAD
+create_init_thread(void *param, int *error) {
 	int rc = 0;
-	ldapThreadData *data = NULL;
-	PyObject *url = NULL;
-	PyObject *tmp = NULL;
-	PyObject *tls = NULL;
+	XTHREAD thread;
+	ldapInitThreadData *data = (ldapInitThreadData *)param;
 
-	data = (ldapThreadData *)malloc(sizeof(ldapThreadData));
-	if (data == NULL) {
-		PyErr_NoMemory();
-		return -1;
-	}
-
-	/* Get URL policy from LDAPClient. */
-	url = PyObject_GetAttrString(client, "url");
-	if (url == NULL) {
-		free(data);
-		return -1;
-	}
-
-	/* Get URL address information from the LDAPClient's LDAPURL object. */
-	tmp = PyObject_CallMethod(url, "get_address", NULL);
-	Py_DECREF(url);
-	if (tmp == NULL) return -1;
-	data->url = PyObject2char(tmp);
-	Py_DECREF(tmp);
-	if (data->url == NULL) {
-		free(data);
-		return -1;
-	}
-
-	/* Check the TLS state. */
-	tls = PyObject_GetAttrString(client, "tls");
-	if (tls == NULL) goto error;
-	data->tls = PyObject_IsTrue(tls);
-	Py_DECREF(tls);
-
-	/* Set cert policy from LDAPClient. */
-	tmp = PyObject_GetAttrString(client, "cert_policy");
-	if (tmp == NULL) goto error;
-	data->cert_policy = (int)PyLong_AsLong(tmp);
-	Py_DECREF(tmp);
-
-	/* Set CA cert directory from LDAPClient. */
-	tmp = PyObject_GetAttrString(client, "ca_cert_dir");
-	if (tmp == NULL) goto error;
-	if (tmp == Py_None) data->ca_cert_dir = NULL;
-	else data->ca_cert_dir = PyObject2char(tmp);
-	Py_DECREF(tmp);
-
-	/* Set CA cert from LDAPClient. */
-	tmp = PyObject_GetAttrString(client, "ca_cert");
-	if (tmp == NULL) {
-		if (data->ca_cert_dir != NULL) free(data->ca_cert_dir);
-		goto error;
-	}
-	if (tmp == Py_None) data->ca_cert = NULL;
-	else data->ca_cert = PyObject2char(tmp);
-	Py_DECREF(tmp);
-
-	/* Set client cert from LDAPClient. */
-	tmp = PyObject_GetAttrString(client, "client_cert");
-	if (tmp == NULL) {
-		if (data->ca_cert_dir != NULL) free(data->ca_cert_dir);
-		if (data->ca_cert != NULL) free(data->ca_cert);
-		goto error;
-	}
-	if (tmp == Py_None) data->client_cert = NULL;
-	else data->client_cert = PyObject2char(tmp);
-	Py_DECREF(tmp);
-
-	/* Set client key from LDAPClient. */
-	tmp = PyObject_GetAttrString(client, "client_key");
-	if (tmp == NULL) {
-		if (data->ca_cert_dir != NULL) free(data->ca_cert_dir);
-		if (data->ca_cert != NULL) free(data->ca_cert);
-		if (data->client_cert != NULL) free(data->client_cert);
-		goto error;
-	}
-	if (tmp == Py_None) data->client_key = NULL;
-	else data->client_key = PyObject2char(tmp);
-	Py_DECREF(tmp);
-
-	data->ld = NULL;
-	data->sock = sock;
-	/* Create the separate thread. */
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-	*thread = (void *)CreateThread(NULL, 0, ldap_init_thread, (void *)data, 0, NULL);
-	if (*thread == NULL) goto error;
-#else
-	*thread = (pthread_t *)malloc(sizeof(pthread_t));
-	if (*thread == NULL) {
-		PyErr_NoMemory();
-		goto error;
-	}
-
+	*error = 0;
 	data->flag = 0;
 	data->mux = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
 	if (data->mux == NULL) {
 		PyErr_NoMemory();
-		goto error;
+		*error = -1;
+		return -1;
 	}
 
 	rc = pthread_mutex_init(data->mux, NULL);
 	if (rc != 0) {
 		PyErr_BadInternalCall();
-		goto error;
+		*error = -1;
+		return -1;
 	}
 
-	rc = pthread_create((pthread_t *)thread, NULL, ldap_init_thread, (void *)data);
-#endif
-	*misc = (void *)data;
-	return rc;
-error:
-	free(data->url);
-	free(data);
-	return -1;
+	rc = pthread_create(&thread, NULL, ldap_init_thread_func, data);
+	if (rc != 0) *error = rc;
+
+	return thread;
 }

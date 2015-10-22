@@ -174,16 +174,105 @@ ldapconnectiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 		self->conn = NULL;
 		self->init_finished = 0;
 		self->message_id = 0;
-		self->thread = NULL;
-		self->data = NULL;
+		self->init_thread_data = NULL;
+		self->init_thread = 0;
+		self->timeout_thread = 0;
 	}
 
 	return (PyObject *)self;
 }
 
-/* Creates a new LDAPConnectIter object for internal use. */
+
+/* Return a char* attribute from the LDAPClient object. */
+static int
+get_tls_attribute(PyObject *client, const char *name, char **value) {
+	PyObject *tmp = NULL;
+
+	tmp = PyObject_GetAttrString(client, name);
+	if (tmp == NULL) return -1;
+
+	if (tmp == Py_None) *value = NULL;
+	else *value= PyObject2char(tmp);
+	Py_DECREF(tmp);
+
+	return 0;
+}
+
+/* Create and return a ldapInitThreadData struct for the initialisation thread. */
+static ldapInitThreadData *
+create_init_thread_data(PyObject *client, SOCKET sock) {
+	int rc = 0;
+	ldapInitThreadData *data = NULL;
+	PyObject *url = NULL;
+	PyObject *tmp = NULL;
+	PyObject *tls = NULL;
+
+	data = (ldapInitThreadData *)malloc(sizeof(ldapInitThreadData));
+	if (data == NULL) {
+		PyErr_NoMemory();
+		return NULL;
+	}
+	data->ca_cert = NULL;
+	data->ca_cert_dir = NULL;
+	data->client_cert = NULL;
+	data->client_key = NULL;
+	data->url = NULL;
+
+	/* Get URL policy from LDAPClient. */
+	url = PyObject_GetAttrString(client, "url");
+	if (url == NULL) goto error;
+
+	/* Get URL address information from the LDAPClient's LDAPURL object. */
+	tmp = PyObject_CallMethod(url, "get_address", NULL);
+	Py_DECREF(url);
+	if (tmp == NULL) goto error;
+	data->url = PyObject2char(tmp);
+	Py_DECREF(tmp);
+	if (data->url == NULL) goto error;
+
+	/* Check the TLS state. */
+	tls = PyObject_GetAttrString(client, "tls");
+	if (tls == NULL) goto error;
+	data->tls = PyObject_IsTrue(tls);
+	Py_DECREF(tls);
+
+	/* Set cert policy from LDAPClient. */
+	tmp = PyObject_GetAttrString(client, "cert_policy");
+	if (tmp == NULL) goto error;
+	data->cert_policy = (int)PyLong_AsLong(tmp);
+	Py_DECREF(tmp);
+
+	/* Set CA cert directory from LDAPClient. */
+	rc = get_tls_attribute(client, "ca_cert_dir", &(data->ca_cert_dir));
+	if (rc != 0) goto error;
+	/* Set CA cert from LDAPClient. */
+	rc = get_tls_attribute(client, "ca_cert", &(data->ca_cert));
+	if (rc != 0) goto error;
+	/* Set client cert from LDAPClient. */
+	rc = get_tls_attribute(client, "client_cert", &(data->client_cert));
+	if (rc != 0) goto error;
+	/* Set client key from LDAPClient. */
+	rc = get_tls_attribute(client, "client_key", &(data->client_key));
+	if (rc != 0) goto error;
+
+	data->ld = NULL;
+	data->sock = sock;
+	return data;
+error:
+	if (data->ca_cert != NULL) free(data->ca_cert);
+	if (data->ca_cert_dir != NULL) free(data->ca_cert_dir);
+	if (data->client_cert != NULL) free(data->client_cert);
+	if (data->client_key != NULL) free(data->client_key);
+	if (data->url != NULL) free(data->url);
+	free(data);
+	PyErr_BadInternalCall();
+	return NULL;
+}
+
+/* Create a new LDAPConnectIter object for internal use. */
 LDAPConnectIter *
-LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info) {
+LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info, SOCKET sock) {
+	int err = 0;
 	LDAPConnectIter *self =
 			(LDAPConnectIter *)LDAPConnectIterType.tp_new(&LDAPConnectIterType,
 					NULL, NULL);
@@ -192,6 +281,12 @@ LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info) {
 		Py_INCREF(conn);
 		self->conn = conn;
 		self->info = info;
+
+		self->init_thread_data = create_init_thread_data(self->conn->client, sock);
+		if (self->init_thread_data == NULL) return NULL;
+
+		self->init_thread = create_init_thread(self->init_thread_data, &err);
+		if (err != 0) return NULL;
 	}
 
 	return self;
@@ -210,7 +305,8 @@ LDAPConnectIter_Next(LDAPConnectIter *self) {
 	}
 
 	if (self->init_finished == 0) {
-		rc = _ldap_finish_init_thread(self->conn->async, self->thread, self->data, &(self->conn->ld));
+		rc = _ldap_finish_init_thread(self->conn->async, self->init_thread,
+				self->init_thread_data, &(self->conn->ld));
 		if (rc == -1) return NULL; /* Error is happened. */
 		if (rc == 1) {
 			/* Initialisation is finished. */

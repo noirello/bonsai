@@ -29,6 +29,7 @@
 #include <sys/socket.h>
 
 #define SOCKET int
+#define XTHREAD pthread_t
 
 int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
 char *_ldap_get_opt_errormsg(LDAP *ld);
@@ -70,12 +71,19 @@ typedef struct ldap_thread_data_s {
 	pthread_mutex_t *mux;
 	int flag;
 #endif
-} ldapThreadData;
+} ldapInitThreadData;
 
-int _ldap_start_init_thread(PyObject *client, SOCKET sock, void **thread, void **misc);
-int _ldap_finish_init_thread(char async, void *thread, void *misc, LDAP **ld);
+typedef struct ldap_timeout_thread_data_s {
+	XTHREAD thread;
+	struct timeval *timeout;
+} ldapTimeoutThreadData;
+
+int _ldap_finish_init_thread(char async, XTHREAD thread, void *misc, LDAP **ld);
 int _ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid);
 
+XTHREAD create_init_thread(void *param, int *error);
+XTHREAD create_timeout_thread(void *param, int *error);
+ldapInitThreadData *get_init_thread_data(PyObject *client, SOCKET sock);
 void *create_conn_info(char *mech, SOCKET sock, PyObject *creds);
 void dealloc_conn_info(ldap_conndata_t* info);
 

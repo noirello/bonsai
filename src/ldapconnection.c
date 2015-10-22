@@ -140,15 +140,8 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 	if (mech != NULL) free(mech);
 	if (info == NULL) return -1;
 
-	*conniter = LDAPConnectIter_New(self, info);
+	*conniter = LDAPConnectIter_New(self, info, ssock);
 	if (*conniter == NULL) return -1;
-
-	rc = _ldap_start_init_thread(self->client, ssock, &((*conniter)->thread), &((*conniter)->data));
-
-	if (rc != 0) {
-		set_exception(self->ld, rc);
-		return -1;
-	}
 
 	return 0;
 }

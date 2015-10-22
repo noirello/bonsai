@@ -19,13 +19,14 @@ typedef struct {
     unsigned short int bind_inprogress;
     unsigned short int init_finished;
     int message_id;
-    void *thread;
-    void *data;
+    XTHREAD init_thread;
+    XTHREAD timeout_thread;
+    void *init_thread_data;
 } LDAPConnectIter;
 
 extern PyTypeObject LDAPConnectIterType;
 
-LDAPConnectIter *LDAPConnectIter_New(LDAPConnection *conn,  ldap_conndata_t *info);
+LDAPConnectIter *LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info, SOCKET sock);
 PyObject *LDAPConnectIter_Next(LDAPConnectIter *self);
 
 #endif /* PYLDAP_LDAPCONNECTITER_H_ */
