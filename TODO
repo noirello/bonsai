@@ -1,6 +1,3 @@
-- Change module name from PyLDAP to avoid confusion with python-ldap.
-- Rearrange source code into folders.
-- Upload to PyPI.
 - Improve sort control.
 - Add timeout function to all of the LDAP operations.
 - Feature: Add LDIF reader and writer function.
