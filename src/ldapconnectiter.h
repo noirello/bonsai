@@ -21,7 +21,7 @@ typedef struct {
     int message_id;
     XTHREAD init_thread;
     void *init_thread_data;
-	unsigned int timeout;
+	int timeout;
 } LDAPConnectIter;
 
 extern PyTypeObject LDAPConnectIterType;

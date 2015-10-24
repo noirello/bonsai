@@ -106,8 +106,8 @@ class LDAPConnectionTest(unittest.TestCase):
         try:
             conn = client.connect()
             conn.close()
-        except:
-            self.fail("TLS connection is failed")
+        except Exception as exc:
+            self.fail("TLS connection is failed with: %s" % str(exc))
 
     def test_connection_error(self):
         """ Test connection error. """

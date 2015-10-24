@@ -212,21 +212,16 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 	struct timespec rest;
 	int wait_msec = 100;
 	long long nanosecs = 0;
+	unsigned long long start_time, end_time;
 	int retval = 0;
 
 	/* Sanity check. */
 	if (val == NULL) return -1;
 
-	if (async) {
+	if (async || *timeout == -1) {
 		wait_msec = 100;
 	} else {
-		if (*timeout < 0) {
-			set_exception(NULL, LDAP_TIMEOUT);
-			retval = -1;
-			goto end;
-		} else {
-			wait_msec = *timeout;
-		}
+		wait_msec = *timeout;
 	}
 
 	/* Create absolute time. */
@@ -250,7 +245,7 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 
 	switch (rc) {
 	case ETIMEDOUT:
-		if (async == 0) {
+		if (async == 0 && *timeout != -1) {
 			set_exception(NULL, LDAP_TIMEOUT);
 			retval = -1;
 			goto end;
@@ -265,7 +260,10 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 			rest.tv_nsec = 5000000;
 			/* Take a nap, try to avoid constantly locking from the main thread. */
 			nanosleep(&rest, NULL);
-			*timeout -= 5;
+			if (*timeout != -1) {
+				*timeout -= 5;
+				if (*timeout < 0) *timeout = 0;
+			}
 			return 0;
 		}
 		/* Block until thread is finished, but if it's async already
@@ -277,6 +275,16 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 			if (val->ld) free(val->ld);
 			retval = -1;
 			goto end;
+		}
+		if (*timeout != -1) {
+			start_time = (unsigned long long)(now.tv_sec) * 1000
+					+ (unsigned long long)(now.tv_usec) / 1000;
+
+			gettimeofday(&now, NULL);
+			end_time = (unsigned long long)(now.tv_sec) * 1000
+							+ (unsigned long long)(now.tv_usec) / 1000;
+			*timeout -= (end_time - start_time);
+			if (*timeout < 0) *timeout = 0;
 		}
 		/* Set initialised LDAP struct pointer. */
 		*ld = val->ld;

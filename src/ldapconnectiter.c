@@ -106,7 +106,13 @@ binding(LDAPConnectIter *self) {
 	} else {
 		if (self->conn->async == 0) {
 			/* Block until the server response. */
-			rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, NULL, &res);
+			if (self->timeout == -1) {
+				rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, NULL, &res);
+			} else {
+				polltime.tv_sec = self->timeout / 1000;
+				polltime.tv_usec = (self->timeout % 1000) * 1000;
+				rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, &polltime, &res);
+			}
 		} else {
 			/* Binding is already in progress, poll result from the server. */
 			rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, &polltime, &res);
@@ -118,6 +124,10 @@ binding(LDAPConnectIter *self) {
 			return NULL;
 		case 0:
 			/* Timeout exceeded.*/
+			if (self->conn->async == 0) {
+				set_exception(self->conn->ld, -5);
+				return NULL;
+			}
 			Py_RETURN_NONE;
 		case LDAP_RES_BIND:
 			/* Response is arrived from the server. */
@@ -294,6 +304,8 @@ LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info, SOCKET sock) {
 
 		self->init_thread = create_init_thread(self->init_thread_data, &err);
 		if (err != 0) return NULL;
+
+		self->timeout = -1;
 	}
 
 	return self;
