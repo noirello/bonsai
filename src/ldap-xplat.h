@@ -79,7 +79,7 @@ typedef struct ldap_timeout_thread_data_s {
 	struct timeval *timeout;
 } ldapTimeoutThreadData;
 
-int _ldap_finish_init_thread(char async, XTHREAD thread, void *misc, LDAP **ld);
+int _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, LDAP **ld);
 int _ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid);
 
 XTHREAD create_init_thread(void *param, int *error);

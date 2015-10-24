@@ -592,7 +592,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
 			PyErr_BadInternalCall();
 			return NULL;
 		}
-		ret = LDAPConnectIter_Next((LDAPConnectIter *)conniter);
+		ret = LDAPConnectIter_Next((LDAPConnectIter *)conniter, millisec);
 		if (ret == NULL) {
 			/* An error is happened. */
 			/* Remove operations from pending_ops. */

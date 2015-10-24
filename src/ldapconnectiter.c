@@ -30,12 +30,19 @@ binding(LDAPConnectIter *self) {
 		Py_RETURN_NONE;
 	} else {
 		if (self->conn->async == 0) {
-			rc = WaitForSingleObject(self->info->thread, INFINITE);
+			rc = WaitForSingleObject(self->info->thread, self->timeout);
 		} else {
 			rc = WaitForSingleObject(self->info->thread, 10);
 		}
 		switch (rc) {
 		case WAIT_TIMEOUT:
+			if (self->conn->async == 0) {
+				TerminateThread(self->info->thread, -1);
+				CloseHandle(self->info->thread);
+				ldap_unbind_ext(self->conn->ld, NULL, NULL);
+				set_exception(NULL, LDAP_TIMEOUT);
+				return NULL;
+			}
 			Py_RETURN_NONE;
 		case WAIT_OBJECT_0:
 			GetExitCodeThread(self->info->thread, &rc);
@@ -176,7 +183,7 @@ ldapconnectiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 		self->message_id = 0;
 		self->init_thread_data = NULL;
 		self->init_thread = 0;
-		self->timeout_thread = 0;
+		self->timeout = -1;
 	}
 
 	return (PyObject *)self;
@@ -294,7 +301,7 @@ LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info, SOCKET sock) {
 
 /* Step the connection process into the next stage. */
 PyObject *
-LDAPConnectIter_Next(LDAPConnectIter *self) {
+LDAPConnectIter_Next(LDAPConnectIter *self, int timeout) {
 	int rc = -1;
 	PyObject *val = NULL;
 	char buff[1];
@@ -304,8 +311,12 @@ LDAPConnectIter_Next(LDAPConnectIter *self) {
 		return PyErr_Format(PyExc_StopIteration, "Connection is already open.");
 	}
 
+	if (self->timeout == -1 && timeout >= 0) {
+		self->timeout = timeout;
+	}
+
 	if (self->init_finished == 0) {
-		rc = _ldap_finish_init_thread(self->conn->async, self->init_thread,
+		rc = _ldap_finish_init_thread(self->conn->async, self->init_thread, &(self->timeout),
 				self->init_thread_data, &(self->conn->ld));
 		if (rc == -1) return NULL; /* Error is happened. */
 		if (rc == 1) {
@@ -328,7 +339,7 @@ LDAPConnectIter_Next(LDAPConnectIter *self) {
 	if (self->conn->async == 0) {
 		/* If the function is blocking, then call next() */
 		/* automatically, until an error or the LDAPConnection occurs.  */
-		return LDAPConnectIter_Next(self);
+		return LDAPConnectIter_Next(self, self->timeout);
 	} else {
 		Py_RETURN_NONE;
 	}

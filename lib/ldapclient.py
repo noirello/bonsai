@@ -367,7 +367,7 @@ class LDAPClient:
     def raw_attributes(self, value=None):
         self.set_raw_attributes(value)
 
-    def connect(self, async=False, **kwargs):
+    def connect(self, async=False, timeout=None, **kwargs):
         """
         Open a connection to the LDAP server.
 
@@ -379,6 +379,6 @@ class LDAPClient:
         :rtype: :class:`LDAPConnection`
         """
         if async:
-            return self.__async_conn(self, **kwargs).open()
+            return self.__async_conn(self, **kwargs).open(timeout)
         else:
-            return LDAPConnection(self, async).open()
+            return LDAPConnection(self, async).open(timeout)
