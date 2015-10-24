@@ -509,6 +509,10 @@ create_init_thread(void *param, int *error) {
 	ldapInitThreadData *data = (ldapInitThreadData *)param;
 
 	*error = 0;
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+	thread = (void *)CreateThread(NULL, 0, ldap_init_thread_func, (void *)data, 0, NULL);
+	if (thread == NULL) rc = -1;
+#else
 	data->flag = 0;
 	data->mux = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
 	if (data->mux == NULL) {
@@ -525,6 +529,7 @@ create_init_thread(void *param, int *error) {
 	}
 
 	rc = pthread_create(&thread, NULL, ldap_init_thread_func, data);
+#endif
 	if (rc != 0) *error = rc;
 
 	return thread;

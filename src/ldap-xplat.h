@@ -18,6 +18,7 @@
 
 #include "wldap-utf8.h"
 
+#define XTHREAD HANDLE
 
 #else
 //Unix
