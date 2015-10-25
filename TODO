@@ -1,5 +1,5 @@
 - Improve sort control.
-- Add timeout function to all of the LDAP operations.
+- Feature: own ldap_start_tls on Windows.
 - Feature: Add LDIF reader and writer function.
 - Feature: Add password modify extended operation.
 - Feature: Possibility to change LDAPEntry and LDAPValueList to other dict and list based objects.

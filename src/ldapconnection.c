@@ -867,7 +867,7 @@ static PyMemberDef ldapconnection_members[] = {
 };
 
 static PyMethodDef ldapconnection_methods[] = {
-	{ "abandon", (PyCFunction)ldapconnection_abandon, METH_VARARGS,
+	{"abandon", (PyCFunction)ldapconnection_abandon, METH_VARARGS,
 			"Abandon ongoing operations associated with the given message id." },
 	{"add", (PyCFunction)ldapconnection_add, METH_VARARGS,
 			"Add new LDAPEntry to the LDAP server."},
