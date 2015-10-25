@@ -524,6 +524,10 @@ end:
 #endif
 }
 
+/*  Create a platform-independent initialisation thread.
+    On success it returns the thread, on failure it sets the
+    `error` parameter to -1;
+*/
 XTHREAD
 create_init_thread(void *param, int *error) {
 	int rc = 0;

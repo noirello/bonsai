@@ -58,7 +58,7 @@ with open('README.md') as file:
     long_descr = long_descr.replace("```\n", "")
 
 setup(name="bonsai",
-      version="0.8.0",
+      version="0.8.1",
       description="Module for Python 3 to access LDAP directory servers.",
       author="noirello",
       author_email="noirello@gmail.com",
