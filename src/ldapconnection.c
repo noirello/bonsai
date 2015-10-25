@@ -725,20 +725,24 @@ ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "i|O", kwlist, &msgid,
 			&timeout_obj)) {
 		PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
-		return NULL;
+		goto end;
 	}
 
 	if (timeout_obj == Py_None || timeout_obj == NULL) {
 		timeout = -1;
 	} else if (PyNumber_Check(timeout_obj) && !PyBool_Check(timeout_obj)) {
 		tmp = PyNumber_Float(timeout_obj);
-		if (tmp == NULL) return NULL;
+		if (tmp == NULL) goto end;
 
 		timeout = (int)(PyFloat_AsDouble(tmp) * 1000);
+		if (timeout < 0) {
+			PyErr_SetString(PyExc_AttributeError, "Wrong timeout parameter.");
+			goto end;
+		}
 		Py_DECREF(tmp);
 	} else {
 		PyErr_SetString(PyExc_AttributeError, "Wrong timeout parameter.");
-		return NULL;
+		goto end;
 	}
 
 	sprintf(msgidstr, "%d", msgid);
@@ -754,15 +758,15 @@ ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	} else {
 		res = LDAPConnection_Result(self, msgid, timeout);
 	}
-
-	Py_DECREF(keys);
-	Py_DECREF(msgid_obj);
+end:
+	Py_XDECREF(keys);
+	Py_XDECREF(msgid_obj);
 	return res;
 }
 
-/* Cancel an ongoing LDAP operation. */
+/* Abandon an ongoing LDAP operation. */
 static PyObject *
-ldapconnection_cancel(LDAPConnection *self, PyObject *args) {
+ldapconnection_abandon(LDAPConnection *self, PyObject *args) {
 	int msgid = -1;
 	char msgidstr[8];
 	int rc = 0;
@@ -863,10 +867,10 @@ static PyMemberDef ldapconnection_members[] = {
 };
 
 static PyMethodDef ldapconnection_methods[] = {
+	{ "abandon", (PyCFunction)ldapconnection_abandon, METH_VARARGS,
+			"Abandon ongoing operations associated with the given message id." },
 	{"add", (PyCFunction)ldapconnection_add, METH_VARARGS,
 			"Add new LDAPEntry to the LDAP server."},
-	{"cancel", (PyCFunction)ldapconnection_cancel, METH_VARARGS,
-			"Cancel ongoing operations associated with the given message id."},
 	{"close", (PyCFunction)ldapconnection_close, METH_NOARGS,
 			"Close connection with the LDAP Server."},
 	{"delete", (PyCFunction)ldapconnection_delentry, METH_VARARGS,

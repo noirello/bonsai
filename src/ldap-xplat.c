@@ -88,7 +88,7 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 			retval = -1;
 			goto end;
 		}
-		/* Set the new LDAP struct and clean up the mess. */
+		/* Set the new LDAP struct. */
 		*ld = val->ld;
 		retval = 1;
 		goto end;
@@ -99,7 +99,13 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 		goto end;
 	}
 end:
+	/* Clean up the mess. */
 	CloseHandle(thread);
+	if (val->url) free(val->url);
+	if (val->ca_cert) free(val->ca_cert);
+	if (val->ca_cert_dir) free(val->ca_cert_dir);
+	if (val->client_cert) free(val->client_cert);
+	if (val->client_key) free(val->client_key);
 	free(val);
 	return retval;
 }
@@ -308,7 +314,7 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 	}
 end:
 	/* Clean-up. */
-	if (val->url != NULL) free(val->url);
+	if (val->url) free(val->url);
 	if (val->ca_cert) free(val->ca_cert);
 	if (val->ca_cert_dir) free(val->ca_cert_dir);
 	if (val->client_cert) free(val->client_cert);

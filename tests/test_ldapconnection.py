@@ -163,13 +163,13 @@ class LDAPConnectionTest(unittest.TestCase):
         self.assertTrue(self.conn.closed)
         self.assertRaises(bonsai.ClosedConnection, self.conn.whoami)
 
-    def test_cancel(self):
-        """ Test cancel method. """
+    def test_abandon(self):
+        """ Test abandon method. """
         msgid = self.async_conn.open()
         while self.async_conn.get_result(msgid) is None:
             pass
         msgid = self.async_conn.search(self.basedn, 2)
-        self.async_conn.cancel(msgid)
+        self.async_conn.abandon(msgid)
         self.assertRaises(bonsai.InvalidMessageID,
                           lambda: self.async_conn.get_result(msgid))
 
