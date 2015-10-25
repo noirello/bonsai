@@ -42,10 +42,12 @@ set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert, char
 int
 _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, LDAP **ld) {
 	int rc = -1;
+	int retval = 0;
 	SYSTEMTIME st;
 	FILETIME ft;
 	ULONGLONG start_time;
 	ULONGLONG end_time;
+	ldapInitThreadData *val = (ldapInitThreadData *)misc;
 
 	GetSystemTime(&st);
 	SystemTimeToFileTime(&st, &ft);
@@ -53,7 +55,7 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 	start_time = (((ULONGLONG)ft.dwHighDateTime) << 32) + ft.dwLowDateTime;
 
 	/* Sanity check. */
-	if (misc == NULL || thread == NULL) return -1;
+	if (val == NULL || thread == NULL) return -1;
 
 	if (async) {
 		rc = WaitForSingleObject(thread, 10);
@@ -65,14 +67,12 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 	case WAIT_TIMEOUT:
 		if (async == 0) {
 			TerminateThread(thread, -1);
-			CloseHandle(thread);
 			set_exception(NULL, LDAP_TIMEOUT);
-			return -1;
+			retval = -1;
+			goto end;
 		}
 		return 0;
 	case WAIT_OBJECT_0:
-		CloseHandle(thread);
-
 		if (async == 0 && *timeout != -1) {
 			GetSystemTime(&st);
 			SystemTimeToFileTime(&st, &ft);
@@ -82,19 +82,26 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 			*timeout -= (int)((end_time - start_time) / 10000);
 			if (*timeout < 0) *timeout = 0;
 		}
-		if (((ldapInitThreadData *)misc)->retval != LDAP_SUCCESS) {
+		if (val->retval != LDAP_SUCCESS) {
 			/* The ldap_connect is failed. Set a Python error. */
-			set_exception(NULL, ((ldapInitThreadData *)misc)->retval);
-			return -1;
+			set_exception(NULL, val->retval);
+			retval = -1;
+			goto end;
 		}
 		/* Set the new LDAP struct and clean up the mess. */
-		*ld = ((ldapInitThreadData *)misc)->ld;
-		return 1;
+		*ld = val->ld;
+		retval = 1;
+		goto end;
 	default:
 		/* The thread is failed. */
 		PyErr_BadInternalCall();
-		return -1;
+		retval = -1;
+		goto end;
 	}
+end:
+	CloseHandle(thread);
+	free(val);
+	return retval;
 }
 
 static int WINAPI
@@ -247,6 +254,7 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 	case ETIMEDOUT:
 		if (async == 0 && *timeout != -1) {
 			set_exception(NULL, LDAP_TIMEOUT);
+			if (val->ld) free(val->ld);
 			retval = -1;
 			goto end;
 		}
@@ -277,12 +285,14 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 			goto end;
 		}
 		if (*timeout != -1) {
+			/* Calculate passed time in milliseconds. */
 			start_time = (unsigned long long)(now.tv_sec) * 1000
 					+ (unsigned long long)(now.tv_usec) / 1000;
 
 			gettimeofday(&now, NULL);
 			end_time = (unsigned long long)(now.tv_sec) * 1000
 							+ (unsigned long long)(now.tv_usec) / 1000;
+			/* Deduct the passed time from the overall timeout. */
 			*timeout -= (end_time - start_time);
 			if (*timeout < 0) *timeout = 0;
 		}
@@ -318,7 +328,8 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid) {
 	/* Mechanism is set, use SASL interactive bind. */
 	if (strcmp(info->mech, "SIMPLE") != 0) {
 		if (info->passwd == NULL) info->passwd = "";
-		rc = ldap_sasl_interactive_bind(ld, info->binddn, info->mech, sctrlsp, NULL, LDAP_SASL_QUIET, sasl_interact, info, result, &(info->rmech), msgid);
+		rc = ldap_sasl_interactive_bind(ld, info->binddn, info->mech, sctrlsp, NULL,
+				LDAP_SASL_QUIET, sasl_interact, info, result, &(info->rmech), msgid);
 	} else {
 		if (info->passwd  == NULL) {
 			passwd.bv_len = 0;
@@ -380,46 +391,6 @@ _ldap_get_opt_errormsg(LDAP *ld) {
 
 	return opt;
 }
-
-static void *
-ldap_timeout_thread_func(void *params){
-	struct timeval timenow;
-	struct timespec rest;
-	ldapTimeoutThreadData *data = (ldapTimeoutThreadData *)params;
-
-	if (data == NULL) return NULL;
-
-	/* Set 10ms for sleeping time. */
-	rest.tv_sec = 0;
-	rest.tv_nsec = 10000000;
-
-	do {
-		gettimeofday(&timenow, NULL);
-
-		if (timenow.tv_sec >= data->timeout->tv_sec
-				&& timenow.tv_usec >= data->timeout->tv_usec) {
-			/* The timeout is exceeded for the initialisation thread. */
-			pthread_cancel(data->thread);
-			return NULL;
-		}
-		nanosleep(&rest, NULL);
-	} while (1);
-}
-
-XTHREAD
-create_timeout_thread(void *param, int *error) {
-	int rc = 0;
-	XTHREAD thread;
-	ldapTimeoutThreadData *data = (ldapTimeoutThreadData *)param;
-
-	*error = 0;
-
-	rc = pthread_create(&thread, NULL, ldap_timeout_thread_func, data);
-	if (rc != 0) *error = rc;
-
-	return thread;
-}
-
 
 #endif
 

@@ -83,7 +83,6 @@ int _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *mis
 int _ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid);
 
 XTHREAD create_init_thread(void *param, int *error);
-XTHREAD create_timeout_thread(void *param, int *error);
 ldapInitThreadData *get_init_thread_data(PyObject *client, SOCKET sock);
 void *create_conn_info(char *mech, SOCKET sock, PyObject *creds);
 void dealloc_conn_info(ldap_conndata_t* info);

@@ -170,7 +170,7 @@ ldapconnection_close(LDAPConnection *self) {
 	int rc;
 	int msgid;
 	PyObject *keys = PyDict_Keys(self->pending_ops);
-	PyObject *iter, *key;
+	PyObject *iter, *key, *tmp;
 
 	if (keys == NULL) return NULL;
 
@@ -186,8 +186,10 @@ ldapconnection_close(LDAPConnection *self) {
 
 	for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
 		/* Key should be an integer by design, if it is not rather not process. */
-		if (!PyLong_Check(key)) continue;
-		msgid = (int)PyLong_AsLong(key);
+		tmp = PyLong_FromUnicodeObject(key, 10);
+		if (tmp == NULL) continue;
+		msgid = (int)PyLong_AsLong(tmp);
+		Py_DECREF(tmp);
 		/* Remove item from the dict. */
 		if (PyDict_DelItem(self->pending_ops, key) != 0) {
 			Py_DECREF(iter);

@@ -173,5 +173,14 @@ class LDAPConnectionTest(unittest.TestCase):
         self.assertRaises(bonsai.InvalidMessageID,
                           lambda: self.async_conn.get_result(msgid))
 
+    def test_async_close_remove_pendig_ops(self):
+        msgid = self.async_conn.open()
+        while self.async_conn.get_result(msgid) is None:
+            pass
+        self.async_conn.search(self.basedn, 2)
+        self.async_conn.search(self.basedn, 0)
+        self.async_conn.close()
+        self.assertTrue(self.async_conn.closed)
+
 if __name__ == '__main__':
     unittest.main()
