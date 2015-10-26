@@ -120,10 +120,12 @@ binding(LDAPConnectIter *self) {
 		switch (rc) {
 		case -1:
 			/* Error occurred during the operation. */
+			ldap_msgfree(res);
 			set_exception(self->conn->ld, 0);
 			return NULL;
 		case 0:
 			/* Timeout exceeded.*/
+			ldap_msgfree(res);
 			if (self->conn->async == 0) {
 				set_exception(self->conn->ld, -5);
 				return NULL;
@@ -136,6 +138,7 @@ binding(LDAPConnectIter *self) {
 			if ((rc != LDAP_SUCCESS) ||
 				(err != LDAP_SASL_BIND_IN_PROGRESS && err != LDAP_SUCCESS)) {
 				/* Connection is failed. */
+				ldap_msgfree(res);
 				set_exception(self->conn->ld, err);
 				return NULL;
 			}
@@ -152,6 +155,8 @@ binding(LDAPConnectIter *self) {
 				if (rc == LDAP_SASL_BIND_IN_PROGRESS) {
 					Py_RETURN_NONE;
 				}
+			} else {
+				ldap_msgfree(res);
 			}
 
 			if (rc == LDAP_SUCCESS) {
