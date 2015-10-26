@@ -26,17 +26,37 @@ Features
 Example
 -------
 
+Simple search and modify:
+
 ```python
 
     import bonsai
 
     client = bonsai.LDAPClient("ldap://localhost")
     client.set_credentials("SIMPLE", ("cn=admin,dc=local", "secret"))
-    conn = client.connect()
-    res = conn.search("ou=nerdherd,dc=local", 2, "(cn=chuck)")
-    res[0]['givenname'] = "Charles"
-    res[0]['sn'] = "Carmichael"
-    res[0].modify()
+    with client.connect() as conn:
+        res = conn.search("ou=nerdherd,dc=local", 2, "(cn=chuck)")
+        res[0]['givenname'] = "Charles"
+        res[0]['sn'] = "Carmichael"
+        res[0].modify()
+
+```
+
+Using with asnycio:
+
+```python
+
+    import bonsai
+
+    @asyncio.coroutine
+    def do():
+        client = bonsai.LDAPClient("ldap://localhost")
+        client.set_credentials("DIGEST-MD5", ("admin", "secret", None, None))
+        with client.connect(async=True) as conn:
+            res = yield from conn.search("ou=nerdherd,dc=local", 2)
+            print(res)
+            who = yield from conn.whoami()
+            print(who)
 
 ```
 
