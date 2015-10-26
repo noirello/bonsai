@@ -46,6 +46,7 @@ Using with asnycio:
 
 ```python
 
+    import asyncio
     import bonsai
 
     @asyncio.coroutine
