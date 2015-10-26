@@ -53,7 +53,7 @@ Using with asnycio:
     def do():
         client = bonsai.LDAPClient("ldap://localhost")
         client.set_credentials("DIGEST-MD5", ("admin", "secret", None, None))
-        with client.connect(async=True) as conn:
+        with (yield from client.connect(async=True)) as conn:
             res = yield from conn.search("ou=nerdherd,dc=local", 2)
             print(res)
             who = yield from conn.whoami()

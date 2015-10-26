@@ -473,10 +473,14 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 	/* Set a new empty list for buffer. */
 	if (search_iter->buffer == NULL) {
 		search_iter->buffer = PyList_New(0);
-		if (search_iter->buffer == NULL) return PyErr_NoMemory();
 	} else {
 		Py_DECREF(search_iter->buffer);
 		search_iter->buffer = PyList_New(0);
+	}
+
+	if (search_iter->buffer == NULL) {
+		Py_DECREF(search_iter);
+		return PyErr_NoMemory();
 	}
 
 	/* Iterate over the received LDAP messages. */
@@ -485,12 +489,14 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 		entryobj = LDAPEntry_FromLDAPMessage(entry, self);
 		if (entryobj == NULL) {
 			Py_DECREF(search_iter->buffer);
+			Py_DECREF(search_iter);
 			return NULL;
 		}
 		if ((entryobj == NULL) || (PyList_Append(search_iter->buffer,
 						(PyObject *)entryobj)) != 0) {
 			Py_XDECREF(entryobj);
 			Py_DECREF(search_iter->buffer);
+			Py_DECREF(search_iter);
 			return PyErr_NoMemory();
 		}
 		Py_DECREF(entryobj);
@@ -501,6 +507,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 
 	if (rc != LDAP_SUCCESS ) {
 		set_exception(self->ld, rc);
+		Py_DECREF(search_iter);
 		return NULL;
 	}
 
@@ -511,11 +518,13 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 	if (err != LDAP_SUCCESS && err != LDAP_PARTIAL_RESULTS) {
 		set_exception(self->ld, err);
 		Py_DECREF(search_iter->buffer);
+		Py_DECREF(search_iter);
 		return NULL;
 	}
 	rc = ldap_parse_pageresponse_control(self->ld,
 			ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL),
 			NULL, search_iter->cookie);
+
 	/* Cleanup. */
 	if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
 
