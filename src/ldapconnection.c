@@ -626,20 +626,25 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
 		}
 	}
 
+	if (millisec >= 0) {
+		timeout.tv_sec = millisec / 1000;
+		timeout.tv_usec = (millisec % 1000) * 1000;
+	} else {
+		timeout.tv_sec = 0L;
+		timeout.tv_usec = 0L;
+	}
+
 	if (self->async == 0) {
 		/* The ldap_result will block, and wait for server response or timeout. */
 		Py_BEGIN_ALLOW_THREADS
 		if (millisec >= 0)  {
-			timeout.tv_sec = millisec / 1000;
-			timeout.tv_usec = (millisec % 1000) * 1000;
 			rc = ldap_result(self->ld, msgid, LDAP_MSG_ALL, &timeout, &res);
 		} else {
+			/* Wait until response or global timeout. */
 			rc = ldap_result(self->ld, msgid, LDAP_MSG_ALL, NULL, &res);
 		}
 		Py_END_ALLOW_THREADS
 	} else {
-		timeout.tv_sec = 0L;
-		timeout.tv_usec = 0L;
 		rc = ldap_result(self->ld, msgid, LDAP_MSG_ALL, &timeout, &res);
 	}
 
@@ -877,7 +882,7 @@ static PyMemberDef ldapconnection_members[] = {
 
 static PyMethodDef ldapconnection_methods[] = {
 	{"abandon", (PyCFunction)ldapconnection_abandon, METH_VARARGS,
-			"Abandon ongoing operations associated with the given message id." },
+			"Abandon ongoing operation associated with the given message id." },
 	{"add", (PyCFunction)ldapconnection_add, METH_VARARGS,
 			"Add new LDAPEntry to the LDAP server."},
 	{"close", (PyCFunction)ldapconnection_close, METH_NOARGS,

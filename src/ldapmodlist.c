@@ -66,7 +66,6 @@ LDAPModList_New(PyObject* entry, Py_ssize_t size) {
 /* Add new LDAPMod to the list. */
 int
 LDAPModList_Add(LDAPModList *self, int mod_op, PyObject *key, PyObject *value) {
-	int i;
 	LDAPMod *mod;
 
 	/* Add to the next free slot, if there is one. */

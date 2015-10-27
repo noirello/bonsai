@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.8.1] - 2015-10-25
+## [0.8.1] - 2015-10-27
 ### Changed
 - Renamed LDAPConnection's cancel method to abandon.
 

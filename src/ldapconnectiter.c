@@ -85,8 +85,13 @@ binding(LDAPConnectIter *self) {
 	LDAPControl **returned_ctrls = NULL;
 	LDAPMessage *res;
 
-	polltime.tv_sec = 0L;
-	polltime.tv_usec = 10L;
+	if (self->timeout == -1) {
+		polltime.tv_sec = 0L;
+		polltime.tv_usec = 10L;
+	} else {
+		polltime.tv_sec = self->timeout / 1000;
+		polltime.tv_usec = (self->timeout % 1000) * 1000;
+	}
 
 	if (self->bind_inprogress == 0) {
 		/* First call of bind. */
@@ -109,8 +114,6 @@ binding(LDAPConnectIter *self) {
 			if (self->timeout == -1) {
 				rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, NULL, &res);
 			} else {
-				polltime.tv_sec = self->timeout / 1000;
-				polltime.tv_usec = (self->timeout % 1000) * 1000;
 				rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, &polltime, &res);
 			}
 		} else {

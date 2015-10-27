@@ -72,6 +72,16 @@ API documentation
 :class:`LDAPConnection`
 -----------------------
 .. autoclass:: LDAPConnection
+
+.. method:: LDAPConnection.abandon(msg_id)
+
+   Abandon an ongoing asynchronous operation associated with the given message id.
+   Note that there is no guarantee that the LDAP server will be able to honor the request, which means
+   the operation could be performed anyway. Nevertheless, it is a good programming paradigm to
+   abandon unwanted operations (e.g after a timeout is exceeded).
+
+   :param int msg_id: the ID of an ongoing LDAP operation.
+
 .. automethod:: LDAPConnection.add
 
 .. method:: LDAPConnection.close()
@@ -79,6 +89,19 @@ API documentation
    Close LDAP connection.
     
 .. automethod:: LDAPConnection.delete
+
+.. method:: LDAPConnection.get_result(msg_id, timeout=None)
+
+   Get the result of an ongoing asynchronous operation associated with the given message id.
+   The method blocks the caller until the given `timeout` parameter is passed or the result
+   is arrived. If the operation is not finished until the timeout, it returns None. If the
+   `timeout` is None, it returns immediately.
+
+   :param int msg_id: the ID of an ongoing LDAP operation.
+   :param float timeout:  time limit in seconds for waiting on the result.
+   :return: the result of the operation.
+   :rtype: depending on the type of the operation.
+   :raises bonsai.InvalidMessageID: if the message ID is invalid or the associated operation is already finished
 
 .. automethod:: LDAPConnection.open
 
