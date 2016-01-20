@@ -7,7 +7,6 @@
 char *lowercase(char *str);
 struct berval *create_berval(char *value);
 PyObject *berval2PyObject(struct berval *bval, int keepbytes);
-LDAPMod *createLDAPModFromItem(int mod_op, PyObject *key, PyObject *value);
 char *PyObject2char(PyObject *obj);
 struct berval **PyList2BervalList(PyObject *list);
 char **PyList2StringList(PyObject *list);

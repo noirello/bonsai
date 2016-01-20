@@ -542,11 +542,11 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 static PyObject *
 parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 	int rc = -1;
+	int err = 0;
 	struct berval *authzid = NULL;
-	char *retoid = NULL;
-	PyObject *retval = NULL;
-
-	rc = ldap_parse_extended_result(self->ld, res, &retoid, &authzid, 1);
+	char *retoid = NULL, *errstr = NULL;
+	PyObject *retval = NULL, *ldaperror = NULL, *errmsg = NULL;
+	LDAPControl	**ctrls = NULL;
 
 	/* Remove operations from pending_ops. */
 	if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
@@ -554,6 +554,23 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 		return NULL;
 	}
 
+	rc = ldap_parse_result(self->ld, res, &err, &retoid, &errstr, NULL, &ctrls, 0);
+
+	if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
+		ldaperror = get_error_by_code(err);
+		if (ldaperror == NULL) return NULL;
+
+		errmsg = PyUnicode_FromFormat("%s.", errstr);
+		if (errmsg != NULL) {
+			PyErr_SetObject(ldaperror, errmsg);
+			Py_DECREF(errmsg);
+		} else PyErr_SetString(ldaperror, "");
+
+		Py_DECREF(ldaperror);
+		return NULL;
+	}
+
+	rc = ldap_parse_extended_result(self->ld, res, &retoid, &authzid, 1);
 	if (rc != LDAP_SUCCESS ) {
 		set_exception(self->ld, rc);
 		return NULL;

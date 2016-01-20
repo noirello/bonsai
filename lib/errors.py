@@ -34,12 +34,17 @@ class InsufficientAccess(LDAPError):
 class TimeoutError(LDAPError):
     """Raised, when the specified timeout is exceeded. """
 
+class ProtocolError(LDAPError):
+    """Raised, when protocol error is happened."""
+
 def _get_error(code):
     """ Return an error by code number. """
     if code == -1 or code == 0x51 or code == -11:
         # WinLDAP returns 0x51 for Server Down.
         # OpenLDAP returns -11 for Connection error.
         return ConnectionError
+    elif code == 0x02:
+        return ProtocolError
     elif code == 0x07:
         return AuthMethodNotSupported
     elif code == 0x22:

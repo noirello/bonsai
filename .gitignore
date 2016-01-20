@@ -13,3 +13,11 @@ docs/_templates
 MANIFEST
 Debug
 bonsai.egg-info
+.vs/*
+x64/*
+bonsai.pyproj
+bonsai.sdf
+bonsai.sln
+bonsai.vcxproj
+bonsai.vcxproj.*
+bonsai.VC.opendb
