@@ -1128,14 +1128,17 @@ clear:
 /* Get the optional error message. */
 char *
 _ldap_get_opt_errormsgU(LDAP *ld) {
+	int code = 0;
 	char *opt = NULL;
 	wchar_t *wopt = NULL;
 
-	if (ld->ld_errno <= 0x80090367L && ld->ld_errno >= 0x80090300L) {
+	ldap_get_option(ld, LDAP_OPT_ERROR_NUMBER, &code);
+
+	if (code <= 0x80090367L && code >= 0x80090300L) {
 		opt = (char *)malloc(sizeof(char) * 72);
 		if (opt == NULL) return opt;
 		sprintf_s(opt, 72, "SSPI authentication procedure is failed"
-			" with error code: 0x%x", ld->ld_errno);
+			" with error code: 0x%x", code);
 	} else {
 		/* Get additional error message from the session. */
 		ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &wopt);
