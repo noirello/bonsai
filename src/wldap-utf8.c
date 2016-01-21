@@ -826,7 +826,7 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
 }
 
 /* Get maximal message length for certain mechanism. */
-int
+static int
 init_package(wchar_t *package_name, unsigned long *max_mgslen) {
 	int rc;
 	PSecPkgInfo pkginfo;
@@ -887,7 +887,7 @@ create_authzid_gssapi_str(char *authzid, char *chunk, int chunklen, int *length)
 }
 
 /* Create the credentials handle for the certain authentication. */
-int
+static int
 create_credentials(CredHandle *hcred, wchar_t *package_name, sasl_defaults_t *defs) {
 	int rc = 0;
 	SEC_WINNT_AUTH_IDENTITY_W wincreds;
@@ -923,7 +923,7 @@ clear:
 
 /* Generate the client context that will be used as a response to the server
    during the authetication porcess. */
-int
+static int
 generate_client_ctxt(CredHandle *hcred, SecHandle *hctxt, wchar_t *package_name,
 	wchar_t *target_name, sasl_defaults_t *defs, char *input, int inlen,
 	char *output, int *outlen, int *crypted, char **crypted_msg) {
@@ -939,10 +939,7 @@ generate_client_ctxt(CredHandle *hcred, SecHandle *hctxt, wchar_t *package_name,
 		newctxt = 1;
 
 		rc = create_credentials(hcred, package_name, defs);
-		if (rc < 0) {
-			goto clear;
-		}
-
+		if (rc < 0) goto clear;
 	}
 
 	/* Prepare output buffer. */
@@ -990,19 +987,14 @@ generate_client_ctxt(CredHandle *hcred, SecHandle *hctxt, wchar_t *package_name,
 			&ctxtattr, NULL);
 		if (isauthz) free(input);
 	}
-	if (rc < 0) {
-		goto clear;
-	}
+	if (rc < 0) goto clear;
 
-	if (rc == SEC_E_OK) {
-		*crypted = 1;
-	}
+	if (rc == SEC_E_OK) *crypted = 1;
+
 	if ((rc == SEC_I_COMPLETE_NEEDED) || (rc == SEC_I_COMPLETE_AND_CONTINUE)) {
 		/* Complete token. */
 		rc = CompleteAuthToken(hctxt, &out_buff_desc);
-		if (rc < 0) {
-			goto clear;
-		}
+		if (rc < 0) goto clear;
 	}
 
 	*outlen = out_buff.cbBuffer;
@@ -1041,7 +1033,7 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
 	int outlen = 0, inlen = 0, crypted = 0;
 	char *output = NULL, *input = NULL, *crypted_msg = NULL;
 	wchar_t *package_name = NULL, *target_name = NULL;
-	wchar_t *wdn = NULL, *wmech = NULL;
+	wchar_t *wdn = NULL, *wmech = NULL, *error_msg = NULL;
 	struct berval cred;
 	struct berval *response = NULL;
 	LDAPControlW **wsctrls = NULL;
@@ -1078,7 +1070,7 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
 	SecInvalidateHandle(&ctxhandle);
 
 	target_name = get_target_name(ld);
-	if (target_name == NULL) return LDAP_PARAM_ERROR;
+	if (target_name == NULL) return LDAP_AUTH_METHOD_NOT_SUPPORTED;
 
 	if (strcmp(mechanism, "EXTERNAL") == 0) {
 		/* Set authorization ID for EXTERNAL. */
@@ -1100,7 +1092,10 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
 		rc = generate_client_ctxt(&credhandle, &ctxhandle, package_name,
 			target_name, defs, input, inlen, output, &outlen, &crypted,
 			&crypted_msg);
-		if (rc < 0) goto clear;
+		if (rc < 0) {
+			ldap_set_option(ld, LDAP_OPT_ERROR_NUMBER, &rc);
+			goto clear;
+		}
 
 		if (strcmp(mechanism, "EXTERNAL") != 0) {
 			cred.bv_len = outlen;
@@ -1136,10 +1131,16 @@ _ldap_get_opt_errormsgU(LDAP *ld) {
 	char *opt = NULL;
 	wchar_t *wopt = NULL;
 
-	/* Get additional error message from the session. */
-	ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &wopt);
-
-	convert_to_mbs(wopt, &opt);
+	if (ld->ld_errno <= 0x80090367L && ld->ld_errno >= 0x80090300L) {
+		opt = (char *)malloc(sizeof(char) * 72);
+		if (opt == NULL) return opt;
+		sprintf_s(opt, 72, "SSPI authentication procedure is failed"
+			" with error code: 0x%x", ld->ld_errno);
+	} else {
+		/* Get additional error message from the session. */
+		ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &wopt);
+		convert_to_mbs(wopt, &opt);
+	}
 
 	return opt;
 }

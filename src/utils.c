@@ -349,26 +349,32 @@ set_exception(LDAP *ld, int code) {
 	/* Get additional error message from the session. */
 	opt_errorstr = _ldap_get_opt_errormsg(ld);
 	errorstr = ldap_err2string(err);
-	if (opt_errorstr != NULL) {
-		if (strcmp(errorstr, opt_errorstr) != 0) {
-			errormsg = PyUnicode_FromFormat("%s. %s", errorstr, opt_errorstr);
-		} else {
+
+	if (errorstr != NULL && strlen(errorstr) > 0) {
+		if (opt_errorstr != NULL && strlen(opt_errorstr) > 0) {
+			if (strcmp(errorstr, opt_errorstr) != 0) {
+				errormsg = PyUnicode_FromFormat("%s. %s", errorstr, opt_errorstr);
+				goto finish;
+			}
+			/* Optional string is empty or equals to the error string. */
 			errormsg = PyUnicode_FromFormat("%s.", errorstr);
 		}
-		if (errormsg != NULL) {
-			PyErr_SetObject(ldaperror, errormsg);
-			Py_DECREF(errormsg);
-		}
-		ldap_memfree(opt_errorstr);
-	} else {
-		if (errorstr != NULL) PyErr_SetString(ldaperror, errorstr);
-		else PyErr_SetString(ldaperror, "");
+	} else if (opt_errorstr != NULL && strlen(opt_errorstr) > 0) {
+		errormsg = PyUnicode_FromFormat("%s.", opt_errorstr);
 	}
+finish:
+	if (errormsg != NULL) {
+		PyErr_SetObject(ldaperror, errormsg);
+		Py_DECREF(errormsg);
+	} else {
+		PyErr_SetString(ldaperror, "");
+	}
+	if (opt_errorstr) ldap_memfree(opt_errorstr);
 	Py_DECREF(ldaperror);
 }
 
 /* Add a pending LDAP operations to a dictionary. The key is the
- * corresponding message id,  the value depends on the type of operation. */
+ * corresponding message id, the value depends on the type of operation. */
 int
 add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item)  {
 	char msgidstr[8];
