@@ -982,9 +982,9 @@ generate_client_ctxt(CredHandle *hcred, SecHandle *hctxt, wchar_t *package_name,
 		return 1;
 	} else {
 		rc = InitializeSecurityContextW(hcred, newctxt ? NULL : hctxt,
-			target_name, ISC_REQ_MUTUAL_AUTH, 0, SECURITY_NATIVE_DREP,
-			newctxt ? NULL : &in_buff_desc, 0, hctxt, &out_buff_desc,
-			&ctxtattr, NULL);
+			target_name, ISC_REQ_MUTUAL_AUTH | ISC_REQ_NO_INTEGRITY,
+			0, SECURITY_NATIVE_DREP, newctxt ? NULL : &in_buff_desc,
+			0, hctxt, &out_buff_desc, &ctxtattr, NULL);
 		if (isauthz) free(input);
 	}
 	if (rc < 0) goto clear;
@@ -1052,7 +1052,7 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
 			break;
 		}
 	}
-	if (package_name == NULL) return LDAP_PARAM_ERROR;
+	if (package_name == NULL) return LDAP_AUTH_METHOD_NOT_SUPPORTED;
 
 	if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto clear;
 	if (rc = convert_to_wcs(mechanism, &wmech) != LDAP_SUCCESS) goto clear;
@@ -1070,7 +1070,7 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
 	SecInvalidateHandle(&ctxhandle);
 
 	target_name = get_target_name(ld);
-	if (target_name == NULL) return LDAP_AUTH_METHOD_NOT_SUPPORTED;
+	if (target_name == NULL) return LDAP_PARAM_ERROR;
 
 	if (strcmp(mechanism, "EXTERNAL") == 0) {
 		/* Set authorization ID for EXTERNAL. */
