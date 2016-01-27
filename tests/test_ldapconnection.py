@@ -55,8 +55,30 @@ class LDAPConnectionTest(unittest.TestCase):
         except (bonsai.errors.ConnectionError, \
                 bonsai.errors.AuthenticationError):
             self.fail()
-        finally:
+        else:
             self.assertNotEqual("anonymous", conn.whoami(), "Digest "
+            "authentication was unsuccessful.")
+            conn.close()
+
+    def test_bind_ntlm(self):
+        """ Test NTLM connection. """
+        if "NTLMAUTH" not in self.cfg:
+            self.skipTest("No NTLM authentication is set.")
+        client = LDAPClient(self.url)
+        if self.cfg["NTLMAUTH"]["realm"] == "None":
+            realm = None
+        else:
+            realm = self.cfg["NTLMAUTH"]["realm"]
+        client.set_credentials("NTLM", (self.cfg["NTLMAUTH"]["user"], \
+                                        self.cfg["NTLMAUTH"]["password"], \
+                                        realm, None))
+        try:
+            conn = client.connect()
+        except (bonsai.errors.ConnectionError, \
+                bonsai.errors.AuthenticationError):
+            self.fail()
+        else:
+            self.assertNotEqual("anonymous", conn.whoami(), "NTLM "
             "authentication was unsuccessful.")
             conn.close()
 
@@ -174,6 +196,7 @@ class LDAPConnectionTest(unittest.TestCase):
                           lambda: self.async_conn.get_result(msgid))
 
     def test_async_close_remove_pendig_ops(self):
+        """ Test remove pending operations after close. """
         msgid = self.async_conn.open()
         while self.async_conn.get_result(msgid) is None:
             pass
