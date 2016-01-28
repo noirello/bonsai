@@ -42,11 +42,16 @@ else:
 
 sources = [os.path.join('src', x) for x in sources]
 depends = [os.path.join('src', x) for x in depends]
+libdirs = []
 
-pyldap_module = Extension("bonsai._bonsai",
+if sys.platform == "darwin":
+    libdirs.append("/usr/local/lib")
+
+bonsai_module = Extension("bonsai._bonsai",
                           libraries=libs,
                           sources=sources,
-                          depends=depends)
+                          depends=depends,
+                          library_dirs=libdirs)
 
 with open('README.md') as file:
     long_descr = file.read()
@@ -65,7 +70,7 @@ setup(name="bonsai",
       url="https://github.com/noirello/bonsai",
       long_description=long_descr,
       license="MIT",
-      ext_modules=[pyldap_module],
+      ext_modules=[bonsai_module],
       package_dir = {"bonsai": "lib"},
       packages=["bonsai", "bonsai.asyncio", "bonsai.gevent", "bonsai.tornado"],
       include_package_data=True,

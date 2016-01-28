@@ -550,14 +550,14 @@ create_init_thread(void *param, int *error) {
 	if (data->mux == NULL) {
 		PyErr_NoMemory();
 		*error = -1;
-		return -1;
+		return thread;
 	}
 
 	rc = pthread_mutex_init(data->mux, NULL);
 	if (rc != 0) {
 		PyErr_BadInternalCall();
 		*error = -1;
-		return -1;
+		return thread;
 	}
 
 	rc = pthread_create(&thread, NULL, ldap_init_thread_func, data);
