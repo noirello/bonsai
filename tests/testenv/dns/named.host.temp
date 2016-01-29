@@ -1,0 +1,22 @@
+$TTL 1H
+@   SOA {{HOSTNAME}}.  root.localhost. (   2
+                        3H
+                        1H
+                        1W
+                        1H )
+    NS  {{HOSTIP}}.
+ 
+{{HOSTNAME}}.                          IN 1H A {{HOSTIP}}
+ 
+_kerberos                             IN TXT "{{HOSTNAME}}"
+_kerberos._tcp.{{HOSTNAME}}.           IN SRV 0 0 88  {{HOSTNAME}}.
+_kerberos._udp.{{HOSTNAME}}.           IN SRV 0 0 88  {{HOSTNAME}}.
+_kerberos-master._tcp.{{HOSTNAME}}.    IN SRV 0 0 88  {{HOSTNAME}}.
+_kerberos-master._udp.{{HOSTNAME}}.    IN SRV 0 0 88  {{HOSTNAME}}.
+_kerberos-adm._tcp.{{HOSTNAME}}.       IN SRV 0 0 749 {{HOSTNAME}}.
+_kerberos-adm._udp.{{HOSTNAME}}.       IN SRV 0 0 749 {{HOSTNAME}}.
+_kpasswd._tcp.{{HOSTNAME}}.            IN SRV 0 0 464 {{HOSTNAME}}.
+ 
+_ldap._tcp.{{HOSTNAME}}.               IN SRV 0 0 389 {{HOSTNAME}}.
+_ldap._tcp.dc._msdcs.{{HOSTNAME}}.     IN SRV 0 0 389 {{HOSTNAME}}.
+_kerberos._tcp.dc._msdcs.{{HOSTNAME}}. IN SRV 0 0 88  {{HOSTNAME}}.

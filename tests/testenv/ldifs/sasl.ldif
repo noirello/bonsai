@@ -1,0 +1,58 @@
+dn: olcDatabase={2}mdb,cn=config
+changeType: modify
+replace: olcRootPW
+olcRootPW: {SSHA}wWpIvu+DAeRzfM5ldoypmEJLZg7GP5Hv
+-
+replace: olcSuffix
+olcSuffix: dc=bonsai,dc=test
+-
+replace: olcRootDN
+olcRootDN: cn=admin,dc=bonsai,dc=test
+
+dn: olcDatabase={1}monitor,cn=config
+changeType: modify
+replace: olcAccess
+olcAccess: {0}to * by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=extern
+ al,cn=auth" read by dn.base="cn=admin,dc=bonsai,dc=test" read by * n
+ one
+
+dn: cn=config
+changeType: modify
+#The FQDN of the Kerberos KDC.
+replace: olcSaslHost
+olcSaslHost: bonsai.test
+-
+#The Kerberos realm name
+replace: olcSaslRealm
+olcSaslRealm: BONSAI.test
+-
+#by default, the DN of an authorized Kerberos client takes the form
+#uid=<Kerberos principal name>,cn=<Kerberos Realm>,cn=GSSAPI,cn=auth
+add: olcAuthzRegexp
+olcAuthzRegexp: {0}"^uid=root,cn=[^,]*,cn=digest-md5,cn=auth" "cn=admin,
+ dc=bonsai,dc=test"
+olcAuthzRegexp: {1}"uid=([^/]*),cn=bonsai.test,cn=GSSAPI,cn=auth" "cn=$1,
+ ou=nerdherd,dc=bonsai,dc=test"
+olcAuthzRegexp: {2}"uid=host/([^/]*).bonsai.test,cn=bonsai.test,
+ cn=gssapi,cn=auth" "cn=$1,ou=hosts,dc=bonsai,dc=test"
+#administrative user map, assumes existence of cn=admin,cn=config
+olcAuthzRegexp: {3}"uid=ldap/admin,cn=bonsai.test,cn=gssapi,cn=auth" 
+ "cn=admin,cn=config"
+olcAuthzRegexp: {4}"^uid=([^,]+).*,cn=[^,]*,cn=auth$" "ldap:///dc=bonsai,
+ dc=test??sub?(cn=$1)"
+olcAuthzRegexp: CN=user,OU=test,O=bonsai cn=admin,dc=bonsai,dc=test
+-
+add: olcAuthzPolicy
+olcAuthzPolicy: to
+-
+replace: olcTLSCertificateFile
+olcTLSCertificateFile: "slapd"
+-
+replace: olcTLSCACertificatePath
+olcTLSCACertificatePath: /etc/openldap/certs
+-
+replace: olcTLSCertificateKeyFile
+olcTLSCertificateKeyFile: /etc/openldap/certs/password
+-
+add: olcTLSVerifyClient
+olcTLSVerifyClient: allow
