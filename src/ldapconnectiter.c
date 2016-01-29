@@ -297,7 +297,6 @@ error:
 /* Create a new LDAPConnectIter object for internal use. */
 LDAPConnectIter *
 LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info, SOCKET sock) {
-	int err = 0;
 	LDAPConnectIter *self =
 			(LDAPConnectIter *)LDAPConnectIterType.tp_new(&LDAPConnectIterType,
 					NULL, NULL);
@@ -310,8 +309,8 @@ LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info, SOCKET sock) {
 		self->init_thread_data = create_init_thread_data(self->conn->client, sock);
 		if (self->init_thread_data == NULL) return NULL;
 
-		self->init_thread = create_init_thread(self->init_thread_data, &err);
-		if (err != 0) return NULL;
+		if (create_init_thread(self->init_thread_data, &(self->init_thread))
+				!= 0) return NULL;
 
 		self->timeout = -1;
 	}

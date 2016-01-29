@@ -531,16 +531,14 @@ end:
 }
 
 /*  Create a platform-independent initialisation thread.
-    On success it returns the thread, on failure it sets the
-    `error` parameter to -1;
+    On success it returns 0 and sets the thread parameter,
+    on failure returns -1.
 */
-XTHREAD
-create_init_thread(void *param, int *error) {
+int
+create_init_thread(void *param, PXTHREAD thread) {
 	int rc = 0;
-	XTHREAD thread;
 	ldapInitThreadData *data = (ldapInitThreadData *)param;
 
-	*error = 0;
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 	thread = (void *)CreateThread(NULL, 0, ldap_init_thread_func, (void *)data, 0, NULL);
 	if (thread == NULL) rc = -1;
@@ -549,20 +547,18 @@ create_init_thread(void *param, int *error) {
 	data->mux = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
 	if (data->mux == NULL) {
 		PyErr_NoMemory();
-		*error = -1;
-		return thread;
+		return -1;
 	}
 
 	rc = pthread_mutex_init(data->mux, NULL);
 	if (rc != 0) {
 		PyErr_BadInternalCall();
-		*error = -1;
-		return thread;
+		return -1;
 	}
 
-	rc = pthread_create(&thread, NULL, ldap_init_thread_func, data);
+	rc = pthread_create(thread, NULL, ldap_init_thread_func, data);
 #endif
-	if (rc != 0) *error = rc;
+	if (rc != 0) return -1;
 
-	return thread;
+	return 0;
 }
