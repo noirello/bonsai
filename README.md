@@ -1,6 +1,12 @@
 Bonsai
 ======
 
+[![PyPI Version](https://img.shields.io/pypi/v/bonsai.svg?style=flat-square)](https://pypi.python.org/pypi/bonsai/)
+[![Build Status](https://img.shields.io/travis/Noirello/bonsai/dev.svg?style=flat-square)](https://travis-ci.org/Noirello/bonsai)
+[![Coverage Status](https://img.shields.io/codecov/c/github/Noirello/bonsai/dev.svg?style=flat-square)](https://codecov.io/github/Noirello/bonsai?branch=dev)
+[![Documentation Status](https://readthedocs.org/projects/bonsai/badge/?version=latest&style=flat-square)](http://bonsai.readthedocs.org/en/latest/)
+[![GitHub License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://raw.githubusercontent.com/Noirello/bonsai/master/LICENSE)
+
 This is a module for handling LDAP operations in Python. Uses libldap2 on Unix platforms and WinLDAP 
 on Microsoft Windows. LDAP entries are mapped to a special Python case-insensitive dictionary,
 tracking the changes of the dictionary to modify the entry on the server easily.
