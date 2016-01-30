@@ -67,6 +67,7 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 	case WAIT_TIMEOUT:
 		if (async == 0) {
 			TerminateThread(thread, -1);
+			CloseHandle(thread);
 			set_exception(NULL, LDAP_TIMEOUT);
 			retval = -1;
 			goto end;
@@ -535,13 +536,13 @@ end:
     on failure returns -1.
 */
 int
-create_init_thread(void *param, PXTHREAD thread) {
+create_init_thread(void *param, XTHREAD *thread) {
 	int rc = 0;
 	ldapInitThreadData *data = (ldapInitThreadData *)param;
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-	thread = (void *)CreateThread(NULL, 0, ldap_init_thread_func, (void *)data, 0, NULL);
-	if (thread == NULL) rc = -1;
+	*thread = CreateThread(NULL, 0, ldap_init_thread_func, (void *)data, 0, NULL);
+	if (*thread == NULL) rc = -1;
 #else
 	data->flag = 0;
 	data->mux = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));

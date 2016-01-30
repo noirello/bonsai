@@ -19,7 +19,6 @@
 #include "wldap-utf8.h"
 
 #define XTHREAD HANDLE
-#define PXTHREAD HANDLE
 
 #else
 //Unix
@@ -32,7 +31,6 @@
 
 #define SOCKET int
 #define XTHREAD pthread_t
-#define PXTHREAD pthread_t*
 
 int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
 char *_ldap_get_opt_errormsg(LDAP *ld);
@@ -84,7 +82,7 @@ typedef struct ldap_timeout_thread_data_s {
 int _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, LDAP **ld);
 int _ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid);
 
-int create_init_thread(void *param, PXTHREAD thread);
+int create_init_thread(void *param, XTHREAD *thread);
 ldapInitThreadData *get_init_thread_data(PyObject *client, SOCKET sock);
 void *create_conn_info(char *mech, SOCKET sock, PyObject *creds);
 void dealloc_conn_info(ldap_conndata_t* info);
