@@ -69,7 +69,7 @@ Documentation is available [online](http://bonsai.readthedocs.org/en/latest/) wi
 Changelog
 ---------
 
-Currently, you can read the changelog [here](https://github.com/noirello/bonsai/blob/master/CHANGELOG). 
+Currently, you can read the changelog [here](https://github.com/noirello/bonsai/blob/master/CHANGELOG.md). 
 
 Contribution
 ------------
