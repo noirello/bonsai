@@ -55,12 +55,6 @@ bonsai_module = Extension("bonsai._bonsai",
 
 with open('README.md') as file:
     long_descr = file.read()
-    # Change linking format from GitHub style to PyPI compatible format.
-    pat = r"\[([a-zA-Z_ ]*)\]\(([a-zA-Z_:/.]*)\)"
-    long_descr = re.sub(pat, r"`\g<1> <\g<2>>`_", long_descr)
-    # Change codeblock format
-    long_descr = long_descr.replace("```python", ".. code-block:: python")
-    long_descr = long_descr.replace("```\n", "")
 
 setup(name="bonsai",
       version="0.8.1",
