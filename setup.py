@@ -53,7 +53,7 @@ bonsai_module = Extension("bonsai._bonsai",
                           depends=depends,
                           library_dirs=libdirs)
 
-with open('README.md') as file:
+with open('README.rst') as file:
     long_descr = file.read()
 
 setup(name="bonsai",

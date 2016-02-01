@@ -95,5 +95,5 @@ Any contributions and advices are welcome. Please report any issues at
 the `GitHub page`_.
 
 .. _online: http://bonsai.readthedocs.org/en/latest/
-.. _here: https://github.com/noirello/bonsai/blob/master/CHANGELOG.md
+.. _here: https://github.com/noirello/bonsai/blob/master/CHANGELOG.rst
 .. _GitHub page: https://github.com/Noirello/bonsai/issues
