@@ -29,16 +29,18 @@ olcSaslRealm: BONSAI.test
 #by default, the DN of an authorized Kerberos client takes the form
 #uid=<Kerberos principal name>,cn=<Kerberos Realm>,cn=GSSAPI,cn=auth
 add: olcAuthzRegexp
-olcAuthzRegexp: {0}"^uid=root,cn=[^,]*,cn=digest-md5,cn=auth" "cn=admin,
+olcAuthzRegexp: {0}"^uid=root,cn=[^,]*,cn=[^,]*,cn=auth" "cn=admin,
  dc=bonsai,dc=test"
-olcAuthzRegexp: {1}"uid=([^/]*),cn=bonsai.test,cn=GSSAPI,cn=auth" "cn=$1,
+olcAuthzRegexp: {1}"^uid=admin,cn=bonsai.test,cn=GSSAPI,cn=auth" "cn=admin,
+ dc=bonsai,dc=test"
+olcAuthzRegexp: {2}"uid=([^/]*),cn=bonsai.test,cn=GSSAPI,cn=auth" "cn=$1,
  ou=nerdherd,dc=bonsai,dc=test"
-olcAuthzRegexp: {2}"uid=host/([^/]*).bonsai.test,cn=bonsai.test,
+olcAuthzRegexp: {3}"uid=host/([^/]*).bonsai.test,cn=bonsai.test,
  cn=gssapi,cn=auth" "cn=$1,ou=hosts,dc=bonsai,dc=test"
 #administrative user map, assumes existence of cn=admin,cn=config
-olcAuthzRegexp: {3}"uid=ldap/admin,cn=bonsai.test,cn=gssapi,cn=auth" 
+olcAuthzRegexp: {4}"uid=ldap/admin,cn=bonsai.test,cn=gssapi,cn=auth" 
  "cn=admin,cn=config"
-olcAuthzRegexp: {4}"^uid=([^,]+).*,cn=[^,]*,cn=auth$" "ldap:///dc=bonsai,
+olcAuthzRegexp: {5}"^uid=([^,]+).*,cn=[^,]*,cn=auth$" "ldap:///dc=bonsai,
  dc=test??sub?(cn=$1)"
 olcAuthzRegexp: CN=user,OU=test,O=bonsai cn=admin,dc=bonsai,dc=test
 -

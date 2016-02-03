@@ -3,18 +3,16 @@ MAINTAINER noirello <noirello@gmail.com>
 
 RUN dnf update -y
 
-# OpenLDAP and Kerberos server and utils.
-RUN dnf install -y openldap openldap-servers openldap-clients cyrus-sasl-md5 cyrus-sasl-gssapi cyrus-sasl-ntlm openssl krb5-server krb5-libs krb5-workstation supervisor bind
+# OpenLDAP server and utils.
+RUN dnf install -y openldap openldap-servers openldap-clients cyrus-sasl-md5 cyrus-sasl-gssapi cyrus-sasl-ntlm openssl
+# Kerberos server and utils.
+RUN dnf install -y krb5-server krb5-libs krb5-workstation
+RUN dnf install -y supervisor
 
 # Setting Kerberos
 COPY ./krb5/kdc.conf /var/kerberos/krb5kdc/kdc.conf
 COPY ./krb5/kadm5.acl /var/kerberos/krb5kdc/kadm5.acl
 COPY ./krb5/krb5.conf /etc/krb5.conf
-
-# DNS Config templates
-COPY ./dns/named.conf.temp /root/named.conf.temp
-COPY ./dns/named.host.temp /root/named.host.temp
-COPY ./dns/rev.host.temp /root/rev.host.temp
 
 # Create a password and a salt.
 RUN echo "p@ssword" > /etc/openldap/certs/password
@@ -50,7 +48,6 @@ COPY ./ldifs/sssvlv.ldif /root/sssvlv.ldif
 # Open LDAP and LDAPS port.
 EXPOSE 389 636
 EXPOSE 88 749
-EXPOSE 53
 
 COPY ./supervisord.conf /etc/supervisord.conf
 

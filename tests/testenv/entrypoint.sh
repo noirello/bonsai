@@ -4,14 +4,7 @@ set -e
 # Check if the setup is already made. 
 [ -f /root/.setup ] && exit 0
 
-setDNS () {
-    LISTENINGIP=`ip -4 addr show scope global dev eth0 | grep inet | awk '{print \$2}' | cut -d / -f 1`
-
-    sed 's/{{HOSTNAME}}/'`hostname`'/g; s/{{HOSTIP}}/'$HOSTIP'/g; s/{{REVIP}}/'`echo $HOSTIP | awk -F. '{print $3"."$2"."$1}'`'/g; s/{{LISTENINGIP}}/'$LISTENINGIP'/g' < /root/named.conf.temp > /etc/named.conf
-    sed 's/{{HOSTNAME}}/'`hostname`'/g; s/{{HOSTIP}}/'$HOSTIP'/g' < /root/named.host.temp > /var/named/named.host
-    sed 's/{{HOSTNAME}}/'`hostname`'/g; s/{{HOSTIP}}/'$HOSTIP'/g; s/{{LASTDIGIT}}/'`echo $HOSTIP | awk -F. '{print $4}'`'/g' < /root/rev.host.temp > /var/named/rev.host
-}
-
+# Set Kerberos database.
 setKerberos () {
     kdb5_util create -r BONSAI.TEST -s -W -P p@ssword
     kadmin.local -q "addprinc -pw p@ssword admin"
@@ -43,7 +36,6 @@ setDigest () {
     echo "p@ssword" | saslpasswd2 -p chuck
 }
 
-setDNS
 setKerberos
 setDigest
 setLDAP
