@@ -43,7 +43,7 @@ install:
 
 script:
   - INSTPATH=$VIRTUAL_ENV/lib/python$TRAVIS_PYTHON_VERSION/site-packages/bonsai-`python setup.py --version`-py$TRAVIS_PYTHON_VERSION-linux-x86_64.egg/bonsai
-  - py.test -v --cov-config .coveragerc --cov=$INSTPATH
+  - py.test -v --cov-config .coveragerc --cov-report= --cov=$INSTPATH
 
 after_success:
   # Change path of the Python source files in .coverage.

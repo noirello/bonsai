@@ -1,8 +1,0 @@
-$TTL 1H
-@   SOA {{HOSTNAME}}.  root.{{HOSTNAME}}. (   2
-                        3H
-                        1H
-                        1W
-                        1H )
-    NS  {{HOSTIP}}.
-{{LASTDIGIT}} PTR {{HOSTNAME}}.
