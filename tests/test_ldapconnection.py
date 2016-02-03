@@ -34,53 +34,75 @@ class LDAPConnectionTest(unittest.TestCase):
         del self.conn
         del self.async_conn
 
-    def test_bind_digest(self):
-        """ Test DIGEST-MD5 connection. """
-        if "DIGESTAUTH" not in self.cfg:
-            self.skipTest("No digest authentication is set.")
+    def _binding(self, auth, mech, authzid):
+        if auth not in self.cfg:
+            self.skipTest("%s authentication is not set." % mech)
         client = LDAPClient(self.url)
-        if self.cfg["DIGESTAUTH"]["realm"] == "None":
+        if self.cfg[auth]["realm"] == "None":
             realm = None
         else:
-            realm = self.cfg["DIGESTAUTH"]["realm"]
-        if self.cfg["DIGESTAUTH"]["authzid"] == "None":
-            authzid = None
-        else:
-            authzid = self.cfg["DIGESTAUTH"]["authzid"]
-        client.set_credentials("DIGEST-MD5", (self.cfg["DIGESTAUTH"]["user"], \
-                                        self.cfg["DIGESTAUTH"]["password"], \
-                                        realm, authzid))
+            realm = self.cfg[auth]["realm"]
+        client.set_credentials(mech, (self.cfg[auth]["user"],
+                                      self.cfg[auth]["password"],
+                                      realm, authzid))
         try:
             conn = client.connect()
         except (bonsai.errors.ConnectionError, \
                 bonsai.errors.AuthenticationError):
             self.fail()
         else:
-            self.assertNotEqual("anonymous", conn.whoami(), "Digest "
-            "authentication was unsuccessful.")
-            conn.close()
+            self.assertNotEqual("anonymous", conn.whoami(),
+                                "%s authentication was unsuccessful." % mech)
+            return conn
+
+    def test_bind_digest(self):
+        """ Test DIGEST-MD5 connection. """
+        conn = self._binding("DIGESTAUTH", "DIGEST-MD5", None)
+        conn.close()
+
+    def test_bind_digest_with_authzid(self):
+        """ Test DIGEST-MD5 connection with authorization ID. """
+        if self.cfg["DIGESTAUTH"]["authzid"] == "None":
+            self.skipTest("Authorization ID is not set.")
+        authzid = self.cfg["DIGESTAUTH"]["authzid"]
+        conn = self._binding("DIGESTAUTH", "DIGEST-MD5", authzid)
+        self.assertEqual(self.cfg["DIGESTAUTH"]["dn"], conn.whoami(),
+                         "Digest authorization was failed. ")
 
     def test_bind_ntlm(self):
         """ Test NTLM connection. """
-        if "NTLMAUTH" not in self.cfg:
-            self.skipTest("No NTLM authentication is set.")
-        client = LDAPClient(self.url)
-        if self.cfg["NTLMAUTH"]["realm"] == "None":
-            realm = None
-        else:
-            realm = self.cfg["NTLMAUTH"]["realm"]
-        client.set_credentials("NTLM", (self.cfg["NTLMAUTH"]["user"], \
-                                        self.cfg["NTLMAUTH"]["password"], \
-                                        realm, None))
+        conn = self._binding("NTLMAUTH", "NTLM", None)
+        conn.close()
+
+    def _bind_gssapi_kinit(self, authzid):
+        import sys
+        import subprocess
+        if sys.platform == "win32":
+             self.skipTest("Cannot use Kerberos auth on Windows"
+                           " against OpenLDAP")
+        cmd = 'echo "%s" | kinit %s' % (self.cfg["GSSAPIAUTH"]["password"],
+                                        self.cfg["GSSAPIAUTH"]["user"])
         try:
-            conn = client.connect()
-        except (bonsai.errors.ConnectionError, \
-                bonsai.errors.AuthenticationError):
-            self.fail()
-        else:
-            self.assertNotEqual("anonymous", conn.whoami(), "NTLM "
-            "authentication was unsuccessful.")
-            conn.close()
+            subprocess.check_output(cmd, shell=True)
+            conn = self._binding("GSSAPIAUTH", "GSSAPI", authzid)
+            subprocess.check_output("kdestroy", shell=True)
+            return conn
+        except subprocess.CalledProcessError:
+            self.fail("Receiving TGT is failed.")
+
+    def test_bind_gssapi_kinit(self):
+        """ Test GSSAPI connection. """
+        conn = self._bind_gssapi_kinit(None)
+
+    def test_bind_gssapi_with_authzid_kinit(self):
+        """ Test GSSAPI connection with authorization ID. """
+        if self.cfg["GSSAPIAUTH"]["authzid"] == "None":
+            self.skipTest("Authorization ID is not set.")
+        authzid = self.cfg["GSSAPIAUTH"]["authzid"]
+        conn = self._bind_gssapi_kinit(authzid)
+        self.assertEqual(self.cfg["GSSAPIAUTH"]["dn"], conn.whoami(),
+                         "Digest authorization was failed. ")
+        conn.close()
 
     def test_search(self):
         """ Test searching. """

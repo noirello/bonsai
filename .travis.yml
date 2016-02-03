@@ -22,14 +22,14 @@ addons:
 
 before_install:
   - sudo apt-get update
-  - sudo apt-get install -y libldap2-dev libsasl2-dev ldap-utils
+  - sudo apt-get install -y libldap2-dev libsasl2-dev ldap-utils krb5-user
   - pip install gevent==1.1rc3
   - pip install tornado
   - pip install codecov
   - pip install pytest-cov
   - cd tests/testenv
   - docker build -t bonsai .
-  - docker run -d -h bonsai.test -p 127.0.0.1:389:389 -p 127.0.0.1:636:636 -p 127.0.0.1:88:88 -e HOSTIP="127.0.0.1" --name server bonsai
+  - docker run -d -h bonsai.test -p 127.0.0.1:389:389 -p 127.0.0.1:636:636 -p 127.0.0.1:88:88 --name server bonsai
   # Waiting for slapd to start in the container.
   - sleep 5
   - docker exec server ps aux
