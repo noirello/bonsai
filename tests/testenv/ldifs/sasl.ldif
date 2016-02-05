@@ -26,6 +26,16 @@ olcSaslHost: bonsai.test
 replace: olcSaslRealm
 olcSaslRealm: BONSAI.test
 -
+# Set logging
+add: olcLogLevel
+olcLogLevel: packets
+olcLogLevel: conns
+olcLogLevel: stats
+olcLogLevel: filter
+-
+replace: olcLogFile
+olcLogFile: /var/log/slapd.log
+-
 #by default, the DN of an authorized Kerberos client takes the form
 #uid=<Kerberos principal name>,cn=<Kerberos Realm>,cn=GSSAPI,cn=auth
 add: olcAuthzRegexp
