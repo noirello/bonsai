@@ -1125,6 +1125,32 @@ clear:
 	return rc;
 }
 
+/* Extended ldap_get_option function with TLS package name and API info
+   support. */
+int
+ldap_get_optionU(LDAP *ld, int option, void *outvalue) {
+	if (option == LDAP_OPT_X_TLS_PACKAGE) {
+		*(char **)outvalue = "SChannel";
+		return LDAP_SUCCESS;
+	}
+	if (option == LDAP_OPT_API_INFO) {
+		/* By default ldap_get_option returns with protocol error,
+		simpler to fill out the struct manually. */
+		LDAPAPIInfo *info = (LDAPAPIInfo *)outvalue;
+		if (info == NULL) return LDAP_OTHER;
+
+		info->ldapai_vendor_name = LDAP_VENDOR_NAME;
+		info->ldapai_vendor_version = LDAP_VENDOR_VERSION;
+		info->ldapai_api_version = LDAP_API_VERSION;
+		info->ldapai_protocol_version = LDAP_VERSION3;
+		info->ldapai_extensions = NULL;
+
+		return LDAP_SUCCESS;
+	}
+
+	return ldap_get_optionW(ld, option, outvalue);
+}
+
 /* Get the optional error message. */
 char *
 _ldap_get_opt_errormsgU(LDAP *ld) {

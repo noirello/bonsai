@@ -69,7 +69,7 @@ class LDAPClientTest(unittest.TestCase):
     def test_tls_impl_name(self):
         """ Test TLS implementation name. """
         tls_impl = bonsai.get_tls_impl_name()
-        self.assertIn(tls_impl, ("GnuTLS", "MozNSS", "OpenSSL"))
+        self.assertIn(tls_impl, ("GnuTLS", "MozNSS", "OpenSSL", "SChannel"))
 
 if __name__ == '__main__':
     unittest.main()

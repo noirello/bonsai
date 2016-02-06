@@ -31,7 +31,6 @@ static PyObject *
 bonsai_get_tls_impl_name(PyObject *self) {
 	int rc = 0;
 	char *package = NULL;
-	PyObject *name = NULL;
 
 	rc = ldap_get_option(NULL, LDAP_OPT_X_TLS_PACKAGE, &package);
 	if (rc != LDAP_SUCCESS || package == NULL) {
@@ -40,9 +39,7 @@ bonsai_get_tls_impl_name(PyObject *self) {
 		return NULL;
 	}
 
-	name = PyUnicode_FromString(package);
-	//ldap_memfree(name);
-	return name;
+	return PyUnicode_FromString(package);
 }
 
 static PyMethodDef bonsai_methods[] = {

@@ -35,12 +35,16 @@
 #define attributeType sk_attrtype
 #define timeval l_timeval
 
+#define LDAP_OPT_X_TLS_PACKAGE 0x6011
+
 #define LDAP_CONTROL_PAGEDRESULTS "1.2.840.113556.1.4.319"
 
 /* All of the used WinLDAP macros are redefined. */
 #undef LDAPControl
 #undef LDAPMod
 #undef LDAPSortKey
+
+#undef LDAPAPIInfo
 
 #undef ldap_create_page_control
 #undef ldap_control_free
@@ -64,9 +68,13 @@
 #undef ldap_start_tls_s
 #undef ldap_simple_bind_s
 
+#undef ldap_get_option
+
 #define LDAPControl LDAPControlA
 #define LDAPMod LDAPModA
 #define LDAPSortKey LDAPSortKeyA
+
+#define LDAPAPIInfo LDAPAPIInfoA
 
 #define ldap_create_page_control ldap_create_page_controlA
 #define ldap_create_sort_control ldap_create_sort_controlA
@@ -99,6 +107,8 @@
 #define ldap_sasl_sspi_bind_s ldap_sasl_sspi_bind_sU
 #define _ldap_get_opt_errormsg _ldap_get_opt_errormsgU
 
+#define ldap_get_option ldap_get_optionU
+
 typedef struct sasl_defaults_s {
 	char *authcid;
 	char *passwd;
@@ -128,6 +138,7 @@ int ldap_start_tls_sU(LDAP *ld, LDAPControlA **sctrls, LDAPControlA **cctrls);
 int ldap_simple_bind_sU(LDAP *ld, char *who, char *passwd);
 void ldap_controls_freeU(LDAPControlA **ctrls);
 int ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrls, LDAPControlA **cctrls, void *defaults);
+int ldap_get_optionU(LDAP *ld, int option, void *outvalue);
 char *_ldap_get_opt_errormsgU(LDAP *ld);
 
 #endif
