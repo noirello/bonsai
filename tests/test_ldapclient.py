@@ -13,7 +13,7 @@ class LDAPClientTest(unittest.TestCase):
         """ Set host url and connection. """
         cfg = configparser.ConfigParser()
         cfg.read(os.path.join(curdir, 'test.ini'))
-        cls.url = "ldap://%s:%s" % (cfg["SERVER"]["host"],
+        cls.url = "ldap://%s:%s" % (cfg["SERVER"]["hostip"],
                                      cfg["SERVER"]["port"])
         cls.client = LDAPClient(cls.url)
 

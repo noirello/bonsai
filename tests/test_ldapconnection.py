@@ -5,6 +5,7 @@ import unittest
 import subprocess
 import tempfile
 
+import bonsai
 from bonsai import LDAPDN
 from bonsai import LDAPClient
 from bonsai import LDAPConnection
@@ -34,7 +35,7 @@ class LDAPConnectionTest(unittest.TestCase):
         curdir = os.path.abspath(os.path.dirname(__file__))
         self.cfg = configparser.ConfigParser()
         self.cfg.read(os.path.join(curdir, 'test.ini'))
-        self.url = "ldap://%s:%s/%s?%s?%s" % (self.cfg["SERVER"]["host"], \
+        self.url = "ldap://%s:%s/%s?%s?%s" % (self.cfg["SERVER"]["hostip"], \
                                         self.cfg["SERVER"]["port"], \
                                         self.cfg["SERVER"]["basedn"], \
                                         self.cfg["SERVER"]["search_attr"], \
@@ -85,9 +86,9 @@ class LDAPConnectionTest(unittest.TestCase):
         if self.cfg["DIGESTAUTH"]["authzid"] == "None":
             self.skipTest("Authorization ID is not set.")
         authzid = self.cfg["DIGESTAUTH"]["authzid"]
-        conn = self._binding("DIGESTAUTH", "DIGEST-MD5", authzid)
-        self.assertEqual(self.cfg["DIGESTAUTH"]["dn"], conn.whoami(),
-                         "Digest authorization was failed. ")
+        with self._binding("DIGESTAUTH", "DIGEST-MD5", authzid) as conn:
+            self.assertEqual(self.cfg["DIGESTAUTH"]["dn"], conn.whoami(),
+                             "Digest authorization was failed. ")
 
     def test_bind_ntlm(self):
         """ Test NTLM connection. """
@@ -120,6 +121,46 @@ class LDAPConnectionTest(unittest.TestCase):
         self.assertEqual(self.cfg["GSSAPIAUTH"]["dn"], conn.whoami(),
                          "Digest authorization was failed. ")
         conn.close()
+
+    def _bind_external(self, authzid):
+        if 'EXTERNALAUTH' not in self.cfg:
+            self.skipTest("EXTERNAL authentication is not set.")
+        if sys.platform == "win32":
+            self.skipTest("Windows relies on set certs in its cert store.")
+        tls_impl = bonsai.get_tls_impl_name()
+        if tls_impl == "GnuTLS" or tls_impl == "OpenSSL":
+            curdir = os.path.abspath(os.path.dirname(__file__))
+            cert_path = os.path.join(curdir, 'testenv', 'certs')
+            cli = LDAPClient("ldap://%s" % self.cfg['SERVER']['hostname'],
+                             tls=True)
+            cli.set_ca_cert(cert_path + '/cacert.pem')
+            cli.set_client_cert(cert_path + '/client.pem')
+            cli.set_client_key(cert_path + '/client.key')
+            cli.set_credentials('EXTERNAL', (authzid,))
+            try:
+                conn = cli.connect()
+            except (bonsai.errors.ConnectionError, \
+                    bonsai.errors.AuthenticationError):
+                self.fail()
+            else:
+                self.assertNotEqual("anonymous", conn.whoami(),
+                                    "EXTERNAL authentication was"
+                                    " unsuccessful.")
+                return conn
+
+    def test_bind_external(self):
+        """ Test EXTERNAL connection. """
+        conn = self._bind_external(None)
+        conn.close()
+
+    def test_bind_external_with_authzid(self):
+        """ Test EXTERNAL connection with authorization ID. """
+        if self.cfg["EXTERNALAUTH"]["authzid"] == "None":
+            self.skipTest("Authorization ID is not set.")
+        authzid = self.cfg["EXTERNALAUTH"]["authzid"]
+        with self._bind_external(authzid) as conn:
+            self.assertEqual(self.cfg["EXTERNALAUTH"]["dn"], conn.whoami(),
+                             "EXTERNAL authorization was failed. ")
 
     def test_search(self):
         """ Test searching. """
@@ -212,7 +253,7 @@ class LDAPConnectionTest(unittest.TestCase):
                                  socket.AF_INET,
                                  socket.SOCK_RAW)
             self.assertEqual(sock.getpeername(),
-                            (self.cfg["SERVER"]["host"],
+                            (self.cfg["SERVER"]["hostip"],
                              int(self.cfg["SERVER"]["port"])))
             sock.close()
         except OSError:

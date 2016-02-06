@@ -13,7 +13,7 @@ class LDAPEntryTest(unittest.TestCase):
         """ Set LDAP client, get config parameters. """
         cfg = configparser.ConfigParser()
         cfg.read(os.path.join(curdir, 'test.ini'))
-        url = "ldap://%s:%s" % (cfg["SERVER"]["host"],
+        url = "ldap://%s:%s" % (cfg["SERVER"]["hostip"],
                                 cfg["SERVER"]["port"])
         cls.client = LDAPClient(url)
         cls.creds = ("SIMPLE", (cfg["SIMPLEAUTH"]["user"],

@@ -30,7 +30,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         curdir = os.path.abspath(os.path.dirname(__file__))
         self.cfg = configparser.ConfigParser()
         self.cfg.read(os.path.join(curdir, 'test.ini'))
-        self.url = "ldap://%s:%s/%s?%s?%s" % (self.cfg["SERVER"]["host"], \
+        self.url = "ldap://%s:%s/%s?%s?%s" % (self.cfg["SERVER"]["hostip"], \
                                         self.cfg["SERVER"]["port"], \
                                         self.cfg["SERVER"]["basedn"], \
                                         self.cfg["SERVER"]["search_attr"], \

@@ -23,7 +23,7 @@ class GeventLDAPConnectionTest(unittest.TestCase):
         curdir = os.path.abspath(os.path.dirname(__file__))
         cfg = configparser.ConfigParser()
         cfg.read(os.path.join(curdir, 'test.ini'))
-        cls.url = "ldap://%s:%s/%s?%s?%s" % (cfg["SERVER"]["host"], \
+        cls.url = "ldap://%s:%s/%s?%s?%s" % (cfg["SERVER"]["hostip"], \
                                              cfg["SERVER"]["port"], \
                                              cfg["SERVER"]["basedn"], \
                                              cfg["SERVER"]["search_attr"], \
