@@ -1,11 +1,31 @@
 import configparser
 import os
+import sys
 import unittest
+import subprocess
+import tempfile
 
 from bonsai import LDAPDN
 from bonsai import LDAPClient
 from bonsai import LDAPConnection
 import bonsai.errors
+
+def invoke_kinit(user, password):
+    """ Invoke kinit command with credential parameters. """
+    proc = subprocess.Popen(['kinit', '--version'], stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, universal_newlines=True)
+    output = " ".join(proc.communicate())
+    if "Heimdal" in output:
+        # Heimdal Kerberos implementation.
+        with tempfile.NamedTemporaryFile() as psw_tmp:
+            psw_tmp.write(password.encode())
+            psw_tmp.flush()
+            cmd = ['kinit', '--password-file=%s' % psw_tmp.name, user]
+            subprocess.check_call(cmd)
+    else:
+        # MIT Kerberos implementation.
+        cmd = 'echo "%s" | kinit %s' % (password, user)
+        subprocess.check_call(cmd, shell=True)
 
 class LDAPConnectionTest(unittest.TestCase):
     """ Test LDAPConnection object. """
@@ -75,17 +95,14 @@ class LDAPConnectionTest(unittest.TestCase):
         conn.close()
 
     def _bind_gssapi_kinit(self, authzid):
-        import sys
-        import subprocess
         if sys.platform == "win32":
              self.skipTest("Cannot use Kerberos auth on Windows"
                            " against OpenLDAP")
-        cmd = 'echo "%s" | kinit %s' % (self.cfg["GSSAPIAUTH"]["password"],
-                                        self.cfg["GSSAPIAUTH"]["user"])
         try:
-            subprocess.check_output(cmd, shell=True)
+            invoke_kinit(self.cfg["GSSAPIAUTH"]["user"],
+                         self.cfg["GSSAPIAUTH"]["password"])
             conn = self._binding("GSSAPIAUTH", "GSSAPI", authzid)
-            subprocess.check_output("kdestroy", shell=True)
+            subprocess.check_call("kdestroy")
             return conn
         except subprocess.CalledProcessError:
             self.fail("Receiving TGT is failed.")
