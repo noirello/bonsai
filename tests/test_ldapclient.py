@@ -17,6 +17,13 @@ class LDAPClientTest(unittest.TestCase):
                                      cfg["SERVER"]["port"])
         cls.client = LDAPClient(cls.url)
 
+    def test_ldapurl(self):
+        """ Test setting LDAPURL. """
+        url =  bonsai.LDAPURL(self.url)
+        client = LDAPClient(url)
+        self.assertEqual(client.url, url)
+        self.assertRaises(ValueError, lambda: LDAPClient(None))
+
     def test_connect(self):
         """ Test connect method. """
         self.assertIsNotNone(self.client.connect())
