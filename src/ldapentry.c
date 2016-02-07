@@ -319,8 +319,8 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 	return self;
 
 error:
+	Py_XDECREF(attrobj);
 	Py_DECREF(self);
-	Py_DECREF(attrobj);
 	Py_DECREF(rawval_list);
 	ldap_memfree(attr);
 	if (ber != NULL) {
@@ -348,6 +348,7 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	mods = LDAPEntry_CreateLDAPMods(self);
 	if (mods == NULL) {
 		PyErr_SetString(PyExc_MemoryError, "Create LDAPModList is failed.");
+		free(dnstr);
 		return NULL;
 	}
 
@@ -591,12 +592,18 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 	if (olddn_str == NULL) return NULL;
 
 	/* Validate and set new LDAP DN. */
-	if (ldapentry_setdn(self, newdn, NULL) != 0) return NULL;
+	if (ldapentry_setdn(self, newdn, NULL) != 0) {
+		free(olddn_str);
+		return NULL;
+	}
 
 	/* Get rdn and parent strings. */
 	newrdn = PySequence_GetItem(self->dn, 0);
 	newparent = PySequence_GetSlice(self->dn, 1, PyObject_Size(self->dn));
-	if (newrdn == NULL || newparent == NULL) return NULL;
+	if (newrdn == NULL || newparent == NULL) {
+		free(olddn_str);
+		return NULL;
+	}
 
 	newrdn_str = PyObject2char(newrdn);
 	newparent_str = PyObject2char(newparent);

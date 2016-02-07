@@ -432,7 +432,14 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
 	}
 
 	defaults = malloc(sizeof(ldap_conndata_t));
-	if (defaults == NULL) return (void *)PyErr_NoMemory();
+	if (defaults == NULL) {
+		if (passwd != NULL) free(passwd);
+		if (binddn != NULL) free(binddn);
+		if (realm != NULL) free(realm);
+		if (authcid != NULL) free(authcid);
+		if (authzid != NULL) free(authzid);
+		return (void *)PyErr_NoMemory();
+	}
 
 	defaults->mech = mech ? strdup(mech) : NULL;
 	defaults->realm = realm;

@@ -147,6 +147,8 @@ class LDAPConnectionTest(unittest.TestCase):
                                     "EXTERNAL authentication was"
                                     " unsuccessful.")
                 return conn
+        else:
+            self.skipTest("")
 
     def test_bind_external(self):
         """ Test EXTERNAL connection. """

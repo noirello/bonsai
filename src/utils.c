@@ -232,7 +232,10 @@ PyList2LDAPSortKeyList(PyObject *list) {
 
 		/* Malloc and set LDAPSortKey struct. */
 		elem = (LDAPSortKey *)malloc(sizeof(LDAPSortKey));
-		if (elem == NULL) goto error;
+		if (elem == NULL) {
+			free(attr);
+			goto error;
+		}
 
 		elem->attributeType = attr;
 		elem->orderingRule = NULL;
