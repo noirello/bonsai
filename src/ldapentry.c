@@ -90,13 +90,6 @@ ldapentry_init(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     return 0;
 }
 
-/*	Creates a new LDAPEntry object for internal use. */
-LDAPEntry *
-LDAPEntry_New(void) {
-	LDAPEntry *self = (LDAPEntry *)LDAPEntryType.tp_new(&LDAPEntryType, NULL, NULL);
-	return self;
-}
-
 /*	Returns 1 if obj is an instance of LDAPEntry, or 0 if not. On error, returns -1 and sets an exception. */
 int
 LDAPEntry_Check(PyObject *obj) {
@@ -262,12 +255,16 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 	}
 	/* Create a new LDAPEntry, raise PyErr_NoMemory if it's failed. */
 	ldapentry_type = load_python_object("bonsai.ldapentry", "LDAPEntry");
-	if (ldapentry_type == NULL) return NULL;
+	if (ldapentry_type == NULL) {
+		Py_DECREF(args);
+		return NULL;
+	}
 	self = (LDAPEntry *)PyObject_CallObject(ldapentry_type, args);
+	Py_DECREF(args);
+	Py_DECREF(ldapentry_type);
 	if (self == NULL) {
 		return (LDAPEntry *)PyErr_NoMemory();
 	}
-	Py_DECREF(ldapentry_type);
 
 	/* Get list of attribute's names, whose values have to keep in bytearray.*/
 	rawval_list = UniqueList_New();
