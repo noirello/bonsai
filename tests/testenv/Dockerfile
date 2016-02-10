@@ -1,4 +1,4 @@
-FROM fedora:23
+FROM fedora:latest
 MAINTAINER noirello <noirello@gmail.com>
 
 RUN dnf update -y
@@ -26,12 +26,19 @@ RUN modutil -dbdir /etc/openldap/certs -changepw 'NSS Certificate DB' -force -ne
 # Copy the root CA cert and key.
 COPY ./certs/cacert.pem /root/cacert.pem
 COPY ./certs/cacert.key /root/cacert.key
+# Copy client cert and key.
+COPY ./certs/client.pem /root/client.pem
+COPY ./certs/client.key /root/client.key
 
 # Generate pkcs12 format from the root CA cert and key.
 RUN openssl pkcs12 -export -in /root/cacert.pem -inkey /root/cacert.key -out /root/cacert.p12 -name OwnCARootCert  -passin pass:p@ssword -passout pass:p@ssword
 # Import into the NSS database and set trust attributest. 
 RUN pk12util -i /root/cacert.p12 -d /etc/openldap/certs -k /etc/openldap/certs/password -w /etc/openldap/certs/password
 RUN certutil -M -n OwnCARootCert -t TCu,Cu,Tuw -d /etc/openldap/certs/
+
+# Import client cert into the database.
+RUN openssl pkcs12 -export -in /root/client.pem -inkey /root/client.key -out /root/client.p12 -name BonsaiTestUser -passin pass:p@ssword -passout pass:p@ssword
+RUN pk12util -i /root/client.p12 -d /etc/openldap/certs -k /etc/openldap/certs/password -w /etc/openldap/certs/password
 
 # Create a new cert for the server.
 RUN certutil -S -n "slapd" -s "cn=bonsai.test" -c "OwnCARootCert" -t "u,u,u" -m 1001 -v 120 -d /etc/openldap/certs -z /etc/openldap/certs/noise.txt -f /etc/openldap/certs/password
