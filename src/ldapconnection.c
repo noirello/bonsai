@@ -14,12 +14,20 @@ ldapconnection_dealloc(LDAPConnection* self) {
 	//Py_XDECREF(self->socketpair); // Cause invalid freeing random occasion.
 
 	/* Free LDAPSortKey list. */
-	if (self->sort_list !=  NULL) {
+	if (self->sort_list != NULL) {
 		for (i = 0; self->sort_list[i] != NULL; i++) {
 			free(self->sort_list[i]->attributeType);
 			free(self->sort_list[i]);
 		}
 		free(self->sort_list);
+	}
+
+	if (self->vlv_info != NULL) {
+		if (self->vlv_info->ldvlv_attrvalue != NULL) {
+			free(self->vlv_info->ldvlv_attrvalue->bv_val);
+			free(self->vlv_info->ldvlv_attrvalue);
+		}
+		free(self->vlv_info);
 	}
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
@@ -298,12 +306,21 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	int num_of_ctrls = 0;
 	LDAPControl *page_ctrl = NULL;
 	LDAPControl *sort_ctrl = NULL;
+	LDAPControl *vlv_ctrl = NULL;
 	LDAPControl **server_ctrls = NULL;
 	LDAPSearchIter *search_iter = (LDAPSearchIter *)iterator;
+	struct timeval timeout;
+	struct timeval *timeout_p;
+	int tout_ms = 0;
+
+	if (search_iter == NULL) return -1;
+
+	tout_ms = (int)(search_iter->timeout * 1000);
 
 	/* Check the number of server controls and allocate it. */
 	if (self->page_size > 1) num_of_ctrls++;
 	if (self->sort_list != NULL) num_of_ctrls++;
+	if (self->vlv_info != NULL) num_of_ctrls++;
 	if (num_of_ctrls > 0) {
 		server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *)
 				* (num_of_ctrls + 1));
@@ -314,14 +331,26 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 		num_of_ctrls = 0;
 	}
 
+	if (self->vlv_info != NULL && self->sort_list == NULL) {
+		PyErr_SetString(PyExc_Exception,
+				"Sort order must be set for using virtual list view.");
+		return -1;
+	}
+
+	if (self->vlv_info != NULL && self->page_size > 1) {
+		PyErr_SetString(PyExc_Exception,
+				"Cannot use paged search with virtual list view.");
+		return -1;
+	}
+
 	if (self->page_size > 1) {
 		/* Create page control and add to the server controls. */
 		rc = ldap_create_page_control(self->ld, self->page_size,
 				search_iter->cookie, 0, &page_ctrl);
 		if (rc != LDAP_SUCCESS) {
-			free(server_ctrls);
 			PyErr_BadInternalCall();
-			return -1;
+			msgid = -1;
+			goto error;
 		}
 		server_ctrls[num_of_ctrls++] = page_ctrl;
 		server_ctrls[num_of_ctrls] = NULL;
@@ -330,13 +359,31 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 	if (self->sort_list != NULL) {
 		rc = ldap_create_sort_control(self->ld, self->sort_list, 0, &sort_ctrl);
 		if (rc != LDAP_SUCCESS) {
-			if (page_ctrl != NULL) ldap_control_free(page_ctrl);
-			free(server_ctrls);
 			PyErr_BadInternalCall();
-			return -1;
+			msgid = -1;
+			goto error;
 		}
 		server_ctrls[num_of_ctrls++] = sort_ctrl;
 		server_ctrls[num_of_ctrls] = NULL;
+	}
+
+	if (self->vlv_info != NULL) {
+		rc = ldap_create_vlv_control(self->ld, self->vlv_info, &vlv_ctrl);
+		if (rc != LDAP_SUCCESS) {
+			PyErr_BadInternalCall();
+			msgid = -1;
+			goto error;
+		}
+		server_ctrls[num_of_ctrls++] = vlv_ctrl;
+		server_ctrls[num_of_ctrls] = NULL;
+	}
+
+	if (tout_ms > 0) {
+		timeout.tv_sec = tout_ms / 1000;
+		timeout.tv_usec = (tout_ms % 1000) * 1000;
+		timeout_p = &timeout;
+	} else {
+		timeout_p = NULL;
 	}
 
 	rc = ldap_search_ext(self->ld, search_iter->base,
@@ -345,7 +392,7 @@ LDAPConnection_Searching(LDAPConnection *self, PyObject *iterator) {
 				search_iter->attrs,
 				search_iter->attrsonly,
 				server_ctrls, NULL,
-				search_iter->timeout,
+				timeout_p,
 				search_iter->sizelimit, &msgid);
 
 	if (rc != LDAP_SUCCESS) {
@@ -363,7 +410,8 @@ error:
 	/* Cleanup. */
 	if (page_ctrl != NULL) ldap_control_free(page_ctrl);
 	if (sort_ctrl != NULL) ldap_control_free(sort_ctrl);
-	if (server_ctrls != NULL) free(server_ctrls);
+	if (vlv_ctrl != NULL) ldap_control_free(vlv_ctrl);
+	free(server_ctrls);
 
 	return msgid;
 }
@@ -454,6 +502,7 @@ static PyObject *
 parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 	int rc = -1;
 	int err = 0;
+	int target_pos = 0, list_count = 0;
 	LDAPMessage *entry;
 	LDAPControl **returned_ctrls = NULL;
 	LDAPEntry *entryobj = NULL;
@@ -471,12 +520,8 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 	}
 
 	/* Set a new empty list for buffer. */
-	if (search_iter->buffer == NULL) {
-		search_iter->buffer = PyList_New(0);
-	} else {
-		Py_DECREF(search_iter->buffer);
-		search_iter->buffer = PyList_New(0);
-	}
+	Py_XDECREF(search_iter->buffer);
+	search_iter->buffer = PyList_New(0);
 
 	if (search_iter->buffer == NULL) {
 		Py_DECREF(search_iter);
@@ -511,19 +556,30 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 		return NULL;
 	}
 
-	if (err == LDAP_NO_SUCH_OBJECT) {
-		return search_iter->buffer;
-	}
-
-	if (err != LDAP_SUCCESS && err != LDAP_PARTIAL_RESULTS) {
+	if (err != LDAP_SUCCESS && err != LDAP_PARTIAL_RESULTS
+			&& err != LDAP_NO_SUCH_OBJECT) {
 		set_exception(self->ld, err);
 		Py_DECREF(search_iter->buffer);
 		Py_DECREF(search_iter);
 		return NULL;
 	}
+
 	rc = ldap_parse_pageresponse_control(self->ld,
 			ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL),
 			NULL, search_iter->cookie);
+
+	if (self->vlv_info != NULL) {
+		rc = ldap_parse_vlvresponse_control(self->ld,
+				ldap_control_find(LDAP_CONTROL_VLVRESPONSE, returned_ctrls, NULL),
+				&target_pos, &list_count, NULL, &err);
+
+		if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
+			set_exception(self->ld, err);
+			Py_DECREF(search_iter->buffer);
+			Py_DECREF(search_iter);
+			return NULL;
+		}
+	}
 
 	/* Cleanup. */
 	if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
@@ -887,6 +943,52 @@ ldapconnection_setsortorder(LDAPConnection *self, PyObject *args) {
 	return Py_None;
 }
 
+static PyObject *
+ldapconnection_setvlv(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+	int offset = 0, before_count = 0, after_count = 0;
+	int list_count = 0;
+	struct berval *attrvalue = NULL;
+	PyObject *attrvalue_obj = NULL;
+	static char *kwlist[] = {"offset", "before_count", "after_count",
+			"est_list_count", "attrvalue", NULL};
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "iiii|O", kwlist, &offset,
+				&before_count, &after_count, &list_count, &attrvalue_obj)) {
+		PyErr_SetString(PyExc_ValueError, "Wrong parameters.");
+		return NULL;
+	}
+
+	self->vlv_info = (LDAPVLVInfo *)malloc(sizeof(LDAPVLVInfo));
+	if (self->vlv_info == NULL) {
+		PyErr_NoMemory();
+		return NULL;
+	}
+
+	self->vlv_info->ldvlv_after_count = after_count;
+	self->vlv_info->ldvlv_before_count = before_count;
+	self->vlv_info->ldvlv_offset = offset;
+	self->vlv_info->ldvlv_context = NULL;
+	self->vlv_info->ldvlv_version = 1;
+	self->vlv_info->ldvlv_count = list_count;
+	if (attrvalue_obj != NULL) {
+		attrvalue = (struct berval *)malloc(sizeof(struct berval *));
+		if (attrvalue == NULL) {
+			PyErr_NoMemory();
+			return NULL;
+		}
+		attrvalue->bv_val = PyObject2char(attrvalue_obj);
+		if (attrvalue->bv_val == NULL) {
+			PyErr_BadInternalCall();
+			free(attrvalue);
+			return NULL;
+		}
+		attrvalue->bv_len = strlen(attrvalue->bv_val);
+	}
+	self->vlv_info->ldvlv_attrvalue = attrvalue;
+
+	return Py_None;
+}
+
 static PyMemberDef ldapconnection_members[] = {
     {"async", T_BOOL, offsetof(LDAPConnection, async), READONLY,
      "Asynchronous connection"},
@@ -912,12 +1014,14 @@ static PyMethodDef ldapconnection_methods[] = {
 			"Poll the status of the operation associated with the given message id from LDAP server."},
 	{"open", (PyCFunction)ldapconnection_open, METH_NOARGS,
 			"Open connection with the LDAP Server."},
-	{"search", (PyCFunction)ldapconnection_search, 	METH_VARARGS | METH_KEYWORDS,
+	{"search", (PyCFunction)ldapconnection_search, METH_VARARGS | METH_KEYWORDS,
 			"Search for LDAP entries."},
 	{"set_page_size", (PyCFunction)ldapconnection_setpagesize, METH_VARARGS,
 			"Set how many entry will be on a page of a search result."},
 	{"set_sort_order", (PyCFunction)ldapconnection_setsortorder, METH_VARARGS,
 			"Set a list of attribute names to sort entries in a search result."},
+	{"set_virtual_list_view", (PyCFunction)ldapconnection_setvlv, METH_VARARGS | METH_KEYWORDS,
+			"Set attributes for virtual list view search."},
 	{"whoami", (PyCFunction)ldapconnection_whoami, METH_NOARGS,
 			"LDAPv3 Who Am I operation."},
     {NULL, NULL, 0, NULL}  /* Sentinel */

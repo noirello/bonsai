@@ -17,7 +17,6 @@ ldapsearchiter_dealloc(LDAPSearchIter* self) {
 
 	free(self->base);
 	free(self->filter);
-	free(self->timeout);
 	if (self->attrs != NULL) {
 		for (i = 0; self->attrs[i] != NULL; i++) {
 			free(self->attrs[i]);
@@ -25,7 +24,7 @@ ldapsearchiter_dealloc(LDAPSearchIter* self) {
 		free(self->attrs);
 	}
 
-	if (self->cookie != NULL) free(self->cookie);
+	free(self->cookie);
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -43,7 +42,7 @@ ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 		self->base = NULL;
 		self->cookie = NULL;
 		self->filter = NULL;
-		self->timeout = NULL;
+		self->timeout = 0;
 		self->attrsonly = 0;
 		self->scope = 0;
 		self->sizelimit = 0;
@@ -69,7 +68,6 @@ LDAPSearchIter_New(LDAPConnection *conn) {
 int
 LDAPSearchIter_SetParams(LDAPSearchIter *self, char **attrs, int attrsonly,
 		char *base, char *filter, int scope, int sizelimit, double timeout) {
-	int tout_ms = (int)(timeout * 1000);
 
 	self->attrs = attrs;
 	self->attrsonly = attrsonly;
@@ -88,19 +86,8 @@ LDAPSearchIter_SetParams(LDAPSearchIter *self, char **attrs, int attrsonly,
 	}
 	self->scope = scope;
 	self->sizelimit = sizelimit;
+	self->timeout = timeout;
 
-	/* Create a timeval, and set tv_sec to timeout, if timeout greater than 0. */
-	if (tout_ms > 0) {
-		self->timeout = malloc(sizeof(struct timeval));
-		if (self->timeout != NULL) {
-			self->timeout->tv_sec = tout_ms / 1000;
-			self->timeout->tv_usec = (tout_ms % 1000) * 1000;
-		} else {
-			return -1;
-		}
-	} else {
-		self->timeout = NULL;
-	}
 	return 0;
 }
 

@@ -20,7 +20,7 @@ typedef struct {
     char *base;
     char *filter;
     char **attrs;
-    struct timeval *timeout;
+    double timeout;
     int scope;
     int attrsonly;
     int sizelimit;

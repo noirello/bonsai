@@ -88,8 +88,8 @@ class LDAPConnection(ldapconnection):
         if self.async:
             return msg_id
         else:
-            if self.page_size > 1:
-                return self.__paged_search(self.get_result(msg_id, timeout))
+            #if self.page_size > 1:
+            #    return self.__paged_search(self.get_result(msg_id, timeout))
             return self.get_result(msg_id, timeout)
 
     def __paged_search(self, res):
