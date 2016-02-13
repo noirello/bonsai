@@ -551,7 +551,6 @@ create_init_thread(void *param, XTHREAD *thread) {
 	*thread = CreateThread(NULL, 0, ldap_init_thread_func, (void *)data, 0, NULL);
 	if (*thread == NULL) rc = -1;
 #else
-	data->flag = 0;
 	data->mux = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
 	if (data->mux == NULL) {
 		PyErr_NoMemory();
@@ -563,7 +562,9 @@ create_init_thread(void *param, XTHREAD *thread) {
 		PyErr_BadInternalCall();
 		return -1;
 	}
-
+	pthread_mutex_lock(data->mux);
+	data->flag = 0;
+	pthread_mutex_unlock(data->mux);
 	rc = pthread_create(thread, NULL, ldap_init_thread_func, data);
 #endif
 	if (rc != 0) return -1;

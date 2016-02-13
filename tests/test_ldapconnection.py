@@ -26,7 +26,7 @@ def invoke_kinit(user, password):
     else:
         # MIT Kerberos implementation.
         cmd = 'echo "%s" | kinit %s' % (password, user)
-        subprocess.check_call(cmd, shell=True)
+        subprocess.check_output(cmd, shell=True)
 
 class LDAPConnectionTest(unittest.TestCase):
     """ Test LDAPConnection object. """

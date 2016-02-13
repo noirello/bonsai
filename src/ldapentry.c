@@ -248,11 +248,14 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 
 	/* Create an attribute list for LDAPEntry (which is implemented in Python). */
 	dn = ldap_get_dn(conn->ld, entrymsg);
-	if (dn != NULL) {
-		args = Py_BuildValue("sO", dn, (PyObject *)conn);
-		ldap_memfree(dn);
-		if (args == NULL) return NULL;
+	if (dn == NULL) {
+		set_exception(conn->ld, 0);
+		return NULL;
 	}
+	args = Py_BuildValue("sO", dn, (PyObject *)conn);
+	ldap_memfree(dn);
+	if (args == NULL) return NULL;
+
 	/* Create a new LDAPEntry, raise PyErr_NoMemory if it's failed. */
 	ldapentry_type = load_python_object("bonsai.ldapentry", "LDAPEntry");
 	if (ldapentry_type == NULL) {
@@ -339,6 +342,7 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 	dnstr = PyObject2char(self->dn);
 	if (dnstr == NULL || strlen(dnstr) == 0) {
 		PyErr_SetString(PyExc_AttributeError, "Missing distinguished name.");
+		free(dnstr);
 		return NULL;
 	}
 
