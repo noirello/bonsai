@@ -15,11 +15,16 @@ lowercase(char *str) {
 
 /* Create a berval structure from a char*. */
 struct berval *
-create_berval(char *value) {
+create_berval(char *value, long int len) {
 	struct berval *bval = NULL;
+
 	bval = malloc(sizeof(struct berval));
 	if (bval == NULL) return NULL;
-	bval->bv_len = (unsigned long)strlen(value);
+	if (len < 0) {
+		bval->bv_len = (unsigned long)strlen(value);
+	} else {
+		bval->bv_len = (unsigned long)len;
+	}
 	bval->bv_val = value;
 	return bval;
 }
@@ -80,63 +85,82 @@ berval2PyObject(struct berval *bval, int keepbytes) {
 	return obj;
 }
 
-/*	Converts any Python objects to C string.
+/*	Converts any Python objects to C string for `output` with length.
  	For string object it uses UTF-8 encoding to convert bytes first,
- 	then char *. For None object returns empty string, for bool it returns
+	then char *. For None object sets empty string, for bool it sets
  	TRUE or FALSE C strings.
 */
-char *
-PyObject2char(PyObject *obj) {
-	char *str = NULL;
+int
+PyObject2char_withlength(PyObject *obj, char **output, long int *len) {
+	int rc = 0;
+	long int size = 0;
 	char *tmp = NULL;
 	PyObject *tmpobj = NULL;
 
-	if (obj == NULL) return NULL;
+	if (obj == NULL) return -1;
 
 	/* If Python object is a None return an empty("") char*. */
 	if (obj == Py_None) {
-		str = strdup("");
-		return str;
+		*output = strdup("");
+		if (len != NULL) *len = 0;
+		return 0;
 	}
 
 	if (PyBytes_Check(obj)) {
 		/* Get the buffer of the Python bytes. */
-		tmp = PyBytes_AsString(obj);
-		if (tmp == NULL) return NULL;
+		rc = PyBytes_AsStringAndSize(obj, &tmp, &size);
+		if (rc != 0) return -1;
 		/* Copy the content of the buffer to avoid invalid freeing. */
-		str = strdup(tmp);
+		*output = (char *)malloc(size + 1);
+		if (*output == NULL) return -1;
+		memcpy(*output, tmp, size + 1);
+
+		if (len != NULL) *len = size;
+
 	} else if (PyUnicode_Check(obj)) {
 		/* Use UTF-8 encoding on Python string to get bytes. */
 		tmpobj = PyUnicode_AsUTF8String(obj);
-		if (tmpobj == NULL) return NULL;
+		if (tmpobj == NULL) return -1;
 
-		str = PyObject2char(tmpobj);
+		rc = PyObject2char_withlength(tmpobj, output, len);
 		Py_DECREF(tmpobj);
 	} else if (PyBool_Check(obj)) {
 		/* Python boolean converting to TRUE or FALSE (see RFC4517 3.3.3). */
 		if (obj == Py_True) {
-			str = strdup("TRUE");
+			*output = strdup("TRUE");
 		} else {
-			str = strdup("FALSE");
+			*output = strdup("FALSE");
 		}
 	} else {
 		tmpobj = PyObject_Str(obj);
 		if (tmpobj == NULL) {
 			PyErr_BadInternalCall();
-			return NULL;
+			return -1;
 		}
 
-		str = PyObject2char(tmpobj);
+		rc = PyObject2char_withlength(tmpobj, output, len);
 		Py_DECREF(tmpobj);
 	}
-	return str;
+	return rc;
+}
+
+/* Converts any Python objects to C string. */
+char *
+PyObject2char(PyObject *obj) {
+	int rc = 0;
+	char *str = NULL;
+
+	rc = PyObject2char_withlength(obj, &str, NULL);
+	if (rc != 0) return NULL;
+	else return str;
 }
 
 /* Create a berval list from a Python list by converting the list element
    using PyObject2char. Returns NULL if the parameter is not a list or NULL. */
 struct berval **
 PyList2BervalList(PyObject *list) {
-	int i = 0;
+	int i = 0, rc = 0;
+	long int len = 0;
 	char *strvalue;
 	struct berval **berval_arr = NULL;
 	PyObject *iter;
@@ -154,10 +178,12 @@ PyList2BervalList(PyObject *list) {
 	}
 
 	for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
-		strvalue = PyObject2char(item);
-		berval_arr[i++] = create_berval(strvalue);
+		rc = PyObject2char_withlength(item, &strvalue, &len);
 		Py_DECREF(item);
+		if (rc != 0) goto finish;
+		berval_arr[i++] = create_berval(strvalue, len);
 	}
+finish:
 	Py_DECREF(iter);
 	berval_arr[i] = NULL;
 	return berval_arr;

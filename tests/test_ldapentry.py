@@ -116,6 +116,24 @@ class LDAPEntryTest(unittest.TestCase):
         conn.close()
         self.assertIn(dname, [res.dn for res in result])
 
+    def test_binary(self):
+        """ Test adding binary data. """
+        curdir = os.path.abspath(os.path.dirname(__file__))
+        self.client.set_credentials(*self.creds)
+        conn = self.client.connect()
+        dname = "cn=binary,%s" % self.basedn
+        entry = LDAPEntry(dname)
+        entry['objectclass'] = ['top', 'inetOrgPerson']
+        entry['sn'] = "binary_test"
+        with open('%s/testenv/test.jpeg' % curdir, 'rb') as image:
+            entry['jpegPhoto'] = image.read()
+        conn.add(entry)
+        result = conn.search(dname, 0)
+        entry.delete()
+        conn.close()
+        self.assertIn("jpegPhoto", result[0].keys())
+        self.assertEqual(result[0]['jpegphoto'][0], entry['jpegphoto'][0])
+
     def test_connection(self):
         """ Test set and get connection object form LDAPEntry. """
         entry = LDAPEntry("cn=test,%s" % self.basedn)

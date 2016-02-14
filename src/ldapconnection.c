@@ -946,7 +946,8 @@ ldapconnection_setsortorder(LDAPConnection *self, PyObject *args) {
 static PyObject *
 ldapconnection_setvlv(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	int offset = 0, before_count = 0, after_count = 0;
-	int list_count = 0;
+	int list_count = 0, rc = 0;
+	long int len = 0;
 	struct berval *attrvalue = NULL;
 	PyObject *attrvalue_obj = NULL;
 	static char *kwlist[] = {"offset", "before_count", "after_count",
@@ -970,19 +971,19 @@ ldapconnection_setvlv(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 	self->vlv_info->ldvlv_context = NULL;
 	self->vlv_info->ldvlv_version = 1;
 	self->vlv_info->ldvlv_count = list_count;
-	if (attrvalue_obj != NULL) {
+	if (attrvalue_obj != NULL && attrvalue_obj != Py_None) {
 		attrvalue = (struct berval *)malloc(sizeof(struct berval *));
 		if (attrvalue == NULL) {
 			PyErr_NoMemory();
 			return NULL;
 		}
-		attrvalue->bv_val = PyObject2char(attrvalue_obj);
-		if (attrvalue->bv_val == NULL) {
+		rc = PyObject2char_withlength(attrvalue_obj, &(attrvalue->bv_val), &len);
+		if (rc != 0 || attrvalue->bv_val == NULL) {
 			PyErr_BadInternalCall();
 			free(attrvalue);
 			return NULL;
 		}
-		attrvalue->bv_len = strlen(attrvalue->bv_val);
+		attrvalue->bv_len = len;
 	}
 	self->vlv_info->ldvlv_attrvalue = attrvalue;
 

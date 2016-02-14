@@ -51,6 +51,7 @@ RUN chown -Rf ldap:ldap /var/lib/ldap
 COPY ./ldifs/base.ldif /root/base.ldif
 COPY ./ldifs/sasl.ldif /root/sasl.ldif
 COPY ./ldifs/sssvlv.ldif /root/sssvlv.ldif
+COPY ./test.jpeg /root/test.jpeg
 
 # Open LDAP and LDAPS port.
 EXPOSE 389 636
