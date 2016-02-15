@@ -287,5 +287,63 @@ class LDAPConnectionTest(unittest.TestCase):
         self.async_conn.close()
         self.assertTrue(self.async_conn.closed)
 
+    def test_vlv_offset(self):
+        """ Test VLV control with offset. """
+        search_dn = "ou=nerdherd,%s" % self.basedn
+        res, ctrl = self.conn.search(search_dn, 1, attrlist=['uidNumber'],
+                                     offset=2, sort_order=["-uidNumber"],
+                                     before_count=1, after_count=1,
+                                     est_list_count=6)
+        self.assertEqual(len(res), 3)
+        self.assertEqual(ctrl['target_position'], 2)
+        self.assertEqual(ctrl['list_count'], 6)
+        self.assertEqual(res[1]['uidNumber'][0], 4)
+
+    def test_vlv_attrvalue(self):
+        """ Test VLV control with attribute value. """
+        search_dn = "ou=nerdherd,%s" % self.basedn
+        res, ctrl = self.conn.search(search_dn, 1, attrlist=['uidNumber'],
+                                     attrvalue=2, sort_order=["-uidNumber"],
+                                     before_count=1, after_count=2,
+                                     est_list_count=6)
+        self.assertEqual(len(res), 4)
+        self.assertEqual(ctrl['target_position'], 4)
+        self.assertEqual(res[0]['uidNumber'][0], 3)
+
+    def test_vlv_without_sort_order(self):
+        """ Test VLV control wihtout sort control. """
+        search_dn = "ou=nerdherd,%s" % self.basedn
+        self.assertRaises(bonsai.UnwillingToPerform,
+                          lambda: self.conn.search(search_dn, 1,
+                                                   attrlist=['uidNumber'],
+                                                   offset=1, before_count=1,
+                                                   after_count=2,
+                                                   est_list_count=6))
+
+    def test_vlv_with_page_size(self):
+        """ Test VLV control wiht page size. """
+        search_dn = "ou=nerdherd,%s" % self.basedn
+        self.assertRaises(bonsai.UnwillingToPerform,
+                          lambda: self.conn.search(search_dn, 1, page_size=3,
+                                                   sort_order=["-uidNumber"],
+                                                   attrvalue=1, before_count=1,
+                                                   after_count=2,
+                                                   est_list_count=6))
+
+    def test_paged_search(self):
+        """ Test paged results control. """
+        search_dn = "ou=nerdherd,%s" % self.basedn
+        res = self.conn.search(search_dn, 1, page_size=2)
+        page = 0
+        while True:
+            if len(res) > 2:
+                self.fail("The size of the page is greater than expected.")
+            msgid = res.acquire_next_page()
+            if msgid is None:
+                break
+            res = self.conn.get_result(msgid)
+            page += 1
+        self.assertEqual(page, 3)
+
 if __name__ == '__main__':
     unittest.main()
