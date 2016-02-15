@@ -567,6 +567,8 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 	LDAPSearchIter *search_iter = NULL;
 	PyObject *buffer = NULL;
 	PyObject *value = NULL;
+	PyObject *ctrl_obj = NULL;
+	PyObject *tmp = NULL;
 
 	/* Get SearchIter from pending operations. */
 	value = PyDict_GetItemString(self->pending_ops, msgidstr);
@@ -611,16 +613,17 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 
 	if (rc != LDAP_SUCCESS ) {
 		set_exception(self->ld, rc);
-		Py_DECREF(search_iter);
-		return NULL;
+		goto error;
 	}
 
-	if (err != LDAP_SUCCESS && err != LDAP_PARTIAL_RESULTS
-			&& err != LDAP_NO_SUCH_OBJECT) {
-		set_exception(self->ld, err);
-		Py_DECREF(buffer);
+	if (err == LDAP_NO_SUCH_OBJECT) {
 		Py_DECREF(search_iter);
-		return NULL;
+		return buffer;
+	}
+
+	if (err != LDAP_SUCCESS && err != LDAP_PARTIAL_RESULTS) {
+		set_exception(self->ld, err);
+		goto error;
 	}
 
 	if (search_iter != NULL) {
@@ -635,10 +638,42 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 
 			if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
 				set_exception(self->ld, err);
-				Py_DECREF(search_iter->buffer);
-				Py_DECREF(search_iter);
-				return NULL;
+				goto error;
 			}
+
+			ctrl_obj = PyDict_New();
+			if (ctrl_obj == NULL) goto error;
+
+			/* Set target position. */
+			tmp = PyLong_FromLong((long int)target_pos);
+			if (tmp == NULL) goto error;
+			if (PyDict_SetItemString(ctrl_obj, "target_position", tmp) != 0) {
+				Py_DECREF(tmp);
+				Py_DECREF(ctrl_obj);
+				PyErr_BadInternalCall();
+				goto error;
+			}
+			Py_DECREF(tmp);
+
+			/* Set real list size. */
+			tmp = PyLong_FromLong((long int)list_count);
+			if (tmp == NULL) goto error;
+			if (PyDict_SetItemString(ctrl_obj, "list_count", tmp) != 0) {
+				Py_DECREF(tmp);
+				Py_DECREF(ctrl_obj);
+				PyErr_BadInternalCall();
+				goto error;
+			}
+			Py_DECREF(tmp);
+
+			/* Create (result, ctrl) tuple as return value. */
+			value = Py_BuildValue("(O,O)", buffer, ctrl_obj);
+			Py_DECREF(ctrl_obj);
+			if (value == NULL) {
+				goto error;
+			}
+			Py_DECREF(buffer);
+			Py_DECREF(search_iter);
 		} else {
 			/* Return LDAPSearchIter for paged search. */
 			Py_XDECREF(search_iter->buffer);
@@ -655,6 +690,10 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 	if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
 
 	return value;
+error:
+	Py_DECREF(buffer);
+	Py_DECREF(search_iter);
+	return NULL;
 }
 
 /* Process the server response after an extended operation. */
