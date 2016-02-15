@@ -128,8 +128,10 @@ PyObject2char_withlength(PyObject *obj, char **output, long int *len) {
 		/* Python boolean converting to TRUE or FALSE (see RFC4517 3.3.3). */
 		if (obj == Py_True) {
 			*output = strdup("TRUE");
+			if (len != NULL) *len = 4;
 		} else {
 			*output = strdup("FALSE");
+			if (len != NULL) *len = 5;
 		}
 	} else {
 		tmpobj = PyObject_Str(obj);
@@ -470,6 +472,50 @@ close_socketpair(PyObject *tup) {
 		if (tmp) {
 			ret = PyObject_CallMethod(tmp, "close", NULL);
 			if (ret) Py_DECREF(ret);
+		}
+	}
+}
+
+/* Set the parameters of an ldapsearchparams struct. */
+int
+set_search_params(ldapsearchparams *params, char **attrs, int attrsonly,
+		char *base, char *filter, int scope, int sizelimit, double timeout) {
+
+	params->attrs = attrs;
+	params->attrsonly = attrsonly;
+
+	/* Copying base string and filter string, because there is no
+	 guarantee that someone will not free them prematurely. */
+	params->base = (char *)malloc(sizeof(char) * (strlen(base)+1));
+	strcpy(params->base, base);
+
+	/* If empty filter string is given, set to NULL. */
+	if (filter == NULL || strlen(filter) == 0) {
+		params->filter = NULL;
+	} else {
+		params->filter = (char *)malloc(sizeof(char) * (strlen(filter)+1));
+		strcpy(params->filter, filter);
+	}
+	params->scope = scope;
+	params->sizelimit = sizelimit;
+	params->timeout = timeout;
+
+	return 0;
+}
+
+/* Free an ldapsearcgparam struct. */
+void
+free_search_params(ldapsearchparams *params) {
+	int i = 0;
+
+	if (params != NULL) {
+		free(params->base);
+		free(params->filter);
+		if (params->attrs != NULL) {
+			for (i = 0; params->attrs[i] != NULL; i++) {
+				free(params->attrs[i]);
+			}
+			free(params->attrs);
 		}
 	}
 }

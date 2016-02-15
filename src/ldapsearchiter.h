@@ -16,20 +16,15 @@ typedef struct {
     PyObject_HEAD
     PyObject *buffer;
     LDAPConnection *conn;
+    ldapsearchparams *params;
     struct berval *cookie;
-    char *base;
-    char *filter;
-    char **attrs;
-    double timeout;
-    int scope;
-    int attrsonly;
-    int sizelimit;
+    int page_size;
+	LDAPSortKey **sort_list;
+    LDAPVLVInfo *vlv_info;
 } LDAPSearchIter;
 
 extern PyTypeObject LDAPSearchIterType;
 
 LDAPSearchIter *LDAPSearchIter_New(LDAPConnection *conn);
-int LDAPSearchIter_SetParams(LDAPSearchIter *self, char **attrs, int attrsonly,
-		char *base, char *filter, int scope, int sizelimit, double timeout);
 
 #endif /* LDAPSEARCHITER_H_ */

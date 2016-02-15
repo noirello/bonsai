@@ -15,13 +15,23 @@ ldapsearchiter_dealloc(LDAPSearchIter* self) {
 	Py_XDECREF(self->buffer);
 	Py_XDECREF(self->conn);
 
-	free(self->base);
-	free(self->filter);
-	if (self->attrs != NULL) {
-		for (i = 0; self->attrs[i] != NULL; i++) {
-			free(self->attrs[i]);
+	free_search_params(self->params);
+	/* Free LDAPSortKey list. */
+	if (self->sort_list != NULL) {
+		for (i = 0; self->sort_list[i] != NULL; i++) {
+			free(self->sort_list[i]->attributeType);
+			free(self->sort_list[i]);
 		}
-		free(self->attrs);
+		free(self->sort_list);
+	}
+
+	/* Free VLVInfo struct. */
+	if (self->vlv_info != NULL) {
+		if (self->vlv_info->ldvlv_attrvalue != NULL) {
+			free(self->vlv_info->ldvlv_attrvalue->bv_val);
+			free(self->vlv_info->ldvlv_attrvalue);
+		}
+		free(self->vlv_info);
 	}
 
 	free(self->cookie);
@@ -38,14 +48,11 @@ ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
 	if (self != NULL) {
 		self->buffer = NULL;
-		self->attrs = NULL;
-		self->base = NULL;
 		self->cookie = NULL;
-		self->filter = NULL;
-		self->timeout = 0;
-		self->attrsonly = 0;
-		self->scope = 0;
-		self->sizelimit = 0;
+		self->page_size = 0;
+		self->params = NULL;
+		self->sort_list = NULL;
+		self->vlv_info = NULL;
 	}
 
 	return (PyObject *)self;
@@ -58,37 +65,12 @@ LDAPSearchIter_New(LDAPConnection *conn) {
 			(LDAPSearchIter *)LDAPSearchIterType.tp_new(&LDAPSearchIterType,
 					NULL, NULL);
 	if (conn != NULL && self != NULL) {
+		self->params = (ldapsearchparams *)malloc(sizeof(ldapsearchparams));
+		if (self->params == NULL) return NULL;
 		Py_INCREF(conn);
 		self->conn = conn;
 	}
 	return self;
-}
-
-/* Set the parameters of an LDAPSEarchIter object. */
-int
-LDAPSearchIter_SetParams(LDAPSearchIter *self, char **attrs, int attrsonly,
-		char *base, char *filter, int scope, int sizelimit, double timeout) {
-
-	self->attrs = attrs;
-	self->attrsonly = attrsonly;
-
-	/* Copying base string and filter string, because there is no
-	 guarantee that someone will not free them prematurely. */
-	self->base = (char *)malloc(sizeof(char) * (strlen(base)+1));
-	strcpy(self->base, base);
-
-	/* If empty filter string is given, set to NULL. */
-	if (filter == NULL || strlen(filter) == 0) {
-		self->filter = NULL;
-	} else {
-		self->filter = (char *)malloc(sizeof(char) * (strlen(filter)+1));
-		strcpy(self->filter, filter);
-	}
-	self->scope = scope;
-	self->sizelimit = sizelimit;
-	self->timeout = timeout;
-
-	return 0;
 }
 
 /* Get the next page of a paged LDAP search. */
@@ -99,7 +81,7 @@ ldapsearchiter_acquirenextpage(LDAPSearchIter *self) {
 	/* If paged LDAP search is in progress. */
 	if ((self->cookie != NULL) && (self->cookie->bv_val != NULL) &&
 			(strlen(self->cookie->bv_val) > 0)) {
-		msgid = LDAPConnection_Searching(self->conn, (PyObject *)self);
+		msgid = LDAPConnection_Searching(self->conn, NULL, (PyObject *)self);
 		if (msgid < 0) return NULL;
 
 		return PyLong_FromLong((long int)msgid);

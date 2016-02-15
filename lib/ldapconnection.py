@@ -74,7 +74,9 @@ class LDAPConnection(ldapconnection):
         return self._evaluate(super().open(), timeout)
 
     def search(self, base=None, scope=None, filter=None, attrlist=None,
-               timeout=None, sizelimit=0, attrsonly=False):
+               timeout=None, sizelimit=0, attrsonly=False, sort_order=None,
+               page_size=0, offset=0, before_count=0, after_count=0,
+               est_list_count=0, attrvalue=None):
         # Documentation in the docs/api.rst with detailed examples.
         # Load values from the LDAPURL, if it is not presented on the
         # parameter list.
@@ -83,8 +85,14 @@ class LDAPConnection(ldapconnection):
         _filter = filter if filter is not None else self.__client.url.filter
         _attrlist = attrlist if attrlist is not None else self.__client.url.attributes
         _timeout = timeout if timeout is not None else 0.0
+        if sort_order is not None:
+            _sort_order = self.__create_sort_list(sort_order)
+        else:
+            _sort_order= []
         msg_id = super().search(_base, _scope, _filter, _attrlist,
-                                _timeout, sizelimit, attrsonly)
+                                _timeout, sizelimit, attrsonly, _sort_order,
+                                page_size, offset, before_count, after_count,
+                                est_list_count, attrvalue)
         if self.async:
             return msg_id
         else:
@@ -100,7 +108,8 @@ class LDAPConnection(ldapconnection):
                 break
             res = self.get_result(msg_id)
 
-    def set_sort_order(self, sort_list):
+    @staticmethod
+    def __create_sort_list(sort_list):
         """
         Set a list of attribute names to sort entries in a search result. For
         reverse order set '-' before to the attribute name.
@@ -121,7 +130,7 @@ class LDAPConnection(ldapconnection):
                 sort_attrs.append((attr, False))
         if len(sort_list) > len(set(map(lambda x: x[0].lower, sort_attrs))):
             raise ValueError("Attribute names must be different from each other.")
-        super().set_sort_order(sort_attrs)
+        return sort_attrs
 
     def whoami(self, timeout=None):
         """
