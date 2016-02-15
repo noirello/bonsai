@@ -618,7 +618,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 	}
 
 	if (err == LDAP_NO_SUCH_OBJECT) {
-		Py_DECREF(search_iter);
+		Py_DECREF(value);
 		return buffer;
 	}
 

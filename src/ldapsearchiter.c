@@ -128,6 +128,25 @@ ldapsearchiter_iternext(LDAPSearchIter *self) {
 	return NULL;
 }
 
+static Py_ssize_t
+ldapsearchiter_len(LDAPSearchIter* self)  {
+	if (self->buffer == NULL) return 0;
+    return PyObject_Size(self->buffer);
+}
+
+static PySequenceMethods ldapsearchiter_sequence = {
+	(lenfunc)ldapsearchiter_len,                  /* sq_length */
+	0,			/* sq_concat */
+	0,        /* sq_repeat */
+	0,                    			/* sq_item */
+	0,                             	/* sq_slice */
+	0,		/* sq_ass_item */
+	0,                              /* sq_ass_slice */
+	0,       /* sq_contains */
+	0,	/* sq_inplace_concat */
+	0,        /* sq_inplace_repeat */
+};
+
 static PyMethodDef ldapsearchiter_methods[] = {
 	{"acquire_next_page", (PyCFunction)ldapsearchiter_acquirenextpage,
 			METH_NOARGS, "Get next page of paged LDAP search."},
@@ -146,7 +165,7 @@ PyTypeObject LDAPSearchIterType = {
     0,                         /* tp_reserved */
     0,                         /* tp_repr */
     0,                         /* tp_as_number */
-    0,                         /* tp_as_sequence */
+	&ldapsearchiter_sequence,  /* tp_as_sequence */
     0,                         /* tp_as_mapping */
     0,                         /* tp_hash  */
     0,                         /* tp_call */

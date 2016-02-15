@@ -24,7 +24,6 @@ int LDAPEntry_Check(PyObject *obj);
 LDAPModList *LDAPEntry_CreateLDAPMods(LDAPEntry *self);
 LDAPEntry *LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn);
 PyObject *LDAPEntry_GetItem(LDAPEntry *self, PyObject *key);
-PyObject *LDAPEntry_GetItemString(LDAPEntry *self, const char *key);
 int LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value);
 int LDAPEntry_SetConnection(LDAPEntry *self, LDAPConnection *conn);
 int LDAPEntry_SetStringDN(LDAPEntry *self, char *value);

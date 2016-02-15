@@ -37,6 +37,9 @@ class TimeoutError(LDAPError):
 class ProtocolError(LDAPError):
     """Raised, when protocol error is happened."""
 
+class UnwillingToPerform(LDAPError):
+    """Raised, when the server is not willing to handle requests."""
+
 def _get_error(code):
     """ Return an error by code number. """
     if code == -1 or code == 0x51 or code == -11:
@@ -53,6 +56,8 @@ def _get_error(code):
         return AuthenticationError
     elif code == 0x32:
         return InsufficientAccess
+    elif code == 0x35:
+        return UnwillingToPerform
     elif code == 0x41:
         return ObjectClassViolation
     elif code == 0x44:

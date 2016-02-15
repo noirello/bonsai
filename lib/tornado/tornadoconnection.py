@@ -43,9 +43,3 @@ class TornadoLDAPConnection(LDAPConnection):
             if exc.errno != 17:
                 raise exc
         return fut
-    
-    def search(self, base=None, scope=None, filter=None, attrlist=None,
-               timeout=0, sizelimit=0, attrsonly=False):
-        msg_id = super().search(base, scope, filter, attrlist, timeout,
-                                sizelimit, attrsonly)
-        return self._evaluate(msg_id)

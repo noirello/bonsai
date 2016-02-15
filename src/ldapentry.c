@@ -691,13 +691,6 @@ LDAPEntry_GetItem(LDAPEntry *self, PyObject *key) {
 	return PyDict_GetItem((PyObject *)self, match);
 }
 
-/*	This is the same as LDAPEntry_GetItem(), but key is specified as a char*. */
-PyObject *
-LDAPEntry_GetItemString(LDAPEntry *self, const char *key) {
-	PyObject *keyobj = PyUnicode_FromString(key);
-	return LDAPEntry_GetItem(self, keyobj);
-}
-
 /*	Set item to LDAPEntry with a case-insensitive key. */
 int
 LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {

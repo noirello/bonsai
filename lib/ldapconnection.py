@@ -1,5 +1,6 @@
 from ._bonsai import ldapconnection
 from .ldapdn import LDAPDN
+from .errors import UnwillingToPerform
 
 class LDAPConnection(ldapconnection):
     """
@@ -89,24 +90,18 @@ class LDAPConnection(ldapconnection):
             _sort_order = self.__create_sort_list(sort_order)
         else:
             _sort_order= []
+        if _sort_order == [] and (offset != 0 or attrvalue is not None):
+            raise UnwillingToPerform("Sort control is required with"
+                                     " virtual list view.")
+        if page_size != 0 and (offset != 0 or attrvalue is not None):
+            raise UnwillingToPerform("Virual list view incompatible"
+                                     " with paged search.")
         msg_id = super().search(_base, _scope, _filter, _attrlist,
                                 _timeout, sizelimit, attrsonly, _sort_order,
                                 page_size, offset, before_count, after_count,
                                 est_list_count, attrvalue)
-        if self.async:
-            return msg_id
-        else:
-            #if self.page_size > 1:
-            #    return self.__paged_search(self.get_result(msg_id, timeout))
-            return self.get_result(msg_id, timeout)
+        return self._evaluate(msg_id, timeout)
 
-    def __paged_search(self, res):
-        while True:
-            yield from res
-            msg_id = res.acquire_next_page()
-            if msg_id is None:
-                break
-            res = self.get_result(msg_id)
 
     @staticmethod
     def __create_sort_list(sort_list):
