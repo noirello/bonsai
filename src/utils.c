@@ -409,10 +409,11 @@ finish:
 int
 add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item)  {
 	char msgidstr[8];
+
 	sprintf(msgidstr, "%d", msgid);
 	if (PyDict_SetItemString(pending_ops, msgidstr, item) != 0) {
-	   PyErr_BadInternalCall();
-		   return -1;
+		PyErr_BadInternalCall();
+		return -1;
 	}
 	Py_DECREF(item);
 

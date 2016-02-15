@@ -88,7 +88,7 @@ ldapsearchiter_acquirenextpage(LDAPSearchIter *self) {
 	} else {
 		ber_bvfree(self->cookie);
 		self->cookie = NULL;
-
+		Py_DECREF(self);
 		Py_RETURN_NONE;
 	}
 }
