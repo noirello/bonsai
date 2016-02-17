@@ -509,7 +509,7 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 			search_iter->vlv_info->ldvlv_count = list_count;
 
 			if (attrvalue_obj != NULL) {
-				attrvalue = (struct berval *)malloc(sizeof(struct berval *));
+				attrvalue = (struct berval *)malloc(sizeof(struct berval));
 				if (attrvalue == NULL) {
 					Py_DECREF(search_iter);
 					PyErr_NoMemory();
@@ -587,7 +587,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 
 	buffer = PyList_New(0);
 	if (buffer == NULL) {
-		Py_DECREF(search_iter);
+		Py_DECREF(value);
 		return PyErr_NoMemory();
 	}
 
@@ -597,13 +597,13 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 		entryobj = LDAPEntry_FromLDAPMessage(entry, self);
 		if (entryobj == NULL) {
 			Py_DECREF(buffer);
-			Py_DECREF(search_iter);
+			Py_DECREF(value);
 			return NULL;
 		}
 		if (PyList_Append(buffer, (PyObject *)entryobj) != 0) {
 			Py_DECREF(entryobj);
 			Py_DECREF(buffer);
-			Py_DECREF(search_iter);
+			Py_DECREF(value);
 			return PyErr_NoMemory();
 		}
 		Py_DECREF(entryobj);
@@ -677,7 +677,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
 error:
 	if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
 	Py_DECREF(buffer);
-	Py_DECREF(search_iter);
+	Py_DECREF(value);
 	return NULL;
 }
 
