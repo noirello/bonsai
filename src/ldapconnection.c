@@ -501,13 +501,13 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 				PyErr_NoMemory();
 				return NULL;
 			}
-
 			search_iter->vlv_info->ldvlv_after_count = after_count;
 			search_iter->vlv_info->ldvlv_before_count = before_count;
 			search_iter->vlv_info->ldvlv_offset = offset;
 			search_iter->vlv_info->ldvlv_context = NULL;
 			search_iter->vlv_info->ldvlv_version = 1;
 			search_iter->vlv_info->ldvlv_count = list_count;
+
 			if (attrvalue_obj != NULL) {
 				attrvalue = (struct berval *)malloc(sizeof(struct berval *));
 				if (attrvalue == NULL) {

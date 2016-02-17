@@ -108,7 +108,7 @@ PyObject2char_withlength(PyObject *obj, char **output, long int *len) {
 
 	if (PyBytes_Check(obj)) {
 		/* Get the buffer of the Python bytes. */
-		rc = PyBytes_AsStringAndSize(obj, &tmp, &size);
+		rc = PyBytes_AsStringAndSize(obj, &tmp, (Py_ssize_t *)&size);
 		if (rc != 0) return -1;
 		/* Copy the content of the buffer to avoid invalid freeing. */
 		*output = (char *)malloc(size + 1);

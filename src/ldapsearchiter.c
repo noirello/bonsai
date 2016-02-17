@@ -77,7 +77,6 @@ LDAPSearchIter_New(LDAPConnection *conn) {
 static PyObject *
 ldapsearchiter_acquirenextpage(LDAPSearchIter *self) {
 	int msgid = -1;
-
 	/* If paged LDAP search is in progress. */
 	if ((self->cookie != NULL) && (self->cookie->bv_val != NULL) &&
 			(strlen(self->cookie->bv_val) > 0)) {

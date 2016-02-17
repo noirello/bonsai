@@ -49,6 +49,7 @@
 #undef ldap_create_page_control
 #undef ldap_control_free
 #undef ldap_controls_free
+#undef ldap_create_vlv_control
 
 #undef ldap_get_dn
 #undef ldap_add_ext
@@ -99,9 +100,11 @@
 #define ldap_start_tls_s ldap_start_tls_sU
 #define ldap_simple_bind_s ldap_simple_bind_sU
 #define ldap_controls_free ldap_controls_freeU
+#define ldap_create_vlv_control ldap_create_vlv_controlU
+#define ldap_parse_vlvresponse_control ldap_parse_vlvresponse_controlU
 
 /* These functions are not represented in the WinLDAP API. */
-#define ldap_parse_pageresponse_control ldap_parse_pageresponse_controlU
+#define ldap_parse_pageresponse_control(ld, ctrls, count, cookie) ldap_parse_pageresponse_controlU(ld, ctrls, count, &(cookie))
 #define ldap_control_find ldap_control_findU
 #define ldap_initialize ldap_initializeU
 #define ldap_sasl_sspi_bind_s ldap_sasl_sspi_bind_sU
@@ -129,8 +132,10 @@ int ldap_renameU(LDAP *ld, char *dn, char *newrdn, char *newSuperior, int delete
 int ldap_search_extU(LDAP *ld, char *base, int scope, char *filter, char **attrs, int attrsonly, LDAPControlA **sctrls, LDAPControlA **cctrls, struct timeval *timeout, int sizelimit, int *msgidp);
 int ldap_extended_operationU(LDAP *ld, char *reqoid, struct berval *reqdata, LDAPControlA **sctrls, LDAPControlA **cctrls, int *msgidp);
 int ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct berval **retdatap, int freeit);
-int ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *count, struct berval *cookie);
+int ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *count, struct berval **cookie);
 LDAPControlA **ldap_control_findU(char *oid, LDAPControlA **ctrls, LDAPControlA ***nextctrlp);
+int ldap_create_vlv_controlU(LDAP *ld, LDAPVLVInfo *vlvinfo, LDAPControlA **ctrl);
+int ldap_parse_vlvresponse_controlU(LDAP *ld, LDAPControlA **ctrls, long int *target_posp, long int *list_countp, struct berval **contextp, int *errcodep);
 int ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp, char **errmsgp, char ***referralsp, LDAPControlA ***sctrls, int freeit);
 char *ldap_err2stringU(int err);
 int ldap_initializeU(LDAP **ldp, char *url);

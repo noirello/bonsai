@@ -507,21 +507,18 @@ ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct b
    object internally. */
 int
 ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *count,
-		struct berval *cookie) {
+		struct berval **cookie) {
 	
 	int rc = 0;
 	LDAPControlW **wctrls = NULL;
 
 	if (rc = convert_ctrl_list(ctrls, &wctrls) != LDAP_SUCCESS) goto clear;
 
-	if (cookie != NULL && cookie->bv_val != NULL) {
-		/* Clear the cookie's content for the new data. */
-		ber_bvfree(cookie);
-		cookie = NULL;
+	if (*cookie != NULL && (*cookie)->bv_val != NULL) {
+		ber_bvfree(*cookie);
 	}
 
-	rc = ldap_parse_page_controlW(ld, wctrls, (unsigned long *)count, &cookie);
-
+	rc = ldap_parse_page_controlW(ld, wctrls, (unsigned long *)count, cookie);
 clear:
 	free_list((void **)wctrls, (void *)free_ctrl);
 
@@ -588,10 +585,10 @@ ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp,
 			ctrla->ldctl_iscritical = wsctrls[i]->ldctl_iscritical;
 			rc = convert_to_mbs(wsctrls[i]->ldctl_oid, &(ctrla->ldctl_oid));
 			if (rc != LDAP_SUCCESS) goto clear;
+			ctrla->ldctl_value.bv_val = (char *)malloc(wsctrls[i]->ldctl_value.bv_len);
+			memcpy(ctrla->ldctl_value.bv_val, wsctrls[i]->ldctl_value.bv_val, wsctrls[i]->ldctl_value.bv_len);
 			ctrla->ldctl_value.bv_len = wsctrls[i]->ldctl_value.bv_len;
-			ctrla->ldctl_value.bv_val = _strdup(wsctrls[i]->ldctl_value.bv_val);
 			ctrls[i] = ctrla;
-
 		}
 		ctrls[i] = NULL;
 
@@ -733,8 +730,56 @@ ldap_controls_freeU(LDAPControlA **ctrls) {
 			if (ctrls[i]->ldctl_value.bv_val != NULL) {
 				free(ctrls[i]->ldctl_value.bv_val);
 			}
+			free(ctrls[i]);
 		}
 	}
+}
+
+/* Extended ldap_get_option function with TLS package name and API info
+support. */
+int
+ldap_get_optionU(LDAP *ld, int option, void *outvalue) {
+	if (option == LDAP_OPT_X_TLS_PACKAGE) {
+		*(char **)outvalue = "SChannel";
+		return LDAP_SUCCESS;
+	}
+	if (option == LDAP_OPT_API_INFO) {
+		/* By default ldap_get_option returns with protocol error,
+		simpler to fill out the struct manually. */
+		LDAPAPIInfo *info = (LDAPAPIInfo *)outvalue;
+		if (info == NULL) return LDAP_OTHER;
+
+		info->ldapai_vendor_name = LDAP_VENDOR_NAME;
+		info->ldapai_vendor_version = LDAP_VENDOR_VERSION;
+		info->ldapai_api_version = LDAP_API_VERSION;
+		info->ldapai_protocol_version = LDAP_VERSION3;
+		info->ldapai_extensions = NULL;
+
+		return LDAP_SUCCESS;
+	}
+
+	return ldap_get_optionW(ld, option, outvalue);
+}
+
+int
+ldap_create_vlv_controlU(LDAP *ld, LDAPVLVInfo *vlvinfo, LDAPControlA **ctrl) {
+	return ldap_create_vlv_controlA(ld, vlvinfo, FALSE, ctrl);
+}
+
+int
+ldap_parse_vlvresponse_controlU(LDAP *ld, LDAPControlA **ctrls, long int *target_posp,
+	long int *list_countp, struct berval **contextp, int *errcodep) {
+	int rc = 0;
+	LDAPControlW **wctrls = NULL;
+
+	rc = convert_ctrl_list(ctrls, &wctrls);
+	if (rc != LDAP_SUCCESS) goto clear;
+
+	rc = ldap_parse_vlv_controlW(ld, wctrls, target_posp, list_countp, contextp, errcodep);
+
+clear:
+	free_list((void **)wctrls, (void *)free_ctrl);
+	return rc;
 }
 
 /******************************************************************************
@@ -1123,32 +1168,6 @@ clear:
 	DeleteSecurityContext(&ctxhandle);
 	FreeCredentialHandle(&credhandle);
 	return rc;
-}
-
-/* Extended ldap_get_option function with TLS package name and API info
-   support. */
-int
-ldap_get_optionU(LDAP *ld, int option, void *outvalue) {
-	if (option == LDAP_OPT_X_TLS_PACKAGE) {
-		*(char **)outvalue = "SChannel";
-		return LDAP_SUCCESS;
-	}
-	if (option == LDAP_OPT_API_INFO) {
-		/* By default ldap_get_option returns with protocol error,
-		simpler to fill out the struct manually. */
-		LDAPAPIInfo *info = (LDAPAPIInfo *)outvalue;
-		if (info == NULL) return LDAP_OTHER;
-
-		info->ldapai_vendor_name = LDAP_VENDOR_NAME;
-		info->ldapai_vendor_version = LDAP_VENDOR_VERSION;
-		info->ldapai_api_version = LDAP_API_VERSION;
-		info->ldapai_protocol_version = LDAP_VERSION3;
-		info->ldapai_extensions = NULL;
-
-		return LDAP_SUCCESS;
-	}
-
-	return ldap_get_optionW(ld, option, outvalue);
 }
 
 /* Get the optional error message. */
