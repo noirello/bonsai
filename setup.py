@@ -38,7 +38,7 @@ if sys.platform == "win32":
     sources.append("wldap-utf8.c")
     depends.append("wldap-utf8.h")
 else:
-    libs = ["ldap", "lber"]
+    libs = ["ldap", "lber", "krb5", "gssapi_krb5"]
 
 sources = [os.path.join('src', x) for x in sources]
 depends = [os.path.join('src', x) for x in depends]

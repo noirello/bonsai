@@ -55,14 +55,10 @@ class LDAPConnectionTest(unittest.TestCase):
         del self.conn
         del self.async_conn
 
-    def _binding(self, auth, mech, authzid):
+    def _binding(self, auth, mech, authzid, realm=None):
         if auth not in self.cfg:
             self.skipTest("%s authentication is not set." % mech)
         client = LDAPClient(self.url)
-        if self.cfg[auth]["realm"] == "None":
-            realm = None
-        else:
-            realm = self.cfg[auth]["realm"]
         client.set_credentials(mech, (self.cfg[auth]["user"],
                                       self.cfg[auth]["password"],
                                       realm, authzid))

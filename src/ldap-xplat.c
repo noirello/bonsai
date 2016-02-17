@@ -151,6 +151,73 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid) {
 
 #else
 
+#ifdef HAVE_KRB5
+
+static int
+create_krb5_cred(krb5_context ctx, char *realm, char *user,
+		char *password, krb5_ccache *ccache, gss_cred_id_t *gsscred) {
+	int rc = 0, len = 0;
+	unsigned int minor_stat = 0;
+	const char *cname = NULL;
+	krb5_get_init_creds_opt *cred_opt;
+	krb5_creds creds;
+	krb5_principal princ = NULL;
+
+	if (realm == NULL || user == NULL || password == NULL) return 1;
+	len = strlen(realm);
+
+	if (len == 0 || strlen(user) == 0) return 0;
+
+	rc = krb5_cc_new_unique(ctx, "MEMORY", NULL, ccache);
+	if (rc != 0) goto clear;
+
+	rc = krb5_build_principal(ctx, &princ, len, realm, user, NULL);
+
+	if (rc != 0) goto clear;
+
+	rc = krb5_cc_initialize(ctx, *ccache, princ);
+	if (rc != 0) goto clear;
+
+	rc = krb5_get_init_creds_opt_alloc(ctx, &cred_opt);
+	if (rc != 0) goto clear;
+
+	rc = krb5_get_init_creds_opt_set_out_ccache(ctx, cred_opt, *ccache);
+	if (rc != 0) goto clear;
+
+	rc = krb5_get_init_creds_password(ctx, &creds, princ, password, 0, NULL, 0, NULL, NULL);
+	if (rc != 0) goto clear;
+
+	rc= krb5_cc_store_cred(ctx, *ccache, &creds);
+	if (rc != 0) goto clear;
+
+	cname = krb5_cc_get_name(ctx, *ccache);
+	if (cname == NULL) goto clear;
+
+	rc = gss_krb5_ccache_name(&minor_stat, cname, NULL);
+	if (rc != 0) goto clear;
+
+	rc = gss_krb5_import_cred(&minor_stat, *ccache, princ, 0, gsscred);
+
+clear:
+	if (princ != NULL) krb5_free_principal(ctx, princ);
+	return rc;
+}
+
+static int
+remove_krb5_cred(krb5_context ctx, krb5_ccache ccache, gss_cred_id_t *gsscred) {
+	int rc = 0;
+
+	rc = gss_release_cred(NULL, gsscred);
+	if (rc != 0) return rc;
+
+	rc = krb5_cc_destroy(ctx, ccache);
+	krb5_free_context(ctx);
+
+	return rc;
+}
+
+#endif
+
 static void
 set_cert_policy(LDAP *ld, int cert_policy) {
 	ldap_set_option(ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &cert_policy);
@@ -358,9 +425,18 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid) {
     any problems. */
 int
 sasl_interact(LDAP *ld, unsigned flags, void *defs, void *in) {
+	int rc = 0;
     sasl_interact_t *interact = (sasl_interact_t*)in;
     const char *dflt = interact->defresult;
 	ldap_conndata_t *defaults = (ldap_conndata_t *)defs;
+
+	if (strcmp("GSSAPI", defaults->mech) == 0 &&
+			strlen(defaults->realm) != 0 &&
+			strlen(defaults->authcid) != 0) {
+		rc = ldap_set_option(ld, LDAP_OPT_X_SASL_GSS_CREDS,
+			(void *)defaults->gsscred);
+		if (rc != 0) return -1;
+	}
 
 	while (interact->id != SASL_CB_LIST_END) {
 		switch(interact->id) {
@@ -470,6 +546,9 @@ dealloc_conn_info(ldap_conndata_t* info) {
 	if (info->mech) free(info->mech);
 	if (info->passwd) free(info->passwd);
 	if (info->realm) free(info->realm);
+#ifdef HAVE_KRB5
+	remove_krb5_cred(info->ctx, info->ccache, &(info->gsscred));
+#endif
 	free(info);
 }
 
@@ -487,9 +566,9 @@ static void *
 ldap_init_thread_func(void *params) {
 	int rc = -1;
 	const int version = LDAP_VERSION3;
-	ldapInitThreadData *ldap_params = (ldapInitThreadData *)params;
+	ldapInitThreadData *data = (ldapInitThreadData *)params;
 
-	if (ldap_params == NULL) {
+	if (data == NULL) {
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 		return 0;
 #else
@@ -499,41 +578,53 @@ ldap_init_thread_func(void *params) {
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 #else
-	pthread_mutex_lock(ldap_params->mux);
+	pthread_mutex_lock(data->mux);
 	/* Lock already acquired by this thread, flag can be set now. */
-	ldap_params->flag = 1;
+	data->flag = 1;
 #endif
-	rc = ldap_initialize(&(ldap_params->ld), ldap_params->url);
+	rc = ldap_initialize(&(data->ld), data->url);
 	if (rc != LDAP_SUCCESS) {
-		ldap_params->retval = rc;
+		data->retval = rc;
 		goto end;
 	}
 	/* Set version to LDAPv3. */
-	ldap_set_option(ldap_params->ld, LDAP_OPT_PROTOCOL_VERSION, &version);
-	if (ldap_params->cert_policy != -1) {
-		set_cert_policy(ldap_params->ld, ldap_params->cert_policy);
+	ldap_set_option(data->ld, LDAP_OPT_PROTOCOL_VERSION, &version);
+	if (data->cert_policy != -1) {
+		set_cert_policy(data->ld, data->cert_policy);
 	}
 	/* Set CA cert dir, CA cert and client cert. */
-	set_certificates(ldap_params->ld, ldap_params->ca_cert_dir,
-			ldap_params->ca_cert, ldap_params->client_cert,
-			ldap_params->client_key);
-	if (ldap_params->tls == 1) {
+	set_certificates(data->ld, data->ca_cert_dir,
+			data->ca_cert, data->client_cert,
+			data->client_key);
+	if (data->tls == 1) {
 		/* Start TLS if it's required. */
-		rc = ldap_start_tls_s(ldap_params->ld, NULL, NULL);
+		rc = ldap_start_tls_s(data->ld, NULL, NULL);
 	}
-	ldap_params->retval = rc;
-	if (ldap_params->sock != -1) {
+	data->retval = rc;
+
+#ifdef HAVE_KRB5
+	if (strcmp("GSSAPI", data->info->mech) == 0) {
+		rc = create_krb5_cred(data->info->ctx, data->info->realm,
+				data->info->authcid, data->info->passwd,
+				&(data->info->ccache), &(data->info->gsscred));
+		if (rc != 0) {
+			data->retval = rc;
+		}
+	}
+#endif
+
+	if (data->sock != -1) {
 		/* Send a signal through an internal socketpair. */
-		if (send(ldap_params->sock, "s", 1, 0) == -1) {
+		if (send(data->sock, "s", 1, 0) == -1) {
 			/* Signalling is failed. */
-			ldap_params->retval = -1;
+			data->retval = -1;
 		}
 	}
 end:
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 	return 0;
 #else
-	pthread_mutex_unlock(ldap_params->mux);
+	pthread_mutex_unlock(data->mux);
 	return NULL;
 #endif
 }
@@ -543,7 +634,7 @@ end:
     on failure returns -1.
 */
 int
-create_init_thread(void *param, XTHREAD *thread) {
+create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread) {
 	int rc = 0;
 	ldapInitThreadData *data = (ldapInitThreadData *)param;
 
@@ -564,7 +655,15 @@ create_init_thread(void *param, XTHREAD *thread) {
 	}
 	pthread_mutex_lock(data->mux);
 	data->flag = 0;
+#ifdef HAVE_KRB5
+	data->info = info;
+	if (strcmp("GSSAPI", data->info->mech) == 0) {
+		rc = krb5_init_context(&(data->info->ctx));
+		if (rc != 0) return -1;
+	}
+#endif
 	pthread_mutex_unlock(data->mux);
+
 	rc = pthread_create(thread, NULL, ldap_init_thread_func, data);
 #endif
 	if (rc != 0) return -1;

@@ -8,6 +8,8 @@
 #ifndef PYLDAP_LDAP_XPLAT_H_
 #define PYLDAP_LDAP_XPLAT_H_
 
+#define HAVE_KRB5 1
+
 #include <Python.h>
 
 
@@ -29,6 +31,12 @@
 #include <pthread.h>
 #include <sys/socket.h>
 
+#ifdef HAVE_KRB5
+#include <krb5.h>
+#include <gssapi.h>
+#include <gssapi/gssapi_krb5.h>
+#endif
+
 #define SOCKET int
 #define XTHREAD pthread_t
 
@@ -49,6 +57,11 @@ typedef struct ldap_conndata_s {
 	HANDLE thread;
 	SOCKET sock;
 #else
+#ifdef HAVE_KRB5
+	krb5_context ctx;
+	krb5_ccache ccache;
+	gss_cred_id_t gsscred;
+#endif
 	char **resps;
 	int nresps;
 	const char *rmech;
@@ -71,13 +84,14 @@ typedef struct ldap_thread_data_s {
 	/* For the POSIX's thread. */
 	pthread_mutex_t *mux;
 	int flag;
+	ldap_conndata_t *info;
 #endif
 } ldapInitThreadData;
 
 int _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, LDAP **ld);
 int _ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid);
 
-int create_init_thread(void *param, XTHREAD *thread);
+int create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread);
 void *create_conn_info(char *mech, SOCKET sock, PyObject *creds);
 void dealloc_conn_info(ldap_conndata_t* info);
 
