@@ -99,7 +99,7 @@ LDAPModList_Pop(LDAPModList *self) {
 	PyObject *berval = NULL;
 	PyObject *ret = NULL;
 	UniqueList *list = NULL;
-	struct berval **mod_bvals;
+	struct berval **mod_bvals = NULL;
 
 	if (self->last > 0) {
 		mod = self->mod_list[--self->last];

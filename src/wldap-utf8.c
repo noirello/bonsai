@@ -586,6 +586,10 @@ ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp,
 			rc = convert_to_mbs(wsctrls[i]->ldctl_oid, &(ctrla->ldctl_oid));
 			if (rc != LDAP_SUCCESS) goto clear;
 			ctrla->ldctl_value.bv_val = (char *)malloc(wsctrls[i]->ldctl_value.bv_len);
+			if (ctrla->ldctl_value.bv_val == NULL) {
+				rc = LDAP_NO_MEMORY;
+				goto clear;
+			}
 			memcpy(ctrla->ldctl_value.bv_val, wsctrls[i]->ldctl_value.bv_val, wsctrls[i]->ldctl_value.bv_len);
 			ctrla->ldctl_value.bv_len = wsctrls[i]->ldctl_value.bv_len;
 			ctrls[i] = ctrla;
@@ -838,13 +842,21 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
 
 	/* This buffer is for SSPI. */
 	bufs[0].BufferType = SECBUFFER_TOKEN;
-	bufs[0].pvBuffer = malloc(sizes.cbSecurityTrailer);
 	bufs[0].cbBuffer = sizes.cbSecurityTrailer;
+	bufs[0].pvBuffer = malloc(sizes.cbSecurityTrailer);
+	if (bufs[0].pvBuffer == NULL) {
+		res = LDAP_NO_MEMORY;
+		goto clear;
+	}
 
 	/* This buffer holds the application data. */
 	bufs[1].BufferType = SECBUFFER_DATA;
 	bufs[1].cbBuffer = inLen;
 	bufs[1].pvBuffer = malloc(inLen);
+	if (bufs[1].pvBuffer == NULL) {
+		res = LDAP_NO_MEMORY;
+		goto clear;
+	}
 
 	memcpy(bufs[1].pvBuffer, inToken, inLen);
 
@@ -852,21 +864,33 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
 	bufs[2].BufferType = SECBUFFER_PADDING;
 	bufs[2].cbBuffer = sizes.cbBlockSize;
 	bufs[2].pvBuffer = malloc(sizes.cbBlockSize);
+	if (bufs[2].pvBuffer == NULL) {
+		res = LDAP_NO_MEMORY;
+		goto clear;
+	}
 
 	res = EncryptMessage(handle, SECQOP_WRAP_NO_ENCRYPT, &buff_desc, 0);
 
 	if (res == SEC_E_OK) {
 		int maxlen = bufs[0].cbBuffer + bufs[1].cbBuffer + bufs[2].cbBuffer;
-		char *p = (char *)malloc(maxlen);
-		*outToken = p;
+		char *tokp = (char *)malloc(maxlen);
+		if (tokp == NULL) {
+			res = LDAP_NO_MEMORY;
+			goto clear;
+		}
+		*outToken = tokp;
 		*outLen = maxlen;
-		memcpy(p, bufs[0].pvBuffer, bufs[0].cbBuffer);
-		p += bufs[0].cbBuffer;
-		memcpy(p, bufs[1].pvBuffer, bufs[1].cbBuffer);
-		p += bufs[1].cbBuffer;
-		memcpy(p, bufs[2].pvBuffer, bufs[2].cbBuffer);
+		memcpy(tokp, bufs[0].pvBuffer, bufs[0].cbBuffer);
+		tokp += bufs[0].cbBuffer;
+		memcpy(tokp, bufs[1].pvBuffer, bufs[1].cbBuffer);
+		tokp += bufs[1].cbBuffer;
+		memcpy(tokp, bufs[2].pvBuffer, bufs[2].cbBuffer);
 	}
-
+	return res;
+clear:
+	free(bufs[0].pvBuffer);
+	free(bufs[1].pvBuffer);
+	free(bufs[2].pvBuffer);
 	return res;
 }
 
@@ -1109,7 +1133,7 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
 	output = (char *)malloc(maxlen);
 	if (output == NULL) return LDAP_NO_MEMORY;
 	/* Fill with zeros (crtical for DIGEST-MD5). */
-	memset(output, 0, sizeof(char));
+	memset(output, 0, maxlen);
 
 	SecInvalidateHandle(&credhandle);
 	SecInvalidateHandle(&ctxhandle);

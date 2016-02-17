@@ -504,7 +504,7 @@ set_search_params(ldapsearchparams *params, char **attrs, int attrsonly,
 	return 0;
 }
 
-/* Free an ldapsearcgparam struct. */
+/* Free an ldapsearchparam struct. */
 void
 free_search_params(ldapsearchparams *params) {
 	int i = 0;
