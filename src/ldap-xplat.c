@@ -425,11 +425,12 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid) {
     any problems. */
 int
 sasl_interact(LDAP *ld, unsigned flags, void *defs, void *in) {
-	int rc = 0;
     sasl_interact_t *interact = (sasl_interact_t*)in;
     const char *dflt = interact->defresult;
 	ldap_conndata_t *defaults = (ldap_conndata_t *)defs;
 
+#ifdef HAVE_KRB5
+	int rc = 0;
 	if (strcmp("GSSAPI", defaults->mech) == 0 &&
 			strlen(defaults->realm) != 0 &&
 			strlen(defaults->authcid) != 0) {
@@ -437,7 +438,7 @@ sasl_interact(LDAP *ld, unsigned flags, void *defs, void *in) {
 			(void *)defaults->gsscred);
 		if (rc != 0) return -1;
 	}
-
+#endif
 	while (interact->id != SASL_CB_LIST_END) {
 		switch(interact->id) {
 			case SASL_CB_GETREALM:

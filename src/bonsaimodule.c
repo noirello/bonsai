@@ -42,11 +42,23 @@ bonsai_get_tls_impl_name(PyObject *self) {
 	return PyUnicode_FromString(package);
 }
 
+/* Check that the module is build with additional KRB5 support. */
+static PyObject *
+bonsai_has_krb5_support(PyObject *self) {
+#ifdef HAVE_KRB5
+	Py_RETURN_TRUE;
+#else
+	Py_RETURN_FALSE;
+#endif
+}
+
 static PyMethodDef bonsai_methods[] = {
 	{"get_vendor_info", (PyCFunction)bonsai_get_vendor_info, METH_NOARGS,
 		"Returns the vendor information of LDAP library."},
 	{"get_tls_impl_name", (PyCFunction)bonsai_get_tls_impl_name, METH_NOARGS,
 		"Returns the name of the underlying TLS implementation."},
+	{"has_krb5_support", (PyCFunction)bonsai_has_krb5_support, METH_NOARGS,
+		"Check that the module is build with additional Kerberos support."},
 	{NULL, NULL, 0, NULL}  /* Sentinel */
 };
 

@@ -8,8 +8,6 @@
 #ifndef PYLDAP_LDAP_XPLAT_H_
 #define PYLDAP_LDAP_XPLAT_H_
 
-#define HAVE_KRB5 1
-
 #include <Python.h>
 
 
