@@ -163,7 +163,7 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user,
 	krb5_creds creds;
 	krb5_principal princ = NULL;
 
-	if (realm == NULL || user == NULL || password == NULL) return 1;
+        if (realm == NULL || user == NULL || password == NULL) return 1;
 	len = strlen(realm);
 
 	if (len == 0 || strlen(user) == 0) return 0;
@@ -172,7 +172,6 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user,
 	if (rc != 0) goto clear;
 
 	rc = krb5_build_principal(ctx, &princ, len, realm, user, NULL);
-
 	if (rc != 0) goto clear;
 
 	rc = krb5_cc_initialize(ctx, *ccache, princ);
@@ -181,11 +180,8 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user,
 	rc = krb5_get_init_creds_opt_alloc(ctx, &cred_opt);
 	if (rc != 0) goto clear;
 
-	rc = krb5_get_init_creds_opt_set_out_ccache(ctx, cred_opt, *ccache);
-	if (rc != 0) goto clear;
-
 	rc = krb5_get_init_creds_password(ctx, &creds, princ, password, 0, NULL, 0, NULL, NULL);
-	if (rc != 0) goto clear;
+        if (rc != 0) goto clear;
 
 	rc= krb5_cc_store_cred(ctx, *ccache, &creds);
 	if (rc != 0) goto clear;
@@ -206,12 +202,15 @@ clear:
 static int
 remove_krb5_cred(krb5_context ctx, krb5_ccache ccache, gss_cred_id_t *gsscred) {
 	int rc = 0;
+        unsigned int minstat = 0;
 
-	rc = gss_release_cred(NULL, gsscred);
-	if (rc != 0) return rc;
+	rc = gss_release_cred(&minstat, gsscred);
+	if (rc != 0) return minstat;
 
-	rc = krb5_cc_destroy(ctx, ccache);
-	krb5_free_context(ctx);
+	if (ccache != NULL) {
+            rc = krb5_cc_destroy(ctx, ccache);
+	    krb5_free_context(ctx);
+        }
 
 	return rc;
 }
@@ -533,6 +532,10 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
 	defaults->resps = NULL;
 	defaults->nresps = 0;
 	defaults->rmech = NULL;
+#ifdef HAVE_KRB5
+        defaults->ccache = NULL;
+        defaults->gsscred = GSS_C_NO_CREDENTIAL;
+#endif
 #endif
 
 	return defaults;
