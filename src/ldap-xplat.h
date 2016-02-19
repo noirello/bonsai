@@ -10,7 +10,6 @@
 
 #include <Python.h>
 
-
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 //MS Windows
 
@@ -59,6 +58,8 @@ typedef struct ldap_conndata_s {
 	krb5_context ctx;
 	krb5_ccache ccache;
 	gss_cred_id_t gsscred;
+	char *errmsg;
+	char requeste_tgt;
 #endif
 	char **resps;
 	int nresps;

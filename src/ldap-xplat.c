@@ -154,16 +154,17 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid) {
 #ifdef HAVE_KRB5
 
 static int
-create_krb5_cred(krb5_context ctx, char *realm, char *user,
-		char *password, krb5_ccache *ccache, gss_cred_id_t *gsscred) {
+create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
+		krb5_ccache *ccache, gss_cred_id_t *gsscred, char **errmsg) {
 	int rc = 0, len = 0;
-	unsigned int minor_stat = 0;
+	unsigned int minor_stat = 0, major_stat = 0;
 	const char *cname = NULL;
+	const char *errmsg_tmp = NULL;
 	krb5_get_init_creds_opt *cred_opt;
 	krb5_creds creds;
 	krb5_principal princ = NULL;
 
-        if (realm == NULL || user == NULL || password == NULL) return 1;
+	if (realm == NULL || user == NULL || password == NULL) return 1;
 	len = strlen(realm);
 
 	if (len == 0 || strlen(user) == 0) return 0;
@@ -180,8 +181,9 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user,
 	rc = krb5_get_init_creds_opt_alloc(ctx, &cred_opt);
 	if (rc != 0) goto clear;
 
-	rc = krb5_get_init_creds_password(ctx, &creds, princ, password, 0, NULL, 0, NULL, NULL);
-        if (rc != 0) goto clear;
+	rc = krb5_get_init_creds_password(ctx, &creds, princ, password, 0, NULL, 0,
+			NULL, NULL);
+	if (rc != 0) goto clear;
 
 	rc= krb5_cc_store_cred(ctx, *ccache, &creds);
 	if (rc != 0) goto clear;
@@ -189,28 +191,41 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user,
 	cname = krb5_cc_get_name(ctx, *ccache);
 	if (cname == NULL) goto clear;
 
-	rc = gss_krb5_ccache_name(&minor_stat, cname, NULL);
-	if (rc != 0) goto clear;
+	major_stat = gss_krb5_ccache_name(&minor_stat, cname, NULL);
+	if (major_stat != 0) goto clear;
 
-	rc = gss_krb5_import_cred(&minor_stat, *ccache, princ, 0, gsscred);
+	major_stat = gss_krb5_import_cred(&minor_stat, *ccache, princ, 0, gsscred);
 
 clear:
 	if (princ != NULL) krb5_free_principal(ctx, princ);
+	if (rc != 0) {
+		/* Create error message with the error code. */
+		errmsg_tmp = krb5_get_error_message(ctx, rc);
+		if (errmsg != NULL && errmsg_tmp != NULL) {
+			len = strlen(errmsg_tmp) + 26;
+			*errmsg = (char *)malloc(len);
+			if (*errmsg == NULL) {
+				krb5_free_error_message(ctx, errmsg_tmp);
+				return -1;
+			}
+			snprintf(*errmsg, len,"%s. (KRB5_ERROR 0x%08x)", errmsg_tmp, rc);
+		}
+		krb5_free_error_message(ctx, errmsg_tmp);
+	}
+	if (major_stat != 0) return major_stat;
 	return rc;
 }
 
 static int
 remove_krb5_cred(krb5_context ctx, krb5_ccache ccache, gss_cred_id_t *gsscred) {
 	int rc = 0;
-        unsigned int minstat = 0;
+	unsigned int minor_stat = 0;
 
-	rc = gss_release_cred(&minstat, gsscred);
-	if (rc != 0) return minstat;
+	rc = gss_release_cred(&minor_stat, gsscred);
+	if (rc != 0) return minor_stat;
 
-	if (ccache != NULL) {
-            rc = krb5_cc_destroy(ctx, ccache);
-	    krb5_free_context(ctx);
-        }
+	if (ccache != NULL) rc = krb5_cc_destroy(ctx, ccache);
+	if (ctx != NULL) krb5_free_context(ctx);
 
 	return rc;
 }
@@ -352,7 +367,18 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 		rc = pthread_join(thread, NULL);
 		/* Thread is finished. */
 		if (val->retval != LDAP_SUCCESS) {
+#ifdef HAVE_KRB5
+			if (val->info->errmsg != NULL) {
+				PyObject *error = get_error_by_code(0x31);
+				if (error == NULL) goto end;
+				PyErr_SetString(error, val->info->errmsg);
+				Py_DECREF(error);
+			} else {
+				set_exception(NULL, val->retval);
+			}
+#else
 			set_exception(NULL, val->retval);
+#endif
 			if (val->ld) free(val->ld);
 			retval = -1;
 			goto end;
@@ -430,9 +456,7 @@ sasl_interact(LDAP *ld, unsigned flags, void *defs, void *in) {
 
 #ifdef HAVE_KRB5
 	int rc = 0;
-	if (strcmp("GSSAPI", defaults->mech) == 0 &&
-			strlen(defaults->realm) != 0 &&
-			strlen(defaults->authcid) != 0) {
+	if (defaults->requeste_tgt == 1) {
 		rc = ldap_set_option(ld, LDAP_OPT_X_SASL_GSS_CREDS,
 			(void *)defaults->gsscred);
 		if (rc != 0) return -1;
@@ -533,8 +557,11 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
 	defaults->nresps = 0;
 	defaults->rmech = NULL;
 #ifdef HAVE_KRB5
-        defaults->ccache = NULL;
-        defaults->gsscred = GSS_C_NO_CREDENTIAL;
+	defaults->ctx = NULL;
+	defaults->ccache = NULL;
+	defaults->gsscred = GSS_C_NO_CREDENTIAL;
+	defaults->errmsg = NULL;
+	defaults->requeste_tgt = 0;
 #endif
 #endif
 
@@ -552,6 +579,7 @@ dealloc_conn_info(ldap_conndata_t* info) {
 	if (info->realm) free(info->realm);
 #ifdef HAVE_KRB5
 	remove_krb5_cred(info->ctx, info->ccache, &(info->gsscred));
+	free(info->errmsg);
 #endif
 	free(info);
 }
@@ -607,10 +635,11 @@ ldap_init_thread_func(void *params) {
 	data->retval = rc;
 
 #ifdef HAVE_KRB5
-	if (strcmp("GSSAPI", data->info->mech) == 0) {
+	if (data->info->requeste_tgt == 1) {
 		rc = create_krb5_cred(data->info->ctx, data->info->realm,
 				data->info->authcid, data->info->passwd,
-				&(data->info->ccache), &(data->info->gsscred));
+				&(data->info->ccache), &(data->info->gsscred),
+				&(data->info->errmsg));
 		if (rc != 0) {
 			data->retval = rc;
 		}
@@ -661,7 +690,10 @@ create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread) {
 	data->flag = 0;
 #ifdef HAVE_KRB5
 	data->info = info;
-	if (strcmp("GSSAPI", data->info->mech) == 0) {
+	if (data->info->mech != NULL && strcmp("GSSAPI", data->info->mech) == 0
+			&& data->info->realm != NULL && strlen(data->info->realm) != 0
+			&& data->info->authcid!= NULL && strlen(data->info->authcid) != 0) {
+		data->info->requeste_tgt = 1;
 		rc = krb5_init_context(&(data->info->ctx));
 		if (rc != 0) return -1;
 	}

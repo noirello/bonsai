@@ -45,7 +45,7 @@ bonsai_get_tls_impl_name(PyObject *self) {
 /* Check that the module is build with additional KRB5 support. */
 static PyObject *
 bonsai_has_krb5_support(PyObject *self) {
-#ifdef HAVE_KRB5
+#ifdef HAVE_KRB5 || WIN32
 	Py_RETURN_TRUE;
 #else
 	Py_RETURN_FALSE;

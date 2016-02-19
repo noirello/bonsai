@@ -65,8 +65,8 @@ class LDAPConnectionTest(unittest.TestCase):
         try:
             conn = client.connect()
         except (bonsai.errors.ConnectionError, \
-                bonsai.errors.AuthenticationError):
-            self.fail()
+                bonsai.errors.AuthenticationError) as err:
+            self.fail(err)
         else:
             self.assertNotEqual("anonymous", conn.whoami(),
                                 "%s authentication was unsuccessful." % mech)
@@ -117,6 +117,42 @@ class LDAPConnectionTest(unittest.TestCase):
         self.assertEqual(self.cfg["GSSAPIAUTH"]["dn"], conn.whoami(),
                          "Digest authorization was failed. ")
         conn.close()
+
+    def test_bind_gssapi(self):
+        """ Test GSSAPI connection with automatic TGT requesting. """
+        if not bonsai.has_krb5_support():
+            self.skipTest("Module doesn't have KRB5 support.")
+        if ("realm" not in self.cfg["GSSAPIAUTH"]
+            or self.cfg["GSSAPIAUTH"]["realm"] == "None"):
+            self.skipTest("Realm is not set.")
+        if sys.platform == "win32":
+             self.skipTest("Cannot use Kerberos auth on Windows"
+                           " against OpenLDAP")
+        # Make sure keytab is empty.
+        subprocess.check_call("kdestroy")
+        conn = self._binding("GSSAPIAUTH", "GSSAPI", None,
+                             self.cfg["GSSAPIAUTH"]["realm"].upper())
+        conn.close()
+
+    def test_bind_gssapi_error(self):
+        """ Test automatic TGT requesting with wrong realm name. """
+        if "GSSAPIAUTH" not in self.cfg:
+            self.skipTest("%s authentication is not set." % mech)
+        if not bonsai.has_krb5_support():
+            self.skipTest("Module doesn't have KRB5 support.")
+        if ("realm" not in self.cfg["GSSAPIAUTH"]
+            or self.cfg["GSSAPIAUTH"]["realm"] == "None"):
+            self.skipTest("Realm is not set.")
+        if sys.platform == "win32":
+             self.skipTest("Cannot use Kerberos auth on Windows"
+                           " against OpenLDAP")
+        client = LDAPClient(self.url)
+        client.set_credentials("GSSAPI", (self.cfg["GSSAPIAUTH"]["user"],
+                                      self.cfg["GSSAPIAUTH"]["password"],
+                                      self.cfg["GSSAPIAUTH"]["realm"],
+                                      None))
+        self.assertRaises(bonsai.AuthenticationError,
+                          lambda: client.connect())
 
     def _bind_external(self, authzid):
         if 'EXTERNALAUTH' not in self.cfg:
