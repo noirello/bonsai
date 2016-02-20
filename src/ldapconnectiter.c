@@ -8,7 +8,7 @@
 
 #include "utils.h"
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#ifdef WIN32
 //MS Windows
 
 /* Poll the answer of the separate thread that runs the binding process.

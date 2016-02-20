@@ -88,11 +88,13 @@ libdirs = []
 macros = []
 if sys.platform == "darwin":
     libdirs.append("/usr/local/lib")
+    macros.append(("MACOSX", 1))
 
 if sys.platform == "win32":
     libs = ["wldap32", "secur32", "Ws2_32"]
     sources.append("wldap-utf8.c")
     depends.append("wldap-utf8.h")
+    macros.append(("WIN32", 1))
 else:
     libs = ["ldap", "lber"]
     if have_krb5(["krb5", "gssapi"], libdirs):

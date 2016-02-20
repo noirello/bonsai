@@ -10,7 +10,7 @@
 
 #include <Python.h>
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#ifdef WIN32
 //MS Windows
 
 #include <WinSock2.h>
@@ -48,7 +48,7 @@ typedef struct ldap_conndata_s {
 	char *authcid;
 	char *passwd;
 	char *authzid;
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#ifdef WIN32
 	/* For the Windows's thread. */
 	LDAP *ld;
 	HANDLE thread;
@@ -59,7 +59,7 @@ typedef struct ldap_conndata_s {
 	krb5_ccache ccache;
 	gss_cred_id_t gsscred;
 	char *errmsg;
-	char requeste_tgt;
+	char request_tgt;
 #endif
 	char **resps;
 	int nresps;
@@ -78,7 +78,7 @@ typedef struct ldap_thread_data_s {
 	char *client_key;
 	int retval;
 	SOCKET sock;
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#ifdef WIN32
 #else
 	/* For the POSIX's thread. */
 	pthread_mutex_t *mux;

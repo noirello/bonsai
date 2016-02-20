@@ -2,7 +2,7 @@
 
 #include "utils.h"
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#ifdef WIN32
 
 /* It does what it says: no verification on the server cert. */
 BOOLEAN _cdecl
@@ -259,7 +259,7 @@ set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert, char
 	ldap_set_option(ld, LDAP_OPT_X_TLS_NEWCTX, &true);
 }
 
-#if defined(__APPLE__)
+#ifdef MACOSX
 
 /* Drop in replacement for pthread_mutext_timedlock for Mac OS X system. */
 static int
@@ -456,7 +456,7 @@ sasl_interact(LDAP *ld, unsigned flags, void *defs, void *in) {
 
 #ifdef HAVE_KRB5
 	int rc = 0;
-	if (defaults->requeste_tgt == 1) {
+	if (defaults->request_tgt == 1) {
 		rc = ldap_set_option(ld, LDAP_OPT_X_SASL_GSS_CREDS,
 			(void *)defaults->gsscred);
 		if (rc != 0) return -1;
@@ -548,7 +548,7 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
 	defaults->authzid = authzid;
 
 	defaults->binddn = binddn;
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#ifdef WIN32
 	defaults->thread = NULL;
 	defaults->ld = NULL;
 	defaults->sock = sock;
@@ -561,7 +561,7 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
 	defaults->ccache = NULL;
 	defaults->gsscred = GSS_C_NO_CREDENTIAL;
 	defaults->errmsg = NULL;
-	defaults->requeste_tgt = 0;
+	defaults->request_tgt = 0;
 #endif
 #endif
 
@@ -590,7 +590,7 @@ thus to avoid the I/O blocking in the main (Python) thread the initialisation
 is done in a separate (POSIX and Windows) thread. A signal is sent through an
 internal socketpair when the thread is finished, thus select() can be used on
 the socket descriptor. */
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#ifdef WIN32
 static int WINAPI
 #else
 static void *
@@ -601,14 +601,14 @@ ldap_init_thread_func(void *params) {
 	ldapInitThreadData *data = (ldapInitThreadData *)params;
 
 	if (data == NULL) {
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#ifdef WIN32
 		return 0;
 #else
 		return NULL;
 #endif
 	}
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#ifdef WIN32
 #else
 	pthread_mutex_lock(data->mux);
 	/* Lock already acquired by this thread, flag can be set now. */
@@ -635,7 +635,7 @@ ldap_init_thread_func(void *params) {
 	data->retval = rc;
 
 #ifdef HAVE_KRB5
-	if (data->info->requeste_tgt == 1) {
+	if (data->info->request_tgt == 1) {
 		rc = create_krb5_cred(data->info->ctx, data->info->realm,
 				data->info->authcid, data->info->passwd,
 				&(data->info->ccache), &(data->info->gsscred),
@@ -654,7 +654,7 @@ ldap_init_thread_func(void *params) {
 		}
 	}
 end:
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#ifdef WIN32
 	return 0;
 #else
 	pthread_mutex_unlock(data->mux);
@@ -671,7 +671,7 @@ create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread) {
 	int rc = 0;
 	ldapInitThreadData *data = (ldapInitThreadData *)param;
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#ifdef WIN32
 	*thread = CreateThread(NULL, 0, ldap_init_thread_func, (void *)data, 0, NULL);
 	if (*thread == NULL) rc = -1;
 #else
@@ -693,7 +693,7 @@ create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread) {
 	if (data->info->mech != NULL && strcmp("GSSAPI", data->info->mech) == 0
 			&& data->info->realm != NULL && strlen(data->info->realm) != 0
 			&& data->info->authcid!= NULL && strlen(data->info->authcid) != 0) {
-		data->info->requeste_tgt = 1;
+		data->info->request_tgt = 1;
 		rc = krb5_init_context(&(data->info->ctx));
 		if (rc != 0) return -1;
 	}

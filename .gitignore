@@ -18,6 +18,6 @@ x64/*
 bonsai.pyproj
 bonsai.sdf
 bonsai.sln
-bonsai.vcxproj
-bonsai.vcxproj.*
-bonsai.VC.opendb
+_bonsai.vcxproj
+_bonsai.vcxproj.*
+_bonsai.VC.opendb
