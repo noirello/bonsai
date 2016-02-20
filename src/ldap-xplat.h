@@ -42,48 +42,48 @@ char *_ldap_get_opt_errormsg(LDAP *ld);
 #endif
 
 typedef struct ldap_conndata_s {
-	char *binddn;
-	char *mech;
-	char *realm;
-	char *authcid;
-	char *passwd;
-	char *authzid;
+    char *binddn;
+    char *mech;
+    char *realm;
+    char *authcid;
+    char *passwd;
+    char *authzid;
 #ifdef WIN32
-	/* For the Windows's thread. */
-	LDAP *ld;
-	HANDLE thread;
-	SOCKET sock;
+    /* For the Windows's thread. */
+    LDAP *ld;
+    HANDLE thread;
+    SOCKET sock;
 #else
 #ifdef HAVE_KRB5
-	krb5_context ctx;
-	krb5_ccache ccache;
-	gss_cred_id_t gsscred;
-	char *errmsg;
-	char request_tgt;
+    krb5_context ctx;
+    krb5_ccache ccache;
+    gss_cred_id_t gsscred;
+    char *errmsg;
+    char request_tgt;
 #endif
-	char **resps;
-	int nresps;
-	const char *rmech;
+    char **resps;
+    int nresps;
+    const char *rmech;
 #endif
 } ldap_conndata_t;
 
 typedef struct ldap_thread_data_s {
-	LDAP *ld;
-	char *url;
-	int tls;
-	int cert_policy;
-	char *ca_cert_dir;
-	char *ca_cert;
-	char *client_cert;
-	char *client_key;
-	int retval;
-	SOCKET sock;
+    LDAP *ld;
+    char *url;
+    int tls;
+    int cert_policy;
+    char *ca_cert_dir;
+    char *ca_cert;
+    char *client_cert;
+    char *client_key;
+    int retval;
+    SOCKET sock;
 #ifdef WIN32
 #else
-	/* For the POSIX's thread. */
-	pthread_mutex_t *mux;
-	int flag;
-	ldap_conndata_t *info;
+    /* For the POSIX's thread. */
+    pthread_mutex_t *mux;
+    int flag;
+    ldap_conndata_t *info;
 #endif
 } ldapInitThreadData;
 

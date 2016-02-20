@@ -19,7 +19,7 @@ typedef struct {
     ldapsearchparams *params;
     struct berval *cookie;
     int page_size;
-	LDAPSortKey **sort_list;
+    LDAPSortKey **sort_list;
     LDAPVLVInfo *vlv_info;
 } LDAPSearchIter;
 

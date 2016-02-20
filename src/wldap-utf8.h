@@ -113,10 +113,10 @@
 #define ldap_get_option ldap_get_optionU
 
 typedef struct sasl_defaults_s {
-	char *authcid;
-	char *passwd;
-	char *realm;
-	char *authzid;
+    char *authcid;
+    char *passwd;
+    char *realm;
+    char *authzid;
 } sasl_defaults_t;
 
 int ldap_unbind_ext(LDAP *ld, LDAPControlA **sctrls, LDAPControlA **cctrls);
