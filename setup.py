@@ -32,10 +32,12 @@ def have_krb5(libs, libdirs=None):
     #include <gssapi/gssapi_krb5.h>
 
     int main(void) {
+        unsigned int ms = 0;
         krb5_context ctx;
+        gss_cred_id_t cred;
 
         krb5_init_context(&ctx);
-        gss_krb5_ccache_name(NULL, "test", NULL);
+        gss_krb5_import_cred(&ms, NULL, NULL, 0, &cred);
         return 0;
     }
     """
