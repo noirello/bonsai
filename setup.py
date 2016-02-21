@@ -34,10 +34,10 @@ def have_krb5(libs, libdirs=None):
     int main(void) {
         unsigned int ms = 0;
         krb5_context ctx;
-        gss_cred_id_t cred;
+        const char *cname = NULL;
 
         krb5_init_context(&ctx);
-        gss_krb5_import_cred(&ms, NULL, NULL, 0, &cred);
+        gss_krb5_ccache_name(&ms, cname, NULL);
         return 0;
     }
     """

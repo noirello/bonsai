@@ -160,7 +160,6 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
     unsigned int minor_stat = 0, major_stat = 0;
     const char *cname = NULL;
     const char *errmsg_tmp = NULL;
-    krb5_get_init_creds_opt *cred_opt;
     krb5_creds creds;
     krb5_principal princ = NULL;
 
@@ -169,16 +168,13 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
 
     if (len == 0 || strlen(user) == 0) return 0;
 
-    rc = krb5_cc_new_unique(ctx, "MEMORY", NULL, ccache);
+    rc = krb5_cc_new_unique(ctx, "FILE", NULL, ccache);
     if (rc != 0) goto clear;
 
     rc = krb5_build_principal(ctx, &princ, len, realm, user, NULL);
     if (rc != 0) goto clear;
 
     rc = krb5_cc_initialize(ctx, *ccache, princ);
-    if (rc != 0) goto clear;
-
-    rc = krb5_get_init_creds_opt_alloc(ctx, &cred_opt);
     if (rc != 0) goto clear;
 
     rc = krb5_get_init_creds_password(ctx, &creds, princ, password, 0, NULL, 0,
@@ -194,7 +190,8 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
     major_stat = gss_krb5_ccache_name(&minor_stat, cname, NULL);
     if (major_stat != 0) goto clear;
 
-    major_stat = gss_krb5_import_cred(&minor_stat, *ccache, princ, 0, gsscred);
+    major_stat = gss_acquire_cred(&minor_stat, GSS_C_NO_NAME, 0,
+            GSS_C_NULL_OID_SET, GSS_C_INITIATE, gsscred, NULL, NULL);
 
 clear:
     if (princ != NULL) krb5_free_principal(ctx, princ);
@@ -690,7 +687,8 @@ create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread) {
     data->flag = 0;
 #ifdef HAVE_KRB5
     data->info = info;
-    if (data->info->mech != NULL && strcmp("GSSAPI", data->info->mech) == 0
+    if (data->info->mech != NULL && (strcmp("GSSAPI", data->info->mech) == 0 ||
+            strcmp("GSS-SPNEGO", data->info->mech) == 0)
             && data->info->realm != NULL && strlen(data->info->realm) != 0
             && data->info->authcid!= NULL && strlen(data->info->authcid) != 0) {
         data->info->request_tgt = 1;
