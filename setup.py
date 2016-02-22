@@ -51,6 +51,9 @@ def have_krb5(libs, libdirs=None):
         distutils.sysconfig.customize_compiler(comp)
         try:
             with silent_stderr():
+                if "-coverage" in os.getenv("CFLAGS"):
+                    # If coverage flag is set.
+                    libs.append("gcov")
                 comp.link_executable(
                         comp.compile([src_name],output_dir=tmp_dir),
                         name, libraries=libs, library_dirs=libdirs)
@@ -102,9 +105,12 @@ else:
     if have_krb5(["krb5", "gssapi"], libdirs):
         libs.extend(["krb5", "gssapi"])
         macros.append(("HAVE_KRB5", 1))
-    if have_krb5(["krb5", "gssapi_krb5"], libdirs):
+    elif have_krb5(["krb5", "gssapi_krb5"], libdirs):
         libs.extend(["krb5", "gssapi_krb5"])
         macros.append(("HAVE_KRB5", 1))
+    else:
+        print("INFO: Kerberos headers and libraries are not found."
+              " Additional GSSAPI capabilities won't be installed.")
 
 sources = [os.path.join('src', x) for x in sources]
 depends = [os.path.join('src', x) for x in depends]
