@@ -377,7 +377,8 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
     return PyLong_FromLong((long int)msgid);
 }
 
-/* Rollback the status of an ldapentry after a failed operation. */
+/* Rollback the status of an ldapentry after a failed operation. The
+   LDAPModList will be freed on success. */
 int
 LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
     int mod_op = -1;

@@ -142,7 +142,7 @@ int
 LDAPModList_Empty(LDAPModList *self) {
     /* It is possible that LDAPModList is casted from None.
     In this case the value of last prop might be invalid. */
-    if (self->last == 0 || (PyObject *)self == Py_None) {
+    if ((PyObject *)self == Py_None || self->last == 0) {
         return 1;
     }
     return 0;

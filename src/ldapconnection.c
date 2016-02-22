@@ -907,6 +907,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             /* LDAP add or modify operation is failed,
                then rollback the changes. */
             if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0) {
+                Py_DECREF(mods);
                 return NULL;
             }
             /* Set Python error. */
@@ -914,6 +915,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             return NULL;
         }
 
+        Py_DECREF(mods);
         Py_RETURN_TRUE;
     }
     Py_RETURN_NONE;

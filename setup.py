@@ -51,7 +51,7 @@ def have_krb5(libs, libdirs=None):
         distutils.sysconfig.customize_compiler(comp)
         try:
             with silent_stderr():
-                if "-coverage" in os.getenv("CFLAGS"):
+                if "-coverage" in os.getenv("CFLAGS", ""):
                     # If coverage flag is set.
                     libs.append("gcov")
                 comp.link_executable(
