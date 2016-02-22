@@ -9,6 +9,7 @@ import bonsai
 from bonsai import LDAPDN
 from bonsai import LDAPClient
 from bonsai import LDAPConnection
+from bonsai import LDAPSearchScope
 import bonsai.errors
 
 def invoke_kinit(user, password):
@@ -198,7 +199,7 @@ class LDAPConnectionTest(unittest.TestCase):
 
     def test_search(self):
         """ Test searching. """
-        obj = self.conn.search(self.basedn, 2)
+        obj = self.conn.search(self.basedn, LDAPSearchScope.SUB)
         self.assertIsNotNone(obj)
         self.assertEqual(obj, self.conn.search())
 

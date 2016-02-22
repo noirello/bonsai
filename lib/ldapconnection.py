@@ -1,6 +1,16 @@
+from enum import IntEnum
+
 from ._bonsai import ldapconnection
 from .ldapdn import LDAPDN
 from .errors import UnwillingToPerform
+
+class LDAPSearchScope(IntEnum):
+    """ Enumeration for LDAP search scopes. """
+    BASE = 0  #: For searching only the base DN.
+    ONELEVEL = 1  #: For searching one tree level under the base DN.
+    ONE = ONELEVEL  #: Alias for :attr:`LDAPSearchScope.ONELEVEL`.
+    SUBTREE = 2  #: For searching the entire subtree, including the base DN.
+    SUB = SUBTREE  #: Alias for :attr:`LDAPSearchScope.SUBTREE`.
 
 class LDAPConnection(ldapconnection):
     """
@@ -34,7 +44,7 @@ class LDAPConnection(ldapconnection):
         :return: msg_id if the connection is async, otherwise the result \
         of the operation.
         """
-        if self.async:
+        if self.is_async:
             return msg_id
         else:
             return self.get_result(msg_id, timeout)

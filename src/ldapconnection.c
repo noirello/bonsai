@@ -746,8 +746,10 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
     LDAPMessage *res;
     LDAPControl **returned_ctrls = NULL;
     LDAPModList *mods = NULL;
+    LDAPEntry *entry = NULL;
     struct timeval timeout;
-    PyObject *ext_obj = NULL;
+    PyObject *obj = NULL;
+    PyObject *newdn = NULL;
     PyObject *conniter = NULL;
     PyObject *ret = NULL;
 
@@ -847,15 +849,49 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
     case LDAP_RES_SEARCH_RESULT:
         return parse_search_result(self, res, msgidstr);
     case LDAP_RES_EXTENDED:
-        ext_obj = parse_extended_result(self, res, msgidstr);
-        if (ext_obj == NULL && PyErr_Occurred()) return NULL;
-        if (ext_obj != NULL) return ext_obj;
+        obj = parse_extended_result(self, res, msgidstr);
+        if (obj == NULL && PyErr_Occurred()) return NULL;
+        if (obj != NULL) return obj;
         break;
+    case LDAP_RES_MODRDN:
+        /* Rename an LDAP entry. */
+        rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
+                        &returned_ctrls, 1);
+        /* Get the modification list from the pending_ops. */
+        obj = PyDict_GetItemString(self->pending_ops, msgidstr);
+        if (obj == NULL) return NULL;
+        Py_INCREF(obj);
+
+        /* Remove operations from pending_ops. */
+        if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
+            PyErr_BadInternalCall();
+            Py_DECREF(obj);
+            return NULL;
+        }
+
+        if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
+           set_exception(self->ld, err);
+           Py_DECREF(obj);
+           return NULL;
+       }
+
+        if (PyArg_ParseTuple(obj, "OO", &entry, &newdn)) {
+            /* Validate and set new LDAP DN. */
+            if (LDAPEntry_SetDN(entry, newdn) != 0) {
+                Py_DECREF(obj);
+                return NULL;
+            }
+            Py_DECREF(obj);
+        } else {
+            Py_DECREF(obj);
+            return NULL;
+        }
+        Py_RETURN_TRUE;
     default:
         rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
                 &returned_ctrls, 1);
 
-         /* Get the modification list from the pending_ops. */
+        /* Get the modification list from the pending_ops. */
         mods = (LDAPModList *)PyDict_GetItemString(self->pending_ops, msgidstr);
         if (mods == NULL) return NULL;
         Py_INCREF(mods);
@@ -863,6 +899,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         /* Remove operations from pending_ops. */
         if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
             PyErr_BadInternalCall();
+            Py_DECREF(obj);
             return NULL;
         }
 
@@ -987,7 +1024,7 @@ ldapconnection_fileno(LDAPConnection *self) {
 }
 
 static PyMemberDef ldapconnection_members[] = {
-    {"async", T_BOOL, offsetof(LDAPConnection, async), READONLY,
+    {"is_async", T_BOOL, offsetof(LDAPConnection, async), READONLY,
      "Asynchronous connection"},
     {"closed", T_BOOL, offsetof(LDAPConnection, closed), READONLY,
      "Connection is closed"},

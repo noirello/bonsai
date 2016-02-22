@@ -40,6 +40,12 @@ class ProtocolError(LDAPError):
 class UnwillingToPerform(LDAPError):
     """Raised, when the server is not willing to handle requests."""
 
+class NoSuchObjectError(LDAPError):
+    """Raised, when the entry is not found in the directory."""
+
+class AffectsMultipleDSA(LDAPError):
+    """Raised, when multiple directory server agents are affected. """
+
 def _get_error(code):
     """ Return an error by code number. """
     if code == -1 or code == 0x51 or code == -11:
@@ -50,6 +56,8 @@ def _get_error(code):
         return ProtocolError
     elif code == 0x07:
         return AuthMethodNotSupported
+    elif code == 0x20:
+        return NoSuchObjectError
     elif code == 0x22:
         return InvalidDN
     elif code == 0x31:
@@ -62,6 +70,8 @@ def _get_error(code):
         return ObjectClassViolation
     elif code == 0x44:
         return AlreadyExists
+    elif code == 0x47:
+        return AffectsMultipleDSA
     elif code == -5 or code == 0x55:
         return TimeoutError
     elif code == -100:

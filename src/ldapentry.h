@@ -26,6 +26,7 @@ LDAPEntry *LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn
 PyObject *LDAPEntry_GetItem(LDAPEntry *self, PyObject *key);
 int LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value);
 int LDAPEntry_SetConnection(LDAPEntry *self, LDAPConnection *conn);
+int LDAPEntry_SetDN(LDAPEntry *self, PyObject *value);
 int LDAPEntry_SetStringDN(LDAPEntry *self, char *value);
 
 #endif /* LDAPENTRY_H_ */

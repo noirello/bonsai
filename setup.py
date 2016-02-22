@@ -115,6 +115,11 @@ bonsai_module = Extension("bonsai._bonsai",
                           depends=depends,
                           define_macros=macros,
                           library_dirs=libdirs)
+python_deps = []
+
+if sys.version_info.minor < 4:
+    # Enum dependecy for Python 3.3.
+    python_deps.append("enum34")
 
 with open('README.rst') as file:
     long_descr = file.read()
@@ -131,6 +136,7 @@ setup(name="bonsai",
       package_dir = {"bonsai": "lib"},
       packages=["bonsai", "bonsai.asyncio", "bonsai.gevent", "bonsai.tornado"],
       include_package_data=True,
+      install_requires=python_deps,
       cmdclass={"test": TestCommand},
       keywords=["python3", "ldap", "libldap", "winldap"],
       classifiers=[

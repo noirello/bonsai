@@ -10,6 +10,7 @@ from .ldapurl import LDAPURL
 from .errors import LDAPError
 from .ldapconnection import LDAPConnection
 from .asyncio import AIOLDAPConnection
+from .ldapconnection import LDAPSearchScope
 
 class LDAPClient:
     """
@@ -267,10 +268,11 @@ class LDAPClient:
                  "supportedControl", "supportedSASLMechanisms",
                  "supportedLDAPVersion"]
         conn = LDAPConnection(self, False).open()
+        root_dse = None
         try:
             # Convert to list to avoid possible LDAPSearchIter object.
-            root_dse = list(conn.search("", 0, "(objectclass=*)", attrs,
-                                        None, False))[0]
+            root_dse = conn.search("", LDAPSearchScope.BASE, "(objectclass=*)",
+                                   attrs, None, False)[0]
         except IndexError:
             return None
         finally:
@@ -367,18 +369,18 @@ class LDAPClient:
     def raw_attributes(self, value=None):
         self.set_raw_attributes(value)
 
-    def connect(self, async=False, timeout=None, **kwargs):
+    def connect(self, is_async=False, timeout=None, **kwargs):
         """
         Open a connection to the LDAP server.
 
-        :param bool async: Set `True` to use asynchronous connection.
-        :param **kwargs: additional keyword arguments that are passed to \
-        the async connection object (e.g. an eventloop object as `loop` \
-        parameter).
+        :param bool is_async: Set `True` to use asynchronous connection.
+        :param \*\*kwargs: additional keyword arguments that are passed to
+                         the async connection object (e.g. an eventloop
+                         object as `loop` parameter).
         :return: an LDAP connection.
         :rtype: :class:`LDAPConnection`
         """
-        if async:
+        if is_async:
             return self.__async_conn(self, **kwargs).open(timeout)
         else:
-            return LDAPConnection(self, async).open(timeout)
+            return LDAPConnection(self, is_async).open(timeout)
