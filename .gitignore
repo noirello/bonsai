@@ -3,6 +3,7 @@ build
 .project
 .cproject
 .pydevproject
+.cache/*
 dist
 tests/__pycache__
 lib/__pycache__

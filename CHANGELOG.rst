@@ -1,6 +1,40 @@
 Change Log
 ==========
 
+[0.8.5] - 2016-02-23
+--------------------
+
+Changed
+~~~~~~~
+
+-  Removed LDAPConnection's set_page_size and set_sort_order method.
+-  If virtual list view parameters are set for the search, the search
+   method will return a tuple of the results and a dictionary of the
+   received VLV response LDAP control.
+-  Renamed LDAPConnection's async attribute and LDAPClient.connect method's
+   async parameter to is_async.
+-  Improved Mac OS X support: provide wheel with newer libldap libs.
+
+Added
+~~~~~
+
+-  New optional parameters for LDAPConnection's search method to perform
+   searches with virtual list view, paged search result and sort order.
+-  New module functions: get_vendor_info and get_tls_impl_name.
+-  NTLM and GSS-SPNEGO support for MS Windows.
+-  Automatic TGT requesting for GSSAPI/GSS-SPNEGO, if the necessary
+   credential information is provided. (Available only if optional Kerberos
+   headers are installed before building the module.)
+-  LDAPSearchScope enumeration for search scopes.
+
+Fixed
+~~~~~
+
+-  Parsing result of an extended operation, if it is not supported by the
+   server.
+-  Binary data handling.
+-  LDAPEntry's rename method do not change the entry's DN after failure.
+
 [0.8.1] - 2015-10-27
 --------------------
 
@@ -17,7 +51,7 @@ Added
 Fixed
 ~~~~~
 
--  Possible deadlock (by constatly locking from the main thread) during
+-  Possible deadlock (by constantly locking from the main thread) during
    initialising an LDAP session on Linux.
 
 [0.8.0] - 2015-10-17

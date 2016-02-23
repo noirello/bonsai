@@ -106,10 +106,44 @@ API documentation
 
 .. automethod:: LDAPConnection.open
 
-.. method:: LDAPConnection.search(base=None, scope=None, filter=None, \
-            attrlist=None, timeout=None, sizelimit=0, attrsonly=False, \
-            sort_order=None, page_size=0, offset=0, before_count=0, \
-            after_count=0, est_list_count=0, attrvalue=None)
+.. method:: LDAPConnection.search(base=None, scope=None, filter=None, attrlist=None, timeout=None,\
+                                  sizelimit=0, attrsonly=False, sort_order=None, page_size=0, \
+                                  offset=0, before_count=0, after_count=0, est_list_count=0, \
+                                  attrvalue=None)
+
+    Perform a search on the directory server. A base DN and a search scope is always necessary to
+    perform a search, but these values - along with the attribute's list and search filter - can
+    also be set with the :class:`LDAPClient` LDAP URL parameter. The parameters, which are passed
+    to the :meth:`LDAPConnection.search` method will overrule the previously set ones with the
+    LDAP URL.
+   
+    >>> from bonsai import LDAPClient
+    >>> client = LDAPClient("ldap://localhost") # without additional parameters
+    >>> conn = client.connect()
+    >>> conn.search("ou=nerdherd,dc=bonsai,dc=test", 1, "(cn=ch*)", ["cn", "sn", "gn"])
+    [{'sn': ['Bartowski'], 'cn': ['chuck'], 'givenName': ['Chuck']}]
+    >>> client = LDAPClient("ldap://localhost/ou=nerdherd,dc=bonsai,dc=test?cn,sn,gn?one?(cn=ch*)") # with additional parameters
+    >>> conn = client.connect()
+    >>> conn.search()
+    [{'sn': ['Bartowski'], 'cn': ['chuck'], 'givenName': ['Chuck']}]
+    >>> conn.search(filter="(cn=j*)")
+    [{'sn': ['Barnes'], 'cn': ['jeff'], 'givenName': ['Jeff']}]
+   
+    Depending which optional parameters are set additional LDAP controls are appended to the search
+    request. These controls will change the behaviour of the :meth:`LDAPConnection.search` method:
+
+        - setting `sort_order` will invoke server side sorting, based on the provided attribute
+          list.
+        - `page_size` will invoke paged search result and the method will return with an
+          :class:`ldapsearchiter` instead of a list.
+        - setting `offset` or `attrvalue` with `sort_order` will invoke virtual list view and the
+          method will return with a tuple of (list, dict) where the list contains the result of the
+          search and the dict contains the LDAP VLV response control from the server.
+   
+    The method raises :class:`bonsai.UnwillingToPerform` if an `offset` or `attrvalue` is set
+    without `sort_order`, or if an `offset` or `attrvalue` is set along with `page_size`.
+
+    For further details using these controls please see :ref:`ldap-controls`.
 
     :param str base: the base DN of the search.
     :param int scope: the scope of the search. An :class:`LDAPSearchScope` also can be used as
@@ -133,40 +167,6 @@ API documentation
                       identifying the target entry for VLV.
     :return: the search result.
     :rtype: list, ldapsearchiter or (list, dict) tuple.
-   
-    Perform a search on the directory server. A base DN and a search scope is always necessary to
-    perform a search, but these values - along with the attribute's list and search filter - can
-    also be set with the :class:`LDAPClient` LDAP URL parameter. The parameters, which are passed
-    to the :meth:`LDAPConnection.search` method will overrule the previously set ones with the
-    LDAP URL.
-   
-   >>> from bonsai import LDAPClient
-   >>> client = LDAPClient("ldap://localhost") # without additional parameters
-   >>> conn = client.connect()
-   >>> conn.search("ou=nerdherd,dc=bonsai,dc=test", 1, "(cn=ch*)", ["cn", "sn", "gn"])
-   [{'sn': ['Bartowski'], 'cn': ['chuck'], 'givenName': ['Chuck']}]
-   >>> client = LDAPClient("ldap://localhost/ou=nerdherd,dc=bonsai,dc=test?cn,sn,gn?one?(cn=ch*)") # with additional parameters
-   >>> conn = client.connect()
-   >>> conn.search()
-   [{'sn': ['Bartowski'], 'cn': ['chuck'], 'givenName': ['Chuck']}]
-   >>> conn.search(filter="(cn=j*)")
-   [{'sn': ['Barnes'], 'cn': ['jeff'], 'givenName': ['Jeff']}]
-   
-    Depending which optional parameters are set additional LDAP controls are appended to the search
-    request. These controls will change the behaviour of the :meth:`LDAPConnection.search` method:
-
-        - setting `sort_order` will invoke server side sorting, based on the provided attribute
-          list.
-        - `page_size` will invoke paged search result and the method will return with an
-          :class:`ldapsearchiter` instead of a list.
-        - setting `offset` or `attrvalue` with `sort_order` will invoke virtual list view and the
-          method will return with a tuple of (list, dict) where the list contains the result of the
-          search and the dict contains the LDAP VLV response control from the server.
-   
-    The method raises :class:`bonsai.UnwillingToPerform` if an `offset` or `attrvalue` is set
-    without `sort_order`, or if an `offset` or `attrvalue` is set along with `page_size`.
-
-    For further details using these controls please see :ref:`ldap-controls`.
 
 .. automethod:: LDAPConnection.whoami
 .. seealso::

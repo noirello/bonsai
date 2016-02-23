@@ -131,7 +131,7 @@ with open('README.rst') as file:
     long_descr = file.read()
 
 setup(name="bonsai",
-      version="0.8.1",
+      version="0.8.5",
       description="Module for Python 3 to access LDAP directory servers.",
       author="noirello",
       author_email="noirello@gmail.com",

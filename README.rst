@@ -21,9 +21,9 @@ Bonsai
     :target: https://raw.githubusercontent.com/Noirello/bonsai/master/LICENSE
     :alt: GitHub License
 
-This is a module for handling LDAP operations in Python. Uses libldap2 on Unix platforms and WinLDAP on Microsoft Windows.
-LDAP entries are mapped to a special Python case-insensitive dictionary, tracking the changes of the dictionary to modify
-the entry on the server easily.
+This is a module for handling LDAP operations in Python. Uses libldap2 on Unix platforms and
+WinLDAP on Microsoft Windows. LDAP entries are mapped to a special Python case-insensitive
+dictionary, tracking the changes of the dictionary to modify the entry on the server easily.
 
 Supports only Python 3.3 or newer, and LDAPv3.
 
@@ -33,6 +33,7 @@ Requirements for building
 -  python3.3-dev or newer
 -  libldap2-dev
 -  libsasl2-dev
+-  libkrb5-dev or heimdal-dev (optional)
 
 Features
 --------
@@ -54,9 +55,9 @@ Simple search and modify:
         import bonsai
 
         client = bonsai.LDAPClient("ldap://localhost")
-        client.set_credentials("SIMPLE", ("cn=admin,dc=local", "secret"))
+        client.set_credentials("SIMPLE", ("cn=admin,dc=bonsai,dc=test", "secret"))
         with client.connect() as conn:
-            res = conn.search("ou=nerdherd,dc=local", 2, "(cn=chuck)")
+            res = conn.search("ou=nerdherd,dc=bonsai,dc=test", 2, "(cn=chuck)")
             res[0]['givenname'] = "Charles"
             res[0]['sn'] = "Carmichael"
             res[0].modify()
@@ -73,7 +74,7 @@ Using with asnycio:
             client = bonsai.LDAPClient("ldap://localhost")
             client.set_credentials("DIGEST-MD5", ("admin", "secret", None, None))
             with (yield from client.connect(async=True)) as conn:
-                res = yield from conn.search("ou=nerdherd,dc=local", 2)
+                res = yield from conn.search("ou=nerdherd,dc=bonsai,dc=test", 2)
                 print(res)
                 who = yield from conn.whoami()
                 print(who)
