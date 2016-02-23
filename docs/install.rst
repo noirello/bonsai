@@ -6,7 +6,7 @@ Using pip
 
 Bonsai can be simply installed with Pip::
 
-   pip install bonsai
+    $ pip install bonsai
 
 Install from source on Linux
 ----------------------------
@@ -30,6 +30,9 @@ from sources you will need:
   **libsasl-dev**.
 
 - The Bonsai source files. You can download it from the project's `GitHub site`_.
+
+- Optionally for additional functions the Kerberos header files. They are
+  usually installed in a package such as **libkrb5-dev** or **heimdal-dev**.
 
 .. _github site: https://github.com/noirello/bonsai
 
