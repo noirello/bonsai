@@ -2,6 +2,7 @@ import configparser
 import os.path
 import unittest
 
+import bonsai
 from bonsai import LDAPClient
 
 class LDAPClientTest(unittest.TestCase):
@@ -12,9 +13,16 @@ class LDAPClientTest(unittest.TestCase):
         """ Set host url and connection. """
         cfg = configparser.ConfigParser()
         cfg.read(os.path.join(curdir, 'test.ini'))
-        cls.url = "ldap://%s:%s" % (cfg["SERVER"]["host"],
+        cls.url = "ldap://%s:%s" % (cfg["SERVER"]["hostip"],
                                      cfg["SERVER"]["port"])
         cls.client = LDAPClient(cls.url)
+
+    def test_ldapurl(self):
+        """ Test setting LDAPURL. """
+        url =  bonsai.LDAPURL(self.url)
+        client = LDAPClient(url)
+        self.assertEqual(client.url, url)
+        self.assertRaises(ValueError, lambda: LDAPClient(None))
 
     def test_connect(self):
         """ Test connect method. """
@@ -56,6 +64,19 @@ class LDAPClientTest(unittest.TestCase):
         self.assertEqual(self.client.credentials, ("cn=admin", "password"))
         self.client.set_credentials("EXTERNAL", ("authzid",))
         self.assertEqual(self.client.credentials, (None, None, None, "authzid"))
+
+    def test_vendor_info(self):
+        """ Test vendor information. """
+        info = bonsai.get_vendor_info()
+        if len(info) != 2:
+            self.fail()
+        self.assertIsInstance(info[0], str)
+        self.assertIsInstance(info[1], int)
+
+    def test_tls_impl_name(self):
+        """ Test TLS implementation name. """
+        tls_impl = bonsai.get_tls_impl_name()
+        self.assertIn(tls_impl, ("GnuTLS", "MozNSS", "OpenSSL", "SChannel"))
 
 if __name__ == '__main__':
     unittest.main()

@@ -14,11 +14,11 @@
 #include "ldap-xplat.h"
 
 typedef struct {
-	PyObject_HEAD
-	LDAPMod **mod_list;
-	Py_ssize_t last;
-	Py_ssize_t size;
-	PyObject *entry;
+    PyObject_HEAD
+    LDAPMod **mod_list;
+    Py_ssize_t last;
+    Py_ssize_t size;
+    PyObject *entry;
 } LDAPModList;
 
 extern PyTypeObject LDAPModListType;

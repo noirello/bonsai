@@ -10,8 +10,7 @@
 
 #include <Python.h>
 
-
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#ifdef WIN32
 //MS Windows
 
 #include <WinSock2.h>
@@ -29,6 +28,12 @@
 #include <pthread.h>
 #include <sys/socket.h>
 
+#ifdef HAVE_KRB5
+#include <krb5.h>
+#include <gssapi.h>
+#include <gssapi/gssapi_krb5.h>
+#endif
+
 #define SOCKET int
 #define XTHREAD pthread_t
 
@@ -37,53 +42,55 @@ char *_ldap_get_opt_errormsg(LDAP *ld);
 #endif
 
 typedef struct ldap_conndata_s {
-	char *binddn;
-	char *mech;
-	char *realm;
-	char *authcid;
-	char *passwd;
-	char *authzid;
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-	/* For the Windows's thread. */
-	LDAP *ld;
-	HANDLE thread;
-	SOCKET sock;
+    char *binddn;
+    char *mech;
+    char *realm;
+    char *authcid;
+    char *passwd;
+    char *authzid;
+#ifdef WIN32
+    /* For the Windows's thread. */
+    LDAP *ld;
+    HANDLE thread;
+    SOCKET sock;
 #else
-	char **resps;
-	int nresps;
-	const char *rmech;
+#ifdef HAVE_KRB5
+    krb5_context ctx;
+    krb5_ccache ccache;
+    gss_cred_id_t gsscred;
+    char *errmsg;
+    char request_tgt;
+#endif
+    char **resps;
+    int nresps;
+    const char *rmech;
 #endif
 } ldap_conndata_t;
 
 typedef struct ldap_thread_data_s {
-	LDAP *ld;
-	char *url;
-	int tls;
-	int cert_policy;
-	char *ca_cert_dir;
-	char *ca_cert;
-	char *client_cert;
-	char *client_key;
-	int retval;
-	SOCKET sock;
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+    LDAP *ld;
+    char *url;
+    int tls;
+    int cert_policy;
+    char *ca_cert_dir;
+    char *ca_cert;
+    char *client_cert;
+    char *client_key;
+    int retval;
+    SOCKET sock;
+#ifdef WIN32
 #else
-	/* For the POSIX's thread. */
-	pthread_mutex_t *mux;
-	int flag;
+    /* For the POSIX's thread. */
+    pthread_mutex_t *mux;
+    int flag;
+    ldap_conndata_t *info;
 #endif
 } ldapInitThreadData;
-
-typedef struct ldap_timeout_thread_data_s {
-	XTHREAD thread;
-	struct timeval *timeout;
-} ldapTimeoutThreadData;
 
 int _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, LDAP **ld);
 int _ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid);
 
-XTHREAD create_init_thread(void *param, int *error);
-ldapInitThreadData *get_init_thread_data(PyObject *client, SOCKET sock);
+int create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread);
 void *create_conn_info(char *mech, SOCKET sock, PyObject *creds);
 void dealloc_conn_info(ldap_conndata_t* info);
 

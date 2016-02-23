@@ -2,8 +2,8 @@ recursive-include src *.c *.h
 recursive-include lib *.py
 recursive-include tests *.py
 recursive-include docs *.rst *.py *.css Makefile make.bat
-include README.md
+include README.rst
 include LICENSE
-include CHANGELOG
+include CHANGELOG.rst
 include tests/test.ini
 recursive-exclude docs/_build *

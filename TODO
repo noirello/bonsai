@@ -1,7 +1,5 @@
-- Improve sort control.
-- Feature: own ldap_start_tls on Windows.
 - Feature: Add LDIF reader and writer function.
 - Feature: Add password modify extended operation.
 - Feature: Possibility to change LDAPEntry and LDAPValueList to other dict and list based objects.
 - Feature: Client-side validation for entries (with defined schemas).
-- Feature: add enum for search scopes. (enum dependency for Python 3.3)
+- Feature: auto page acquiring for ldapsearchiter.

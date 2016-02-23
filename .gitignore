@@ -3,6 +3,7 @@ build
 .project
 .cproject
 .pydevproject
+.cache/*
 dist
 tests/__pycache__
 lib/__pycache__
@@ -13,3 +14,11 @@ docs/_templates
 MANIFEST
 Debug
 bonsai.egg-info
+.vs/*
+x64/*
+bonsai.pyproj
+bonsai.sdf
+bonsai.sln
+_bonsai.vcxproj
+_bonsai.vcxproj.*
+_bonsai.VC.opendb

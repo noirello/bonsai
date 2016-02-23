@@ -1,0 +1,12 @@
+dn: cn=module{0},cn=config
+changetype: add
+objectClass: olcModuleList
+olcModulePath: /usr/lib64/openldap/
+cn: module{0}
+olcModuleLoad: sssvlv.la
+
+dn: olcOverlay=sssvlv,olcDatabase={2}mdb,cn=config
+changetype: add
+objectClass: olcSssVlvConfig
+olcSssVlvMax: 10
+olcSssVlvMaxKeys: 5

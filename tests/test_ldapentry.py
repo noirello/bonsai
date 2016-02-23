@@ -13,7 +13,7 @@ class LDAPEntryTest(unittest.TestCase):
         """ Set LDAP client, get config parameters. """
         cfg = configparser.ConfigParser()
         cfg.read(os.path.join(curdir, 'test.ini'))
-        url = "ldap://%s:%s" % (cfg["SERVER"]["host"],
+        url = "ldap://%s:%s" % (cfg["SERVER"]["hostip"],
                                 cfg["SERVER"]["port"])
         cls.client = LDAPClient(url)
         cls.creds = ("SIMPLE", (cfg["SIMPLEAUTH"]["user"],
@@ -116,6 +116,24 @@ class LDAPEntryTest(unittest.TestCase):
         conn.close()
         self.assertIn(dname, [res.dn for res in result])
 
+    def test_binary(self):
+        """ Test adding binary data. """
+        curdir = os.path.abspath(os.path.dirname(__file__))
+        self.client.set_credentials(*self.creds)
+        conn = self.client.connect()
+        dname = "cn=binary,%s" % self.basedn
+        entry = LDAPEntry(dname)
+        entry['objectclass'] = ['top', 'inetOrgPerson']
+        entry['sn'] = "binary_test"
+        with open('%s/testenv/test.jpeg' % curdir, 'rb') as image:
+            entry['jpegPhoto'] = image.read()
+        conn.add(entry)
+        result = conn.search(dname, 0)
+        entry.delete()
+        conn.close()
+        self.assertIn("jpegPhoto", result[0].keys())
+        self.assertEqual(result[0]['jpegphoto'][0], entry['jpegphoto'][0])
+
     def test_connection(self):
         """ Test set and get connection object form LDAPEntry. """
         entry = LDAPEntry("cn=test,%s" % self.basedn)
@@ -126,10 +144,50 @@ class LDAPEntryTest(unittest.TestCase):
              entry.connection = "string"
         self.assertRaises(TypeError, invalid_assign)
 
+    def _add_for_renaming(self, conn, entry):
+        entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
+                                'organizationalPerson']
+        entry['sn'] = 'test'
+        try:
+            conn.add(entry)
+        except bonsai.AlreadyExists:
+            conn.delete(entry.dn)
+            conn.add(entry)
+        except:
+            self.fail("Adding LDAPEntry to the server is failed.")
+
+    def test_rename(self):
+        """ Test LDAPEntry's rename LDAP operation. """
+        entry = LDAPEntry("cn=test,%s" % self.basedn)
+        self.client.set_credentials(*self.creds)
+        with self.client.connect() as conn:
+            self._add_for_renaming(conn, entry)
+            entry.rename("cn=test2,%s" % self.basedn)
+            self.assertEqual(str(entry.dn), "cn=test2,%s" % self.basedn)
+            obj = conn.search("cn=test,%s" % self.basedn, 0)
+            self.assertEqual(obj, [])
+            obj = conn.search("cn=test2,%s" % self.basedn, 0)[0]
+            self.assertEqual(entry.dn, obj.dn)
+            entry.delete()
+
+    def test_rename_error(self):
+        """ Test LDAPEntry's rename error handling. """
+        dname = bonsai.LDAPDN("cn=test,%s" % self.basedn)
+        entry = LDAPEntry(dname)
+        self.client.set_credentials(*self.creds)
+        with self.client.connect() as conn:
+            self._add_for_renaming(conn, entry)
+            try:
+                newdn = bonsai.LDAPDN("cn=test2,ou=invalid,%s" % self.basedn)
+                entry.rename(newdn)
+            except bonsai.LDAPError:
+                self.assertEqual(entry.dn, dname)
+            finally:
+                conn.delete(dname)
+
     def test_sync_operations(self):
         """
-        Test LDAPEntry's add, modify, rename and delete
-        synchronous operations. 
+        Test LDAPEntry's add, modify and delete synchronous operations.
         """
         entry = LDAPEntry("cn=test,%s" % self.basedn)
         self.client.set_credentials(*self.creds)
@@ -146,18 +204,12 @@ class LDAPEntryTest(unittest.TestCase):
                 conn.add(entry)
             except:
                 self.fail("Adding LDAPEntry to the server is failed.")
-            entry.rename("cn=test2,%s" % self.basedn)
-            self.assertEqual(str(entry.dn), "cn=test2,%s" % self.basedn)
-            obj = conn.search("cn=test,%s" % self.basedn, 0)
-            self.assertEqual(obj, [])
-            obj = conn.search("cn=test2,%s" % self.basedn, 0)[0]
-            self.assertEqual(entry.dn, obj.dn)
             entry['sn'] = "Test_modify"
             try:
                 entry.modify()
             except:
                 self.fail("Modify failed.")
-            obj = conn.search("cn=test2,%s" % self.basedn, 0)[0]
+            obj = conn.search("cn=test,%s" % self.basedn, 0)[0]
             self.assertEqual(entry['sn'], obj['sn'])
             try:
                 entry.delete()

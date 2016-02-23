@@ -1,5 +1,16 @@
+from enum import IntEnum
+
 from ._bonsai import ldapconnection
 from .ldapdn import LDAPDN
+from .errors import UnwillingToPerform
+
+class LDAPSearchScope(IntEnum):
+    """ Enumeration for LDAP search scopes. """
+    BASE = 0  #: For searching only the base DN.
+    ONELEVEL = 1  #: For searching one tree level under the base DN.
+    ONE = ONELEVEL  #: Alias for :attr:`LDAPSearchScope.ONELEVEL`.
+    SUBTREE = 2  #: For searching the entire subtree, including the base DN.
+    SUB = SUBTREE  #: Alias for :attr:`LDAPSearchScope.SUBTREE`.
 
 class LDAPConnection(ldapconnection):
     """
@@ -33,7 +44,7 @@ class LDAPConnection(ldapconnection):
         :return: msg_id if the connection is async, otherwise the result \
         of the operation.
         """
-        if self.async:
+        if self.is_async:
             return msg_id
         else:
             return self.get_result(msg_id, timeout)
@@ -74,7 +85,9 @@ class LDAPConnection(ldapconnection):
         return self._evaluate(super().open(), timeout)
 
     def search(self, base=None, scope=None, filter=None, attrlist=None,
-               timeout=None, sizelimit=0, attrsonly=False):
+               timeout=None, sizelimit=0, attrsonly=False, sort_order=None,
+               page_size=0, offset=0, before_count=0, after_count=0,
+               est_list_count=0, attrvalue=None):
         # Documentation in the docs/api.rst with detailed examples.
         # Load values from the LDAPURL, if it is not presented on the
         # parameter list.
@@ -83,24 +96,25 @@ class LDAPConnection(ldapconnection):
         _filter = filter if filter is not None else self.__client.url.filter
         _attrlist = attrlist if attrlist is not None else self.__client.url.attributes
         _timeout = timeout if timeout is not None else 0.0
-        msg_id = super().search(_base, _scope, _filter, _attrlist,
-                                _timeout, sizelimit, attrsonly)
-        if self.async:
-            return msg_id
+        if sort_order is not None:
+            _sort_order = self.__create_sort_list(sort_order)
         else:
-            if self.page_size > 1:
-                return self.__paged_search(self.get_result(msg_id, timeout))
-            return list(self.get_result(msg_id, timeout))
+            _sort_order= []
+        if _sort_order == [] and (offset != 0 or attrvalue is not None):
+            raise UnwillingToPerform("Sort control is required with"
+                                     " virtual list view.")
+        if page_size != 0 and (offset != 0 or attrvalue is not None):
+            raise UnwillingToPerform("Virual list view incompatible"
+                                     " with paged search.")
+        msg_id = super().search(_base, _scope, _filter, _attrlist,
+                                _timeout, sizelimit, attrsonly, _sort_order,
+                                page_size, offset, before_count, after_count,
+                                est_list_count, attrvalue)
+        return self._evaluate(msg_id, timeout)
 
-    def __paged_search(self, res):
-        while True:
-            yield from res
-            msg_id = res.acquire_next_page()
-            if msg_id is None:
-                break
-            res = self.get_result(msg_id)
 
-    def set_sort_order(self, sort_list):
+    @staticmethod
+    def __create_sort_list(sort_list):
         """
         Set a list of attribute names to sort entries in a search result. For
         reverse order set '-' before to the attribute name.
@@ -121,7 +135,7 @@ class LDAPConnection(ldapconnection):
                 sort_attrs.append((attr, False))
         if len(sort_list) > len(set(map(lambda x: x[0].lower, sort_attrs))):
             raise ValueError("Attribute names must be different from each other.")
-        super().set_sort_order(sort_attrs)
+        return sort_attrs
 
     def whoami(self, timeout=None):
         """

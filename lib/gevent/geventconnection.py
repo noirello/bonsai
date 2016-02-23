@@ -15,9 +15,3 @@ class GeventLDAPConnection(LDAPConnection):
 
     def _evaluate(self, msg_id, timeout=None):
         return self._poll(msg_id, timeout)
-    
-    def search(self, base=None, scope=None, filter=None, attrlist=None,
-               timeout=0, sizelimit=0, attrsonly=False):
-        msg_id = super().search(base, scope, filter, attrlist, timeout,
-                                sizelimit, attrsonly)
-        return list(self._poll(msg_id))

@@ -5,7 +5,7 @@
 #include "structmember.h"
 
 typedef struct {
-	PyListObject list;
+    PyListObject list;
 } UniqueList;
 
 extern PyTypeObject UniqueListType;

@@ -34,24 +34,44 @@ class InsufficientAccess(LDAPError):
 class TimeoutError(LDAPError):
     """Raised, when the specified timeout is exceeded. """
 
+class ProtocolError(LDAPError):
+    """Raised, when protocol error is happened."""
+
+class UnwillingToPerform(LDAPError):
+    """Raised, when the server is not willing to handle requests."""
+
+class NoSuchObjectError(LDAPError):
+    """Raised, when the entry is not found in the directory."""
+
+class AffectsMultipleDSA(LDAPError):
+    """Raised, when multiple directory server agents are affected. """
+
 def _get_error(code):
     """ Return an error by code number. """
     if code == -1 or code == 0x51 or code == -11:
         # WinLDAP returns 0x51 for Server Down.
         # OpenLDAP returns -11 for Connection error.
         return ConnectionError
+    elif code == 0x02:
+        return ProtocolError
     elif code == 0x07:
         return AuthMethodNotSupported
+    elif code == 0x20:
+        return NoSuchObjectError
     elif code == 0x22:
         return InvalidDN
     elif code == 0x31:
         return AuthenticationError
     elif code == 0x32:
         return InsufficientAccess
+    elif code == 0x35:
+        return UnwillingToPerform
     elif code == 0x41:
         return ObjectClassViolation
     elif code == 0x44:
         return AlreadyExists
+    elif code == 0x47:
+        return AffectsMultipleDSA
     elif code == -5 or code == 0x55:
         return TimeoutError
     elif code == -100:

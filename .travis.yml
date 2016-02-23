@@ -1,0 +1,67 @@
+language: python
+sudo: required
+
+notifications:
+  email: false
+
+branches:
+  only:
+    - master
+    - dev
+
+python:
+  - "3.3"
+  - "3.4"
+  - "3.5"
+  - "nightly"
+
+services:
+  - docker
+
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install -y libldap2-dev libsasl2-dev ldap-utils
+  # For GSSAPI authentication.
+  - sudo apt-get install -y krb5-user libsasl2-modules-gssapi-mit libkrb5-dev
+  - pip install gevent==1.1rc3
+  - pip install tornado
+  - pip install codecov
+  - pip install pytest-cov
+  - if [[ $TRAVIS_PYTHON_VERSION == '3.3' ]]; then pip install asyncio; fi
+  - docker build -t bonsai ./tests/testenv
+  - docker run -d -h bonsai.test --name server bonsai
+  # Set container IP in the hosts file.
+  - DOCKER_IP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' server`
+  - sudo bash -c 'echo "'$DOCKER_IP'        bonsai.test" >> /etc/hosts'
+  - cat /etc/hosts
+  # Waiting for slapd to start in the container.
+  - sleep 5
+  # Check that everything is started.
+  - docker exec server ps aux
+  - docker exec server /bin/bash -c "cat /var/log/supervisord.log"
+  # Check that slapd is working.
+  - ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U root -w p@ssword
+  - ldapsearch -h bonsai.test -b "" -s base 'objectclass=*' -x -LLL +
+
+install:
+  - export CFLAGS="-coverage"
+  - python setup.py install
+
+before_script:
+  # Change localhost IP in test.ini to the container's.
+  - sed -i.bak "s/127.0.0.1/$DOCKER_IP/g" ./tests/test.ini
+  # Set used Kerberos config file to my own.
+  - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/tests/testenv/krb5/krb5.conf"
+  - INSTALL_PATH=$VIRTUAL_ENV/lib/python$TRAVIS_PYTHON_VERSION/site-packages/bonsai-`python setup.py --version`-py$TRAVIS_PYTHON_VERSION-linux-x86_64.egg/bonsai
+
+script:
+  - py.test -v --cov-config .coveragerc --cov-report= --cov=$INSTALL_PATH
+
+after_success:
+  # Change path of the Python source files in .coverage.
+  - sed -i.bak 's|'$INSTALL_PATH'|'$TRAVIS_BUILD_DIR/lib'|g' .coverage
+  - codecov
+
+after_failure:
+  # Print out slapd log for debugging.
+  - docker exec server cat /var/log/slapd.log
