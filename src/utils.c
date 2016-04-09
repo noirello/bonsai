@@ -387,9 +387,9 @@ set_exception(LDAP *ld, int code) {
                 errormsg = PyUnicode_FromFormat("%s. %s", errorstr, opt_errorstr);
                 goto finish;
             }
-            /* Optional string is empty or equals to the error string. */
-            errormsg = PyUnicode_FromFormat("%s.", errorstr);
         }
+        /* Optional string is empty or equals to the error string. */
+        errormsg = PyUnicode_FromFormat("%s.", errorstr);
     } else if (opt_errorstr != NULL && strlen(opt_errorstr) > 0) {
         errormsg = PyUnicode_FromFormat("%s.", opt_errorstr);
     }

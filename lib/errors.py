@@ -46,6 +46,9 @@ class NoSuchObjectError(LDAPError):
 class AffectsMultipleDSA(LDAPError):
     """Raised, when multiple directory server agents are affected. """
 
+class SizeLimitError(LDAPError):
+    """Raised, when the size limit of the search is exceeded."""
+
 def _get_error(code):
     """ Return an error by code number. """
     if code == -1 or code == 0x51 or code == -11:
@@ -54,6 +57,8 @@ def _get_error(code):
         return ConnectionError
     elif code == 0x02:
         return ProtocolError
+    elif code == 0x04:
+        return SizeLimitError
     elif code == 0x07:
         return AuthMethodNotSupported
     elif code == 0x20:

@@ -657,6 +657,10 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
             }
             Py_DECREF(buffer);
             Py_DECREF(search_iter);
+        } else if (search_iter->sort_list != NULL) {
+            /* Return simple list for ordered search. */
+            value = buffer;
+            Py_DECREF(search_iter);
         } else {
             /* Return LDAPSearchIter for paged search. */
             Py_XDECREF(search_iter->buffer);
