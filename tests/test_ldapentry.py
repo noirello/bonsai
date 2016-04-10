@@ -216,5 +216,17 @@ class LDAPEntryTest(unittest.TestCase):
             except:
                 self.fail("Delete failed.")
 
+    def test_dn_attr(self):
+        """ Test LDAPEntry's DN attribute. """
+        entry = LDAPEntry("cn=test,%s" % self.basedn)
+        def remove_dn():
+            del entry.dn
+        def set_dn():
+            entry['dn'] = 5
+        entry.dn = "cn=test"
+        self.assertEqual(str(entry.dn), "cn=test")
+        self.assertRaises(TypeError, remove_dn)
+        self.assertRaises(TypeError, set_dn)
+
 if __name__ == '__main__':
     unittest.main()

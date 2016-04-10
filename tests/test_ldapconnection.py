@@ -367,6 +367,8 @@ class LDAPConnectionTest(unittest.TestCase):
         """ Test paged results control. """
         search_dn = "ou=nerdherd,%s" % self.basedn
         res = self.conn.search(search_dn, 1, page_size=2)
+        for ent in res:
+            self.assertIsInstance(ent, bonsai.LDAPEntry)
         page = 0
         while True:
             if len(res) > 2:
