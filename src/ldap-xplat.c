@@ -338,6 +338,7 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
     switch (rc) {
     case ETIMEDOUT:
         if (async == 0 && *timeout != -1) {
+            pthread_cancel(thread);
             set_exception(NULL, LDAP_TIMEOUT);
             if (val->ld) free(val->ld);
             retval = -1;
@@ -491,6 +492,7 @@ char *
 _ldap_get_opt_errormsg(LDAP *ld) {
     char *opt = NULL;
 
+    if (ld == NULL) return NULL;
     ldap_get_option(ld, LDAP_OPT_DIAGNOSTIC_MESSAGE, &opt);
 
     return opt;

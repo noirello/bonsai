@@ -1,4 +1,3 @@
-- Fix: timeout for connection.
 - Add: DN as key in LDAPEntry.
 - Feature: Add LDIF reader and writer function.
 - Feature: Add password modify extended operation.

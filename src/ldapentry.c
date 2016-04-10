@@ -719,15 +719,7 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
         /* If theres an item with a `dn` key, and with a string value set to the dn attribute. */
         if (strcmp(newkey, "dn") == 0) {
             free(newkey);
-            if (PyUnicode_Check(value)) {
-                char *dnstr = PyObject2char(value);
-                LDAPEntry_SetStringDN(self, dnstr);
-                free(dnstr);
-            } else {
-                PyErr_SetString(PyExc_TypeError, "Distinguished name must be string type.");
-                Py_DECREF(key);
-                return -1;
-            }
+            if (LDAPEntry_SetDN(self, value) != 0) return -1;
         } else {
             free(newkey);
             /* Set the new value to the item. */
