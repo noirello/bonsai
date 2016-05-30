@@ -7,7 +7,7 @@ from ..ldapconnection import LDAPConnection
 from ..errors import LDAPError
 
 class TornadoLDAPConnection(LDAPConnection):
-    def __init__(self, client, ioloop):
+    def __init__(self, client, ioloop=None):
         super().__init__(client, is_async=True)
         self._ioloop = ioloop or IOLoop.instance()
         self._fileno = None
