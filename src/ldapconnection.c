@@ -214,14 +214,11 @@ ldapconnection_add(LDAPConnection *self, PyObject *args) {
 
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
-    if (!PyArg_ParseTuple(args, "O", &param)) {
-        PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
-        return NULL;
-    }
+    if (!PyArg_ParseTuple(args, "O", &param)) return NULL;
 
     /* Validate parameter. */
     if (LDAPEntry_Check(param) != 1) {
-        PyErr_SetString(PyExc_AttributeError, "Parameter must be an LDAPEntry");
+        PyErr_SetString(PyExc_TypeError, "Parameter must be an LDAPEntry");
         return NULL;
     }
     /* Set this connection to the LDAPEntry, before add to the server. */
@@ -264,10 +261,7 @@ ldapconnection_delentry(LDAPConnection *self, PyObject *args) {
 
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
-    if (!PyArg_ParseTuple(args, "s", &dnstr)) {
-        PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
-        return NULL;
-    }
+    if (!PyArg_ParseTuple(args, "s", &dnstr)) return NULL;
 
     msgid = LDAPConnection_DelEntryStringDN(self, dnstr);
     if (msgid < 0) return NULL;
@@ -430,7 +424,7 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
             &sizelimit, &PyBool_Type, &attrsonlyo, &PyList_Type, &sort_order,
             &page_size, &offset, &before_count, &after_count, &list_count,
             &attrvalue_obj)) {
-        PyErr_SetString(PyExc_AttributeError,
+        PyErr_SetString(PyExc_TypeError,
                 "Wrong parameters (base<str|LDAPDN>, scope<int>, filter<str>,"
                 " attrlist<List>, timeout<float>, attrsonly<bool>,"
                 " sort_order<List>, page_size<int>, offset<int>,"
@@ -441,7 +435,7 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
     /* Check that scope's value is not remained the default. */
     if (scope == -1) {
-        PyErr_SetString(PyExc_AttributeError, "Search scope must be set.");
+        PyErr_SetString(PyExc_ValueError, "Search scope must be set.");
         return NULL;
     }
 
@@ -449,13 +443,13 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     if (attrvalue_obj == Py_None) attrvalue_obj = NULL;
 
     if (page_size != 0 && page_size < 2) {
-        PyErr_SetString(PyExc_AttributeError,
+        PyErr_SetString(PyExc_ValueError,
                 "The page_size parameter must be greater, than 1.");
         return NULL;
     }
 
     if (page_size != 0 && (offset != 0 || attrvalue != NULL)) {
-        PyErr_SetString(PyExc_AttributeError, "Cannot use paged search and"
+        PyErr_SetString(PyExc_ValueError, "Cannot use paged search and"
                 " virtual list view at the same time.");
         return NULL;
     }
@@ -941,7 +935,7 @@ ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "i|O", kwlist, &msgid,
             &timeout_obj)) {
-        PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
+        PyErr_SetString(PyExc_TypeError, "Wrong parameter.");
         goto end;
     }
 
@@ -953,12 +947,13 @@ ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
         timeout = (int)(PyFloat_AsDouble(tmp) * 1000);
         if (timeout < 0) {
-            PyErr_SetString(PyExc_AttributeError, "Wrong timeout parameter.");
+            PyErr_SetString(PyExc_ValueError, "Wrong timeout parameter. "
+                    "Timeout must be non-negative.");
             goto end;
         }
         Py_DECREF(tmp);
     } else {
-        PyErr_SetString(PyExc_AttributeError, "Wrong timeout parameter.");
+        PyErr_SetString(PyExc_TypeError, "Wrong timeout parameter.");
         goto end;
     }
 
@@ -989,7 +984,6 @@ ldapconnection_abandon(LDAPConnection *self, PyObject *args) {
     int rc = 0;
 
     if (!PyArg_ParseTuple(args, "i", &msgid)) {
-        PyErr_SetString(PyExc_AttributeError, "Wrong parameters");
         return NULL;
     }
 

@@ -79,7 +79,8 @@ uniquelist_init(UniqueList *self, PyObject *args, PyObject *kwds) {
 
             if (PySequence_Count(tmp, item) > 1) {
                 Py_DECREF(tmp);
-                PyErr_SetString(PyExc_AttributeError, "UniqueList's argument is containing non-unique values. (Bool types converted to number)");
+                PyErr_SetString(PyExc_ValueError, "UniqueList's argument is containing "
+                        "non-unique values. (Bool types converted to number)");
                 return -1;
             }
         }

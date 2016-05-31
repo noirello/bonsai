@@ -341,7 +341,7 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
     /* Get DN string. */
     dnstr = PyObject2char(self->dn);
     if (dnstr == NULL || strlen(dnstr) == 0) {
-        PyErr_SetString(PyExc_AttributeError, "Missing distinguished name.");
+        PyErr_SetString(PyExc_ValueError, "Missing distinguished name.");
         free(dnstr);
         return NULL;
     }
@@ -461,7 +461,7 @@ ldapentry_delete(LDAPEntry *self) {
 
     /* Connection must be set. */
     if (self->conn == NULL) {
-        PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
+        PyErr_SetString(PyExc_ValueError, "LDAPConnection is not set.");
         return NULL;
     }
 
@@ -505,7 +505,7 @@ static PyObject *
 ldapentry_modify(LDAPEntry *self) {
     /* Connection must be set. */
     if (self->conn == NULL) {
-        PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
+        PyErr_SetString(PyExc_ValueError, "LDAPConnection is not set.");
         return NULL;
     }
 
@@ -573,17 +573,14 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 
     /* Connection must be set. */
     if (self->conn == NULL) {
-        PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
+        PyErr_SetString(PyExc_ValueError, "LDAPConnection is not set.");
         return NULL;
     }
 
     /* Connection must be open. */
     if (LDAPConnection_IsClosed(self->conn) != 0) return NULL;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &newdn)) {
-        PyErr_SetString(PyExc_AttributeError, "Wrong parameter.");
-        return NULL;
-    }
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &newdn)) return NULL;
 
     /* Save old dn string. */
     tmp = PyObject_Str(self->dn);
@@ -840,7 +837,7 @@ ldapentry_setconnection(LDAPEntry *self, PyObject *value, void *closure) {
 static PyObject *
 ldapentry_getconnection(LDAPEntry *self, void *closure) {
     if (self->conn == NULL) {
-        PyErr_SetString(PyExc_AttributeError, "LDAPConnection is not set.");
+        PyErr_SetString(PyExc_ValueError, "LDAPConnection is not set.");
         return NULL;
     }
     Py_INCREF(self->conn);
