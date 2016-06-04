@@ -1,6 +1,6 @@
 from .errors import InvalidDN
 
-class LDAPDN(object):
+class LDAPDN:
     """
     A class for handling valid LDAP distinguished name.
 
@@ -8,7 +8,7 @@ class LDAPDN(object):
     """
     __slots__ = ("__rdns")
 
-    def __init__(self, strdn):
+    def __init__(self, strdn: str):
         if strdn != "":
             escaped_str = self.__escape_special_char(strdn)
             # Get RDN strings.
@@ -68,7 +68,7 @@ class LDAPDN(object):
             map(lambda attr: "+".join(
                 map(lambda type_value: "=".join(type_value), attr)), rdns))
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int):
         """
         Return the string format of the relative distinguished names
         in the LDAPDN.
@@ -87,7 +87,7 @@ class LDAPDN(object):
             raise TypeError("Indices must be integers or slices.")
         return self.__rdns_to_str(self.__rdns[idx])
 
-    def __setitem__(self, idx, value):
+    def __setitem__(self, idx: int, value: str):
         """
         Set the string format of the relative distinguished names
         in the LDAPDN.

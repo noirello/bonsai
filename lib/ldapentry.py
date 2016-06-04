@@ -1,10 +1,13 @@
+from typing import Union
+
 from ._bonsai import ldapentry
+from .ldapdn import LDAPDN
 
 class LDAPEntry(ldapentry):
-    def __init__(self, dn, conn=None):
+    def __init__(self, dn: Union[LDAPDN, str], conn=None):
         super().__init__(str(dn), conn)
 
-    def delete(self, timeout=None):
+    def delete(self, timeout=None) -> Union[bool, int]:
         """
         Remove LDAP entry from the dictionary server.
 
@@ -14,7 +17,7 @@ class LDAPEntry(ldapentry):
         """
         return self.connection._evaluate(super().delete(), timeout)
 
-    def modify(self, timeout=None):
+    def modify(self, timeout: float=None) -> Union[bool, int]:
         """
         Send entry's modifications to the dictionary server.
 
@@ -24,7 +27,7 @@ class LDAPEntry(ldapentry):
         """
         return self.connection._evaluate(super().modify(), timeout)
 
-    def rename(self, newdn, timeout=None):
+    def rename(self, newdn: str, timeout: float=None) -> Union[bool, int]:
         """
         Change the entry's distinguished name.
 
@@ -35,7 +38,7 @@ class LDAPEntry(ldapentry):
         """
         return self.connection._evaluate(super().rename(newdn), timeout)
 
-    def update(self, *args, **kwds):
+    def update(self, *args, **kwds) -> None:
         """
         Update the LDAPEntry with the key/value pairs from other, overwriting existing keys.
         (Same as dict's update method.)
@@ -56,7 +59,7 @@ class LDAPEntry(ldapentry):
             for key, value in kwds.items():
                 self.__setitem__(key, value)
 
-    def clear(self):
+    def clear(self) -> None:
         keys = list(self.keys())
         for key in keys:
             del self[key]

@@ -123,6 +123,10 @@ bonsai_module = Extension("bonsai._bonsai",
                           library_dirs=libdirs)
 python_deps = []
 
+if sys.version_info.minor < 5:
+    # Typing dependecy for Python 3.4 and earlier.
+    python_deps.append("typing")
+
 if sys.version_info.minor < 4:
     # Enum dependecy for Python 3.3.
     python_deps.append("enum34")

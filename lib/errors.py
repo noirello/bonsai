@@ -49,7 +49,7 @@ class AffectsMultipleDSA(LDAPError):
 class SizeLimitError(LDAPError):
     """Raised, when the size limit of the search is exceeded."""
 
-def _get_error(code):
+def _get_error(code: int) -> LDAPError:
     """ Return an error by code number. """
     if code == -1 or code == 0x51 or code == -11:
         # WinLDAP returns 0x51 for Server Down.

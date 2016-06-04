@@ -1,7 +1,9 @@
 from enum import IntEnum
+from typing import Union, Any, List
 
 from ._bonsai import ldapconnection
 from .ldapdn import LDAPDN
+from .ldapentry import LDAPEntry
 from .errors import UnwillingToPerform
 
 class LDAPSearchScope(IntEnum):
@@ -22,7 +24,7 @@ class LDAPConnection(ldapconnection):
     :param LDAPClient client: a client object.
     :param bool is_async: set True to create an asynchronous connection.
     """
-    def __init__(self, client, is_async=False):
+    def __init__(self, client, is_async: bool=False):
         self.__client = client
         super().__init__(client, is_async)
 
@@ -34,7 +36,7 @@ class LDAPConnection(ldapconnection):
         """ Context manager exit point. """
         self.close()
 
-    def _evaluate(self, msg_id, timeout=None):
+    def _evaluate(self, msg_id: int, timeout: float=None) -> Any:
         """
         Depending on the connection's type (asynchronous or synchronous),
         it returns a message ID or the result of the LDAP operation.
@@ -49,7 +51,7 @@ class LDAPConnection(ldapconnection):
         else:
             return self.get_result(msg_id, timeout)
 
-    def add(self, entry, timeout=None):
+    def add(self, entry: LDAPEntry, timeout: float=None) -> Union[int, bool]:
         """
         Add new entry to the directory server.
 
@@ -60,7 +62,7 @@ class LDAPConnection(ldapconnection):
         """
         return self._evaluate(super().add(entry), timeout)
 
-    def delete(self, dnstr, timeout=None):
+    def delete(self, dnstr: str, timeout: float=None) -> Union[int, bool]:
         """
         Remove entry from the directory server.
 
@@ -73,7 +75,7 @@ class LDAPConnection(ldapconnection):
             dnstr = str(dnstr)
         return self._evaluate(super().delete(dnstr), timeout)
 
-    def open(self, timeout=None):
+    def open(self, timeout: float=None):
         """
         Open the LDAP connection.
 
@@ -84,10 +86,13 @@ class LDAPConnection(ldapconnection):
         """
         return self._evaluate(super().open(), timeout)
 
-    def search(self, base=None, scope=None, filter=None, attrlist=None,
-               timeout=None, sizelimit=0, attrsonly=False, sort_order=None,
-               page_size=0, offset=0, before_count=0, after_count=0,
-               est_list_count=0, attrvalue=None):
+    def search(self, base: Union[str, LDAPDN]=None,
+               scope: Union[LDAPSearchScope, int]=None, filter: str=None,
+               attrlist: List[str]=None, timeout: float=None,
+               sizelimit: int=0, attrsonly: bool=False,
+               sort_order: List[str]=None, page_size: int=0, offset: int=0,
+               before_count: int=0, after_count: int=0, est_list_count: int=0,
+               attrvalue: str=None) -> Any:
         # Documentation in the docs/api.rst with detailed examples.
         # Load values from the LDAPURL, if it is not presented on the
         # parameter list.
@@ -114,7 +119,7 @@ class LDAPConnection(ldapconnection):
 
 
     @staticmethod
-    def __create_sort_list(sort_list):
+    def __create_sort_list(sort_list: List[str]):
         """
         Set a list of attribute names to sort entries in a search result. For
         reverse order set '-' before to the attribute name.
@@ -137,7 +142,7 @@ class LDAPConnection(ldapconnection):
             raise ValueError("Attribute names must be different from each other.")
         return sort_attrs
 
-    def whoami(self, timeout=None):
+    def whoami(self, timeout: float=None) -> Union[str, int]:
         """
         This method can be used to obtain authorization identity.
         

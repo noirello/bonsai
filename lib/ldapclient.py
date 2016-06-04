@@ -5,12 +5,14 @@
 
 """
 import socket
+from typing import Union, List, Tuple
 
 from .ldapurl import LDAPURL
 from .errors import LDAPError
 from .ldapconnection import LDAPConnection
 from .asyncio import AIOLDAPConnection
 from .ldapconnection import LDAPSearchScope
+from .ldapentry import LDAPEntry
 
 class LDAPClient:
     """
@@ -21,7 +23,7 @@ class LDAPClient:
     :raises ValueError: if the `url` parameter is not string \
     or not a valid LDAP URL.
     """
-    def __init__(self, url="ldap://", tls=False):
+    def __init__(self, url: Union[LDAPURL, str]="ldap://", tls: bool=False):
         """ init method. """
         if type(url) == str:
             self.__url = LDAPURL(url)
@@ -74,7 +76,7 @@ class LDAPClient:
             return (ssock, csock)
         return socketpair()
 
-    def set_raw_attributes(self, raw_list):
+    def set_raw_attributes(self, raw_list: List[str]) -> None:
         """
         By default the values of the LDAPEntry are in string format. The
         values of the listed LDAP attribute's names in `raw_list` will be
@@ -93,7 +95,9 @@ class LDAPClient:
             raise ValueError("Attribute names must be different from each other.")
         self.__raw_list = raw_list
 
-    def set_credentials(self, mechanism, creds):
+    def set_credentials(self, mechanism: str,
+                        creds: Union[Tuple[str,str,str,str],
+                                     Tuple[str,str],Tuple[str]]) -> None:
         """
         Set binding mechanism and credential information. The credential
         information must be in a tuple. If the binding mechanism is ``SIMPLE``,
@@ -130,7 +134,7 @@ class LDAPClient:
                              "realm, authzid)." % self.__mechanism)
         self.__credentials = creds
 
-    def set_cert_policy(self, policy):
+    def set_cert_policy(self, policy: str) -> None:
         """
         Set policy about server certification.
 
@@ -157,7 +161,7 @@ class LDAPClient:
             raise ValueError("'%s' is an invalid policy.", policy)
         self.__cert_policy = tls_options[policy]
 
-    def set_ca_cert(self, name):
+    def set_ca_cert(self, name: str) -> None:
         """
         Set the name of CA certificate. If the underlying libldap library \
         uses the Mozilla NSS as TLS library the `name` should be the same \
@@ -178,7 +182,7 @@ class LDAPClient:
             raise ValueError("Name parameter must be string or None.")
         self.__ca_cert = name
 
-    def set_ca_cert_dir(self, path):
+    def set_ca_cert_dir(self, path: str) -> None:
         """
         Set the directory of the CA cert. If the underlying libldap library \
         uses the Mozilla NSS as TLS library the `path` should be the path to \
@@ -198,7 +202,7 @@ class LDAPClient:
             raise ValueError("Path parameter must be string or None.")
         self.__ca_cert_dir = path
 
-    def set_client_cert(self, name):
+    def set_client_cert(self, name: str) -> None:
         """
         Set the name of client certificate. If the underlying libldap library \
         uses the Mozilla NSS as TLS library the `name` should be the same one \
@@ -220,7 +224,7 @@ class LDAPClient:
             raise ValueError("Name parameter must be string or None.")
         self.__client_cert = name
 
-    def set_client_key(self, name):
+    def set_client_key(self, name: str) -> None:
         """
         Set the file that contains the private key that matches the \
         certificate of the client that specified with \
@@ -240,7 +244,7 @@ class LDAPClient:
             raise ValueError("Name parameter must be string or None.")
         self.__client_key = name
 
-    def set_async_connection_class(self, conn):
+    def set_async_connection_class(self, conn: LDAPConnection) -> None:
         """
         Set the LDAP connection class for asynchronous connection. The \
         default connection class is `AIOLDAPConnection` that uses the
@@ -254,7 +258,7 @@ class LDAPClient:
             raise ValueError("Class must be a subclass of LDAPConnection. ")
         self.__async_conn = conn
 
-    def get_rootDSE(self):
+    def get_rootDSE(self) -> LDAPEntry:
         """
         Returns the server's root DSE entry. The root DSE may contain
         information about the vendor, the naming contexts, the request
@@ -369,7 +373,8 @@ class LDAPClient:
     def raw_attributes(self, value=None):
         self.set_raw_attributes(value)
 
-    def connect(self, is_async=False, timeout=None, **kwargs):
+    def connect(self, is_async: bool=False,
+                timeout: float=None, **kwargs) -> LDAPConnection:
         """
         Open a connection to the LDAP server.
 

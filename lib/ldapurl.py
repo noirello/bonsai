@@ -2,7 +2,7 @@ import re
 import urllib.parse
 from .ldapdn import LDAPDN
 
-class LDAPURL(object):
+class LDAPURL:
     """
     LDAP URL object for handling LDAP connection informations, such as
     hostname, port, LDAP bind DN, search attributes, scope (base,sub or
@@ -16,8 +16,8 @@ class LDAPURL(object):
     """
     __slots__ = ("__hostinfo", "__searchinfo", "__extensions")
 
-    def __init__(self, strurl=None):
-        """ init method. """
+    def __init__(self, strurl: str=None):
+        """ Init method. """
         self.__hostinfo = ['ldap', 'localhost', 389]
         # Default values to the search parameters.
         self.__searchinfo = ["", [], "", ""]
@@ -70,12 +70,12 @@ class LDAPURL(object):
             raise ValueError("'%s' is not a valid LDAP URL." % strurl)
 
     @property
-    def host(self):
+    def host(self) -> str:
         """ The hostname. """
         return self.__hostinfo[1]
 
     @staticmethod
-    def is_valid_hostname(hostname):
+    def is_valid_hostname(hostname: str):
         """"
         Validate a hostname.
         Source:
@@ -91,7 +91,7 @@ class LDAPURL(object):
         return all(allowed.match(x) for x in hostname.split("."))
 
     @host.setter
-    def host(self, value):
+    def host(self, value: str):
         """ Setter for hostname. """
         # RegExp for valid hostname.
         if not self.is_valid_hostname(value):
@@ -100,12 +100,12 @@ class LDAPURL(object):
             self.__hostinfo[1] = value
 
     @property
-    def port(self):
+    def port(self) -> int:
         """ The portnumber. """
         return self.__hostinfo[2]
 
     @port.setter
-    def port(self, value):
+    def port(self, value: int):
         """ Setter for portnumber. """
         if type(value) == int and (value > 0 and value < 65535):
             self.__hostinfo[2] = value
@@ -113,12 +113,12 @@ class LDAPURL(object):
             raise ValueError("Port must be an int between 1 and 65535.")
 
     @property
-    def scheme(self):
+    def scheme(self) -> str:
         """ The URL scheme."""
         return self.__hostinfo[0]
 
     @scheme.setter
-    def scheme(self, value):
+    def scheme(self, value: str):
         """ Setter for URL scheme."""
         # It must be ldap or ldaps
         if type(value) == str and value.lower() == 'ldap' \
@@ -128,12 +128,12 @@ class LDAPURL(object):
             raise ValueError("Scheme only be 'ldap' or 'ldaps'.")
 
     @property
-    def basedn(self):
+    def basedn(self) -> LDAPDN:
         """ The LDAP distinguished name for binding. """
         return self.__searchinfo[0]
 
     @basedn.setter
-    def basedn(self, value):
+    def basedn(self, value: LDAPDN):
         """ Setter for LDAP distinguished name for binding. """
         if type(value) == LDAPDN:
             self.__searchinfo[0] = value
@@ -146,12 +146,12 @@ class LDAPURL(object):
         return self.__searchinfo[1]
 
     @property
-    def scope(self):
+    def scope(self) -> str:
         """ The searching scope. """
         return self.__searchinfo[2]
 
     @scope.setter
-    def scope(self, value):
+    def scope(self, value: str):
         """ Setter for searching scope. """
         if type(value) == str:
             if value.lower() == "base" or value.lower() == "one" \
@@ -164,7 +164,7 @@ class LDAPURL(object):
             raise ValueError("Scope must be a string.")
 
     @property
-    def scope_num(self):
+    def scope_num(self) -> int:
         """ Return the searching scope number. """
         if self.scope == "base":
             return 0
@@ -176,17 +176,17 @@ class LDAPURL(object):
             return -1
 
     @property
-    def filter(self):
+    def filter(self) -> str:
         """ The searching filter. """
         return self.__searchinfo[3]
 
-    def get_address(self):
+    def get_address(self) -> str:
         """
         Return the full address of the host.
         """
         return "%s://%s:%d" % tuple(self.__hostinfo)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """ Returns the full format of LDAP URL. """
         strurl = self.get_address()
         strattrs = ""
@@ -207,6 +207,6 @@ class LDAPURL(object):
             strurl = "%s/%s" % (strurl, strbind)
         return strurl
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """ The LDAPURL representation. """
         return "<LDAPURL %s>" % str(self)

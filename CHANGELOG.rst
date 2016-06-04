@@ -12,6 +12,7 @@ Added
 ~~~~~
 
 -  New SizeLimitError.
+-  Some typing info and typing module dependecy for 3.4 and earlier versions.
 
 Fixed
 ~~~~~
