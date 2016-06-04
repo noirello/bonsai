@@ -8,6 +8,7 @@ RUN dnf install -y openldap openldap-servers openldap-clients cyrus-sasl-md5 cyr
 # Kerberos server and utils.
 RUN dnf install -y krb5-server krb5-libs krb5-workstation
 RUN dnf install -y supervisor
+RUN dnf downgrade -y nss-tools --allowerasing
 
 # Setting Kerberos
 COPY ./krb5/kdc.conf /var/kerberos/krb5kdc/kdc.conf

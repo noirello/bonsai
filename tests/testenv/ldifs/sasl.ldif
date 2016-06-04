@@ -67,3 +67,9 @@ olcTLSCertificateKeyFile: /etc/openldap/certs/password
 -
 add: olcTLSVerifyClient
 olcTLSVerifyClient: allow
+-
+add: olcTLSProtocolMin
+olcTLSProtocolMin: 3.1
+-
+add: olcTLSCipherSuite
+olcTLSCipherSuite: HIGH
