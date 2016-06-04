@@ -23,7 +23,7 @@ before_install:
   - sudo apt-get install -y libldap2-dev libsasl2-dev ldap-utils
   # For GSSAPI authentication.
   - sudo apt-get install -y krb5-user libsasl2-modules-gssapi-mit libkrb5-dev
-  - pip install gevent==1.1rc3
+  - pip install gevent
   - pip install tornado
   - pip install codecov
   - pip install pytest-cov
@@ -62,6 +62,6 @@ after_success:
   - sed -i.bak 's|'$INSTALL_PATH'|'$TRAVIS_BUILD_DIR/lib'|g' .coverage
   - codecov
 
-after_failure:
+#after_failure:
   # Print out slapd log for debugging.
-  - docker exec server cat /var/log/slapd.log
+  #- docker exec server cat /var/log/slapd.log

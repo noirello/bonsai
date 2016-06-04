@@ -1,4 +1,3 @@
-- Add: DN as key in LDAPEntry.
 - Feature: Add LDIF reader and writer function.
 - Feature: Add password modify extended operation.
 - Feature: Possibility to change LDAPEntry and LDAPValueList to other dict and list based objects.

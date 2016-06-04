@@ -45,6 +45,11 @@ Features
    that makes easier to add and modify them.
 -  Works with various asynchronous library (like asyncio, gevent).
 
+Documentation
+-------------
+
+Documentation is available `online`_ with a simple tutorial.
+
 Example
 -------
 
@@ -73,16 +78,11 @@ Using with asnycio:
         def do():
             client = bonsai.LDAPClient("ldap://localhost")
             client.set_credentials("DIGEST-MD5", ("admin", "secret", None, None))
-            with (yield from client.connect(async=True)) as conn:
+            with (yield from client.connect(is_async=True)) as conn:
                 res = yield from conn.search("ou=nerdherd,dc=bonsai,dc=test", 2)
                 print(res)
                 who = yield from conn.whoami()
                 print(who)
-
-Documentation
--------------
-
-Documentation is available `online`_ with a simple tutorial.
 
 Changelog
 ---------

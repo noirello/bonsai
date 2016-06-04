@@ -1,5 +1,26 @@
 Change Log
 ==========
+[0.8.6] - 2016-06-04
+--------------------
+
+Changed
+~~~~~~~
+
+-  AttributeErrors to Type- and ValueErrors for invalid function parameters.
+
+Added
+~~~~~
+
+-  New SizeLimitError.
+
+Fixed
+~~~~~
+
+-  Ordered search returning with list (instead of ldapsearchiter).
+-  Setting error messages on Unix systems.
+-  Timeout for connecting.
+-  Setting default ioloop for TornadoLDAPConnection (Thanks to @lilydjwg).
+
 
 [0.8.5] - 2016-02-23
 --------------------

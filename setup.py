@@ -26,7 +26,7 @@ def silent_stderr():
         os.dup2(old, sys.stderr.fileno())
 
 def have_krb5(libs, libdirs=None):
-    """ Check that the target platfrom has KRB5 support. """
+    """ Check that the target platform has KRB5 support. """
     code = """
     #include <krb5.h>
     #include <gssapi/gssapi_krb5.h>
@@ -131,7 +131,7 @@ with open('README.rst') as file:
     long_descr = file.read()
 
 setup(name="bonsai",
-      version="0.8.5",
+      version="0.8.6",
       description="Module for Python 3 to access LDAP directory servers.",
       author="noirello",
       author_email="noirello@gmail.com",
