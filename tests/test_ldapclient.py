@@ -1,9 +1,14 @@
 import configparser
 import os.path
 import unittest
+import xmlrpc.client as rpc
 
 import bonsai
 from bonsai import LDAPClient
+
+def receive_timeout_error(client):
+    """ Function for connection TimeoutError. """
+    client.connect(timeout=2.0)
 
 class LDAPClientTest(unittest.TestCase):
     """ Testing LDAPClient object. """
@@ -13,9 +18,11 @@ class LDAPClientTest(unittest.TestCase):
         """ Set host url and connection. """
         cfg = configparser.ConfigParser()
         cfg.read(os.path.join(curdir, 'test.ini'))
-        cls.url = "ldap://%s:%s" % (cfg["SERVER"]["hostip"],
-                                     cfg["SERVER"]["port"])
+        cls.ipaddr = cfg["SERVER"]["hostip"]
+        cls.url = "ldap://%s:%s" % (cls.ipaddr, cfg["SERVER"]["port"])
         cls.client = LDAPClient(cls.url)
+        proxy = rpc.ServerProxy("http://%s:%d/" % (cls.ipaddr, 8000))
+        proxy.remove_delay()
 
     def test_ldapurl(self):
         """ Test setting LDAPURL. """
@@ -77,6 +84,31 @@ class LDAPClientTest(unittest.TestCase):
         """ Test TLS implementation name. """
         tls_impl = bonsai.get_tls_impl_name()
         self.assertIn(tls_impl, ("GnuTLS", "MozNSS", "OpenSSL", "SChannel"))
+
+
+    def test_connection_timeout(self):
+        """
+        Test connection timeout. Runs in a separate process,
+        because that can be easily polled and terminated.
+        """
+        import multiprocessing
+        self.assertRaises(TypeError, lambda: self.client.connect(timeout="Wrong"))
+        self.assertRaises(ValueError, lambda: self.client.connect(timeout=-1.5))
+        proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
+        res = proxy.set_delay(2.1)
+        if res != 0:
+            raise Exception("Failed to set delay on the server's interface.")
+        pool = multiprocessing.Pool(processes=1)
+        try:
+            result = pool.apply_async(receive_timeout_error, args=(self.client,))
+            result.get(timeout=5.0)
+        except Exception as exc:
+            self.assertIsInstance(exc, bonsai.TimeoutError)
+        else:
+            self.fail("Failed to receive TimeoutError.")
+        finally:
+            pool.terminate()
+            proxy.remove_delay()
 
 if __name__ == '__main__':
     unittest.main()

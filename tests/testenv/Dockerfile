@@ -57,6 +57,8 @@ COPY ./test.jpeg /root/test.jpeg
 EXPOSE 389 636
 EXPOSE 88 749
 
+COPY ./delay.py /root/delay.py
+
 COPY ./supervisord.conf /etc/supervisord.conf
 
 COPY ./entrypoint.sh /root/entrypoint.sh

@@ -4,6 +4,8 @@ import sys
 import unittest
 import subprocess
 import tempfile
+import xmlrpc.client as rpc
+
 
 import bonsai
 from bonsai import LDAPDN
@@ -29,6 +31,16 @@ def invoke_kinit(user, password):
         cmd = 'echo "%s" | kinit %s' % (password, user)
         subprocess.check_output(cmd, shell=True)
 
+def receive_search_timeout(client, ipaddr, search_dn):
+    """ Set network delay and wait for a TimeoutError. """
+    conn = client.connect()
+    proxy = rpc.ServerProxy("http://%s:%d/" % (ipaddr, 8000))
+    res = proxy.set_delay(2.1)
+    if res != 0:
+        raise Exception("Failed to set delay on the server's interface.")
+    res = conn.search(search_dn, 1, timeout=2.0)
+    return res
+
 class LDAPConnectionTest(unittest.TestCase):
     """ Test LDAPConnection object. """
     def setUp(self):
@@ -36,6 +48,7 @@ class LDAPConnectionTest(unittest.TestCase):
         curdir = os.path.abspath(os.path.dirname(__file__))
         self.cfg = configparser.ConfigParser()
         self.cfg.read(os.path.join(curdir, 'test.ini'))
+        self.ipaddr = self.cfg["SERVER"]["hostip"]
         self.url = "ldap://%s:%s/%s?%s?%s" % (self.cfg["SERVER"]["hostip"], \
                                         self.cfg["SERVER"]["port"], \
                                         self.cfg["SERVER"]["basedn"], \
@@ -379,6 +392,28 @@ class LDAPConnectionTest(unittest.TestCase):
             res = self.conn.get_result(msgid)
             page += 1
         self.assertEqual(page, 3)
+
+    def test_search_timeout(self):
+        search_dn = "ou=nerdherd,%s" % self.basedn
+        import multiprocessing
+        self.assertRaises(TypeError,
+                          lambda: self.conn.search(search_dn, 1, timeout=True))
+        self.assertRaises(ValueError,
+                          lambda: self.conn.search(search_dn, 1, timeout=-15))
+        proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
+        pool = multiprocessing.Pool(processes=1)
+        try:
+            client = LDAPClient(self.url)
+            result = pool.apply_async(receive_search_timeout,
+                                      args=(client, self.ipaddr, search_dn))
+            result.get(timeout=6.0)
+        except Exception as exc:
+            self.assertIsInstance(exc, bonsai.TimeoutError)
+        else:
+            self.fail("Failed to receive TimeoutError.")
+        finally:
+            pool.terminate()
+            proxy.remove_delay()
 
 if __name__ == '__main__':
     unittest.main()
