@@ -7,7 +7,7 @@ class LDAPEntry(ldapentry):
     def __init__(self, dn: Union[LDAPDN, str], conn=None):
         super().__init__(str(dn), conn)
 
-    def delete(self, timeout=None) -> Union[bool, int]:
+    def delete(self, timeout: float=None) -> Union[bool, int]:
         """
         Remove LDAP entry from the dictionary server.
 
@@ -27,15 +27,18 @@ class LDAPEntry(ldapentry):
         """
         return self.connection._evaluate(super().modify(), timeout)
 
-    def rename(self, newdn: str, timeout: float=None) -> Union[bool, int]:
+    def rename(self, newdn: Union[str, LDAPDN],
+               timeout: float=None) -> Union[bool, int]:
         """
         Change the entry's distinguished name.
 
+        :param str|LDAPDN newdn: the new DN of the entry.
         :param float timeout: time limit in seconds for the operation.
-        :param str newdn: the new DN of the entry.
         :return: True, if the operation is finished.
         :rtype: bool
         """
+        if type(newdn) == LDAPDN:
+            newdn = str(newdn)
         return self.connection._evaluate(super().rename(newdn), timeout)
 
     def update(self, *args, **kwds) -> None:

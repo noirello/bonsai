@@ -62,18 +62,20 @@ class LDAPConnection(ldapconnection):
         """
         return self._evaluate(super().add(entry), timeout)
 
-    def delete(self, dnstr: str, timeout: float=None) -> Union[int, bool]:
+    def delete(self, dname: Union[str, LDAPDN],
+               timeout: float=None) -> Union[int, bool]:
         """
         Remove entry from the directory server.
 
-        :param str dnstr: the string format of the entry's DN.
+        :param str|LDAPDN dname: the string or LDAPDN format of the \
+        entry's DN.
         :param float timeout: time limit in seconds for the operation.
         :return: True, if the operation is finished.
         :rtype: bool
         """
-        if type(dnstr) == LDAPDN:
-            dnstr = str(dnstr)
-        return self._evaluate(super().delete(dnstr), timeout)
+        if type(dname) == LDAPDN:
+            dname = str(dname)
+        return self._evaluate(super().delete(dname), timeout)
 
     def open(self, timeout: float=None) -> Union['LDAPConnection', Iterator]:
         """

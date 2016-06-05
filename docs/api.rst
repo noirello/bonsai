@@ -5,9 +5,9 @@ API documentation
 
 :class:`LDAPClient`
 ===================
-.. autoclass:: LDAPClient
-.. automethod:: LDAPClient.connect
-.. automethod:: LDAPClient.get_rootDSE
+.. autoclass:: LDAPClient(url, tls=False)
+.. automethod:: LDAPClient.connect(is_async=False, timeout=None, **kwargs)
+.. automethod:: LDAPClient.get_rootDSE()
 
     An example of getting the root DSE:
     
@@ -20,7 +20,7 @@ API documentation
     '1.3.6.1.4.1.4203.1.11.1', '1.3.6.1.4.1.4203.1.11.3', '1.3.6.1.1.8'],
     'supportedSASLMechanisms': ['DIGEST-MD5', 'NTLM', 'CRAM-MD5']}
 
-.. automethod:: LDAPClient.set_credentials
+.. automethod:: LDAPClient.set_credentials(mechanism, creds)
     
     >>> from bonsai import LDAPClient
     >>> client = LDAPClient()
@@ -36,7 +36,7 @@ API documentation
 .. automethod:: LDAPClient.set_ca_cert_dir
 .. automethod:: LDAPClient.set_client_cert
 .. automethod:: LDAPClient.set_client_key
-.. automethod:: LDAPClient.set_async_connection_class
+.. automethod:: LDAPClient.set_async_connection_class(conn)
 
     An example to change the default async connection class to a Gevent-based one:
 
@@ -47,7 +47,7 @@ API documentation
     >>> client.connect(True)
     <bonsai.gevent.geventconnection.GeventLDAPConnection object at 0x7f9b1789c6d8>
 
-.. automethod:: LDAPClient.set_raw_attributes
+.. automethod:: LDAPClient.set_raw_attributes(raw_list)
 
     An example:
     
@@ -82,13 +82,13 @@ API documentation
 
     :param int msg_id: the ID of an ongoing LDAP operation.
 
-.. automethod:: LDAPConnection.add
+.. automethod:: LDAPConnection.add(entry, timeout=None)
 
 .. method:: LDAPConnection.close()
 
     Close LDAP connection.
     
-.. automethod:: LDAPConnection.delete
+.. automethod:: LDAPConnection.delete(dname, timeout=None)
 
 .. method:: LDAPConnection.get_result(msg_id, timeout=None)
 
@@ -104,7 +104,7 @@ API documentation
     :raises bonsai.InvalidMessageID: if the message ID is invalid or the associated operation is
                                      already finished
 
-.. automethod:: LDAPConnection.open
+.. automethod:: LDAPConnection.open(timeout=None)
 
 .. method:: LDAPConnection.search(base=None, scope=None, filter=None, attrlist=None, timeout=None,\
                                   sizelimit=0, attrsonly=False, sort_order=None, page_size=0, \
@@ -168,7 +168,7 @@ API documentation
     :return: the search result.
     :rtype: list, ldapsearchiter or (list, dict) tuple.
 
-.. automethod:: LDAPConnection.whoami
+.. automethod:: LDAPConnection.whoami(timeout=None)
 .. seealso::
     RFC about the LDAP Who am I extended operation `RFC4532`_.
     
@@ -244,9 +244,9 @@ Example for working with LDAPDN objects.
     >>> str(anna.dn)
     'cn=anna,ou=nerdherd,dc=bonsai,dc=test'
 
-.. automethod:: LDAPEntry.delete
-.. automethod:: LDAPEntry.modify
-.. automethod:: LDAPEntry.rename
+.. automethod:: LDAPEntry.delete(timeout=None)
+.. automethod:: LDAPEntry.modify(timeout=None)
+.. automethod:: LDAPEntry.rename(newdn, timeout=None)
 .. automethod:: LDAPEntry.update
 
 :class:`LDAPSearchScope`
@@ -342,7 +342,7 @@ Module functions
     >>> bonsai.get_tls_impl_name()
     "MozNSS"
 
-    The possible return values are: `GnuTLS`, `OpenSSL`, `MozNSS` and `Schannel`.
+    The possible return values are: `GnuTLS`, `OpenSSL`, `MozNSS` and `SChannel`.
 
     :return: A identification of TLS implementation.
     :rtype: str

@@ -35,9 +35,13 @@ class Mock(MagicMock):
         return Mock()
 
 #on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-
 MOCK_MODULES = ['lib._bonsai']
+try:
+    import typing
+except ImportError:
+    MOCK_MODULES.append('typing')
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
 
 import lib as bonsai
 sys.modules['bonsai'] = bonsai

@@ -10,9 +10,6 @@ Bonsai is an LDAP module for Python 3, using OpenLDAP's libldap2 library on Linu
 library on Microsoft Windows to handle communications with LDAP capable directory servers.
 The module main goal is to give a simple way to use the LDAP protocol as pythonic as it can be.
 
-.. warning::
-   The module is under development, therefore the module's architecture could change significantly.
-   
 .. note::
    The module compatibles only with Python 3.3 or newer releases.
 

@@ -250,7 +250,8 @@ class LDAPClient:
         default connection class is `AIOLDAPConnection` that uses the
         asyncio event loop.
         
-        :param class conn:
+        :param LDAPConnection conn: the new asynchronous connection class \
+        that is a subclass of LDAPConnection.
         :raises ValueError: if `conn` parameter is not a subclass \
         of :class:`LDAPConnection`.
         """
@@ -379,6 +380,7 @@ class LDAPClient:
         Open a connection to the LDAP server.
 
         :param bool is_async: Set `True` to use asynchronous connection.
+        :param float timeout: time limit in seconds for the operation.
         :param \*\*kwargs: additional keyword arguments that are passed to
                          the async connection object (e.g. an eventloop
                          object as `loop` parameter).
