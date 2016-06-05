@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import Union, Any, List
+from typing import Union, Any, List, Iterator, Tuple
 
 from ._bonsai import ldapconnection
 from .ldapdn import LDAPDN
@@ -75,7 +75,7 @@ class LDAPConnection(ldapconnection):
             dnstr = str(dnstr)
         return self._evaluate(super().delete(dnstr), timeout)
 
-    def open(self, timeout: float=None):
+    def open(self, timeout: float=None) -> Union['LDAPConnection', Iterator]:
         """
         Open the LDAP connection.
 
@@ -92,7 +92,8 @@ class LDAPConnection(ldapconnection):
                sizelimit: int=0, attrsonly: bool=False,
                sort_order: List[str]=None, page_size: int=0, offset: int=0,
                before_count: int=0, after_count: int=0, est_list_count: int=0,
-               attrvalue: str=None) -> Any:
+               attrvalue: str=None) -> Union[List[LDAPEntry], Iterator,
+                                             Tuple[dict,List[LDAPEntry]]]:
         # Documentation in the docs/api.rst with detailed examples.
         # Load values from the LDAPURL, if it is not presented on the
         # parameter list.

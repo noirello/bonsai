@@ -86,6 +86,8 @@ LDAP DN:
     >>> anna['objectClass'] = ['top', 'inetOrgPerson'] # Must set schemas to get a valid LDAP entry.
     >>> anna['sn'] = "Wu" # Must set a surname attribute because inetOrgPerson schema requires.
     >>> anna['mail'] = "anna@nerdherd.com"
+    >>> anna.dn
+    <LDAPDN cn=anna,ou=nerdherd,dc=bonsai,dc=test>
     >>> anna
     {'cn': ['anna'], 'objectClass': ['top', 'inetorgperson'], 'sn': ['Wu'], 'mail' : ['anna@nerdherd.com']}
 
@@ -130,8 +132,12 @@ Rename an LDAP entry
 To rename an existing entry call the :meth:`LDAPEntry.rename` method with the new DN on an already
 loaded :class:`LDAPEntry` object:
 
+    >>> anna.dn
+    <LDAPDN cn=anna,ou=nerdherd,dc=bonsai,dc=test>
     >>> anna.rename("cn=wu,ou=nerdherd,dc=bonsai,dc=test")
     True
+    >>> anna.dn
+    <LDAPDN cn=wu,ou=nerdherd,dc=bonsai,dc=test>
 
 Be aware that if you would like to move the entry into a different subtree of the directory, then
 the stated subtree needs to already exist.
