@@ -1,12 +1,13 @@
 Change Log
 ==========
-[0.8.6] - 2016-06-04
+[0.8.6] - 2016-06-05
 --------------------
 
 Changed
 ~~~~~~~
 
 -  AttributeErrors to Type- and ValueErrors for invalid function parameters.
+-  LDAPConnection.delete and LDAPEntry.rename accept LDAPDN as DN parameter. 
 
 Added
 ~~~~~
