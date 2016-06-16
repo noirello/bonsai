@@ -49,6 +49,10 @@ class AffectsMultipleDSA(LDAPError):
 class SizeLimitError(LDAPError):
     """Raised, when the size limit of the search is exceeded."""
 
+class NotAllowedOnNonleaf(LDAPError):
+    """Raised, when the operation is not allowed on a nonleaf object."""
+
+
 def _get_error(code: int) -> LDAPError:
     """ Return an error by code number. """
     if code == -1 or code == 0x51 or code == -11:
@@ -73,6 +77,8 @@ def _get_error(code: int) -> LDAPError:
         return UnwillingToPerform
     elif code == 0x41:
         return ObjectClassViolation
+    elif code == 0x42:
+        return NotAllowedOnNonleaf
     elif code == 0x44:
         return AlreadyExists
     elif code == 0x47:

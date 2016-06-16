@@ -239,6 +239,23 @@ class LDAPConnectionTest(unittest.TestCase):
         except bonsai.LDAPError:
             self.fail("Add and delete new entry is failed.")
 
+    def test_recursive_delete(self):
+        org1 = bonsai.LDAPEntry("ou=users,%s" % self.cfg["SERVER"]["basedn"])
+        org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "users"})
+        org2 = bonsai.LDAPEntry("ou=tops,ou=users,%s" % self.cfg["SERVER"]["basedn"])
+        org2.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "tops"})
+        entry = bonsai.LDAPEntry("cn=user,ou=tops,ou=users,%s" % self.cfg["SERVER"]["basedn"])
+        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "example", "sn" : "example"})
+        try:
+            self.conn.add(org1)
+            self.conn.add(org2)
+            self.conn.add(entry)
+            self.conn.delete(org1.dn, recursive=True)
+            res = self.conn.search(org1.dn, 2)
+            self.assertListEqual(res, [])
+        except bonsai.LDAPError:
+            self.fail("Recursive delete is failed.")
+
     def test_whoami(self):
         """ Test whoami. """
         obj = self.conn.whoami()

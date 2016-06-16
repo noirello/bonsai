@@ -4,7 +4,7 @@ from typing import Union, Any, List, Iterator, Tuple
 from ._bonsai import ldapconnection
 from .ldapdn import LDAPDN
 from .ldapentry import LDAPEntry
-from .errors import UnwillingToPerform
+from .errors import UnwillingToPerform, NotAllowedOnNonleaf
 
 class LDAPSearchScope(IntEnum):
     """ Enumeration for LDAP search scopes. """
@@ -63,19 +63,31 @@ class LDAPConnection(ldapconnection):
         return self._evaluate(super().add(entry), timeout)
 
     def delete(self, dname: Union[str, LDAPDN],
-               timeout: float=None) -> Union[int, bool]:
+               timeout: float=None, recursive: bool=False) -> Union[int, bool]:
         """
         Remove entry from the directory server.
 
         :param str|LDAPDN dname: the string or LDAPDN format of the \
         entry's DN.
         :param float timeout: time limit in seconds for the operation.
+        :param bool recursive: remove every entry of the given subtree \
+        recursively.
         :return: True, if the operation is finished.
         :rtype: bool
         """
-        if type(dname) == LDAPDN:
-            dname = str(dname)
-        return self._evaluate(super().delete(dname), timeout)
+        try:
+            if type(dname) == LDAPDN:
+                dname = str(dname)
+            return self._evaluate(super().delete(dname), timeout)
+        except NotAllowedOnNonleaf as exc:
+            if recursive and self.is_async == False:
+                results = self.search(dname, LDAPSearchScope.ONELEVEL,
+                                     attrlist=['1.1'], timeout=timeout)
+                for res in results:
+                    self.delete(res.dn, timeout, True)
+                return self.delete(dname, timeout, False)
+            else:
+                raise exc
 
     def open(self, timeout: float=None) -> Union['LDAPConnection', Iterator]:
         """

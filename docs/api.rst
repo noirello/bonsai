@@ -88,7 +88,7 @@ API documentation
 
     Close LDAP connection.
     
-.. automethod:: LDAPConnection.delete(dname, timeout=None)
+.. automethod:: LDAPConnection.delete(dname, timeout=None, recursive=False)
 
 .. method:: LDAPConnection.get_result(msg_id, timeout=None)
 
