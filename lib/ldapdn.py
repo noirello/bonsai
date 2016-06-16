@@ -17,11 +17,9 @@ class LDAPDN:
             # Validate by rebuilding the parsed string.
         else:
             self.__rdns = []
-        if str(self) != strdn and \
-        self.__escape_special_char(str(self)) != strdn:
-            raise InvalidDN(strdn)
 
-    def __escape_special_char(self, strdn, reverse=False):
+    @staticmethod
+    def __escape_special_char(strdn, reverse=False):
         """ Escaping special characters."""
         char_list = [(r'\\\\', '\\5C'),
                      (r'\,', '\\2C'),
@@ -59,7 +57,8 @@ class LDAPDN:
                 raise InvalidDN(str_rdn)
         return tuple(rdn)
 
-    def __rdns_to_str(self, rdns):
+    @staticmethod
+    def __rdns_to_str(rdns):
         """
         Convert RDN tuples to string.
         Warning: the string value must be 3 depth deep!

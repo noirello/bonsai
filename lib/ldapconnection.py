@@ -95,7 +95,7 @@ class LDAPConnection(ldapconnection):
                sort_order: List[str]=None, page_size: int=0, offset: int=0,
                before_count: int=0, after_count: int=0, est_list_count: int=0,
                attrvalue: str=None) -> Union[List[LDAPEntry], Iterator,
-                                             Tuple[dict,List[LDAPEntry]]]:
+                                             Tuple[List[LDAPEntry],dict]]:
         # Documentation in the docs/api.rst with detailed examples.
         # Load values from the LDAPURL, if it is not presented on the
         # parameter list.
