@@ -245,7 +245,7 @@ static PyObject *
 ldapvaluelist_append(LDAPValueList *self, PyObject *newitem) {
     if (LDAPValueList_Append(self, newitem) == 0) {
         self->status = 1;
-        return Py_None;
+        Py_RETURN_NONE;
     }
     return NULL;
 }
@@ -254,7 +254,7 @@ static PyObject *
 ldapvaluelist_extend(LDAPValueList *self, PyObject *b) {
     if (LDAPValueList_Extend(self, b) == 0) {
         self->status = 1;
-        return Py_None;
+        Py_RETURN_NONE;
     }
     return NULL;
 }
@@ -267,7 +267,7 @@ ldapvaluelist_insert(LDAPValueList *self, PyObject *args) {
     if (!PyArg_ParseTuple(args, "nO:insert", &i, &v)) return NULL;
     if (LDAPValueList_Insert(self, i, v) == 0) {
         self->status = 1;
-        return Py_None;
+        Py_RETURN_NONE;
     }
     return NULL;
 }
@@ -304,7 +304,7 @@ static PyObject *
 ldapvaluelist_remove(LDAPValueList *self, PyObject *value) {
     if (LDAPValueList_Remove(self, value) == 0) {
         self->status = 2;
-        return Py_None;
+        Py_RETURN_NONE;
     }
     return NULL;
 }

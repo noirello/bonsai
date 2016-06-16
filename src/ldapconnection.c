@@ -163,7 +163,7 @@ ldapconnection_close(LDAPConnection *self) {
     if (self->closed == 1) {
         /* Connection is already close, nothing to do. */
         Py_DECREF(keys);
-        return Py_None;
+        Py_RETURN_NONE;
     }
 
     iter = PyObject_GetIter(keys);
@@ -203,7 +203,7 @@ ldapconnection_close(LDAPConnection *self) {
         return NULL;
     }
     self->closed = 1;
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 /* Add new LDAPEntry to the server. */
@@ -773,7 +773,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             }
             return NULL;
         }
-        if (ret == Py_None) return ret;
+        if (ret == Py_None) Py_RETURN_NONE;
         else {
             /* The init and bind are finished. */
             /* Remove operations from pending_ops. */
@@ -1000,7 +1000,7 @@ ldapconnection_abandon(LDAPConnection *self, PyObject *args) {
         return NULL;
     }
 
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 /* Get the underlying socket descriptor of the LDAP connection. */

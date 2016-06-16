@@ -265,7 +265,7 @@ UniqueList_SetSlice(UniqueList *self, Py_ssize_t ilow, Py_ssize_t ihigh, PyObjec
 static PyObject *
 uniquelist_append(UniqueList *self, PyObject *newitem) {
     if (UniqueList_Append(self, newitem) == 0) {
-        return Py_None;
+        Py_RETURN_NONE;
     }
     return NULL;
 }
@@ -273,7 +273,7 @@ uniquelist_append(UniqueList *self, PyObject *newitem) {
 static PyObject *
 uniquelist_extend(UniqueList *self, PyObject *b) {
     if (UniqueList_Extend(self, b) == 0) {
-        return Py_None;
+        Py_RETURN_NONE;
     }
     return NULL;
 }
@@ -285,7 +285,7 @@ uniquelist_insert(UniqueList *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(args, "nO:insert", &i, &v)) return NULL;
     if (UniqueList_Insert(self, i, v) == 0) {
-        return Py_None;
+        Py_RETURN_NONE;
     }
     return NULL;
 }
@@ -293,7 +293,7 @@ uniquelist_insert(UniqueList *self, PyObject *args) {
 static PyObject *
 uniquelist_remove(UniqueList *self, PyObject *value) {
     if (UniqueList_Remove(self, value) == 0) {
-        return Py_None;
+        Py_RETURN_NONE;
     }
     return NULL;
 }
