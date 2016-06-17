@@ -1,7 +1,7 @@
 import asyncio
 
-from ..ldapconnection import LDAPConnection
-from ..errors import LDAPError
+from ..ldapconnection import LDAPConnection, LDAPSearchScope
+from ..errors import LDAPError, NotAllowedOnNonleaf
 
 class AIOLDAPConnection(LDAPConnection):
     def __init__(self, client, loop=None):
@@ -27,3 +27,20 @@ class AIOLDAPConnection(LDAPConnection):
     
     def _evaluate(self, msg_id, timeout=None):
         return self._poll(msg_id, timeout)
+
+    def delete(self, dname, timeout=None, recursive=False):
+        try:
+            res = yield from super().delete(dname, timeout, recursive)
+            return res
+        except NotAllowedOnNonleaf as exc:
+            if recursive:
+                results = yield from self.search(dname,
+                                                 LDAPSearchScope.ONELEVEL,
+                                                 attrlist=['1.1'],
+                                                 timeout=timeout)
+                for res in results:
+                    yield from self.delete(res.dn, timeout, True)
+                res = yield from self.delete(dname, timeout, False)
+                return res
+            else:
+                raise exc

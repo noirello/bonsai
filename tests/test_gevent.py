@@ -64,6 +64,25 @@ class GeventLDAPConnectionTest(unittest.TestCase):
             res = conn.search()
             self.assertNotIn(entry, res)
 
+    def test_recursive_delete(self):
+        """ Test removing a subtree recursively. """
+        org1 = bonsai.LDAPEntry("ou=users,%s" % self.basedn)
+        org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "users"})
+        org2 = bonsai.LDAPEntry("ou=tops,ou=users,%s" % self.basedn)
+        org2.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "tops"})
+        entry = bonsai.LDAPEntry("cn=user,ou=tops,ou=users,%s" % self.basedn)
+        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "example", "sn" : "example"})
+        try:
+            with self.client.connect(True) as conn:
+                conn.add(org1)
+                conn.add(org2)
+                conn.add(entry)
+                conn.delete(org1.dn, recursive=True)
+                res = conn.search(org1.dn, 2)
+                self.assertListEqual(res, [])
+        except bonsai.LDAPError as err:
+            self.fail("Recursive delete is failed: %s" % err)
+
     def test_modify_and_rename(self):
         with self.client.connect(True) as conn:
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)

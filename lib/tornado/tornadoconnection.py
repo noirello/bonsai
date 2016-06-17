@@ -1,10 +1,11 @@
 from functools import partial
 
+from tornado import gen
 from tornado.ioloop import IOLoop
 from tornado.concurrent import Future
 
-from ..ldapconnection import LDAPConnection
-from ..errors import LDAPError
+from ..ldapconnection import LDAPConnection, LDAPSearchScope
+from ..errors import LDAPError, NotAllowedOnNonleaf
 
 class TornadoLDAPConnection(LDAPConnection):
     def __init__(self, client, ioloop=None):
@@ -43,3 +44,19 @@ class TornadoLDAPConnection(LDAPConnection):
             if exc.errno != 17:
                 raise exc
         return fut
+
+    @gen.coroutine
+    def delete(self, dname, timeout=None, recursive=False):
+        try:
+            res = yield super().delete(dname, timeout, recursive)
+            return res
+        except NotAllowedOnNonleaf as exc:
+            if recursive:
+                results = yield self.search(dname, LDAPSearchScope.ONELEVEL,
+                                            attrlist=['1.1'], timeout=timeout)
+                for res in results:
+                    yield self.delete(res.dn, timeout, True)
+                res = yield self.delete(dname, timeout, False)
+                return res
+            else:
+                raise exc

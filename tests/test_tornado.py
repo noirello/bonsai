@@ -11,6 +11,7 @@ def dummy(f):
     return f
 
 try:
+    from tornado import ioloop
     from tornado.testing import gen_test
     from tornado.testing import AsyncTestCase
     from bonsai.tornado import TornadoLDAPConnection
@@ -41,21 +42,22 @@ class TornadoLDAPConnectionTest(TestCaseClass):
                                           self.cfg["SIMPLEAUTH"]["password"]))
         self.client.set_async_connection_class(TornadoLDAPConnection)
         self.io_loop = self.get_new_ioloop()
-        
-    @gen_test
+
+
+    @gen_test(timeout=20.0)
     def test_connection(self):
         conn = yield self.client.connect(True, ioloop=self.io_loop)
         self.assertIsNotNone(conn)
         self.assertFalse(conn.closed)
         conn.close()
     
-    @gen_test
+    @gen_test(timeout=20.0)
     def test_search(self):
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             res = yield conn.search()
             self.assertIsNotNone(res)
    
-    @gen_test
+    @gen_test(timeout=20.0)
     def test_add_and_delete(self):
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)
@@ -75,7 +77,26 @@ class TornadoLDAPConnectionTest(TestCaseClass):
             res = yield conn.search()
             self.assertNotIn(entry, res)
 
-    @gen_test
+    @gen_test(timeout=20.0)
+    def test_recursive_delete(self):
+        org1 = bonsai.LDAPEntry("ou=users,%s" % self.basedn)
+        org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "users"})
+        org2 = bonsai.LDAPEntry("ou=tops,ou=users,%s" % self.basedn)
+        org2.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "tops"})
+        entry = bonsai.LDAPEntry("cn=user,ou=tops,ou=users,%s" % self.basedn)
+        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "example", "sn" : "example"})
+        try:
+            with (yield self.client.connect(True, timeout=10.0, ioloop=self.io_loop)) as conn:
+                yield conn.add(org1)
+                yield conn.add(org2)
+                yield conn.add(entry)
+                yield conn.delete(org1.dn, recursive=True)
+                res = yield conn.search(org1.dn, 2)
+                self.assertListEqual(res, [])
+        except bonsai.LDAPError as err:
+            self.fail("Recursive delete is failed: %s" % err)
+
+    @gen_test(timeout=20.0)
     def test_modify_and_rename(self):
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)
@@ -103,7 +124,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
             self.assertEqual(res, [])
             yield conn.delete(entry.dn)
     
-    @gen_test
+    @gen_test(timeout=20.0)
     def test_obj_err(self):
         entry = LDAPEntry("cn=async_test,%s" % self.basedn)
         entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
@@ -117,7 +138,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
             self.fail("test_obj_err failed with %s" % exc)
         self.fail("test_obj_err failed without the right exception.")
 
-    @gen_test
+    @gen_test(timeout=20.0)
     def test_whoami(self):
         """ Test whoami. """
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:

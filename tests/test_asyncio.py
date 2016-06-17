@@ -70,6 +70,25 @@ class AIOLDAPConnectionTest(unittest.TestCase):
             self.assertNotIn(entry, res)
 
     @asyncio_test
+    def test_recursive_delete(self):
+        org1 = bonsai.LDAPEntry("ou=users,%s" % self.basedn)
+        org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "users"})
+        org2 = bonsai.LDAPEntry("ou=tops,ou=users,%s" % self.basedn)
+        org2.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "tops"})
+        entry = bonsai.LDAPEntry("cn=user,ou=tops,ou=users,%s" % self.basedn)
+        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "example", "sn" : "example"})
+        try:
+            with (yield from self.client.connect(True)) as conn:
+                yield from conn.add(org1)
+                yield from conn.add(org2)
+                yield from conn.add(entry)
+                yield from conn.delete(org1.dn, recursive=True)
+                res = yield from conn.search(org1.dn, 2)
+                self.assertListEqual(res, [])
+        except bonsai.LDAPError as err:
+            self.fail("Recursive delete is failed: %s" % err)
+
+    @asyncio_test
     def test_modify_and_rename(self):
         with (yield from self.client.connect(True)) as conn:
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)
