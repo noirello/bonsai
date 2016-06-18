@@ -102,11 +102,11 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 end:
     /* Clean up the mess. */
     CloseHandle(thread);
-    if (val->url) free(val->url);
-    if (val->ca_cert) free(val->ca_cert);
-    if (val->ca_cert_dir) free(val->ca_cert_dir);
-    if (val->client_cert) free(val->client_cert);
-    if (val->client_key) free(val->client_key);
+    free(val->url);
+    free(val->ca_cert);
+    free(val->ca_cert_dir);
+    free(val->client_cert);
+    free(val->client_key);
     free(val);
     return retval;
 }
@@ -340,7 +340,7 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
         if (async == 0 && *timeout != -1) {
             pthread_cancel(thread);
             set_exception(NULL, LDAP_TIMEOUT);
-            if (val->ld) free(val->ld);
+            free(val->ld);
             retval = -1;
             goto end;
         }
@@ -377,7 +377,7 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 #else
             set_exception(NULL, val->retval);
 #endif
-            if (val->ld) free(val->ld);
+            free(val->ld);
             retval = -1;
             goto end;
         }
@@ -405,11 +405,11 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
     }
 end:
     /* Clean-up. */
-    if (val->url) free(val->url);
-    if (val->ca_cert) free(val->ca_cert);
-    if (val->ca_cert_dir) free(val->ca_cert_dir);
-    if (val->client_cert) free(val->client_cert);
-    if (val->client_key) free(val->client_key);
+    free(val->url);
+    free(val->ca_cert);
+    free(val->ca_cert_dir);
+    free(val->client_cert);
+    free(val->client_key);
     pthread_mutex_destroy(val->mux);
     free(val->mux);
     free(val);
@@ -532,11 +532,11 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
 
     defaults = malloc(sizeof(ldap_conndata_t));
     if (defaults == NULL) {
-        if (passwd != NULL) free(passwd);
-        if (binddn != NULL) free(binddn);
-        if (realm != NULL) free(realm);
-        if (authcid != NULL) free(authcid);
-        if (authzid != NULL) free(authzid);
+        free(passwd);
+        free(binddn);
+        free(realm);
+        free(authcid);
+        free(authzid);
         return (void *)PyErr_NoMemory();
     }
 
@@ -570,12 +570,12 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
 /* Dealloc an ldapConnectionInfo struct. */
 void
 dealloc_conn_info(ldap_conndata_t* info) {
-    if (info->authcid) free(info->authcid);
-    if (info->authzid) free(info->authzid);
-    if (info->binddn) free(info->binddn);
-    if (info->mech) free(info->mech);
-    if (info->passwd) free(info->passwd);
-    if (info->realm) free(info->realm);
+    free(info->authcid);
+    free(info->authzid);
+    free(info->binddn);
+    free(info->mech);
+    free(info->passwd);
+    free(info->realm);
 #ifdef HAVE_KRB5
     remove_krb5_cred(info->ctx, info->ccache, &(info->gsscred));
     free(info->errmsg);

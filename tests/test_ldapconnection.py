@@ -501,5 +501,21 @@ class LDAPConnectionTest(unittest.TestCase):
         self.assertRaises(ValueError, missing_scope)
         self.assertRaises(TypeError, wrong)
 
+    def test_wrong_add_param(self):
+        """ Test passing wrong parameters for add method. """
+        def close_conn():
+            cli = LDAPClient("ldap://%s" % self.ipaddr)
+            LDAPConnection(cli).add(bonsai.LDAPEntry("cn=dummy"))
+        self.assertRaises(ClosedConnection, close_conn)
+        self.assertRaises(TypeError, lambda: self.conn.add("wrong"))
+
+    def test_wrong_delete_param(self):
+        """ Test passing wrong parameters for add method. """
+        def close_conn():
+            cli = LDAPClient("ldap://%s" % self.ipaddr)
+            LDAPConnection(cli).delete("cn=dummy")
+        self.assertRaises(ClosedConnection, close_conn)
+        self.assertRaises(TypeError, lambda: self.conn.delete(0))
+
 if __name__ == '__main__':
     unittest.main()

@@ -151,7 +151,7 @@ convert_ctrl(LDAPControlA *ctrl, LDAPControlW **wctrl) {
 static void 
 free_ctrl(LDAPControlW *ctrl) {
     if (ctrl != NULL) {
-        if (ctrl->ldctl_oid) free(ctrl->ldctl_oid);
+        free(ctrl->ldctl_oid);
         free(ctrl);
     }
 }
@@ -217,7 +217,7 @@ convert_mod(LDAPModA *mod, LDAPModW **wmod) {
 static void
 free_mod(LDAPModW *mod) {
     if (mod != NULL) {
-        if (mod->mod_type) free(mod->mod_type);
+        free(mod->mod_type);
         if ((mod->mod_op & LDAP_MOD_BVALUES) != LDAP_MOD_BVALUES) {
             if (mod->mod_vals.modv_strvals) free_list(mod->mod_vals.modv_strvals, &free);
         }
@@ -297,7 +297,7 @@ ldap_add_extU(LDAP *ld, char *dn, LDAPModA **attrs, LDAPControlA **sctrls, LDAPC
     rc = ldap_add_extW(ld, wdn, wattrs, wsctrls, wcctrls, msgidp);
 
 clear:
-    if (wdn) free(wdn);
+    free(wdn);
     free_list((void **)wsctrls, (void *)free_ctrl);
     free_list((void **)wcctrls, (void *)free_ctrl);
     free_list((void **)wattrs, (void *)free_mod);
@@ -323,7 +323,7 @@ ldap_modify_extU(LDAP *ld, char *dn, LDAPModA **attrs, LDAPControlA **sctrls, LD
     rc = ldap_modify_extW(ld, wdn, wattrs, wsctrls, wcctrls, msgidp);
 
 clear:
-    if (wdn) free(wdn);
+    free(wdn);
     free_list((void **)wsctrls, (void *)free_ctrl);
     free_list((void **)wcctrls, (void *)free_ctrl);
     free_list((void **)wattrs, (void *)free_mod);
@@ -345,7 +345,7 @@ ldap_delete_extU(LDAP *ld, char *dn, LDAPControlA **sctrls, LDAPControlA **cctrl
     rc = ldap_delete_extW(ld, wdn, wsctrls, wcctrls, msgidp);
 
 clear:
-    if (wdn) free(wdn);
+    free(wdn);
     free_list((void **)wsctrls, (void *)free_ctrl);
     free_list((void **)wcctrls, (void *)free_ctrl);
 
@@ -389,7 +389,7 @@ ldap_get_values_lenU(LDAP *ld, LDAPMessage *entry, char *target) {
 
     ret = ldap_get_values_lenW(ld, entry, wtarget);
 
-    if (wtarget) free(wtarget);
+    free(wtarget);
 
     return ret;
 }
@@ -414,9 +414,9 @@ ldap_renameU(LDAP *ld, char *dn, char *newrdn, char *newSuperior, int deleteoldr
     rc = ldap_rename_extW(ld, wdn, wnewrdn, wnewSuperior, deleteoldrdn, wsctrls, wcctrls, msgidp);
 
 clear:
-    if (wdn) free(wdn);
-    if (wnewrdn) free(wnewrdn);
-    if (wnewSuperior) free(wnewSuperior);
+    free(wdn);
+    free(wnewrdn);
+    free(wnewSuperior);
     free_list((void **)wsctrls, (void *)free_ctrl);
     free_list((void **)wcctrls, (void *)free_ctrl);
 
@@ -451,8 +451,8 @@ ldap_search_extU(LDAP *ld, char *base, int scope, char *filter, char **attrs, in
             sizelimit, msgidp);
 
 clear:
-    if (wbase) free(wbase);
-    if (wfilter) free(wfilter);
+    free(wbase);
+    free(wfilter);
     free_list((void **)wattrs, (void *)free);
     free_list((void **)wsctrls, (void *)free_ctrl);
     free_list((void **)wcctrls, (void *)free_ctrl);
@@ -476,7 +476,7 @@ ldap_extended_operationU(LDAP *ld, char *reqoid, struct berval *reqdata, LDAPCon
     rc = ldap_extended_operationW(ld, woid, reqdata, wsctrls, wcctrls, msgidp);
 
 clear:
-    if (woid) free(woid);
+    free(woid);
     free_list((void **)wsctrls, (void *)free_ctrl);
     free_list((void **)wcctrls, (void *)free_ctrl);
 
@@ -673,8 +673,8 @@ init:
 
     *ldp = ldap_sslinitW(whost, port, ssl);
 
-    if (host) free(host);
-    if (whost) free(whost);
+    free(host);
+    free(whost);
 
     if (*ldp == NULL) {
         err = LdapGetLastError();
@@ -715,8 +715,8 @@ ldap_simple_bind_sU(LDAP *ld, char *who, char *passwd) {
     rc = ldap_simple_bind_sW(ld, wwho, wpsw);
 
 clear:
-    if (wwho) free(wwho);
-    if (wpsw) free(wpsw);
+    free(wwho);
+    free(wpsw);
 
     return rc;
 }
@@ -984,9 +984,9 @@ create_credentials(CredHandle *hcred, wchar_t *package_name, sasl_defaults_t *de
     rc = AcquireCredentialsHandleW(NULL, package_name, SECPKG_CRED_OUTBOUND, NULL,
         &wincreds, NULL, NULL, hcred, NULL);
 clear:
-    if (wauthcid) free(wauthcid);
-    if (wpasswd) free(wpasswd);
-    if (wrealm) free(wrealm);
+    free(wauthcid);
+    free(wpasswd);
+    free(wrealm);
     return rc;
 }
 
@@ -1183,10 +1183,10 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
     } while (rc == LDAP_SASL_BIND_IN_PROGRESS);
 
 clear:
-    if (wdn) free(wdn);
-    if (wmech) free(wmech);
-    if (target_name) free(target_name);
-    if (output) free(output);
+    free(wdn);
+    free(wmech);
+    free(target_name);
+    free(output);
     free_list((void **)wsctrls, (void *)free_ctrl);
     free_list((void **)wcctrls, (void *)free_ctrl);
     DeleteSecurityContext(&ctxhandle);

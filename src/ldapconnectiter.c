@@ -284,11 +284,11 @@ create_init_thread_data(PyObject *client, SOCKET sock) {
     data->sock = sock;
     return data;
 error:
-    if (data->ca_cert != NULL) free(data->ca_cert);
-    if (data->ca_cert_dir != NULL) free(data->ca_cert_dir);
-    if (data->client_cert != NULL) free(data->client_cert);
-    if (data->client_key != NULL) free(data->client_key);
-    if (data->url != NULL) free(data->url);
+    free(data->ca_cert);
+    free(data->ca_cert_dir);
+    free(data->client_cert);
+    free(data->client_key);
+    free(data->url);
     free(data);
     PyErr_BadInternalCall();
     return NULL;

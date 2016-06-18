@@ -90,13 +90,6 @@ ldapentry_init(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     return 0;
 }
 
-/*  Returns 1 if obj is an instance of LDAPEntry, or 0 if not. On error, returns -1 and sets an exception. */
-int
-LDAPEntry_Check(PyObject *obj) {
-    if (obj == NULL) return -1;
-    return PyObject_IsInstance(obj, (PyObject *)&LDAPEntryType);
-}
-
 /*  Returns a NULL-delimitered LDAPMod list for adds new or modificates existing LDAP entries.
     It uses only those LDAPValueList, whose status is 1 - add or delete, or 2 - replace, and
     the deleted keys listed in LDAPEntry's deleted list.

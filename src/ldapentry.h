@@ -20,7 +20,6 @@ extern PyTypeObject LDAPEntryType;
 
 PyObject *LDAPEntry_AddOrModify(LDAPEntry *self, int mod);
 int LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods);
-int LDAPEntry_Check(PyObject *obj);
 LDAPModList *LDAPEntry_CreateLDAPMods(LDAPEntry *self);
 LDAPEntry *LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn);
 PyObject *LDAPEntry_GetItem(LDAPEntry *self, PyObject *key);

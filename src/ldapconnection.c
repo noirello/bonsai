@@ -114,14 +114,14 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
         /* Init the socketpair. */
         rc = get_socketpair(self->client, &(self->socketpair), &(self->csock), &ssock);
         if (rc != 0) {
-            if (mech != NULL) free(mech);
+            free(mech);
             return -1;
         }
     }
 
     info = create_conn_info(mech, ssock, creds);
     Py_DECREF(creds);
-    if (mech != NULL) free(mech);
+    free(mech);
     if (info == NULL) return -1;
 
     *conniter = LDAPConnectIter_New(self, info, ssock);
@@ -212,13 +212,8 @@ ldapconnection_add(LDAPConnection *self, PyObject *args) {
 
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
-    if (!PyArg_ParseTuple(args, "O", &param)) return NULL;
+    if (!PyArg_ParseTuple(args, "O!", &LDAPEntryType, &param)) return NULL;
 
-    /* Validate parameter. */
-    if (LDAPEntry_Check(param) != 1) {
-        PyErr_SetString(PyExc_TypeError, "Parameter must be an LDAPEntry");
-        return NULL;
-    }
     /* Set this connection to the LDAPEntry, before add to the server. */
     if (LDAPEntry_SetConnection((LDAPEntry *)param, self) == 0) {
         msgid = LDAPEntry_AddOrModify((LDAPEntry *)param, 0);
@@ -439,12 +434,6 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
     /* If attrvalue_obj is None, then it is not set.*/
     if (attrvalue_obj == Py_None) attrvalue_obj = NULL;
-
-    if (page_size != 0 && page_size < 2) {
-        PyErr_SetString(PyExc_ValueError,
-                "The page_size parameter must be greater, than 1.");
-        return NULL;
-    }
 
     if (sort_order != NULL && PyList_Size(sort_order) > 0) {
         /* Convert the attribute, reverse order pairs to LDAPSortKey struct. */
