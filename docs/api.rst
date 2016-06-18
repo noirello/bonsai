@@ -359,5 +359,5 @@ Module functions
 
 .. function:: bonsai.has_krb5_support
 
-    :return: True if the module is build with the optional Kerberos/GSSAPI headers.
+    :return: True if the module is built with the optional Kerberos/GSSAPI headers.
     :rtype: bool

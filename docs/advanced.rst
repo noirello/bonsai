@@ -105,7 +105,7 @@ module's client can only interfere with the authorization ID:
     >>> client.connect().whoami()
     'dn:cn=chuck,ou=nerdherd,dc=bonsai,dc=test'
 
-But on a Windows system (by default) or if Bonsai is build with the optional Kerberos headers, then
+But on a Windows system (by default) or if Bonsai is built with the optional Kerberos headers, then
 it is possible to requesting a TGT with the module's client if username, password and realm name
 are all provided:
 
