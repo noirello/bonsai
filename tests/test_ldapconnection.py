@@ -33,13 +33,23 @@ def invoke_kinit(user, password):
         subprocess.check_output(cmd, shell=True)
 
 def receive_search_timeout(client, ipaddr, search_dn):
-    """ Set network delay and wait for a TimeoutError. """
+    """ Set network delay and wait for a TimeoutError during search. """
     conn = client.connect()
     proxy = rpc.ServerProxy("http://%s:%d/" % (ipaddr, 8000))
-    res = proxy.set_delay(2.1)
+    res = proxy.set_delay(3.1)
     if res != 0:
         raise Exception("Failed to set delay on the server's interface.")
-    res = conn.search(search_dn, 1, timeout=2.0)
+    res = conn.search(search_dn, 1, timeout=3.0)
+    return res
+
+def receive_whoami_timeout(client, ipaddr):
+    """ Set network delay and wait for a TimeoutError during whoami. """
+    conn = client.connect()
+    proxy = rpc.ServerProxy("http://%s:%d/" % (ipaddr, 8000))
+    res = proxy.set_delay(4.1)
+    if res != 0:
+        raise Exception("Failed to set delay on the server's interface.")
+    res = conn.whoami(timeout=4.0)
     return res
 
 class LDAPConnectionTest(unittest.TestCase):
@@ -438,7 +448,31 @@ class LDAPConnectionTest(unittest.TestCase):
             client = LDAPClient(self.url)
             result = pool.apply_async(receive_search_timeout,
                                       args=(client, self.ipaddr, search_dn))
-            result.get(timeout=6.0)
+            result.get(timeout=7.0)
+        except Exception as exc:
+            self.assertIsInstance(exc, bonsai.TimeoutError)
+        else:
+            self.fail("Failed to receive TimeoutError.")
+        finally:
+            pool.terminate()
+            proxy.remove_delay()
+
+    def test_whoami_timeout(self):
+        """ Test whoami's timeout. """
+        import multiprocessing
+        self.assertRaises(TypeError,
+                          lambda: self.conn.whoami(timeout='A'))
+        self.assertRaises(ValueError,
+                          lambda: self.conn.whoami(timeout=-10))
+        self.assertRaises(bonsai.TimeoutError,
+                          lambda: self.conn.whoami(timeout=0))
+        proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
+        pool = multiprocessing.Pool(processes=1)
+        try:
+            client = LDAPClient(self.url)
+            result = pool.apply_async(receive_whoami_timeout,
+                                      args=(client, self.ipaddr))
+            result.get(timeout=9.0)
         except Exception as exc:
             self.assertIsInstance(exc, bonsai.TimeoutError)
         else:

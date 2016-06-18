@@ -82,6 +82,10 @@ class AIOLDAPConnectionTest(unittest.TestCase):
                 yield from conn.add(org1)
                 yield from conn.add(org2)
                 yield from conn.add(entry)
+                try:
+                    yield from conn.delete(org1.dn)
+                except bonsai.LDAPError as exc:
+                    self.assertIsInstance(exc, bonsai.errors.NotAllowedOnNonleaf)
                 yield from conn.delete(org1.dn, recursive=True)
                 res = yield from conn.search(org1.dn, 2)
                 self.assertListEqual(res, [])

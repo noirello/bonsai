@@ -77,6 +77,10 @@ class GeventLDAPConnectionTest(unittest.TestCase):
                 conn.add(org1)
                 conn.add(org2)
                 conn.add(entry)
+                try:
+                    conn.delete(org1.dn)
+                except bonsai.LDAPError as exc:
+                    self.assertIsInstance(exc, bonsai.errors.NotAllowedOnNonleaf)
                 conn.delete(org1.dn, recursive=True)
                 res = conn.search(org1.dn, 2)
                 self.assertListEqual(res, [])

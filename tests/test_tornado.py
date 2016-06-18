@@ -90,6 +90,10 @@ class TornadoLDAPConnectionTest(TestCaseClass):
                 yield conn.add(org1)
                 yield conn.add(org2)
                 yield conn.add(entry)
+                try:
+                    yield conn.delete(org1.dn)
+                except bonsai.LDAPError as exc:
+                    self.assertIsInstance(exc, bonsai.errors.NotAllowedOnNonleaf)
                 yield conn.delete(org1.dn, recursive=True)
                 res = yield conn.search(org1.dn, 2)
                 self.assertListEqual(res, [])
