@@ -13,6 +13,7 @@ from bonsai import LDAPClient
 from bonsai import LDAPConnection
 from bonsai import LDAPSearchScope
 import bonsai.errors
+from bonsai.errors import ClosedConnection
 
 def invoke_kinit(user, password):
     """ Invoke kinit command with credential parameters. """
@@ -230,21 +231,34 @@ class LDAPConnectionTest(unittest.TestCase):
         if 'cn' not in obj.keys():
             self.fail()
 
+    def test_search_attrsonly(self):
+        """ Test search receiving only attributes. """
+        obj = self.conn.search(self.basedn, 2, "(objectclass=person)",
+                               ['cn'], attrsonly=True)[0]
+        self.assertIsNotNone(obj)
+        self.assertListEqual(obj['cn'], [])
+
     def test_add_and_delete(self):
-        entry = bonsai.LDAPEntry("cn=example,%s" % self.cfg["SERVER"]["basedn"])
+        """ Test adding and removing an LDAP entry. """
+        entry = bonsai.LDAPEntry("cn=example,%s" % self.basedn)
         entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "example", "sn" : "example"})
         try:
             self.conn.add(entry)
+            res = self.conn.search(entry.dn, 0)
+            self.assertEqual(res[0], entry)
             self.conn.delete("cn=example,%s" % self.cfg["SERVER"]["basedn"])
+            res = self.conn.search(entry.dn, 0)
+            self.assertListEqual(res, [])
         except bonsai.LDAPError:
             self.fail("Add and delete new entry is failed.")
 
     def test_recursive_delete(self):
-        org1 = bonsai.LDAPEntry("ou=users,%s" % self.cfg["SERVER"]["basedn"])
+        """ Test removing a subtree recursively. """
+        org1 = bonsai.LDAPEntry("ou=users,%s" % self.basedn)
         org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "users"})
-        org2 = bonsai.LDAPEntry("ou=tops,ou=users,%s" % self.cfg["SERVER"]["basedn"])
+        org2 = bonsai.LDAPEntry("ou=tops,ou=users,%s" % self.basedn)
         org2.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "tops"})
-        entry = bonsai.LDAPEntry("cn=user,ou=tops,ou=users,%s" % self.cfg["SERVER"]["basedn"])
+        entry = bonsai.LDAPEntry("cn=user,ou=tops,ou=users,%s" % self.basedn)
         entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "example", "sn" : "example"})
         try:
             self.conn.add(org1)
@@ -411,6 +425,7 @@ class LDAPConnectionTest(unittest.TestCase):
         self.assertEqual(page, 3)
 
     def test_search_timeout(self):
+        """ Test search's timeout. """
         search_dn = "ou=nerdherd,%s" % self.basedn
         import multiprocessing
         self.assertRaises(TypeError,
@@ -431,6 +446,26 @@ class LDAPConnectionTest(unittest.TestCase):
         finally:
             pool.terminate()
             proxy.remove_delay()
+
+    def test_wrong_conn_param(self):
+        """ Test passing wrong parameters for LDAPConnection. """
+        self.assertRaises(TypeError, lambda: LDAPConnection("wrong"))
+        self.assertRaises(TypeError, lambda: LDAPConnection(LDAPClient(), 1))
+
+    def test_wrong_search_param(self):
+        """ Test passing wrong parameters for search method. """
+        def close_conn():
+            cli = LDAPClient("ldap://%s" % self.ipaddr)
+            LDAPConnection(cli).search()
+        def missing_scope():
+            cli = LDAPClient("ldap://%s" % self.ipaddr)
+            LDAPConnection(cli).open().search()
+        def wrong():
+            cli = LDAPClient("ldap://%s" % self.ipaddr)
+            LDAPConnection(cli).open().search("",0,3)
+        self.assertRaises(ClosedConnection, close_conn)
+        self.assertRaises(ValueError, missing_scope)
+        self.assertRaises(TypeError, wrong)
 
 if __name__ == '__main__':
     unittest.main()

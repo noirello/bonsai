@@ -46,8 +46,6 @@ ldapconnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
         return -1;
     }
 
-    if (client == NULL || async == NULL) return -1;
-
     /* Validate that the Python object parameter is type of an LDAPClient. */
     ldapclient_type = load_python_object("bonsai.ldapclient", "LDAPClient");
     if (ldapclient_type == NULL ||
@@ -445,12 +443,6 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     if (page_size != 0 && page_size < 2) {
         PyErr_SetString(PyExc_ValueError,
                 "The page_size parameter must be greater, than 1.");
-        return NULL;
-    }
-
-    if (page_size != 0 && (offset != 0 || attrvalue != NULL)) {
-        PyErr_SetString(PyExc_ValueError, "Cannot use paged search and"
-                " virtual list view at the same time.");
         return NULL;
     }
 

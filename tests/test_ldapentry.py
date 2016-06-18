@@ -5,6 +5,7 @@ import unittest
 from bonsai import LDAPClient
 from bonsai import LDAPEntry
 import bonsai.errors
+from bonsai.errors import InvalidDN
 
 class LDAPEntryTest(unittest.TestCase):
     @classmethod
@@ -227,6 +228,11 @@ class LDAPEntryTest(unittest.TestCase):
         self.assertEqual(str(entry.dn), "cn=test")
         self.assertRaises(TypeError, remove_dn)
         self.assertRaises(TypeError, set_dn)
+
+    def test_wrong_params(self):
+        """ Test passing wrong params to LDAPEntry. """
+        self.assertRaises(TypeError, lambda: LDAPEntry('', 1))
+        self.assertRaises(InvalidDN, lambda: LDAPEntry('5', 1))
 
 if __name__ == '__main__':
     unittest.main()
