@@ -1,6 +1,7 @@
 import configparser
 import os.path
 import unittest
+import time
 import xmlrpc.client as rpc
 
 import bonsai
@@ -8,7 +9,7 @@ from bonsai import LDAPClient
 
 def receive_timeout_error(client):
     """ Function for connection TimeoutError. """
-    client.connect(timeout=10.0)
+    client.connect(timeout=7.0)
 
 class LDAPClientTest(unittest.TestCase):
     """ Testing LDAPClient object. """
@@ -96,13 +97,12 @@ class LDAPClientTest(unittest.TestCase):
         self.assertRaises(ValueError, lambda: self.client.connect(timeout=-1.5))
         self.assertRaises(bonsai.TimeoutError, lambda: self.client.connect(timeout=0))
         proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
-        res = proxy.set_delay(10.1)
-        if res != 0:
-            raise Exception("Failed to set delay on the server's interface.")
+        proxy.set_delay(9.0, 15)
+        time.sleep(3.0)
         pool = multiprocessing.Pool(processes=1)
         try:
             result = pool.apply_async(receive_timeout_error, args=(self.client,))
-            result.get(timeout=21.0)
+            result.get(timeout=18.0)
         except Exception as exc:
             self.assertIsInstance(exc, bonsai.TimeoutError)
         else:

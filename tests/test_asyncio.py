@@ -1,6 +1,7 @@
 import asyncio
 import configparser
 import os
+import time
 import unittest
 from functools import wraps
 
@@ -32,6 +33,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
                                              cfg["SERVER"]["search_attr"], \
                                              cfg["SERVER"]["search_scope"])
         cls.basedn = cfg["SERVER"]["basedn"]
+        cls.ipaddr = cfg["SERVER"]["hostip"]
         cls.client = LDAPClient(cls.url)
         cls.client.set_credentials("SIMPLE", (cfg["SIMPLEAUTH"]["user"],
                                               cfg["SIMPLEAUTH"]["password"]))
@@ -137,6 +139,38 @@ class AIOLDAPConnectionTest(unittest.TestCase):
             obj = yield from conn.whoami()
             expected_res = "dn:%s" % self.user
             self.assertEqual(obj, expected_res)
-            
+
+    @asyncio_test
+    def test_connection_timeout(self):
+        import xmlrpc.client as rpc
+        proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
+        proxy.set_delay(6.0)
+        time.sleep(3.0)
+        try:
+            conn = yield from self.client.connect(True,
+                                                  timeout=8.0)
+        except Exception as exc:
+            self.assertIsInstance(exc, asyncio.TimeoutError)
+        else:
+            self.fail("Failed to receive TimeoutError.")
+        finally:
+            proxy.remove_delay()
+
+    @asyncio_test
+    def test_search_timeout(self):
+        import xmlrpc.client as rpc
+        with (yield from self.client.connect(True)) as conn:
+            proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
+            proxy.set_delay(5.1, 7)
+            time.sleep(3.0)
+            try:
+                res = yield from conn.search(timeout=4.0)
+            except Exception as exc:
+                self.assertIsInstance(exc, asyncio.TimeoutError)
+            else:
+                self.fail("Failed to receive TimeoutError.")
+            finally:
+                proxy.remove_delay()
+
 if __name__ == '__main__':
     unittest.main()

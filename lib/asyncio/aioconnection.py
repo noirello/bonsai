@@ -22,8 +22,12 @@ class AIOLDAPConnection(LDAPConnection):
     def _poll(self, msg_id, timeout=None):
         fut = asyncio.Future()
         self._loop.add_reader(self.fileno(), self._ready, msg_id, fut)
-        res = yield from asyncio.wait_for(fut, timeout, loop=self._loop)
-        return res
+        try:
+            res = yield from asyncio.wait_for(fut, timeout, loop=self._loop)
+            return res
+        except Exception as exc:
+            self._loop.remove_reader(self.fileno())
+            raise exc
     
     def _evaluate(self, msg_id, timeout=None):
         return self._poll(msg_id, timeout)

@@ -1,5 +1,6 @@
 import configparser
 import os
+import time
 import unittest
 
 from bonsai import LDAPClient
@@ -29,6 +30,7 @@ class GeventLDAPConnectionTest(unittest.TestCase):
                                              cfg["SERVER"]["search_attr"], \
                                              cfg["SERVER"]["search_scope"])
         cls.basedn = cfg["SERVER"]["basedn"]
+        cls.ipaddr = cfg["SERVER"]["hostip"]
         cls.client = LDAPClient(cls.url)
         cls.client.set_credentials("SIMPLE", (cfg["SIMPLEAUTH"]["user"],
                                                cfg["SIMPLEAUTH"]["password"]))

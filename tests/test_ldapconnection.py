@@ -4,6 +4,7 @@ import sys
 import unittest
 import subprocess
 import tempfile
+import time
 import xmlrpc.client as rpc
 
 
@@ -36,21 +37,17 @@ def receive_search_timeout(client, ipaddr, search_dn):
     """ Set network delay and wait for a TimeoutError during search. """
     conn = client.connect()
     proxy = rpc.ServerProxy("http://%s:%d/" % (ipaddr, 8000))
-    res = proxy.set_delay(3.1)
-    if res != 0:
-        raise Exception("Failed to set delay on the server's interface.")
-    res = conn.search(search_dn, 1, timeout=3.0)
-    return res
+    proxy.set_delay(6.1)
+    time.sleep(3.0)
+    return conn.search(search_dn, 1, timeout=4.0)
 
 def receive_whoami_timeout(client, ipaddr):
     """ Set network delay and wait for a TimeoutError during whoami. """
     conn = client.connect()
     proxy = rpc.ServerProxy("http://%s:%d/" % (ipaddr, 8000))
-    res = proxy.set_delay(4.1)
-    if res != 0:
-        raise Exception("Failed to set delay on the server's interface.")
-    res = conn.whoami(timeout=4.0)
-    return res
+    proxy.set_delay(4.1)
+    time.sleep(3.0)
+    return conn.whoami(timeout=4.0)
 
 class LDAPConnectionTest(unittest.TestCase):
     """ Test LDAPConnection object. """
@@ -448,7 +445,7 @@ class LDAPConnectionTest(unittest.TestCase):
             client = LDAPClient(self.url)
             result = pool.apply_async(receive_search_timeout,
                                       args=(client, self.ipaddr, search_dn))
-            result.get(timeout=7.0)
+            result.get(timeout=9.0)
         except Exception as exc:
             self.assertIsInstance(exc, bonsai.TimeoutError)
         else:
@@ -502,7 +499,7 @@ class LDAPConnectionTest(unittest.TestCase):
         self.assertRaises(TypeError, wrong)
 
     def test_wrong_add_param(self):
-        """ Test passing wrong parameters for add method. """
+        """ Test passing wrong parameter for add method. """
         def close_conn():
             cli = LDAPClient("ldap://%s" % self.ipaddr)
             LDAPConnection(cli).add(bonsai.LDAPEntry("cn=dummy"))
@@ -510,7 +507,7 @@ class LDAPConnectionTest(unittest.TestCase):
         self.assertRaises(TypeError, lambda: self.conn.add("wrong"))
 
     def test_wrong_delete_param(self):
-        """ Test passing wrong parameters for add method. """
+        """ Test passing wrong parameter for delete method. """
         def close_conn():
             cli = LDAPClient("ldap://%s" % self.ipaddr)
             LDAPConnection(cli).delete("cn=dummy")

@@ -1,5 +1,6 @@
 import configparser
 import os
+import time
 import unittest
 from functools import wraps
 
@@ -12,6 +13,7 @@ def dummy(f):
 
 try:
     from tornado import ioloop
+    from tornado import gen
     from tornado.testing import gen_test
     from tornado.testing import AsyncTestCase
     from bonsai.tornado import TornadoLDAPConnection
@@ -37,12 +39,12 @@ class TornadoLDAPConnectionTest(TestCaseClass):
                                         self.cfg["SERVER"]["search_attr"], \
                                         self.cfg["SERVER"]["search_scope"])
         self.basedn = self.cfg["SERVER"]["basedn"]
+        self.ipaddr = self.cfg["SERVER"]["hostip"]
         self.client = LDAPClient(self.url)
         self.client.set_credentials("SIMPLE", (self.cfg["SIMPLEAUTH"]["user"],
                                           self.cfg["SIMPLEAUTH"]["password"]))
         self.client.set_async_connection_class(TornadoLDAPConnection)
         self.io_loop = self.get_new_ioloop()
-
 
     @gen_test(timeout=20.0)
     def test_connection(self):
@@ -134,7 +136,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
                                 'organizationalPerson']
         try:
-            with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
+            with (yield self.client.connect(True,ioloop=self.io_loop)) as conn:
                 yield conn.add(entry)
         except bonsai.errors.ObjectClassViolation:
             return
@@ -149,6 +151,39 @@ class TornadoLDAPConnectionTest(TestCaseClass):
             obj = yield conn.whoami()
             expected_res = "dn:%s" % self.cfg["SIMPLEAUTH"]["user"]
             self.assertEqual(obj, expected_res)
-            
+
+    @gen_test(timeout=12.0)
+    def test_connection_timeout(self):
+        import xmlrpc.client as rpc
+        proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
+        proxy.set_delay(6.0)
+        time.sleep(3.0)
+        try:
+            conn = yield self.client.connect(True,
+                                             ioloop=self.io_loop,
+                                             timeout=8.0)
+        except Exception as exc:
+            self.assertIsInstance(exc, gen.TimeoutError)
+        else:
+            self.fail("Failed to receive TimeoutError.")
+        finally:
+            proxy.remove_delay()
+
+    @gen_test(timeout=18.0)
+    def test_search_timeout(self):
+        import xmlrpc.client as rpc
+        with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
+            proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
+            proxy.set_delay(5.1)
+            time.sleep(3.0)
+            try:
+                res = yield conn.search(timeout=4.0)
+            except Exception as exc:
+                self.assertIsInstance(exc, gen.TimeoutError)
+            else:
+                self.fail("Failed to receive TimeoutError.")
+            finally:
+                proxy.remove_delay()
+
 if __name__ == '__main__':
     unittest.main()

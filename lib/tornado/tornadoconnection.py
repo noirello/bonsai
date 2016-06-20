@@ -12,6 +12,7 @@ class TornadoLDAPConnection(LDAPConnection):
         super().__init__(client, is_async=True)
         self._ioloop = ioloop or IOLoop.instance()
         self._fileno = None
+        self._timeout = None
         
     def _io_callback(self, fut, msg_id, fd=None, events=None):
         try:
@@ -19,6 +20,8 @@ class TornadoLDAPConnection(LDAPConnection):
             res = super().get_result(msg_id)
             if res is not None:
                 fut.set_result(res)
+                if self._timeout is not None:
+                    self._ioloop.remove_timeout(self._timeout)
             else:
                 self._fileno = self.fileno()
                 callback = partial(self._io_callback, fut, msg_id)
@@ -30,7 +33,11 @@ class TornadoLDAPConnection(LDAPConnection):
                         raise exc
         except LDAPError as exc:
             fut.set_exception(exc)
-    
+
+    def _timeout_callback(self, fut):
+        self._ioloop.remove_handler(self._fileno)
+        fut.set_exception(gen.TimeoutError())
+
     def _evaluate(self, msg_id, timeout=None):
         fut = Future()
         callback = partial(self._io_callback, fut, msg_id)
@@ -38,6 +45,9 @@ class TornadoLDAPConnection(LDAPConnection):
         try:
             self._ioloop.add_handler(self._fileno, callback,
                                      IOLoop.WRITE | IOLoop.READ)
+            if timeout is not None:
+                self._timeout = self._ioloop.call_later(timeout,
+                                    self._timeout_callback, fut)
         except FileExistsError as exc:
             # Avoid concurrency problems by registring with
             # the same fileno more than once.
