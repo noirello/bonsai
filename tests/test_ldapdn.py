@@ -41,5 +41,16 @@ class LDAPDNTest(unittest.TestCase):
         spec = LDAPDN("cn=specal\, name,dc=test,dc=local")
         self.assertEqual(str(spec), "cn=specal\, name,dc=test,dc=local")
 
+    def test_setitem(self):
+        """ Test setting RDNs for DN object. """
+        dnobj = LDAPDN("sn=some+gn=thing,dc=test,dc=local")
+        self.assertEqual("sn=some+gn=thing", dnobj[0])
+        dnobj[0] = "cn=user"
+        self.assertEqual("cn=user,dc=test,dc=local", dnobj)
+        dnobj[1] = "ou=group1,ou=group2"
+        self.assertEqual("cn=user,ou=group1,ou=group2,dc=local", dnobj)
+        dnobj[2:] = "dc=local"
+        self.assertEqual("cn=user,ou=group1,dc=local", dnobj)
+
 if __name__ == '__main__':
     unittest.main()
