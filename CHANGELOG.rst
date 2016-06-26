@@ -1,5 +1,26 @@
 Change Log
 ==========
+[0.8.7] - 2016-06-25
+--------------------
+
+Changed
+~~~~~~~
+
+-  LDAPDN object to validate with regex instead of splitting to tuples.
+
+Added
+~~~~~
+
+-  Optional `recursive` bool parameter for LDAPConnection.delete method to
+   remove entities in a subtree recursively.
+
+Fixed
+~~~~~
+
+-  Wrong typing for LDAPConnection.search when VLV is set.
+-  Py_None return values in C functions.
+-  Timeout parameter for operations of Tornado and Asyncio connections.
+
 [0.8.6] - 2016-06-05
 --------------------
 
@@ -22,7 +43,6 @@ Fixed
 -  Setting error messages on Unix systems.
 -  Timeout for connecting.
 -  Setting default ioloop for TornadoLDAPConnection (Thanks to @lilydjwg).
-
 
 [0.8.5] - 2016-02-23
 --------------------

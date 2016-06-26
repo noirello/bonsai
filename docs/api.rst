@@ -326,8 +326,10 @@ Errors
 .. autoclass:: bonsai.InvalidDN
 .. autoclass:: bonsai.InvalidMessageID
 .. autoclass:: bonsai.NoSuchObjectError
+.. autoclass:: bonsai.NotAllowedOnNonleaf
 .. autoclass:: bonsai.ObjectClassViolation
 .. autoclass:: bonsai.ProtocolError
+.. autoclass:: bonsai.SizeLimitError
 .. autoclass:: bonsai.TimeoutError
 .. autoclass:: bonsai.UnwillingToPerform
 
