@@ -8,8 +8,10 @@ from bonsai import LDAPClient
 from bonsai import LDAPEntry
 import bonsai.errors
 
-def dummy(f):
-    return f
+def dummy(timeout=None):
+    def dummy_f(f):
+        return f
+    return dummy_f
 
 try:
     from tornado import ioloop
