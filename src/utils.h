@@ -14,6 +14,8 @@ typedef struct {
     int sizelimit;
 } ldapsearchparams;
 
+extern PyObject *LDAPDNObj;
+
 char *lowercase(char *str);
 struct berval *create_berval(char *value, long int len);
 PyObject *berval2PyObject(struct berval *bval, int keepbytes);

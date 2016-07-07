@@ -6,7 +6,9 @@
 #include "ldapsearchiter.h"
 #include "ldapmodlist.h"
 #include "ldapconnectiter.h"
+#include "utils.h"
 
+PyObject *LDAPDNObj = NULL;
 
 /* Get the vendor's name and version of the LDAP library. */
 static PyObject *
@@ -52,6 +54,12 @@ bonsai_has_krb5_support(PyObject *self) {
 #endif
 }
 
+static void
+bonsai_free(PyObject *self) {
+    Py_DECREF(LDAPDNObj);
+    Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
 static PyMethodDef bonsai_methods[] = {
     {"get_vendor_info", (PyCFunction)bonsai_get_vendor_info, METH_NOARGS,
         "Returns the vendor information of LDAP library."},
@@ -62,17 +70,21 @@ static PyMethodDef bonsai_methods[] = {
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
-static PyModuleDef pyldap2module = {
+static PyModuleDef bonsai2module = {
     PyModuleDef_HEAD_INIT,
     "_bonsai",
-    "Python C extension to access directory servers using LDAP.",
+    "Python C extension for accessing directory servers using LDAP.",
     -1,
-    bonsai_methods, NULL, NULL, NULL, NULL
+    bonsai_methods, NULL, NULL, NULL, (freefunc)bonsai_free
 };
 
 PyMODINIT_FUNC
 PyInit__bonsai(void) {
-    PyObject* m;
+    PyObject* module = NULL;
+
+    /* Import LDAPDN object. */
+    LDAPDNObj = load_python_object("bonsai.ldapdn", "LDAPDN");
+    if (LDAPDNObj == NULL) return NULL;
 
     UniqueListType.tp_base = &PyList_Type;
     LDAPValueListType.tp_base = &UniqueListType;
@@ -85,17 +97,17 @@ PyInit__bonsai(void) {
     if (PyType_Ready(&LDAPValueListType) < 0) return NULL;
     if (PyType_Ready(&LDAPModListType) < 0) return NULL;
 
-    m = PyModule_Create(&pyldap2module);
-    if (m == NULL) return NULL;
+    module = PyModule_Create(&bonsai2module);
+    if (module == NULL) return NULL;
 
     Py_INCREF(&LDAPEntryType);
-    PyModule_AddObject(m, "ldapentry", (PyObject *)&LDAPEntryType);
+    PyModule_AddObject(module, "ldapentry", (PyObject *)&LDAPEntryType);
 
     Py_INCREF(&LDAPConnectionType);
-    PyModule_AddObject(m, "ldapconnection", (PyObject *)&LDAPConnectionType);
+    PyModule_AddObject(module, "ldapconnection", (PyObject *)&LDAPConnectionType);
 
     Py_INCREF(&LDAPValueListType);
-    PyModule_AddObject(m, "ldapvaluelist", (PyObject *)&LDAPValueListType);
+    PyModule_AddObject(module, "ldapvaluelist", (PyObject *)&LDAPValueListType);
 
-    return m;
+    return module;
 }

@@ -526,29 +526,19 @@ ldapentry_getdn(LDAPEntry *self, void *closure) {
 static int
 convert_to_ldapdn(PyObject *obj, PyObject **ldapdn) {
     PyObject *dn = NULL;
-    PyObject *dntype = NULL;
 
-    /* Import LDAPDN object. */
-    dntype = load_python_object("bonsai.ldapdn", "LDAPDN");
-    if (dntype == NULL) return -1;
-
-    if (PyObject_IsInstance(obj, dntype)) {
+    if (PyObject_IsInstance(obj, LDAPDNObj)) {
         Py_INCREF(obj);
         dn = obj;
     } else if (PyUnicode_Check(obj)) {
-        dn = PyObject_CallFunctionObjArgs(dntype, obj, NULL);
-        /* Check for valid DN. */
-        if (dn == NULL) {
-            Py_DECREF(dntype);
-            return -1;
-        }
+        /* Call LDAPDN __init__ with the dn string. */
+        dn = PyObject_CallFunctionObjArgs(LDAPDNObj, obj, NULL);
+        if (dn == NULL) return -1;
     } else {
         PyErr_SetString(PyExc_TypeError, "The DN attribute value must"
                 " be an LDAPDN or a string.");
-        Py_DECREF(dntype);
         return -1;
     }
-    Py_DECREF(dntype);
     *ldapdn = dn;
     return 0;
 }
