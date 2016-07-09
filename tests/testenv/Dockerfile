@@ -51,7 +51,8 @@ RUN chown -Rf ldap:ldap /var/lib/ldap
 # Copy the basic LDIF files into the container.
 COPY ./ldifs/base.ldif /root/base.ldif
 COPY ./ldifs/sasl.ldif /root/sasl.ldif
-COPY ./ldifs/sssvlv.ldif /root/sssvlv.ldif
+COPY ./ldifs/overlays.ldif /root/overlays.ldif
+COPY ./ldifs/ppolicy.ldif /root/ppolicy.ldif
 COPY ./test.jpeg /root/test.jpeg
 
 # Open LDAP and LDAPS port.

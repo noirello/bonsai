@@ -1,0 +1,26 @@
+dn: ou=policies,dc=bonsai,dc=test
+objectClass: top
+objectClass: organizationalUnit
+ou: policies
+
+dn: cn=default,ou=policies,dc=bonsai,dc=test
+objectClass: top
+objectClass: person
+objectClass: pwdPolicy
+cn: default
+sn: default
+pwdAttribute: userPassword
+pwdAllowUserChange: TRUE
+pwdInHistory: 3
+pwdMinLength: 8
+pwdMaxFailure: 2
+pwdFailureCountInterval: 30
+pwdCheckQuality: 2
+pwdGraceAuthNLimit: 0
+pwdMinAge: 0
+pwdMaxAge: 10
+pwdExpireWarning: 10
+pwdLockoutDuration: 5
+pwdLockout: TRUE
+pwdMustChange: FALSE
+pwdSafeModify: FALSE

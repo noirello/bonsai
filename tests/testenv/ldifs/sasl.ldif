@@ -8,6 +8,11 @@ olcSuffix: dc=bonsai,dc=test
 -
 replace: olcRootDN
 olcRootDN: cn=admin,dc=bonsai,dc=test
+-
+add: olcAccess
+olcAccess: {0}to attrs=userPassword by self write by anonymous auth
+  by * none
+olcAccess: {1}to * by self write by * read
 
 dn: olcDatabase={1}monitor,cn=config
 changeType: modify

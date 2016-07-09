@@ -22,10 +22,17 @@ setLDAP () {
     /usr/sbin/slapd -h "ldap:// ldapi:// ldaps://"
     sleep 2
     ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/sasl.ldif
-    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/cosine.ldif && ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/inetorgperson.ldif && ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/nis.ldif
+    # Load schemas.
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/cosine.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/inetorgperson.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/nis.ldif
+    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/ppolicy.ldif
+    # Set overlays: allow vlv, server side sort and password policy.
+    ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/overlays.ldif
+    # Create base entry and populate the dictionary.
     ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldapi:/// -f /root/base.ldif
-    # Allow VLV and server side sort.
-    ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/sssvlv.ldif
+    # Set default password policy.
+    ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldapi:/// -f /root/ppolicy.ldif
     # Stop the slapd. 
     ps axf | grep /usr/sbin/slapd | grep -v grep | awk '{print "kill  " $1}'| sh
 }
