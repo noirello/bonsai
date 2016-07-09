@@ -17,5 +17,5 @@ changetype: add
 objectClass: olcPPolicyConfig
 olcOverlay: ppolicy
 olcPPolicyDefault: cn=default,ou=policies,dc=bonsai,dc=test
-olcPPolicyHashCleartext: TRUE
+olcPPolicyHashCleartext: FALSE
 olcPPolicyUseLockout: TRUE
