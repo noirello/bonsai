@@ -42,6 +42,7 @@ before_install:
   # Check that slapd is working.
   - ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U root -w p@ssword
   - ldapsearch -h bonsai.test -b "" -s base 'objectclass=*' -x -LLL +
+  - ldapsearch -VV
 
 install:
   - export CFLAGS="-coverage"
@@ -52,7 +53,9 @@ before_script:
   - sed -i.bak "s/127.0.0.1/$DOCKER_IP/g" ./tests/test.ini
   # Set used Kerberos config file to my own.
   - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/tests/testenv/krb5/krb5.conf"
-  - INSTALL_PATH=$VIRTUAL_ENV/lib/python$TRAVIS_PYTHON_VERSION/site-packages/bonsai-`python setup.py --version`-py$TRAVIS_PYTHON_VERSION-linux-x86_64.egg/bonsai
+  # Set install path for coverage.py.
+  - INSTALL_PATH=`python -c "import bonsai; print(bonsai.__file__[:-12])"`
+  - echo $INSTALL_PATH
 
 script:
   - py.test -v --cov-config .coveragerc --cov-report= --cov=$INSTALL_PATH
