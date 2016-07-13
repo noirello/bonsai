@@ -41,7 +41,10 @@ class UnwillingToPerform(LDAPError):
     """Raised, when the server is not willing to handle requests."""
 
 class NoSuchObjectError(LDAPError):
-    """Raised, when the entry is not found in the directory."""
+    """
+    Raised, when operation (except search) is performed on
+    an entry that is not found in the directory.
+    """
 
 class AffectsMultipleDSA(LDAPError):
     """Raised, when multiple directory server agents are affected. """
@@ -52,6 +55,76 @@ class SizeLimitError(LDAPError):
 class NotAllowedOnNonleaf(LDAPError):
     """Raised, when the operation is not allowed on a nonleaf object."""
 
+class PasswordPolicyError(LDAPError):
+    """ General exception for password policy errors. """
+    _dflt_args = ("Password policy error.",)
+    def __init__(self, msg=None):
+        super().__init__(msg)
+        self.args = self._dflt_args if msg is None else (msg,)
+
+class PasswordExpired(PasswordPolicyError, AuthenticationError):
+    """
+    Raised, when the password policy is set, available on the server
+    and the user's password is expired.
+    """
+    _dflt_args = ("User's password is expired.",)
+
+class AccountLocked(PasswordPolicyError, AuthenticationError):
+    """
+    Raised, when the password policy is set, available on the server
+    and the user's account is locked.
+    """
+    _dflt_args = ("User's account is locked.",)
+
+class ChangeAfterReset(PasswordPolicyError):
+    """
+    Raised, when the password policy is set, available on the server
+    and it signifies that the password must be changed before the user
+    will be allowed to perform any operation (except bind and modify).
+    """
+    _dflt_args = ("User's password is expired.",)
+
+class PasswordModNotAllowed(PasswordPolicyError):
+    """
+    Raised, when the password policy is set, available on the server
+    and the user is restricted from changing her password.
+    """
+    _dflt_args = ("Password modification is not allowed.",)
+
+class MustSupplyOldPassword(PasswordPolicyError):
+    """
+    Raised, when the password policy is set, available on the server
+    and the existing password is not specified.
+    """
+    _dflt_args = ("Old password must be provieded.",)
+
+class InsufficientPasswordQuality(PasswordPolicyError):
+    """
+    Raised, when the password policy is set, available on the server
+    and the user's password is not strong enough.
+    """
+    _dflt_args = ("Password does not pass quality checking.",)
+
+class PasswordTooShort(PasswordPolicyError):
+    """
+    Raised, when the password policy is set, available on the server
+    and the user's password is too short to be set.
+    """
+    _dflt_args = ("Password is too short.",)
+
+class PasswordTooYoung(PasswordPolicyError):
+    """
+    Raised, when the password policy is set, available on the server
+    and the user's password is too young to be modified.
+    """
+    _dflt_args = ("Password is too young to be modified.",)
+
+class PasswordInHistory(PasswordPolicyError):
+    """
+    Raised, when the password policy is set, available on the server
+    and the user's password is in the history.
+    """
+    _dflt_args = ("User's password is in the history.",)
 
 def _get_error(code: int) -> LDAPError:
     """ Return an error by code number. """
@@ -89,5 +162,23 @@ def _get_error(code: int) -> LDAPError:
         return InvalidMessageID
     elif code == -101:
         return ClosedConnection
+    elif code == -200:
+        return PasswordExpired
+    elif code == -201:
+        return AccountLocked
+    elif code == -202:
+        return ChangeAfterReset
+    elif code == -203:
+        return PasswordModNotAllowed
+    elif code == -204:
+        return MustSupplyOldPassword
+    elif code == -205:
+        return InsufficientPasswordQuality
+    elif code == -206:
+        return PasswordTooShort
+    elif code == -207:
+        return PasswordTooYoung
+    elif code == -208:
+        return PasswordInHistory
     else:
         return LDAPError

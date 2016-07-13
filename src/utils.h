@@ -34,5 +34,7 @@ void close_socketpair(PyObject *tup);
 int set_search_params(ldapsearchparams *params, char **attrs, int attrsonly,
         char *base, char *filter, int scope, int sizelimit, double timeout);
 void free_search_params(ldapsearchparams *params);
+int create_ppolicy_control(LDAP *ld, LDAPControl **returned_ctrls,
+        PyObject **ctrl_obj,  unsigned int *pperr);
 
 #endif /* UTILS_H_ */

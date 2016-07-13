@@ -520,3 +520,29 @@ free_search_params(ldapsearchparams *params) {
         }
     }
 }
+
+int
+create_ppolicy_control(LDAP *ld, LDAPControl **returned_ctrls,
+        PyObject **ctrl_obj, unsigned int *pperr) {
+    int rc = 0;
+    int expire = 1;
+    int grace = -1;
+    LDAPControl *ppolicy_ctrl = NULL;
+
+    ppolicy_ctrl = ldap_control_find(LDAP_CONTROL_PASSWORDPOLICYRESPONSE,
+                                    returned_ctrls, NULL);
+    if (ppolicy_ctrl != NULL) {
+        rc = ldap_parse_passwordpolicy_control(ld, ppolicy_ctrl,
+                &expire, &grace, pperr);
+        if (rc != LDAP_SUCCESS) return -1;
+        /* Create ppolicy ctrl dict. */
+        *ctrl_obj = Py_BuildValue("{s,s,s,i,s,i}",
+                "oid", LDAP_CONTROL_PASSWORDPOLICYRESPONSE,
+                "expire", expire,
+                "grace", grace);
+        if (*ctrl_obj == NULL) return -1;
+        return 1;
+    }
+
+    return 0;
+}

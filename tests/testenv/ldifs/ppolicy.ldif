@@ -16,7 +16,7 @@ pwdMinLength: 8
 pwdMaxFailure: 2
 pwdFailureCountInterval: 30
 pwdCheckQuality: 2
-pwdGraceAuthNLimit: 0
+pwdGraceAuthNLimit: 1
 pwdMinAge: 0
 pwdMaxAge: 10
 pwdExpireWarning: 10

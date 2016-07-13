@@ -417,15 +417,27 @@ end:
 }
 
 int
-_ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid) {
+_ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, int *msgid) {
     int rc;
-    LDAPControl **sctrlsp = NULL;
+    LDAPControl **server_ctrls = NULL;
+    LDAPControl *ppolicy_ctrl = NULL;
     struct berval passwd;
+
+    if (ppolicy == 1) {
+        rc = ldap_create_passwordpolicy_control(ld, &ppolicy_ctrl);
+        if (rc != LDAP_SUCCESS) return rc;
+
+        server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *) * (1 + 1));
+        if (server_ctrls == NULL) return LDAP_NO_MEMORY;
+
+        server_ctrls[0] = ppolicy_ctrl;
+        server_ctrls[1] = NULL;
+    }
 
     /* Mechanism is set, use SASL interactive bind. */
     if (strcmp(info->mech, "SIMPLE") != 0) {
         if (info->passwd == NULL) info->passwd = "";
-        rc = ldap_sasl_interactive_bind(ld, info->binddn, info->mech, sctrlsp, NULL,
+        rc = ldap_sasl_interactive_bind(ld, info->binddn, info->mech, server_ctrls, NULL,
                 LDAP_SASL_QUIET, sasl_interact, info, result, &(info->rmech), msgid);
     } else {
         if (info->passwd  == NULL) {
@@ -434,9 +446,13 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid) {
             passwd.bv_len = strlen(info->passwd );
         }
         passwd.bv_val = info->passwd ;
-        rc = ldap_sasl_bind(ld, info->binddn, LDAP_SASL_SIMPLE, &passwd, sctrlsp, NULL, msgid);
+        rc = ldap_sasl_bind(ld, info->binddn, LDAP_SASL_SIMPLE, &passwd, server_ctrls,
+                NULL, msgid);
     }
 
+    if (ppolicy_ctrl != NULL) ldap_control_free(ppolicy_ctrl);
+
+    free(server_ctrls);
     ldap_msgfree(result);
 
     return rc;

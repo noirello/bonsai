@@ -88,7 +88,7 @@ typedef struct ldap_thread_data_s {
 } ldapInitThreadData;
 
 int _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, LDAP **ld);
-int _ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid);
+int _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, int *msgid);
 
 int create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread);
 void *create_conn_info(char *mech, SOCKET sock, PyObject *creds);

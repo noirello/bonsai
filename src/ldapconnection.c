@@ -25,6 +25,7 @@ ldapconnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         /* The connection should be closed. */
         self->closed = 1;
         self->async = 0;
+        self->ppolicy = 0;
         self->csock = -1;
         self->socketpair = NULL;
     }
@@ -61,6 +62,12 @@ ldapconnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
     /* Convert PyBool to char and set to async. */
     self->async = (char)PyObject_IsTrue(async);
+
+    /* Set password policy option. */
+    tmp = PyObject_GetAttrString(client, "password_policy");
+    if (tmp == NULL) return -1;
+    self->ppolicy = (char)PyObject_IsTrue(tmp);
+    Py_DECREF(tmp);
 
     /* Set client object to LDAPConnection. */
     tmp = self->client;
@@ -665,9 +672,12 @@ static PyObject *
 parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
     int rc = -1;
     int err = 0;
+    int ppres = 0;
+    unsigned int pperr = 0;
     struct berval *authzid = NULL;
     char *retoid = NULL, *errstr = NULL;
     PyObject *retval = NULL, *ldaperror = NULL, *errmsg = NULL;
+    PyObject *ctrl_obj = NULL;
     LDAPControl **ctrls = NULL;
 
     /* Remove operations from pending_ops. */
@@ -678,15 +688,24 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 
     rc = ldap_parse_result(self->ld, res, &err, &retoid, &errstr, NULL, &ctrls, 0);
 
-    if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
-        ldaperror = get_error_by_code(err);
-        if (ldaperror == NULL) return NULL;
+    ppres = create_ppolicy_control(self->ld, ctrls, &ctrl_obj, &pperr);
+    if (ppres == -1) return NULL;
 
-        errmsg = PyUnicode_FromFormat("%s.", errstr);
-        if (errmsg != NULL) {
-            PyErr_SetObject(ldaperror, errmsg);
-            Py_DECREF(errmsg);
-        } else PyErr_SetString(ldaperror, "");
+    if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
+        if (ppres == 1 && pperr != 65535) {
+            ldaperror = get_error_by_code(-200 - pperr);
+            if (ldaperror == NULL) return NULL;
+            PyObject_SetAttrString(ldaperror, "control", ctrl_obj);
+            PyErr_SetNone(ldaperror);
+        } else {
+            ldaperror = get_error_by_code(err);
+            if (ldaperror == NULL) return NULL;
+            errmsg = PyUnicode_FromFormat("%s.", errstr);
+            if (errmsg != NULL) {
+                PyErr_SetObject(ldaperror, errmsg);
+                Py_DECREF(errmsg);
+            } else PyErr_SetString(ldaperror, "");
+        }
 
         Py_DECREF(ldaperror);
         return NULL;
@@ -762,8 +781,8 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
                 PyErr_BadInternalCall();
                 return NULL;
             }
-            /* Return with the open connection object .*/
-            return (PyObject *)self;
+            /* Return with the result of the connectiter. */
+            return ret;
         }
     }
 

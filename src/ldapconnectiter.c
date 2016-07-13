@@ -81,9 +81,14 @@ static PyObject *
 binding(LDAPConnectIter *self) {
     int rc = -1;
     int err = 0;
+    int ppres = 0;
+    unsigned int pperr = 0;
     struct timeval polltime;
     LDAPControl **returned_ctrls = NULL;
     LDAPMessage *res;
+    PyObject *ctrl_obj = NULL;
+    PyObject *value = NULL;
+    PyObject *ldaperror = NULL;
 
     if (self->timeout == -1) {
         polltime.tv_sec = 0L;
@@ -95,7 +100,8 @@ binding(LDAPConnectIter *self) {
 
     if (self->bind_inprogress == 0) {
         /* First call of bind. */
-        rc = _ldap_bind(self->conn->ld, self->info, NULL, &(self->message_id));
+        rc = _ldap_bind(self->conn->ld, self->info, self->conn->ppolicy,
+                NULL, &(self->message_id));
         if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
             close_socketpair(self->conn->socketpair);
             set_exception(self->conn->ld, rc);
@@ -137,18 +143,35 @@ binding(LDAPConnectIter *self) {
         case LDAP_RES_BIND:
             /* Response is arrived from the server. */
             rc = ldap_parse_result(self->conn->ld, res, &err, NULL, NULL, NULL, &returned_ctrls, 0);
-
-            if ((rc != LDAP_SUCCESS) ||
-                (err != LDAP_SASL_BIND_IN_PROGRESS && err != LDAP_SUCCESS)) {
-                /* Connection is failed. */
+            if (rc != LDAP_SUCCESS) {
                 ldap_msgfree(res);
-                set_exception(self->conn->ld, err);
                 return NULL;
             }
 
+            ppres = create_ppolicy_control(self->conn->ld, returned_ctrls,
+                    &ctrl_obj, &pperr);
+            if (ppres == -1) return NULL;
+
+            if (err != LDAP_SASL_BIND_IN_PROGRESS && err != LDAP_SUCCESS) {
+                /* Connection is failed. */
+                ldap_msgfree(res);
+                if (ppres == 1 && pperr != 65535) {
+                    ldaperror = get_error_by_code(-200 - pperr);
+                    PyObject_SetAttrString(ldaperror, "control", ctrl_obj);
+                    PyErr_SetNone(ldaperror);
+                    Py_DECREF(ldaperror);
+                    return NULL;
+                } else {
+                    set_exception(self->conn->ld, err);
+                }
+                return NULL;
+            }
+
+
             if (strcmp(self->info->mech, "SIMPLE") != 0) {
                 /* Continue SASL binding procedure. */
-                rc = _ldap_bind(self->conn->ld, self->info, res, &(self->message_id));
+                rc = _ldap_bind(self->conn->ld, self->info, self->conn->ppolicy,
+                        res, &(self->message_id));
 
                 if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
                     set_exception(self->conn->ld, rc);
@@ -166,8 +189,19 @@ binding(LDAPConnectIter *self) {
                 /* The binding is successfully finished. */
                 self->bind_inprogress = 0;
                 self->conn->closed = 0;
-                Py_INCREF((PyObject *)self->conn);
-                return (PyObject *)self->conn;
+                if (self->conn->ppolicy == 1) {
+                    /* If ppolicy is not available set control to None. */
+                    if (ppres != 1) ctrl_obj = Py_None;
+
+                    /* Create (result, ctrl) tuple as return value. */
+                    value = Py_BuildValue("(O,O)", self->conn, ctrl_obj);
+                    Py_DECREF(ctrl_obj);
+                    if (value == NULL) return NULL;
+                    return value;
+                } else {
+                    Py_INCREF(self->conn);
+                    return (PyObject *)self->conn;
+                }
             }
             Py_RETURN_NONE;
         default:

@@ -14,6 +14,7 @@ typedef struct {
     LDAP *ld;
     char closed;
     char async;
+    char ppolicy;
     SOCKET csock;
     PyObject *socketpair;
 } LDAPConnection;

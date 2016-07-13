@@ -44,6 +44,7 @@ class LDAPClient:
         self.__client_cert = ""
         self.__client_key = ""
         self.__async_conn = AIOLDAPConnection
+        self.__ppolicy_ctrl = False
 
     @staticmethod
     def _create_socketpair():
@@ -90,7 +91,7 @@ class LDAPClient:
         """
         for elem in raw_list:
             if type(elem) != str:
-                raise ValueError("All element of raw_list must be string.")
+                raise TypeError("All element of raw_list must be string.")
         if len(raw_list) > len(set(map(str.lower, raw_list))):
             raise ValueError("Attribute names must be different from each other.")
         self.__raw_list = raw_list
@@ -112,12 +113,12 @@ class LDAPClient:
         the `creds` is not a tuple, or the tuple has wrong length.
         """
         if type(mechanism) != str:
-            raise ValueError("The mechanism must be a string.")
+            raise TypeError("The mechanism must be a string.")
         self.__mechanism = mechanism.upper()
         if type(creds) != tuple:
-            raise ValueError("The credential information must be in a tuple.")
+            raise TypeError("The credential information must be in a tuple.")
         if list(filter(lambda x: type(x) != str and x != None, creds)) != []:
-            raise ValueError("All element must be a string or None in the"
+            raise TypeError("All element must be a string or None in the"
                              " tuple.")
         if self.__mechanism == "EXTERNAL":
             if len(creds) != 1:
@@ -155,7 +156,7 @@ class LDAPClient:
         """
         tls_options = {'never' : 0, 'demand' : 2, 'allow': 3, 'try' : 4}
         if type(policy) != str:
-            raise ValueError("Policy parameter must be string.")
+            raise TypeError("Policy parameter must be string.")
         policy = policy.lower()
         if policy not in tls_options.keys():
             raise ValueError("'%s' is an invalid policy.", policy)
@@ -179,7 +180,7 @@ class LDAPClient:
         :raises ValueError: if `name` parameter is not a string or not None.
         """
         if name is not None and type(name) != str:
-            raise ValueError("Name parameter must be string or None.")
+            raise TypeError("Name parameter must be string or None.")
         self.__ca_cert = name
 
     def set_ca_cert_dir(self, path: str) -> None:
@@ -199,7 +200,7 @@ class LDAPClient:
         :raises ValueError: if `path` parameter is not a string or not None.
         """
         if path is not None and type(path) != str:
-            raise ValueError("Path parameter must be string or None.")
+            raise TypeError("Path parameter must be string or None.")
         self.__ca_cert_dir = path
 
     def set_client_cert(self, name: str) -> None:
@@ -221,7 +222,7 @@ class LDAPClient:
         :raises ValueError: if `name` parameter is not a string or not None.
         """
         if name is not None and type(name) != str:
-            raise ValueError("Name parameter must be string or None.")
+            raise TypeError("Name parameter must be string or None.")
         self.__client_cert = name
 
     def set_client_key(self, name: str) -> None:
@@ -241,7 +242,7 @@ class LDAPClient:
         :raises ValueError: if `name` parameter is not a string or not None.
         """
         if name is not None and type(name) != str:
-            raise ValueError("Name parameter must be string or None.")
+            raise TypeError("Name parameter must be string or None.")
         self.__client_key = name
 
     def set_async_connection_class(self, conn: LDAPConnection) -> None:
@@ -256,8 +257,13 @@ class LDAPClient:
         of :class:`LDAPConnection`.
         """
         if not issubclass(conn, LDAPConnection):
-            raise ValueError("Class must be a subclass of LDAPConnection. ")
+            raise TypeError("Class must be a subclass of LDAPConnection. ")
         self.__async_conn = conn
+
+    def set_password_policy(self, ppolicy: bool):
+        if type(ppolicy) != bool:
+            TypeError("Parameter must be bool.")
+        self.__ppolicy_ctrl = ppolicy
 
     def get_rootDSE(self) -> LDAPEntry:
         """
@@ -273,6 +279,8 @@ class LDAPClient:
                  "supportedControl", "supportedSASLMechanisms",
                  "supportedLDAPVersion"]
         conn = LDAPConnection(self, False).open()
+        if self.__ppolicy_ctrl:
+            conn = conn[0]
         root_dse = None
         try:
             # Convert to list to avoid possible LDAPSearchIter object.
@@ -373,6 +381,14 @@ class LDAPClient:
     @raw_attributes.setter
     def raw_attributes(self, value=None):
         self.set_raw_attributes(value)
+
+    @property
+    def password_policy(self):
+        return self.__ppolicy_ctrl;
+    
+    @password_policy.setter
+    def password_policy(self, value):
+        self.set_password_policy(value)
 
     def connect(self, is_async: bool=False,
                 timeout: float=None, **kwargs) -> LDAPConnection:
