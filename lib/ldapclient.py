@@ -384,8 +384,8 @@ class LDAPClient:
 
     @property
     def password_policy(self):
-        return self.__ppolicy_ctrl;
-    
+        return self.__ppolicy_ctrl
+
     @password_policy.setter
     def password_policy(self, value):
         self.set_password_policy(value)

@@ -45,7 +45,7 @@ class LDAPClientTest(unittest.TestCase):
         """ Test setting raw attributes to keep in bytearray format. """
         def value_err():
             self.client.set_raw_attributes([5])
-        self.assertRaises(ValueError, value_err)
+        self.assertRaises(TypeError, value_err)
         self.client.set_raw_attributes(["namingContexts"])
         if type(self.client.get_rootDSE()["namingContexts"][0]) != bytes:
             self.fail("The type of the value is not bytes.")
@@ -54,12 +54,12 @@ class LDAPClientTest(unittest.TestCase):
         """
         Test setcredentials method, mechanism and credentials properties.
         """
-        self.assertRaises(ValueError,
+        self.assertRaises(TypeError,
                           lambda: self.client.set_credentials(2323, (None,)))
-        self.assertRaises(ValueError,
+        self.assertRaises(TypeError,
                           lambda: self.client.set_credentials("Simple",
                                                               "pass"))
-        self.assertRaises(ValueError, lambda: self.client
+        self.assertRaises(TypeError, lambda: self.client
                           .set_credentials("Simple",("Name", 2, None, None)))
         self.assertRaises(ValueError, lambda: self.client
                          .set_credentials("EXTERNAL", (None, None)))
