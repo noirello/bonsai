@@ -550,10 +550,11 @@ class LDAPConnectionTest(unittest.TestCase):
         entry.modify()
         conn.close()
         cli.set_credentials("SIMPLE", (user_dn, "newvalidpassword"))
+        time.sleep(2.0)
         conn, ctrl = cli.connect()
-        print(ctrl)
         if not (ctrl['expire'] <= 10 and ctrl['expire'] > 0):
-            self.fail("Expire time is in the wrong range.")
+            self.fail("Expire time is in "
+                      "the wrong range (Expire: %d)." % ctrl['expire'])
         conn.close()
         time.sleep(10)
         conn, ctrl = cli.connect()
