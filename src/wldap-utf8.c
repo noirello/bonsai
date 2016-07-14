@@ -787,6 +787,22 @@ clear:
 }
 
 /******************************************************************************
+ Dummy functions for password policy control.
+ WinLDAP fails with protocol error when the empty password policy control is
+ attached to an LDAP operation.
+*******************************************************************************/
+int
+ldap_create_passwordpolicy_controlU(LDAP *ld, LDAPControlA **ctrlp) {
+	return LDAP_SUCCESS;
+}
+
+int
+ldap_parse_passwordpolicy_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *expirep,
+	ber_int_t *gracep, unsigned int *errorp) {
+	return LDAP_CONTROL_NOT_FOUND;
+}
+
+/******************************************************************************
 * The following functions are for SASL binding, using SSPI.
 ******************************************************************************/
 

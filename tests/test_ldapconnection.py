@@ -517,6 +517,8 @@ class LDAPConnectionTest(unittest.TestCase):
 
     def test_password_lockout(self):
         """ Test password locking with password policy. """
+        if sys.platform == "win32":
+             self.skipTest("Cannot use password policy on Windows")
         user_dn = "cn=jeff,ou=nerdherd,dc=bonsai,dc=test"
         cli = LDAPClient("ldap://%s" % self.ipaddr)
         cli.set_password_policy(True)
@@ -540,6 +542,8 @@ class LDAPConnectionTest(unittest.TestCase):
 
     def test_password_expire(self):
         """ Test password expiring with password policy. """
+        if sys.platform == "win32":
+             self.skipTest("Cannot use password policy on Windows")
         user_dn = "cn=skip,ou=nerdherd,dc=bonsai,dc=test"
         cli = LDAPClient("ldap://%s" % self.ipaddr)
         cli.set_password_policy(True)

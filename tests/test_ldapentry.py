@@ -235,7 +235,12 @@ class LDAPEntryTest(unittest.TestCase):
         self.assertRaises(InvalidDN, lambda: LDAPEntry('5', 1))
 
     def test_password_modify(self):
-        """ Test modifing passoword with simple modify operation. """
+        """
+        Test modifing password with simple modify operation and
+        password policy.
+        """
+        if sys.platform == "win32":
+             self.skipTest("Cannot use password policy on Windows")
         cli = LDAPClient(self.client.url)
         user_dn = "cn=jeff,ou=nerdherd,dc=bonsai,dc=test"
         cli.set_password_policy(True)

@@ -38,6 +38,8 @@
 #define LDAP_OPT_X_TLS_PACKAGE 0x6011
 
 #define LDAP_CONTROL_PAGEDRESULTS "1.2.840.113556.1.4.319"
+#define LDAP_CONTROL_PASSWORDPOLICYREQUEST	"1.3.6.1.4.1.42.2.27.8.5.1"
+#define LDAP_CONTROL_PASSWORDPOLICYRESPONSE	"1.3.6.1.4.1.42.2.27.8.5.1"
 
 /* All of the used WinLDAP macros are redefined. */
 #undef LDAPControl
@@ -102,6 +104,8 @@
 #define ldap_controls_free ldap_controls_freeU
 #define ldap_create_vlv_control ldap_create_vlv_controlU
 #define ldap_parse_vlvresponse_control ldap_parse_vlvresponse_controlU
+#define ldap_create_passwordpolicy_control ldap_create_passwordpolicy_controlU
+#define ldap_parse_passwordpolicy_control ldap_parse_passwordpolicy_controlU
 
 /* These functions are not represented in the WinLDAP API. */
 #define ldap_parse_pageresponse_control(ld, ctrls, count, cookie) ldap_parse_pageresponse_controlU(ld, ctrls, count, &(cookie))
@@ -136,6 +140,8 @@ int ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *
 LDAPControlA **ldap_control_findU(char *oid, LDAPControlA **ctrls, LDAPControlA ***nextctrlp);
 int ldap_create_vlv_controlU(LDAP *ld, LDAPVLVInfo *vlvinfo, LDAPControlA **ctrl);
 int ldap_parse_vlvresponse_controlU(LDAP *ld, LDAPControlA **ctrls, long int *target_posp, long int *list_countp, struct berval **contextp, int *errcodep);
+int ldap_create_passwordpolicy_controlU(LDAP *ld, LDAPControlA **ctrlp);
+int ldap_parse_passwordpolicy_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *expirep, ber_int_t *gracep, unsigned int *errorp);
 int ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp, char **errmsgp, char ***referralsp, LDAPControlA ***sctrls, int freeit);
 char *ldap_err2stringU(int err);
 int ldap_initializeU(LDAP **ldp, char *url);

@@ -361,7 +361,6 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
         server_ctrls[0] = ppolicy_ctrl;
         server_ctrls[1] = NULL;
     }
-
     if (mod == 0) {
         rc = ldap_add_ext(self->conn->ld, dnstr, mods->mod_list, server_ctrls,
                 NULL, &msgid);

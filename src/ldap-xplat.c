@@ -141,12 +141,18 @@ ldap_thread_bind(void *params) {
 /* Create a separate thread for binding to the server. Results of asynchronous
 SASL function call cannot be parsed (because of some kind of bug in WinLDAP). */
 int
-_ldap_bind(LDAP *ld, ldap_conndata_t *info, LDAPMessage *result, int *msgid) {
+_ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, int *msgid) {
 
     info->ld = ld;
     info->thread = (void *)CreateThread(NULL, 0, ldap_thread_bind, (void *)info, 0, NULL);
 
     return LDAP_SUCCESS;
+}
+
+int
+_ldap_parse_passwordpolicy_control(LDAP *ld, LDAPControl **ctrls, ber_int_t *expire,
+	ber_int_t *grace, unsigned int *error) {
+	return ldap_parse_passwordpolicy_control(ld, ctrls, expire, grace, error);
 }
 
 #else
@@ -514,6 +520,15 @@ _ldap_get_opt_errormsg(LDAP *ld) {
     return opt;
 }
 
+int
+_ldap_parse_passwordpolicy_control(LDAP *ld, LDAPControl *ctrl,
+	ber_int_t *expire, ber_int_t *grace, unsigned int *error) {
+
+	if (ctrl == NULL) return LDAP_CONTROL_NOT_FOUND;
+
+	return ldap_parse_passwordpolicy_control(ld, ctrl, expire, grace, error);
+
+}
 #endif
 
 /*  This function is based on the OpenLDAP liblutil's sasl.c source

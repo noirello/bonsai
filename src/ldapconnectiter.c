@@ -18,10 +18,12 @@ static PyObject *
 binding(LDAPConnectIter *self) {
     int rc;
     char buff[1];
+	PyObject *value = NULL;
 
     if (self->bind_inprogress == 0) {
         /* First call of bind. */
-        rc = _ldap_bind(self->conn->ld, self->info, NULL, &(self->message_id));
+        rc = _ldap_bind(self->conn->ld, self->info, self->conn->ppolicy,
+			NULL, &(self->message_id));
         if (rc != LDAP_SUCCESS) {
             set_exception(self->conn->ld, rc);
             return NULL;
@@ -62,8 +64,18 @@ binding(LDAPConnectIter *self) {
             /* The binding is successfully finished. */
             self->bind_inprogress = 0;
             self->conn->closed = 0;
-            Py_INCREF((PyObject *)self->conn);
-            return (PyObject *)self->conn;
+			if (self->conn->ppolicy == 1) {
+				/* Create (result, ctrl) tuple as return value.
+				   Because WinLDAP does not support password policy control,
+				   it is always None. */
+				value = Py_BuildValue("(O,O)", self->conn, Py_None);
+				if (value == NULL) return NULL;
+				return value;
+			}
+			else {
+				Py_INCREF(self->conn);
+				return (PyObject *)self->conn;
+			}
         default:
             /* The thread is failed. */
             PyErr_BadInternalCall();
