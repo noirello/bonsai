@@ -11,7 +11,7 @@ cn: default
 sn: default
 pwdAttribute: userPassword
 pwdAllowUserChange: TRUE
-pwdInHistory: 3
+pwdInHistory: 1
 pwdMinLength: 8
 pwdMaxFailure: 2
 pwdFailureCountInterval: 30

@@ -233,5 +233,34 @@ class LDAPEntryTest(unittest.TestCase):
         """ Test passing wrong params to LDAPEntry. """
         self.assertRaises(TypeError, lambda: LDAPEntry('', 1))
         self.assertRaises(InvalidDN, lambda: LDAPEntry('5', 1))
+
+    def test_password_modify(self):
+        """ Test modifing passoword with simple modify operation. """
+        cli = LDAPClient(self.client.url)
+        user_dn = "cn=jeff,ou=nerdherd,dc=bonsai,dc=test"
+        cli.set_password_policy(True)
+        cli.set_credentials("SIMPLE", (user_dn, "p@ssword"))
+        conn, ctrl = cli.connect()
+        entry = conn.search(user_dn, 0)[0]
+        try:
+            entry['userPassword'] = "newpassword"
+            entry.modify()
+        except Exception as exc:
+            self.assertIsInstance(exc, bonsai.errors.PasswordModNotAllowed)
+        user_dn = "cn=skip,ou=nerdherd,dc=bonsai,dc=test"
+        cli.set_credentials("SIMPLE", (user_dn, "p@ssword"))
+        conn, ctrl = cli.connect()
+        entry = conn.search(user_dn, 0)[0]
+        try:
+            entry['userPassword'] = "short"
+            entry.modify()
+        except Exception as exc:
+            self.assertIsInstance(exc, bonsai.errors.PasswordTooShort)
+        try:
+            entry['userPassword'] = "p@ssword"
+            entry.modify()
+        except Exception as exc:
+            self.assertIsInstance(exc, bonsai.errors.PasswordInHistory)
+
 if __name__ == '__main__':
     unittest.main()
