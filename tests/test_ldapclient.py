@@ -6,6 +6,7 @@ import xmlrpc.client as rpc
 
 import bonsai
 from bonsai import LDAPClient
+from bonsai.ldapconnection import LDAPConnection
 
 def receive_timeout_error(client):
     """ Function for connection TimeoutError. """
@@ -110,6 +111,28 @@ class LDAPClientTest(unittest.TestCase):
         finally:
             pool.terminate()
             proxy.remove_delay()
+
+    def test_ppolicy(self):
+        """ Test password policy setting. """
+        client = LDAPClient(self.url)
+        self.assertRaises(TypeError, lambda: client.set_password_policy("F"))
+        client.set_password_policy(True)
+        client.set_credentials("SIMPLE", ("cn=chuck,ou=nerdherd,dc=bonsai,dc=test",
+                                          "p@ssword"))
+        ret_val = client.connect()
+        self.assertIsInstance(ret_val, tuple)
+        self.assertIsInstance(ret_val[0], LDAPConnection)
+        print(ret_val)
+        if type(ret_val[1]) is None:
+            pass
+        elif type(ret_val[1]) == dict:
+            self.assertIn("oid", ret_val[1].keys())
+            self.assertIn("expire", ret_val[1].keys())
+            self.assertIn("grace", ret_val[1].keys())
+            self.assertEqual('1.3.6.1.4.1.42.2.27.8.5.1', ret_val[1]['oid'])
+        else:
+            self.fail("Invalid second object in the tuple.")
+        ret_val[0].close()
 
 if __name__ == '__main__':
     unittest.main()

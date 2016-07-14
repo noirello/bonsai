@@ -12,14 +12,14 @@ class LDAPEntryTest(unittest.TestCase):
     def setUpClass(cls):
         curdir = os.path.abspath(os.path.dirname(__file__))
         """ Set LDAP client, get config parameters. """
-        cfg = configparser.ConfigParser()
-        cfg.read(os.path.join(curdir, 'test.ini'))
-        url = "ldap://%s:%s" % (cfg["SERVER"]["hostip"],
-                                cfg["SERVER"]["port"])
+        cls.cfg = configparser.ConfigParser()
+        cls.cfg.read(os.path.join(curdir, 'test.ini'))
+        url = "ldap://%s:%s" % (cls.cfg["SERVER"]["hostip"],
+                                cls.cfg["SERVER"]["port"])
         cls.client = LDAPClient(url)
-        cls.creds = ("SIMPLE", (cfg["SIMPLEAUTH"]["user"],
-                                 cfg["SIMPLEAUTH"]["password"]))
-        cls.basedn = cfg["SERVER"]["basedn"]
+        cls.creds = ("SIMPLE", (cls.cfg["SIMPLEAUTH"]["user"],
+                                cls.cfg["SIMPLEAUTH"]["password"]))
+        cls.basedn = cls.cfg["SERVER"]["basedn"]
 
     def test_set_get(self):
         """ Test LDAPEntry's SetItem, GetItem and get methods. """  
@@ -233,6 +233,5 @@ class LDAPEntryTest(unittest.TestCase):
         """ Test passing wrong params to LDAPEntry. """
         self.assertRaises(TypeError, lambda: LDAPEntry('', 1))
         self.assertRaises(InvalidDN, lambda: LDAPEntry('5', 1))
-
 if __name__ == '__main__':
     unittest.main()

@@ -515,5 +515,66 @@ class LDAPConnectionTest(unittest.TestCase):
         self.assertRaises(ClosedConnection, close_conn)
         self.assertRaises(TypeError, lambda: self.conn.delete(0))
 
+    def test_password_lockout(self):
+        """ Test password locking with password policy. """
+        user_dn = "cn=jeff,ou=nerdherd,dc=bonsai,dc=test"
+        cli = LDAPClient("ldap://%s" % self.ipaddr)
+        cli.set_password_policy(True)
+        try:
+            cli.set_credentials("SIMPLE", (user_dn, "wrong_pass"))
+            conn, ctrl = cli.connect()
+        except bonsai.errors.AuthenticationError:
+            try:
+                cli.set_credentials("SIMPLE", (user_dn, "p@ssword"))
+                conn, ctrl = cli.connect()
+            except Exception as exc:
+                self.assertIsInstance(exc, bonsai.errors.AccountLocked)
+            else:
+                self.fail("No exception.")
+        finally:
+            entry = self.conn.search(user_dn, 0,
+                                     attrlist=["pwdAccountLockedTime"])[0]
+            if "pwdAccountLockedTime" in entry.keys():
+                del entry['pwdAccountLockedTime']
+                entry.modify()
+
+    def test_password_expire(self):
+        """ Test password expiring with password policy. """
+        user_dn = "cn=skip,ou=nerdherd,dc=bonsai,dc=test"
+        cli = LDAPClient("ldap://%s" % self.ipaddr)
+        cli.set_password_policy(True)
+        cli.set_credentials("SIMPLE", (user_dn, "p@ssword"))
+        conn, ctrl = cli.connect()
+        entry = conn.search(user_dn, 0)[0]
+        entry['userPassword'] = "newvalidpassword"
+        entry.modify()
+        conn.close()
+        cli.set_credentials("SIMPLE", (user_dn, "newvalidpassword"))
+        conn, ctrl = cli.connect()
+        print(ctrl)
+        if not (ctrl['expire'] <= 10 and ctrl['expire'] > 0):
+            self.fail("Expire time is in the wrong range.")
+        conn.close()
+        time.sleep(10)
+        conn, ctrl = cli.connect()
+        self.assertEqual(ctrl['grace'], 1)
+        conn.close()
+        try:
+            conn, ctrl = cli.connect()
+        except Exception as exc:
+            self.assertIsInstance(exc, bonsai.errors.PasswordExpired)
+        finally:
+            entry = self.conn.search(user_dn, 0,
+                                     attrlist=["userPassword"])[0]
+            entry['userPassword'] = "p@ssword"
+            entry.modify()
+            entry = self.conn.search(user_dn, 0,
+                                     attrlist=["pwdChangeTime",
+                                               "pwdGraceUseTime"])[0]
+            if ("pwdChangeTime", "pwdGraceUseTime") in entry.keys():
+                del entry['pwdChangeTime']
+                del entry['pwdGraceUseTime']
+                entry.modify()
+
 if __name__ == '__main__':
     unittest.main()

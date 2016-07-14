@@ -24,3 +24,14 @@ pwdLockoutDuration: 5
 pwdLockout: TRUE
 pwdMustChange: FALSE
 pwdSafeModify: FALSE
+
+dn: cn=nochange,ou=policies,dc=bonsai,dc=test
+objectClass: top
+objectClass: person
+objectClass: pwdPolicy
+cn: nochange
+sn: nochange
+pwdAttribute: userPassword
+pwdAllowUserChange: FALSE
+pwdMaxFailure: 1
+pwdLockout: TRUE
