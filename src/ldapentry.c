@@ -330,6 +330,8 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
     int msgid = -1;
     char *dnstr = NULL;
     LDAPModList *mods = NULL;
+    LDAPControl **server_ctrls = NULL;
+    LDAPControl *ppolicy_ctrl = NULL;
 
     /* Get DN string. */
     dnstr = PyObject2char(self->dn);
@@ -346,11 +348,25 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
         return NULL;
     }
 
+    if (self->conn->ppolicy == 1) {
+        rc = ldap_create_passwordpolicy_control(self->conn->ld, &ppolicy_ctrl);
+        if (rc != LDAP_SUCCESS) {
+            PyErr_BadInternalCall();
+            return NULL;
+        }
+
+        server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *) * (1 + 1));
+        if (server_ctrls == NULL) return PyErr_NoMemory();
+
+        server_ctrls[0] = ppolicy_ctrl;
+        server_ctrls[1] = NULL;
+    }
+
     if (mod == 0) {
-        rc = ldap_add_ext(self->conn->ld, dnstr, mods->mod_list, NULL,
+        rc = ldap_add_ext(self->conn->ld, dnstr, mods->mod_list, server_ctrls,
                 NULL, &msgid);
     } else {
-        rc = ldap_modify_ext(self->conn->ld, dnstr, mods->mod_list, NULL,
+        rc = ldap_modify_ext(self->conn->ld, dnstr, mods->mod_list, server_ctrls,
                 NULL, &msgid);
     }
     free(dnstr);
@@ -366,6 +382,9 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
         Py_DECREF(mods);
         return NULL;
     }
+
+    if (ppolicy_ctrl != NULL) ldap_control_free(ppolicy_ctrl);
+    free(server_ctrls);
 
     return PyLong_FromLong((long int)msgid);
 }

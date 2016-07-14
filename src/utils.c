@@ -546,3 +546,14 @@ create_ppolicy_control(LDAP *ld, LDAPControl **returned_ctrls,
 
     return 0;
 }
+
+void
+set_ppolicy_err(unsigned int pperr, PyObject *ctrl_obj) {
+    PyObject *ldaperror = NULL;
+
+    ldaperror = get_error_by_code(-200 - pperr);
+    if (ldaperror == NULL) return;
+    PyObject_SetAttrString(ldaperror, "control", ctrl_obj);
+    PyErr_SetNone(ldaperror);
+    Py_DECREF(ldaperror);
+}

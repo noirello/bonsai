@@ -88,7 +88,6 @@ binding(LDAPConnectIter *self) {
     LDAPMessage *res;
     PyObject *ctrl_obj = NULL;
     PyObject *value = NULL;
-    PyObject *ldaperror = NULL;
 
     if (self->timeout == -1) {
         polltime.tv_sec = 0L;
@@ -155,15 +154,9 @@ binding(LDAPConnectIter *self) {
             if (err != LDAP_SASL_BIND_IN_PROGRESS && err != LDAP_SUCCESS) {
                 /* Connection is failed. */
                 ldap_msgfree(res);
-                if (ppres == 1 && pperr != 65535) {
-                    ldaperror = get_error_by_code(-200 - pperr);
-                    PyObject_SetAttrString(ldaperror, "control", ctrl_obj);
-                    PyErr_SetNone(ldaperror);
-                    Py_DECREF(ldaperror);
-                    return NULL;
-                } else {
-                    set_exception(self->conn->ld, err);
-                }
+                if (ppres == 1 && pperr != 65535) set_ppolicy_err(pperr, ctrl_obj);
+                else set_exception(self->conn->ld, err);
+
                 return NULL;
             }
 

@@ -262,7 +262,7 @@ class LDAPClient:
 
     def set_password_policy(self, ppolicy: bool):
         if type(ppolicy) != bool:
-            TypeError("Parameter must be bool.")
+            raise TypeError("Parameter must be bool.")
         self.__ppolicy_ctrl = ppolicy
 
     def get_rootDSE(self) -> LDAPEntry:

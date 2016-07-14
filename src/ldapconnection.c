@@ -693,10 +693,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
 
     if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
         if (ppres == 1 && pperr != 65535) {
-            ldaperror = get_error_by_code(-200 - pperr);
-            if (ldaperror == NULL) return NULL;
-            PyObject_SetAttrString(ldaperror, "control", ctrl_obj);
-            PyErr_SetNone(ldaperror);
+            set_ppolicy_err(pperr, ctrl_obj);
         } else {
             ldaperror = get_error_by_code(err);
             if (ldaperror == NULL) return NULL;
@@ -705,9 +702,9 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
                 PyErr_SetObject(ldaperror, errmsg);
                 Py_DECREF(errmsg);
             } else PyErr_SetString(ldaperror, "");
+            Py_DECREF(ldaperror);
         }
 
-        Py_DECREF(ldaperror);
         return NULL;
     }
 
@@ -740,7 +737,9 @@ PyObject *
 LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
     int rc = -1;
     int err = 0;
+    int ppres = 0;
     char msgidstr[8];
+    unsigned int pperr = 0;
     LDAPMessage *res;
     LDAPControl **returned_ctrls = NULL;
     LDAPModList *mods = NULL;
@@ -750,6 +749,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
     PyObject *newdn = NULL;
     PyObject *conniter = NULL;
     PyObject *ret = NULL;
+    PyObject *ctrl_obj = NULL;
 
     /*- Create a char* from int message id. */
     sprintf(msgidstr, "%d", msgid);
@@ -901,6 +901,9 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             return NULL;
         }
 
+        ppres = create_ppolicy_control(self->ld, returned_ctrls, &ctrl_obj, &pperr);
+        if (ppres == -1) return NULL;
+
         if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
             /* LDAP add or modify operation is failed,
                then rollback the changes. */
@@ -909,7 +912,9 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
                 return NULL;
             }
             /* Set Python error. */
-            set_exception(self->ld, err);
+            if (ppres == 1 && pperr != 65535) set_ppolicy_err(pperr, ctrl_obj);
+            else set_exception(self->ld, err);
+
             return NULL;
         }
 

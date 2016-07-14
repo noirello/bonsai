@@ -36,5 +36,6 @@ int set_search_params(ldapsearchparams *params, char **attrs, int attrsonly,
 void free_search_params(ldapsearchparams *params);
 int create_ppolicy_control(LDAP *ld, LDAPControl **returned_ctrls,
         PyObject **ctrl_obj,  unsigned int *pperr);
+void set_ppolicy_err(unsigned int pperr, PyObject *ctrl_obj);
 
 #endif /* UTILS_H_ */
