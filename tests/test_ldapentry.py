@@ -1,6 +1,7 @@
 import configparser
 import os.path
 import unittest
+import sys
 
 from bonsai import LDAPClient
 from bonsai import LDAPEntry

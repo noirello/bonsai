@@ -89,7 +89,7 @@ class LDAPConnection(ldapconnection):
             else:
                 raise exc
 
-    def open(self, timeout: float=None) -> Union['LDAPConnection', Iterator]:
+    def open(self, timeout: float=None) -> Union[int, 'LDAPConnection', Iterator]:
         """
         Open the LDAP connection.
 
@@ -106,7 +106,7 @@ class LDAPConnection(ldapconnection):
                sizelimit: int=0, attrsonly: bool=False,
                sort_order: List[str]=None, page_size: int=0, offset: int=0,
                before_count: int=0, after_count: int=0, est_list_count: int=0,
-               attrvalue: str=None) -> Union[List[LDAPEntry], Iterator,
+               attrvalue: str=None) -> Union[int, List[LDAPEntry], Iterator,
                                              Tuple[List[LDAPEntry],dict]]:
         # Documentation in the docs/api.rst with detailed examples.
         # Load values from the LDAPURL, if it is not presented on the
@@ -147,15 +147,39 @@ class LDAPConnection(ldapconnection):
         sort_attrs = []
         for attr in sort_list:
             if type(attr) != str or len(attr) == 0:
-                raise ValueError("All element of sort_list must be a non empty string.")
+                raise ValueError("All element of sort_list must be"
+                                 " a non empty string.")
             if attr[0] == '-':
                 # Set reverse order.
                 sort_attrs.append((attr[1:], True))
             else:
                 sort_attrs.append((attr, False))
         if len(sort_list) > len(set(map(lambda x: x[0].lower, sort_attrs))):
-            raise ValueError("Attribute names must be different from each other.")
+            raise ValueError("Attribute names must be different"
+                             " from each other.")
         return sort_attrs
+
+    def modify_password(self, user: Union[str, LDAPDN]=None,
+                        new_password:str=None, old_password: str=None,
+                        timeout: float=None) -> Union[str, int, None]:
+        """
+        Set a new password for the given user.
+
+        :param str|LDAPDN user: the identification of the user. If not set, \
+        the owner of the current LDAP session will be associated.
+        :param str new_password: the new password. If not set, the server \
+        will generate one and the new password will be returned by this method.
+        :param str old_password: the current password of the user.
+        :param float timeout: time limit in seconds for the operation.
+
+        :return: if the `new_password` is not set, then the generated \
+        password, None otherwise.
+        :rtype: str|None
+        """
+        if type(user) == LDAPDN:
+            user = str(user)
+        return self._evaluate(super().modify_password(user, new_password,
+                                                      old_password), timeout)
 
     def whoami(self, timeout: float=None) -> Union[str, int]:
         """

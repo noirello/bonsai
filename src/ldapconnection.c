@@ -524,18 +524,112 @@ static PyObject *
 ldapconnection_whoami(LDAPConnection *self) {
     int rc = -1;
     int msgid = -1;
+    PyObject *oid = NULL;
 
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
     /* Start an LDAP Who Am I operation. */
-    rc = ldap_extended_operation(self->ld, "1.3.6.1.4.1.4203.1.11.3", NULL, NULL, NULL, &msgid);
+    rc = ldap_extended_operation(self->ld, "1.3.6.1.4.1.4203.1.11.3", NULL,
+            NULL, NULL, &msgid);
 
     if (rc != LDAP_SUCCESS) {
         set_exception(self->ld, rc);
         return NULL;
     }
 
-    if (add_to_pending_ops(self->pending_ops, msgid,  Py_None) != 0) {
+    /* Add the new operation to the pending_ops with the proper OID. */
+    oid = PyUnicode_FromString("1.3.6.1.4.1.4203.1.11.3");
+    if (oid == NULL) return NULL;
+    if (add_to_pending_ops(self->pending_ops, msgid, oid) != 0) {
         return NULL;
+    }
+
+    return PyLong_FromLong((long int)msgid);
+}
+
+static PyObject *
+ldapconnection_modpasswd(LDAPConnection *self, PyObject *args, PyObject *kwds) {
+    int rc = -1;
+    int msgid = -1;
+    int user_len = 0, newpwd_len = 0, oldpwd_len = 0;
+    struct berval user, newpwd, oldpwd;
+    struct berval *data = NULL;
+    BerElement *ber = NULL;
+    PyObject *oid = NULL;
+    LDAPControl *ppolicy_ctrl = NULL;
+    LDAPControl **server_ctrls = NULL;
+    static char *kwlist[] = { "user", "new_password", "old_password", NULL };
+
+    if (LDAPConnection_IsClosed(self) != 0) return NULL;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|z#z#z#", kwlist,
+            &user.bv_val, &user_len, &newpwd.bv_val, &newpwd_len,
+            &oldpwd.bv_val, &oldpwd_len)) {
+        return NULL;
+    }
+
+    /* Set lengths. */
+    user.bv_len = user_len;
+    newpwd.bv_len = newpwd_len;
+    oldpwd.bv_len = oldpwd_len;
+
+    ber = ber_alloc_t(LBER_USE_DER);
+    if (ber == NULL) return PyErr_NoMemory();
+
+    /* Create a valid BER object with the provided parameters. */
+    ber_printf(ber, "{");
+    if (user.bv_val != NULL && user.bv_len != 0) {
+        ber_printf(ber, "tO", 0x80U, &user);
+    }
+    if (oldpwd.bv_val != NULL && oldpwd.bv_len != 0) {
+        ber_printf(ber, "tO", 0x81U, &oldpwd);
+    }
+    if (newpwd.bv_val != NULL && newpwd.bv_len != 0) {
+        ber_printf(ber, "tO", 0x82U, &newpwd);
+    }
+    ber_printf(ber, "N}");
+
+    /* Load the BER value into a berval. */
+    rc = ber_flatten(ber, &data);
+    ber_free(ber, 1);
+    if (rc != 0) {
+        set_exception(NULL, LDAP_ENCODING_ERROR);
+        return NULL;
+    }
+
+    if (self->ppolicy == 1) {
+        /* Create password policy control if it is set. */
+        rc = ldap_create_passwordpolicy_control(self->ld, &ppolicy_ctrl);
+        if (rc != LDAP_SUCCESS) {
+            PyErr_BadInternalCall();
+            return NULL;
+        }
+
+        server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *) * (1 + 1));
+        if (server_ctrls == NULL) return PyErr_NoMemory();
+
+        server_ctrls[0] = ppolicy_ctrl;
+        server_ctrls[1] = NULL;
+    }
+
+    /* Start an LDAP Password Modify operation. */
+    rc = ldap_extended_operation(self->ld, "1.3.6.1.4.1.4203.1.11.1",
+            data, server_ctrls, NULL, &msgid);
+
+    /* Clear the mess. */
+    ber_bvfree(data);
+    if (ppolicy_ctrl != NULL) ldap_control_free(ppolicy_ctrl);
+    free(server_ctrls);
+
+    if (rc != LDAP_SUCCESS) {
+        set_exception(self->ld, rc);
+        return NULL;
+    }
+
+    /* Add the new operation to the pending_ops with the proper OID. */
+    oid = PyUnicode_FromString("1.3.6.1.4.1.4203.1.11.1");
+    if (oid == NULL) return NULL;
+    if (add_to_pending_ops(self->pending_ops, msgid, oid) != 0) {
+       return NULL;
     }
 
     return PyLong_FromLong((long int)msgid);
@@ -674,24 +768,35 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
     int err = 0;
     int ppres = 0;
     unsigned int pperr = 0;
-    struct berval *authzid = NULL;
-    char *retoid = NULL, *errstr = NULL;
+    struct berval *data = NULL;
+    struct berval *newpasswd = NULL;
+    char *errstr = NULL;
+    PyObject *oid = NULL;
     PyObject *retval = NULL, *ldaperror = NULL, *errmsg = NULL;
     PyObject *ctrl_obj = NULL;
     LDAPControl **ctrls = NULL;
+    BerElement *ber = NULL;
+    ber_tag_t tag;
 
-    /* Remove operations from pending_ops. */
+    /* Get oid and remove operations from pending_ops. */
+    oid = PyDict_GetItemString(self->pending_ops, msgidstr);
+    if (oid == NULL) return NULL;
+    Py_INCREF(oid);
     if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
         PyErr_BadInternalCall();
         return NULL;
     }
 
-    rc = ldap_parse_result(self->ld, res, &err, &retoid, &errstr, NULL, &ctrls, 0);
+    rc = ldap_parse_result(self->ld, res, &err, NULL, &errstr, NULL, &ctrls, 0);
 
     ppres = create_ppolicy_control(self->ld, ctrls, &ctrl_obj, &pperr);
-    if (ppres == -1) return NULL;
+    if (ppres == -1) {
+        Py_DECREF(oid);
+        return NULL;
+    }
 
     if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
+        Py_DECREF(oid);
         if (ppres == 1 && pperr != 65535) {
             set_ppolicy_err(pperr, ctrl_obj);
         } else {
@@ -708,27 +813,52 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
         return NULL;
     }
 
-    rc = ldap_parse_extended_result(self->ld, res, &retoid, &authzid, 1);
+    rc = ldap_parse_extended_result(self->ld, res, NULL, &data, 1);
+
     if (rc != LDAP_SUCCESS ) {
+        Py_DECREF(oid);
         set_exception(self->ld, rc);
         return NULL;
     }
     /* LDAP Who Am I operation. */
-    /* WARNING: OpenLDAP does not send back oid for whoami operations.
-        It's gonna be really messy, if it does for any type of extended op. */
-    if (retoid == NULL || strcmp(retoid, "1.3.6.1.4.1.4203.1.11.3") == 0) {
-        if (authzid == NULL) return PyUnicode_FromString("anonymous");
+    if (PyUnicode_CompareWithASCIIString(oid,
+            "1.3.6.1.4.1.4203.1.11.3") == 0) {
+        Py_DECREF(oid);
+        if (data == NULL) return PyUnicode_FromString("anonymous");
 
-        if(authzid->bv_len == 0) {
-            authzid->bv_val = strdup("anonymous");
-            authzid->bv_len = 9;
+        if(data->bv_len == 0) {
+            data->bv_val = strdup("anonymous");
+            data->bv_len = 9;
         }
 
-        ldap_memfree(retoid);
-        retval = PyUnicode_FromString(authzid->bv_val);
-        ber_bvfree(authzid);
+        retval = PyUnicode_FromStringAndSize(data->bv_val, data->bv_len);
+    /* LDAP Password Modify operation. */
+    } else if (PyUnicode_CompareWithASCIIString(oid,
+            "1.3.6.1.4.1.4203.1.11.1") == 0) {
+        Py_DECREF(oid);
+        if (data == NULL) Py_RETURN_NONE;
+
+        ber = ber_init(data);
+        if (ber == NULL) {
+            ber_bvfree(data);
+            return PyErr_NoMemory();
+        }
+
+        tag = ber_scanf(ber, "{O}", &newpasswd);
+        ber_free(ber, 1);
+
+        if (tag == LBER_ERROR) {
+            set_exception(NULL, LDAP_DECODING_ERROR);
+            ber_bvfree(data);
+            return NULL;
+        }
+        retval = PyUnicode_FromStringAndSize(newpasswd->bv_val, newpasswd->bv_len);
+        ber_bvfree(newpasswd);
+    } else {
+        Py_DECREF(oid);
     }
 
+    ber_bvfree(data);
     return retval;
 }
 
@@ -1051,6 +1181,8 @@ static PyMethodDef ldapconnection_methods[] = {
             "Poll the status of the operation associated with the given message id from LDAP server."},
     {"open", (PyCFunction)ldapconnection_open, METH_NOARGS,
             "Open connection with the LDAP Server."},
+    {"modify_password", (PyCFunction)ldapconnection_modpasswd, METH_VARARGS | METH_KEYWORDS,
+            "Modify password for the user."},
     {"search", (PyCFunction)ldapconnection_search, METH_VARARGS | METH_KEYWORDS,
             "Search for LDAP entries."},
     {"whoami", (PyCFunction)ldapconnection_whoami, METH_NOARGS,

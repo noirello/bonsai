@@ -349,6 +349,7 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
     }
 
     if (self->conn->ppolicy == 1) {
+        /* Create password policy control if it is set. */
         rc = ldap_create_passwordpolicy_control(self->conn->ld, &ppolicy_ctrl);
         if (rc != LDAP_SUCCESS) {
             PyErr_BadInternalCall();
@@ -361,6 +362,7 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
         server_ctrls[0] = ppolicy_ctrl;
         server_ctrls[1] = NULL;
     }
+
     if (mod == 0) {
         rc = ldap_add_ext(self->conn->ld, dnstr, mods->mod_list, server_ctrls,
                 NULL, &msgid);
@@ -368,7 +370,11 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
         rc = ldap_modify_ext(self->conn->ld, dnstr, mods->mod_list, server_ctrls,
                 NULL, &msgid);
     }
+
+    /* Clear the mess. */
     free(dnstr);
+    if (ppolicy_ctrl != NULL) ldap_control_free(ppolicy_ctrl);
+    free(server_ctrls);
 
     if (rc != LDAP_SUCCESS) {
         set_exception(self->conn->ld, rc);
@@ -382,8 +388,6 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
         return NULL;
     }
 
-    if (ppolicy_ctrl != NULL) ldap_control_free(ppolicy_ctrl);
-    free(server_ctrls);
 
     return PyLong_FromLong((long int)msgid);
 }
