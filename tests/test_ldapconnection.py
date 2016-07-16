@@ -581,5 +581,42 @@ class LDAPConnectionTest(unittest.TestCase):
                 del entry['pwdGraceUseTime']
                 entry.modify()
 
+    def test_password_modify(self):
+        """ Test Password Modify extended operation. """
+        user_dn = LDAPDN("cn=skip,ou=nerdherd,dc=bonsai,dc=test")
+        cli = LDAPClient("ldap://%s" % self.ipaddr)
+        cli.set_credentials("SIMPLE", (str(user_dn), "p@ssword"))
+        conn = cli.connect()
+        self.assertRaises(TypeError,
+                          lambda: conn.modify_password(new_password=0))
+        conn.modify_password(user_dn, "newpassword", "p@ssword")
+        conn.close()
+        self.assertRaises(ClosedConnection,
+                          lambda: conn.modify_password())
+        try:
+            cli.set_credentials("SIMPLE", (str(user_dn), "newpassword"))
+            cli.set_password_policy(True)
+            conn, ctrl = cli.connect()
+            newpass = conn.modify_password()
+            conn.close()
+            self.assertIsInstance(newpass, str)
+            cli.set_credentials("SIMPLE", (str(user_dn), newpass))
+            conn, ctrl = cli.connect()
+            conn.close()
+        except bonsai.AuthenticationError:
+            self.fail("Failed to authenticate with the new password.")
+        finally:
+            entry = self.conn.search(user_dn, 0,
+                                     attrlist=["userPassword"])[0]
+            entry['userPassword'] = "p@ssword"
+            entry.modify()
+            entry = self.conn.search(user_dn, 0,
+                                     attrlist=["pwdChangeTime",
+                                               "pwdGraceUseTime"])[0]
+            if ("pwdChangeTime", "pwdGraceUseTime") in entry.keys():
+                del entry['pwdChangeTime']
+                del entry['pwdGraceUseTime']
+                entry.modify()
+
 if __name__ == '__main__':
     unittest.main()
