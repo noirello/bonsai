@@ -530,7 +530,6 @@ ldapconnection_whoami(LDAPConnection *self) {
     /* Start an LDAP Who Am I operation. */
     rc = ldap_extended_operation(self->ld, "1.3.6.1.4.1.4203.1.11.3", NULL,
             NULL, NULL, &msgid);
-
     if (rc != LDAP_SUCCESS) {
         set_exception(self->ld, rc);
         return NULL;
@@ -578,15 +577,15 @@ ldapconnection_modpasswd(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     /* Create a valid BER object with the provided parameters. */
     ber_printf(ber, "{");
     if (user.bv_val != NULL && user.bv_len != 0) {
-        ber_printf(ber, "tO", 0x80U, &user);
+        ber_printf(ber, "to", 0x80U, user.bv_val, user.bv_len);
     }
     if (oldpwd.bv_val != NULL && oldpwd.bv_len != 0) {
-        ber_printf(ber, "tO", 0x81U, &oldpwd);
+        ber_printf(ber, "to", 0x81U, oldpwd.bv_val, oldpwd.bv_len);
     }
     if (newpwd.bv_val != NULL && newpwd.bv_len != 0) {
-        ber_printf(ber, "tO", 0x82U, &newpwd);
+        ber_printf(ber, "to", 0x82U, newpwd.bv_val, newpwd.bv_len);
     }
-    ber_printf(ber, "N}");
+    ber_printf(ber, "n}");
 
     /* Load the BER value into a berval. */
     rc = ber_flatten(ber, &data);
@@ -770,7 +769,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
     unsigned int pperr = 0;
     struct berval *data = NULL;
     struct berval *newpasswd = NULL;
-    char *errstr = NULL;
+	char *errstr = NULL, *retoid = NULL;
     PyObject *oid = NULL;
     PyObject *retval = NULL, *ldaperror = NULL, *errmsg = NULL;
     PyObject *ctrl_obj = NULL;
@@ -813,7 +812,8 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
         return NULL;
     }
 
-    rc = ldap_parse_extended_result(self->ld, res, NULL, &data, 1);
+    rc = ldap_parse_extended_result(self->ld, res, &retoid, &data, 1);
+	ldap_memfree(retoid);
 
     if (rc != LDAP_SUCCESS ) {
         Py_DECREF(oid);
@@ -857,7 +857,6 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
     } else {
         Py_DECREF(oid);
     }
-
     ber_bvfree(data);
     return retval;
 }
@@ -955,7 +954,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
                 set_exception(self->ld, rc);
             }
             mods = (LDAPModList *)PyDict_GetItemString(self->pending_ops, msgidstr);
-            if (mods != NULL && (PyObject *)mods != Py_None) {
+            if (mods != NULL && (PyObject *)mods != Py_None && !PyUnicode_Check(mods)) {
                 /* LDAP add or modify operation is failed,
                    then rollback the changes. */
                 if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0) {

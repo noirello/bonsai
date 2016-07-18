@@ -581,7 +581,7 @@ class LDAPConnectionTest(unittest.TestCase):
                 del entry['pwdGraceUseTime']
                 entry.modify()
 
-    def test_password_modify(self):
+    def test_password_modify_extop(self):
         """ Test Password Modify extended operation. """
         user_dn = LDAPDN("cn=skip,ou=nerdherd,dc=bonsai,dc=test")
         cli = LDAPClient("ldap://%s" % self.ipaddr)

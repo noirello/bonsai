@@ -122,8 +122,7 @@ class LDAPClientTest(unittest.TestCase):
         ret_val = client.connect()
         self.assertIsInstance(ret_val, tuple)
         self.assertIsInstance(ret_val[0], LDAPConnection)
-        print(ret_val)
-        if type(ret_val[1]) is None:
+        if ret_val[1] is None:
             pass
         elif type(ret_val[1]) == dict:
             self.assertIn("oid", ret_val[1].keys())
