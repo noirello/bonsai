@@ -31,7 +31,7 @@ class LDAPClientTest(unittest.TestCase):
         url =  bonsai.LDAPURL(self.url)
         client = LDAPClient(url)
         self.assertEqual(client.url, url)
-        self.assertRaises(ValueError, lambda: LDAPClient(None))
+        self.assertRaises(TypeError, lambda: LDAPClient(None))
 
     def test_connect(self):
         """ Test connect method. """
