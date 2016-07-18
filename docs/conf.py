@@ -32,7 +32,7 @@ class Mock(MagicMock):
             return object
         if name == 'ldapsearchiter':
             return object
-        return Mock()
+        #return Mock()
 
 #on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 MOCK_MODULES = ['lib._bonsai']

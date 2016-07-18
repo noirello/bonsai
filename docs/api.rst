@@ -47,6 +47,25 @@ API documentation
     >>> client.connect(True)
     <bonsai.gevent.geventconnection.GeventLDAPConnection object at 0x7f9b1789c6d8>
 
+.. automethod:: LDAPClient.set_password_policy(ppolicy)
+
+    An example:
+
+    >>> import bonsai
+    >>> client = bonsai.LDAPClient()
+    >>> client.set_credentials("SIMPLE", ("cn=user,dc=bonsai,dc=test", "secret"))
+    >>> client.set_password_policy(True)
+    >>> conn, ctrl = client.connect()
+    >>> conn
+    <bonsai.ldapconnection.LDAPConnection object at 0x7fa552ab4e28>
+    >>> ctrl
+    {'grace': 1, 'expire': 3612, 'oid': '1.3.6.1.4.1.42.2.27.8.5.1'})
+
+.. note:: Password policy control cannot be used on MS Windows with WinLDAP.
+   In this case after opening a connection the control dictionary will always be
+   None.
+
+
 .. automethod:: LDAPClient.set_raw_attributes(raw_list)
 
     An example:
@@ -64,6 +83,7 @@ API documentation
 .. autoattribute:: LDAPClient.client_key
 .. autoattribute:: LDAPClient.credentials
 .. autoattribute:: LDAPClient.mechanism
+.. autoattribute:: LDAPClient.password_policy
 .. autoattribute:: LDAPClient.raw_attributes
 .. autoattribute:: LDAPClient.tls
 .. autoattribute:: LDAPClient.url
@@ -105,6 +125,11 @@ API documentation
                                      already finished
 
 .. automethod:: LDAPConnection.open(timeout=None)
+.. automethod:: LDAPConnection.modify_password(user=None, new_password=None, old_password=None, timeout=None)
+.. seealso::
+    RFC about the LDAP Password Modify extended operation `RFC3062`_.
+
+.. _RFC3062: https://www.ietf.org/rfc/rfc3062.txt
 
 .. method:: LDAPConnection.search(base=None, scope=None, filter=None, attrlist=None, timeout=None,\
                                   sizelimit=0, attrsonly=False, sort_order=None, page_size=0, \
@@ -332,6 +357,16 @@ Errors
 .. autoclass:: bonsai.SizeLimitError
 .. autoclass:: bonsai.TimeoutError
 .. autoclass:: bonsai.UnwillingToPerform
+.. autoclass:: bonsai.PasswordPolicyError
+.. autoclass:: bonsai.AccountLocked
+.. autoclass:: bonsai.ChangeAfterReset
+.. autoclass:: bonsai.InsufficientPasswordQuality
+.. autoclass:: bonsai.MustSupplyOldPassword
+.. autoclass:: bonsai.PasswordExpired
+.. autoclass:: bonsai.PasswordInHistory
+.. autoclass:: bonsai.PasswordModNotAllowed
+.. autoclass:: bonsai.PasswordTooShort
+.. autoclass:: bonsai.PasswordTooYoung
 
 Module functions
 ================

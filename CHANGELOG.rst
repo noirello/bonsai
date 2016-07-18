@@ -1,5 +1,29 @@
 Change Log
 ==========
+[0.8.8] - 2016-07-19
+--------------------
+
+Changed
+~~~~~~~
+
+-  LDAPDN object is loaded for the C extension after initialisation once,
+   rather than loading it for every time when an LDAPEntry's DN is set.
+
+Added
+~~~~~
+
+-  Password policy control support with LDAPClient.set_password_policy on
+   Unix.
+-  New exceptions for password policy errors.
+-  LDAP Password Modify extended operation support with
+   LDAPConnection.modify_password.
+
+Fixed
+~~~~~
+
+-  AIOLDAPConnection hanging on write events during selecting socket
+   descriptors.
+
 [0.8.7] - 2016-06-27
 --------------------
 

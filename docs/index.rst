@@ -33,6 +33,7 @@ Contents
    tutorial
    advanced
    api
+   changelog
    
 Contribution
 ============

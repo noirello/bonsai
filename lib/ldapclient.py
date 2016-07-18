@@ -20,7 +20,7 @@ class LDAPClient:
 
     :param str|LDAPURL url: an LDAP URL.
     :param bool tls: Set `True` to use TLS connection.
-    :raises ValueError: if the `url` parameter is not string \
+    :raises TypeError: if the `url` parameter is not string \
     or not a valid LDAP URL.
     """
     def __init__(self, url: Union[LDAPURL, str]="ldap://", tls: bool=False):
@@ -30,7 +30,7 @@ class LDAPClient:
         elif type(url) == LDAPURL:
             self.__url = url
         else:
-            raise ValueError("The url parameter must be string or an LDAPURL.")
+            raise TypeError("The url parameter must be string or an LDAPURL.")
         if self.__url.scheme != "ldaps" and tls:
             self.__tls = True
         else:
@@ -86,8 +86,10 @@ class LDAPClient:
         :param list raw_list: a list of LDAP attributum's names. \
         The elements must be string and unique.
 
-        :raises ValueError: if any of the list's element is not a \
-        string or not a unique element.
+        :raises TypeError: if any of the list's element is not a \
+        string.
+        :raises ValueError: if the item in the lit is not a unique \
+        element.
         """
         for elem in raw_list:
             if type(elem) != str:
@@ -109,8 +111,9 @@ class LDAPClient:
 
         :param str mechanism: the name of the binding mechanism.
         :param tuple creds: the credential information.
-        :raises ValueError: if the `mechanism` parameter is not a string, or \
-        the `creds` is not a tuple, or the tuple has wrong length.
+        :raises TypeError: if the `mechanism` parameter is not a string, or \
+        the `creds` is not a tuple.
+        :raises ValueError: the tuple has wrong length.
         """
         if type(mechanism) != str:
             raise TypeError("The mechanism must be a string.")
@@ -147,8 +150,8 @@ class LDAPClient:
             - `never` or `allow`: the server cert will be used without any \
             verification.
 
-        :raises ValueError: if the `policy` parameter is not a string, or not \
-        one of the four above.
+        :raises TypeError: if the `policy` parameter is not a string.
+        :raises ValueError: if the `policy` not one of the four above.
 
         .. warning::
            Set off the cert verification is dangerous. Without verification \
@@ -177,7 +180,7 @@ class LDAPClient:
            installed manually in to the cert store.  
 
         :param str name: the name of the CA cert.
-        :raises ValueError: if `name` parameter is not a string or not None.
+        :raises TypeError: if `name` parameter is not a string or not None.
         """
         if name is not None and type(name) != str:
             raise TypeError("Name parameter must be string or None.")
@@ -197,7 +200,7 @@ class LDAPClient:
            installed manually in to the cert store.            
 
         :param str path: the path to the CA directory.
-        :raises ValueError: if `path` parameter is not a string or not None.
+        :raises TypeError: if `path` parameter is not a string or not None.
         """
         if path is not None and type(path) != str:
             raise TypeError("Path parameter must be string or None.")
@@ -219,7 +222,7 @@ class LDAPClient:
            the cert store.  
 
         :param str name: the name of the client cert.
-        :raises ValueError: if `name` parameter is not a string or not None.
+        :raises TypeError: if `name` parameter is not a string or not None.
         """
         if name is not None and type(name) != str:
             raise TypeError("Name parameter must be string or None.")
@@ -239,7 +242,7 @@ class LDAPClient:
            the cert store.  
 
         :param str name: the name of the CA cert.
-        :raises ValueError: if `name` parameter is not a string or not None.
+        :raises TypeError: if `name` parameter is not a string or not None.
         """
         if name is not None and type(name) != str:
             raise TypeError("Name parameter must be string or None.")
@@ -253,7 +256,7 @@ class LDAPClient:
         
         :param LDAPConnection conn: the new asynchronous connection class \
         that is a subclass of LDAPConnection.
-        :raises ValueError: if `conn` parameter is not a subclass \
+        :raises TypeError: if `conn` parameter is not a subclass \
         of :class:`LDAPConnection`.
         """
         if not issubclass(conn, LDAPConnection):
@@ -261,6 +264,24 @@ class LDAPClient:
         self.__async_conn = conn
 
     def set_password_policy(self, ppolicy: bool):
+        """
+        Enable password policy control, if it is provided by the directory \
+        server. Setting it `True` will change the return value of \
+        :meth:`LDAPClient.connect` to a tuple of `(conn, ctrl)` where the \
+        `conn` is an :class:`LDAPConnection`, the `ctrl` is a dict of \
+        returned password policy control response that contains the oid, \
+        the remaining seconds of password expiration, and the number of \
+        remaining grace logins. If the password policy control is not \
+        available on the server or not supported by the platform the second \
+        item in the returned tuple is None, instead of a dictionary.
+
+        By enabling the password policy control the server can send \
+        additional error messages related to the user's account and \
+        password during conneting to the server and changing entries.
+
+        :param bool ppolicy: enabling/disabling password policy control.
+        :raises TypeError: If the parameter is not a bool type.
+        """
         if type(ppolicy) != bool:
             raise TypeError("Parameter must be bool.")
         self.__ppolicy_ctrl = ppolicy
@@ -384,6 +405,7 @@ class LDAPClient:
 
     @property
     def password_policy(self):
+        """ The status of using password policy. """
         return self.__ppolicy_ctrl
 
     @password_policy.setter
