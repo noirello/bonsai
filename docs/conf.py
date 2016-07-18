@@ -22,6 +22,8 @@ sys.path[0:0] = [os.path.abspath('..')]
 
 from unittest.mock import MagicMock
 
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+
 class Mock(MagicMock):
     @classmethod
     def __getattr__(cls, name):
@@ -32,9 +34,9 @@ class Mock(MagicMock):
             return object
         if name == 'ldapsearchiter':
             return object
-        #return Mock()
+        if on_rtd:
+            return Mock()
 
-#on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 MOCK_MODULES = ['lib._bonsai']
 try:
     import typing
