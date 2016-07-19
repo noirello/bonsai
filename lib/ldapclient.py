@@ -267,13 +267,14 @@ class LDAPClient:
         """
         Enable password policy control, if it is provided by the directory \
         server. Setting it `True` will change the return value of \
-        :meth:`LDAPClient.connect` to a tuple of `(conn, ctrl)` where the \
-        `conn` is an :class:`LDAPConnection`, the `ctrl` is a dict of \
-        returned password policy control response that contains the oid, \
-        the remaining seconds of password expiration, and the number of \
-        remaining grace logins. If the password policy control is not \
-        available on the server or not supported by the platform the second \
-        item in the returned tuple is None, instead of a dictionary.
+        :meth:`LDAPClient.connect` and :meth:`LDAPConnection.open` to a \
+        tuple of `(conn, ctrl)` where the `conn` is an \
+        :class:`LDAPConnection`, the `ctrl` is a dict of returned password \
+        policy control response that contains the oid, the remaining seconds \
+        of password expiration, and the number of remaining grace logins. \
+        If the password policy control is not available on the server or not \
+        supported by the platform the second item in the returned tuple is \
+        `None`, instead of a dictionary.
 
         By enabling the password policy control the server can send \
         additional error messages related to the user's account and \

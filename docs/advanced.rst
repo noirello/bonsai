@@ -262,6 +262,42 @@ the VLV server response: the target position and the real list size.
 
 .. note::
     The OID of virtual list view control is: 2.16.840.1.113730.3.4.9.
+    
+Password policy
+---------------
+
+Password policy defines a set of rules about accounts and modification of passwords. It allows
+for the system administrator to set experation time for passwords and a maximal number of failed
+login attemps before the account become locked. Is also specifies rules about the qualitiy of
+password.
+
+Enabling the password policy control with :meth:`LDAPClient.set_password_policy` method, the client
+can receive additional information during connecting to a server or modifying a user's password.
+Setting this control will change the return value of :meth:`LDAPClient.connect` and
+:meth:`LDAPConnection.open` to a tuple of :class:`LDAPConnection` and a dictionary that contains
+the remaining seconds until the password's expiration and the remaining grace logins. The client
+can also receive new exceptions related to password modifications.
+
+	>>> import bonsai
+	>>> client = bonsai.LDAPClient()
+	>>> client.set_credentials("SIMPLE", ("cn=user,dc=bonsai,dc=test", "secret"))
+	>>> client.set_password_policy(True)
+	>>> conn, ctrl = client.connect()
+	>>> conn
+	<bonsai.ldapconnection.LDAPConnection object at 0x7fa552ab4e28>
+	>>> ctrl
+	{'grace': 1, 'expire': 3612, 'oid': '1.3.6.1.4.1.42.2.27.8.5.1'})
+
+If the server does not support password policy control or the given credentials does not have
+policies (like anonym or administrator user) the second item in the tuple will be `None`.
+
+.. note::
+	Because the password policy is not standardized, it is not listed by the server among
+	the `supportedControls` even if it is available.
+	
+.. note::
+	Password policy control cannot be used on MS Windows with WinLDAP. In this case after 
+	opening a connection the control dictionary will always be `None`.
 
 Asynchronous operations
 =======================

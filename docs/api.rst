@@ -63,7 +63,7 @@ API documentation
 
 .. note:: Password policy control cannot be used on MS Windows with WinLDAP.
    In this case after opening a connection the control dictionary will always be
-   None.
+   `None`.
 
 
 .. automethod:: LDAPClient.set_raw_attributes(raw_list)
