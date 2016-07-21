@@ -2,7 +2,6 @@
 
 #include "ldapconnection.h"
 #include "ldapentry.h"
-#include "ldapvaluelist.h"
 #include "ldapsearchiter.h"
 #include "ldapmodlist.h"
 #include "ldapconnectiter.h"
@@ -139,7 +138,6 @@ PyInit__bonsai(void) {
     if (PyType_Ready(&LDAPSearchIterType) < 0) return NULL;
     if (PyType_Ready(&LDAPConnectIterType) < 0) return NULL;
     if (PyType_Ready(&LDAPEntryType) < 0) return NULL;
-    if (PyType_Ready(&LDAPValueListType) < 0) return NULL;
     if (PyType_Ready(&LDAPModListType) < 0) return NULL;
 
     Py_INCREF(&LDAPEntryType);
@@ -147,9 +145,6 @@ PyInit__bonsai(void) {
 
     Py_INCREF(&LDAPConnectionType);
     PyModule_AddObject(module, "ldapconnection", (PyObject *)&LDAPConnectionType);
-
-    Py_INCREF(&LDAPValueListType);
-    PyModule_AddObject(module, "ldapvaluelist", (PyObject *)&LDAPValueListType);
 
     return module;
 }

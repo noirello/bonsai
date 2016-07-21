@@ -82,12 +82,12 @@ class TestCommand(Command):
         sys.exit(0)
 
 sources = ["bonsaimodule.c", "ldapentry.c", "ldapconnectiter.c",
-           "ldapconnection.c", "ldapmodlist.c", "ldapvaluelist.c",
-           "ldap-xplat.c", "ldapsearchiter.c", "utils.c", "uniquelist.c"]
+           "ldapconnection.c", "ldapmodlist.c", "ldap-xplat.c",
+           "ldapsearchiter.c", "utils.c"]
 
 depends = ["ldapconnection.h", "ldapentry.h", "ldapconnectiter.h",
-           "ldapmodlist.h", "ldapvaluelist.h", "ldapsearchiter.h",
-           "ldap-xplat.h", "uniquelist.h", "utils.h"]
+           "ldapmodlist.h", "ldapsearchiter.h", "ldap-xplat.h",
+           "utils.h"]
 
 libdirs = []
 macros = []

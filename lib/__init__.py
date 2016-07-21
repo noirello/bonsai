@@ -4,6 +4,7 @@ from .ldapconnection import LDAPConnection
 from .ldapconnection import LDAPSearchScope
 from .ldapentry import LDAPEntry
 from .ldapclient import LDAPClient
+from .ldapvaluelist import LDAPValueList
 from .errors import *
 
 from ._bonsai import get_tls_impl_name, get_vendor_info, \
