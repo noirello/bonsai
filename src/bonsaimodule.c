@@ -9,6 +9,7 @@
 #include "utils.h"
 
 PyObject *LDAPDNObj = NULL;
+PyObject *LDAPValueListObj = NULL;
 
 /* Get the vendor's name and version of the LDAP library. */
 static PyObject *
@@ -92,6 +93,7 @@ end:
 static void
 bonsai_free(PyObject *self) {
     Py_DECREF(LDAPDNObj);
+    Py_DECREF(LDAPValueListObj);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -124,11 +126,13 @@ PyInit__bonsai(void) {
     LDAPDNObj = load_python_object("bonsai.ldapdn", "LDAPDN");
     if (LDAPDNObj == NULL) return NULL;
 
+    /* Import LDAPValueList object. */
+    LDAPValueListObj = load_python_object("bonsai.ldapvaluelist", "LDAPValueList");
+    if (LDAPValueListObj == NULL) return NULL;
+
     module = PyModule_Create(&bonsai2module);
     if (module == NULL) return NULL;
 
-    UniqueListType.tp_base = &PyList_Type;
-    LDAPValueListType.tp_base = &UniqueListType;
     LDAPEntryType.tp_base = &PyDict_Type;
 
     if (PyType_Ready(&LDAPConnectionType) < 0) return NULL;

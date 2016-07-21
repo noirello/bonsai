@@ -1,5 +1,4 @@
 #include "utils.h"
-#include "uniquelist.h"
 #include "ldapentry.h"
 
 /* Clear all object in the LDAPEntry. */
@@ -11,7 +10,7 @@ ldapentry_clear(LDAPEntry *self) {
     self->conn = NULL;
     Py_XDECREF(tmp);
 
-    tmp = (PyObject *)self->deleted;
+    tmp = self->deleted;
     self->deleted = NULL;
     Py_XDECREF(tmp);
 
@@ -51,7 +50,7 @@ ldapentry_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
             return NULL;
         }
         /* Set an empty list for deleted attributes. */
-        self->deleted = UniqueList_New();
+        self->deleted = PyList_New(0);
         if (self->deleted == NULL) {
             Py_DECREF(self);
             return NULL;
@@ -90,17 +89,19 @@ ldapentry_init(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     return 0;
 }
 
-/*  Returns a NULL-delimitered LDAPMod list for adds new or modificates existing LDAP entries.
+/*  Returns a NULL-delimitered LDAPMod list for adds new or modifies existing LDAP entries.
     It uses only those LDAPValueList, whose status is 1 - add or delete, or 2 - replace, and
     the deleted keys listed in LDAPEntry's deleted list.
 */
 LDAPModList *
 LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
+    int status = -1;
     Py_ssize_t i;
     PyObject *keys = PyMapping_Keys((PyObject *)self);
     PyObject *iter, *key;
     LDAPModList *mods = NULL;
-    LDAPValueList *value;
+    PyObject *value = NULL;
+    PyObject *added = NULL, *deleted = NULL;
 
     /* Create an LDAPModList for the LDAPEntry values and deleted attributes. */
     mods = LDAPModList_New((PyObject *)self,
@@ -115,33 +116,45 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
 
     for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
         /* Return value: Borrowed reference. */
-        value = (LDAPValueList *)LDAPEntry_GetItem(self, key);
+        value = LDAPEntry_GetItem(self, key);
         if (value == NULL) goto error;
 
         /* Remove empty list values. */
-        if (Py_SIZE((PyObject *)value) == 0) {
+        if (Py_SIZE(value) == 0) {
             if (LDAPEntry_SetItem(self, key, NULL) != 0) {
                 goto error;
             }
-            value->status = 0;
+            if (set_ldapvaluelist_status(value, 0) != 0) goto error;
         }
 
-        if (value->status == 1) {
+        /* Get LDAPValueList's status. */
+        status = get_ldapvaluelist_status(value);
+        if (status == -1) goto error;
+
+        /* Get LDAPValueList's __added list. */
+        added = PyObject_GetAttrString(value, "_LDAPValueList__added");
+        if (added == NULL) goto error;
+
+        /* Get LDAPValueList's __deleted list. */
+        deleted = PyObject_GetAttrString(value, "_LDAPValueList__deleted");
+        if (deleted == NULL) goto error;
+
+        if (status == 1) {
             /* LDAPMod for newly added attributes and values. */
-            if (Py_SIZE((PyObject *)value->added) > 0) {
+            if (Py_SIZE(added) > 0) {
                 if (LDAPModList_Add(mods, LDAP_MOD_ADD | LDAP_MOD_BVALUES,
-                        key, (PyObject *)value->added) != 0) {
+                        key, added) != 0) {
                     goto error;
                 }
             }
             /* LDAPMod for deleted values. */
-            if (Py_SIZE((PyObject *)value->deleted) > 0) {
+            if (Py_SIZE(deleted) > 0) {
                 if (LDAPModList_Add(mods, LDAP_MOD_DELETE | LDAP_MOD_BVALUES,
-                        key, (PyObject *)value->deleted) != 0) {
+                        key, deleted) != 0) {
                     goto error;
                 }
             }
-        } else if (value->status == 2) {
+        } else if (status == 2) {
             /* LDAPMod for replaced attributes. */
             if (LDAPModList_Add(mods, LDAP_MOD_REPLACE | LDAP_MOD_BVALUES,
                     key, (PyObject *)value) != 0){
@@ -149,26 +162,25 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
             }
         }
         /* Change attributes' status to "not changed" (0), and clear lists. */
-        value->status = 0;
-        UniqueList_SetSlice(value->deleted, 0, Py_SIZE(value->deleted), NULL);
-        UniqueList_SetSlice(value->added, 0, Py_SIZE(value->added), NULL);
+        if (set_ldapvaluelist_status(value, 0) != 0) goto error;
+        if (PyObject_CallMethod(added, "clear", NULL) == NULL) goto error;
+        if (PyObject_CallMethod(deleted, "clear", NULL) == NULL) goto error;
         Py_DECREF(key);
     }
     Py_DECREF(iter);
     /* LDAPMod for deleted attributes. */
-    for (i = 0; i < Py_SIZE((PyObject *)self->deleted); i++) {
+    for (i = 0; i < Py_SIZE(self->deleted); i++) {
         if (LDAPModList_Add(mods, LDAP_MOD_DELETE | LDAP_MOD_BVALUES,
-                self->deleted->list.ob_item[i], NULL) != 0) {
+                ((PyListObject *)self->deleted)->ob_item[i], NULL) != 0) {
             Py_DECREF(mods);
             return NULL;
         }
-        Py_DECREF(self->deleted->list.ob_item[i]);
+        Py_DECREF(((PyListObject *)self->deleted)->ob_item[i]);
     }
     /* Delete the list. */
     Py_DECREF(self->deleted);
-    self->deleted = UniqueList_New();
+    self->deleted = PyList_New(0);
     return mods;
-
 error:
     Py_DECREF(iter);
     Py_DECREF(key);
@@ -176,6 +188,7 @@ error:
     return NULL;
 }
 
+/*
 static PyObject *
 ldapentry_status(LDAPEntry *self) {
     PyObject *keys = PyMapping_Keys((PyObject *)self);
@@ -194,7 +207,6 @@ ldapentry_status(LDAPEntry *self) {
     if (iter == NULL) return NULL;
 
     for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
-        /* Return value: Borrowed reference. */
         value = (LDAPValueList *)LDAPEntry_GetItem(self, key);
         if (value == NULL) goto error;
 
@@ -221,7 +233,7 @@ error:
     Py_DECREF(key);
     Py_DECREF(result);
     return NULL;
-}
+}*/
 
 /*  Create a LDAPEntry from a LDAPMessage. */
 LDAPEntry *
@@ -232,11 +244,11 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
     char *attr;
     struct berval **values;
     BerElement *ber;
-    UniqueList *rawval_list;
+    PyObject *rawval_list = NULL;
     PyObject *val = NULL, *attrobj = NULL, *tmp;
     PyObject *ldapentry_type = NULL;
     PyObject *args = NULL;
-    LDAPValueList *lvl = NULL;
+    PyObject *lvl = NULL;
     LDAPEntry *self;
 
     /* Create an attribute list for LDAPEntry (which is implemented in Python). */
@@ -261,18 +273,16 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
     if (self == NULL) {
         return (LDAPEntry *)PyErr_NoMemory();
     }
-
     /* Get list of attribute's names, whose values have to keep in bytearray.*/
-    rawval_list = UniqueList_New();
+    rawval_list = PyList_New(0);
     tmp = PyObject_GetAttrString(conn->client, "raw_attributes");
     if (rawval_list == NULL || tmp == NULL ||
-            UniqueList_Extend(rawval_list, tmp) != 0) {
+            _PyList_Extend((PyListObject *)rawval_list, tmp) != Py_None) {
         Py_DECREF(self);
         Py_XDECREF(tmp);
         return NULL;
     }
     Py_DECREF(tmp);
-
     /* Iterate over the LDAP attributes. */
     for (attr = ldap_first_attribute(conn->ld, entrymsg, &ber);
         attr != NULL; attr = ldap_next_attribute(conn->ld, entrymsg, ber)) {
@@ -282,24 +292,24 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
         values = ldap_get_values_len(conn->ld, entrymsg, attr);
         ldap_memfree(attr);
 
-        lvl = LDAPValueList_New();
+        lvl = PyObject_CallFunctionObjArgs(LDAPValueListObj, NULL);
         if (lvl == NULL) goto error;
         if (values != NULL) {
             for (i = 0; values[i] != NULL; i++) {
                 /* Check attribute is in the raw_list. */
-                contain = PySequence_Contains((PyObject *)rawval_list, attrobj);
+                contain = PySequence_Contains(rawval_list, attrobj);
                 /* Convert berval to PyObject*, if it's failed skip it. */
                 val = berval2PyObject(values[i], contain);
                 if (val == NULL) continue;
                 /* If the attribute has more value, then append to the list. */
-                if (PyList_Append((PyObject *)lvl, val) != 0) {
+                if (PyList_Append(lvl, val) != 0) {
                     Py_DECREF(lvl);
                     goto error;
                 }
                 Py_DECREF(val);
             }
         }
-        PyDict_SetItem((PyObject *)self, attrobj, (PyObject *)lvl);
+        PyDict_SetItem((PyObject *)self, attrobj, lvl);
         Py_DECREF(lvl);
         ldap_value_free_len(values);
         Py_DECREF(attrobj);
@@ -397,11 +407,13 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 int
 LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
     int mod_op = -1;
+    int status = -1;
     PyObject *key = NULL;
     PyObject *res_tuple = NULL;
     PyObject *values = NULL;
     PyObject *iter, *item;
-    LDAPValueList *attr = NULL;
+    PyObject *attr = NULL;
+    PyObject *added = NULL, *deleted = NULL;
 
     while (!LDAPModList_Empty(mods)) {
         /* Get every item for the LDAPModList. */
@@ -411,16 +423,29 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
         if (!PyArg_ParseTuple(res_tuple, "OiO:rollback",
                 &key, &mod_op, &values)) return -1;
 
-        attr = (LDAPValueList *)LDAPEntry_GetItem(self, key);
+        attr = LDAPEntry_GetItem(self, key);
+
+        /* Get LDAPValueList's status. */
+        status = get_ldapvaluelist_status(attr);
+        if (status == -1) return -1;
+
+        /* Get LDAPValueList's __added list. */
+        added = PyObject_GetAttrString(attr, "_LDAPValueList__added");
+        if (added == NULL) return -1;
+
+        /* Get LDAPValueList's __deleted list. */
+        deleted = PyObject_GetAttrString(attr, "_LDAPValueList__deleted");
+        if (deleted == NULL) return -1;
+
         if (attr == NULL) {
             /* If the attribute is remove from the LDAPEntry and deleted
-               with the previous modifications, then prepare for resending . */
+               with the previous modifications, then prepare for resending. */
             if (values == Py_None) {
-                if (UniqueList_Append(self->deleted, key) != 0) return -1;
+                if (PyList_Append(self->deleted, key) != 0) return -1;
             }
         } else {
             /* When status is `replaced`, then drop the previous changes. */
-            if (attr->status != 2) {
+            if (status != 2) {
                 iter = PyObject_GetIter(values);
                 if (iter == NULL) return -1;
                 /* Check every item in the LDAPMod value list,
@@ -431,26 +456,26 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
                         case LDAP_MOD_ADD:
                             /* Check that the item is not in the list already
                                to avoid errors.  */
-                            if (UniqueList_Contains((UniqueList *)attr, item) == 1 &&
-                                    UniqueList_Contains(attr->added, item) == 0) {
-                                if (UniqueList_Append(attr->added, item) != 0) {
+                            if (uniqueness_check(attr, item) == 1 &&
+                                    uniqueness_check(added, item) == 0) {
+                                if (PyList_Append(added, item) != 0) {
                                     return -1;
                                 }
                             }
-                            attr->status = 1;
+                            if (set_ldapvaluelist_status(attr, 1) != 0) return -1;
                             break;
                         case LDAP_MOD_DELETE:
-                            if (UniqueList_Contains((UniqueList *)attr, item) == 0 &&
-                                    UniqueList_Contains(attr->deleted, item) == 0) {
-                                if (UniqueList_Append(attr->deleted, item) != 0) {
+                            if (uniqueness_check(attr, item) == 0 &&
+                                    uniqueness_check(deleted, item) == 0) {
+                                if (PyList_Append(deleted, item) != 0) {
                                     return -1;
                                 }
                             }
-                            attr->status = 1;
+                            if (set_ldapvaluelist_status(attr, 1) != 0) return -1;
                             break;
                         case LDAP_MOD_REPLACE:
                             /* Nothing to do when the attribute's status is replaced. */
-                            attr->status = 2;
+                            if (set_ldapvaluelist_status(attr, 2) != 0) return -1;
                             break;
                     }
                     Py_DECREF(item);
@@ -472,7 +497,7 @@ ldapentry_delete(LDAPEntry *self) {
     char *dnstr;
     PyObject *keys = PyMapping_Keys((PyObject *)self);
     PyObject *iter, *key;
-    LDAPValueList *value;
+    PyObject *value;
 
     /* Connection must be set. */
     if (self->conn == NULL) {
@@ -501,13 +526,13 @@ ldapentry_delete(LDAPEntry *self) {
         statuses have to change to replaced . */
     for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
         /* Return value: Borrowed reference. */
-        value = (LDAPValueList *)LDAPEntry_GetItem(self, key);
+        value = LDAPEntry_GetItem(self, key);
         if (value == NULL) {
             Py_DECREF(iter);
             Py_DECREF(key);
             return NULL;
         }
-        value->status = 2;
+        set_ldapvaluelist_status(value, 2);
         Py_DECREF(key);
     }
     Py_DECREF(iter);
@@ -643,8 +668,8 @@ static PyMethodDef ldapentry_methods[] = {
             "Send LDAPEntry's modification to the LDAP server."},
     {"rename",  (PyCFunction)ldapentry_rename,  METH_VARARGS | METH_KEYWORDS,
             "Rename or remove LDAPEntry on the LDAP server."},
-    {"_status",     (PyCFunction)ldapentry_status,  METH_NOARGS,
-                "Get LDAPEntry's modification status." },
+    /*{"_status",     (PyCFunction)ldapentry_status,  METH_NOARGS,
+                "Get LDAPEntry's modification status." },*/
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
@@ -705,7 +730,7 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
     int rc = 0;
     int status = 1;
     char *newkey = lowercase(PyObject2char(key));
-    LDAPValueList *list;
+    PyObject *list;
 
     if (newkey == NULL) {
         PyErr_BadInternalCall();
@@ -725,24 +750,30 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
         } else {
             free(newkey);
             /* Set the new value to the item. */
-            if (LDAPValueList_Check(value) == 0) {
+            if (PyObject_IsInstance(value, LDAPValueListObj) == 0) {
                 /* Convert value to LDAPValueList object. */
-                list = LDAPValueList_New();
+                list = PyObject_CallFunctionObjArgs(LDAPValueListObj, NULL);
                 if (PyList_Check(value) || PyTuple_Check(value)) {
-                    LDAPValueList_Extend(list, value);
+                    if (PyObject_CallMethod(list, "extend", "(O)", value) == NULL) {
+                        Py_DECREF(list);
+                        return -1;
+                    }
                 } else {
-                    LDAPValueList_Append(list, value);
+                    if (PyObject_CallMethod(list, "append", "(O)", value) == NULL) {
+                        Py_DECREF(list);
+                        return -1;
+                    }
                 }
                 rc = PyDict_SetItem((PyObject *)self, key, (PyObject *)list);
-                list->status = status;
+                if (set_ldapvaluelist_status(list, status) != 0) return -1;
                 Py_DECREF(list);
             } else {
                 rc = PyDict_SetItem((PyObject *)self, key, value);
-                ((LDAPValueList *)value)->status = status;
+                if (set_ldapvaluelist_status(value, status) != 0) return -1;
             }
             /* Avoid inconsistency. (same key in the added and the deleted list) */
-            if (PySequence_Contains((PyObject *)self->deleted, key)) {
-                if (UniqueList_Remove(self->deleted, key) != 0) return -1;
+            if (PySequence_Contains(self->deleted, key)) {
+                if (uniqueness_remove(self->deleted, key) != 1) return -1;
             }
             if (rc != 0) return rc;
         }
@@ -750,7 +781,7 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
         free(newkey);
         /* This means, it has to remove the item. */
         if (PyDict_DelItem((PyObject *)self, key) != 0) return -1;
-        if (UniqueList_Append(self->deleted, key) != 0) return -1;
+        if (PyList_Append(self->deleted, key) != 0) return -1;
     }
     return 0;
 }

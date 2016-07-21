@@ -553,3 +553,72 @@ set_ppolicy_err(unsigned int pperr, PyObject *ctrl_obj) {
     PyErr_SetNone(ldaperror);
     Py_DECREF(ldaperror);
 }
+
+int
+uniqueness_check(PyObject *list, PyObject *value) {
+    int rc = 0;
+    PyObject *iter = NULL;
+    PyObject *item = NULL;
+
+    iter = PyObject_GetIter(list);
+    if (iter == NULL) return -1;
+
+    for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
+        rc = lower_case_match(item, value);
+        if (rc != 0) goto end;
+        Py_DECREF(item);
+    }
+
+end:
+    Py_DECREF(iter);
+    Py_XDECREF(item);
+    return rc;
+}
+
+/* Remove an item from the list without set an error.
+   Return 0 if item is not in the list, 1 if item is successfully removed
+   and -1 for error. */
+int
+uniqueness_remove(PyObject *list, PyObject *value) {
+    int cmp;
+    Py_ssize_t i;
+
+    for (i = 0; i < Py_SIZE(list); i++) {
+        cmp = lower_case_match(((PyListObject *)list)->ob_item[i], value);
+        if (cmp > 0) {
+            if (PyList_SetSlice(list, i, i+1, NULL) == 0) {
+                return 1;
+            }
+            return -1;
+        } else if (cmp < 0) return -1;
+    }
+    return 0;
+}
+
+int
+get_ldapvaluelist_status(PyObject *lvl) {
+    int status = -1;
+    PyObject *tmp = NULL;
+
+    tmp = PyObject_GetAttrString(lvl, "status");
+    if (tmp == NULL) return -1;
+
+    status = (int)PyLong_AsSize_t(tmp);
+    Py_DECREF(tmp);
+
+    return status;
+}
+
+int
+set_ldapvaluelist_status(PyObject *lvl, int status) {
+    int rc = 0;
+    PyObject *tmp = NULL;
+
+    tmp = PyLong_FromLong((long int)status);
+    if (tmp == NULL) return -1;
+
+    rc = PyObject_SetAttrString(lvl, "status", tmp);
+    Py_DECREF(tmp);
+
+    return rc;
+}

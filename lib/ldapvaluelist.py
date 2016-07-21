@@ -133,7 +133,7 @@ class LDAPValueList(list):
 
     @status.setter
     def status(self, value):
-        if (type) != int:
+        if type(value) != int:
             raise TypeError("Status must be int.")
         if value > -1 and value < 3:
             self.__status = value

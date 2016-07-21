@@ -8,7 +8,6 @@
 #include "ldapmodlist.h"
 
 #include "utils.h"
-#include "uniquelist.h"
 
 /*  Dealloc the LDAPModList object. */
 static void
@@ -54,10 +53,13 @@ ldapmodlist_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 LDAPModList *
 LDAPModList_New(PyObject* entry, Py_ssize_t size) {
     LDAPModList *self = (LDAPModList *)LDAPModListType.tp_new(&LDAPModListType, NULL, NULL);
+
     if (self == NULL) return NULL;
     /*  Malloc a new `size` length LDAPMod list. */
-    self->mod_list  = (LDAPMod **)malloc(sizeof(LDAPMod *) * (size + 1));
-    if (self->mod_list != NULL) self->mod_list[0] = NULL;
+    self->mod_list = (LDAPMod **)malloc(sizeof(LDAPMod *) * (size + 1));
+    if (self->mod_list == NULL) return PyErr_NoMemory();
+
+    self->mod_list[0] = NULL;
     self->size = size;
     self->entry = entry;
     return self;
@@ -98,7 +100,7 @@ LDAPModList_Pop(LDAPModList *self) {
     LDAPMod *mod;
     PyObject *berval = NULL;
     PyObject *ret = NULL;
-    UniqueList *list = NULL;
+    PyObject *list = NULL;
     struct berval **mod_bvals = NULL;
 
     if (self->last > 0) {
@@ -106,7 +108,7 @@ LDAPModList_Pop(LDAPModList *self) {
         mod_bvals = mod->mod_vals.modv_bvals;
 
         if (mod_bvals != NULL) {
-            list = UniqueList_New();
+            list = PyList_New(0);
             if (list == NULL) return NULL;
 
             for (i = 0; mod_bvals[i] != NULL; i++) {
@@ -114,7 +116,7 @@ LDAPModList_Pop(LDAPModList *self) {
                 berval = berval2PyObject(mod_bvals[i], 0);
                 if (berval == NULL) return NULL;
                 /* Append to the list. */
-                if (UniqueList_Append(list, berval) != 0) return NULL;
+                if (PyList_Append(list, berval) != 0) return NULL;
                 Py_DECREF(berval);
                 /* Free bervals. */
                 free(mod_bvals[i]->bv_val);
@@ -123,7 +125,7 @@ LDAPModList_Pop(LDAPModList *self) {
             free(mod->mod_vals.modv_bvals);
             /* Create tuple with return values. */
             ret = Py_BuildValue("(ziO)", mod->mod_type,
-                    mod->mod_op ^ LDAP_MOD_BVALUES, (PyObject *)list);
+                    mod->mod_op ^ LDAP_MOD_BVALUES, list);
         } else {
             ret = Py_BuildValue("(ziO)", mod->mod_type,
                     mod->mod_op ^ LDAP_MOD_BVALUES, Py_None);
