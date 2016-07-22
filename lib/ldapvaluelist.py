@@ -26,7 +26,7 @@ class LDAPValueList(list):
     
     def _append_unchecked(self, value):
         super().append(value)
-            
+
     def __contains__(self, item):
         return bonsai._unique_contains(self, item)[0]
     
@@ -39,6 +39,22 @@ class LDAPValueList(list):
             self.__balance(self.__added, self.__deleted, old_value)
         super().__delitem__(idx)
     
+    def __mul__(self, value):
+        raise TypeError("Cannot multiple LDAPValueList.")
+
+    def __add__(self, other):
+        if type(other) != list and type(other) != LDAPValueList:
+            raise TypeError("Can only concatenate list and LDAPValueList.")
+        new_list = self.copy()
+        new_list.extend(other)
+        return new_list
+
+    def __iadd__(self, other):
+        if type(other) != list and type(other) != LDAPValueList:
+            raise TypeError("Can only concatenate list and LDAPValueList.")
+        self.extend(other)
+        return self
+
     def __setitem__(self, idx:int, value):
         old_value = self[idx]
         if type(idx) == slice:
@@ -58,7 +74,7 @@ class LDAPValueList(list):
     
     def append(self, item):
         """
-        Add a unique item to the end of the list. 
+        Add a unique item to the end of the LDAPValueList.
         
         :param item: New item.
         :raises ValueError: if the `item` is not unique. 
@@ -67,13 +83,14 @@ class LDAPValueList(list):
         if item in self:
             raise ValueError("%r is already in the list." % item)
         self.__balance(self.__deleted, self.__added, item)
+        self.__status = 1
         super().append(item)
         
     def extend(self, items):
         """
-        Extend the list by appending all the items in the given list.
-        All element in `items` must be unqiue and also not represented
-        in the list.
+        Extend the LDAPValueList by appending all the items in the given
+        list. All element in `items` must be unqiue and also not
+        represented in the LDAPValueList.
         
         :param items: List of new items.
         :raises ValueError: if any of the items is already in the list.
@@ -83,6 +100,7 @@ class LDAPValueList(list):
                 raise ValueError("%r is already in the list." % item)
         for item in items:
             self.__balance(self.__deleted, self.__added, item)
+        self.__status = 1
         super().extend(items)
     
     def insert(self, idx:int, value):
@@ -96,11 +114,12 @@ class LDAPValueList(list):
         if value in self:
             raise ValueError("%r is already in the list." % value)
         self.__balance(self.__deleted, self.__added, value)
+        self.__status = 1
         super().insert(idx, value)
     
     def remove(self, value):
         """
-        Remove the first item from the list whose value is `value`.
+        Remove the first item from the LDAPValueList whose value is `value`.
         
         :param value: the item to be removed.
         :raises ValueError: if `value` is not int the list.
@@ -109,26 +128,50 @@ class LDAPValueList(list):
         if not contain:
             raise ValueError("%r is not in the list." % value)
         super().remove(obj)
+        self.__status = 1
         self.__balance(self.__added, self.__deleted, obj)
     
     def pop(self, idx: int=-1):
         """
-        Remove the item at the given position in the list, and return it.
-        If no index is specified, pop() removes and returns the last item
-        in the list.
+        Remove the item at the given position in the LDAPValueList, and
+        return it. If no index is specified, pop() removes and returns the
+        last item in the list.
         
         :param int idx: optional index.
         """
         value = super().pop(idx)
         self.__balance(self.__added, self.__deleted, value)
+        self.__status = 1
         return value
     
     def clear(self):
-        """ Remove all items from the list. """
+        """ Remove all items from the LDAPValueList. """
         del self[:]
+
+    def copy(self):
+        """
+        Return a shallow copy of the LDAPValueList. This includes
+        the status and the previously added and deleted items.
+
+        :rtype: LDAPValueList
+        :return: The copy of the LDAPValueList.
+        """
+        new_list = LDAPValueList()
+        for item in self:
+            new_list._append_unchecked(item)
+        new_list.__added = self.__added.copy()
+        new_list.__deleted = self.__deleted.copy()
+        new_list.__status = self.__status
+        return new_list
     
     @property
     def status(self):
+        """
+        The status of the LDAPValueList. The status can be:
+            - 0: unchanged.
+            - 1: added or deleted item to list.
+            - 2: replaced the entire list.
+        """
         return self.__status
 
     @status.setter

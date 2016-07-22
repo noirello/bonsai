@@ -57,5 +57,37 @@ class LDAPValueListTest(unittest.TestCase):
         self.assertEqual(lvl, [])
         self.assertRaises(IndexError, lambda: lvl.pop())
 
+    def test_copy(self):
+        """ Test LDAPValueList's copy method. """
+        lvl1 = LDAPValueList(("test1", "test2"))
+        lvl2 = lvl1.copy()
+        self.assertEqual(lvl1, lvl2)
+        self.assertEqual(lvl1.status, lvl2.status)
+
+    def test_add(self):
+        """ Test adding list to an LDAPValueList. """
+        lvl = LDAPValueList((1,2,3))
+        self.assertEqual(lvl + [4,5], [1,2,3,4,5])
+        self.assertRaises(TypeError, lambda: lvl + 3)
+        lvl += [4,5]
+        self.assertEqual(lvl, [1,2,3,4,5])
+
+    def test_mul(self):
+        """ Test multiplying an LDAPValueList. """
+        lvl = LDAPValueList((1,2,3))
+        self.assertRaises(TypeError, lambda: lvl * 3)
+
+    def test_set_status(self):
+        """ Test setting LDAPValueList's status. """
+        lvl = LDAPValueList()
+        def wrong1():
+            lvl.status = 'a'
+        self.assertRaises(TypeError, wrong1)
+        def wrong2():
+            lvl.status = -1
+        self.assertRaises(ValueError, wrong2)
+        lvl.status = 2
+        self.assertEqual(lvl.status, 2)
+
 if __name__ == '__main__':
     unittest.main()
