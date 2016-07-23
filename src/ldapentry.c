@@ -425,18 +425,6 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
 
         attr = LDAPEntry_GetItem(self, key);
 
-        /* Get LDAPValueList's status. */
-        status = get_ldapvaluelist_status(attr);
-        if (status == -1) return -1;
-
-        /* Get LDAPValueList's __added list. */
-        added = PyObject_GetAttrString(attr, "_LDAPValueList__added");
-        if (added == NULL) return -1;
-
-        /* Get LDAPValueList's __deleted list. */
-        deleted = PyObject_GetAttrString(attr, "_LDAPValueList__deleted");
-        if (deleted == NULL) return -1;
-
         if (attr == NULL) {
             /* If the attribute is remove from the LDAPEntry and deleted
                with the previous modifications, then prepare for resending. */
@@ -444,6 +432,18 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
                 if (PyList_Append(self->deleted, key) != 0) return -1;
             }
         } else {
+            /* Get LDAPValueList's status. */
+            status = get_ldapvaluelist_status(attr);
+            if (status == -1) return -1;
+
+            /* Get LDAPValueList's __added list. */
+            added = PyObject_GetAttrString(attr, "_LDAPValueList__added");
+            if (added == NULL) return -1;
+
+            /* Get LDAPValueList's __deleted list. */
+            deleted = PyObject_GetAttrString(attr, "_LDAPValueList__deleted");
+            if (deleted == NULL) return -1;
+
             /* When status is `replaced`, then drop the previous changes. */
             if (status != 2) {
                 iter = PyObject_GetIter(values);
