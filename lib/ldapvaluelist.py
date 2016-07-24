@@ -27,6 +27,16 @@ class LDAPValueList(list):
     def _append_unchecked(self, value):
         super().append(value)
 
+    @property
+    def _status_dict(self):
+        return {"@status": self.__status,
+                "@added": self.__added.copy(),
+                "@deleted": self.__deleted.copy()}
+
+    @_status_dict.setter
+    def _status_dict(self, value):
+        raise TypeError("Can not change _status_dict")
+
     def __contains__(self, item):
         return bonsai._unique_contains(self, item)[0]
     

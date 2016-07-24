@@ -188,14 +188,14 @@ error:
     return NULL;
 }
 
-/*
+
 static PyObject *
 ldapentry_status(LDAPEntry *self) {
     PyObject *keys = PyMapping_Keys((PyObject *)self);
     PyObject *iter, *key;
     PyObject *status_dict = NULL;
     PyObject *result = NULL;
-    LDAPValueList *value;
+    PyObject *value = NULL;
 
     if (keys == NULL) return NULL;
 
@@ -207,10 +207,10 @@ ldapentry_status(LDAPEntry *self) {
     if (iter == NULL) return NULL;
 
     for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
-        value = (LDAPValueList *)LDAPEntry_GetItem(self, key);
+        value = LDAPEntry_GetItem(self, key);
         if (value == NULL) goto error;
 
-        status_dict = LDAPValueList_Status(value);
+        status_dict = PyObject_GetAttrString(value, "_status_dict");
         if (status_dict == NULL) goto error;
         if (PyDict_SetItem(result, key, status_dict) != 0) {
             Py_DECREF(status_dict);
@@ -221,8 +221,7 @@ ldapentry_status(LDAPEntry *self) {
     }
     Py_DECREF(iter);
 
-    if (PyDict_SetItemString(result, "@deleted",
-            (PyObject *)self->deleted) != 0) {
+    if (PyDict_SetItemString(result, "@deleted_attr", self->deleted) != 0) {
         Py_DECREF(result);
     }
 
@@ -233,7 +232,7 @@ error:
     Py_DECREF(key);
     Py_DECREF(result);
     return NULL;
-}*/
+}
 
 /*  Create a LDAPEntry from a LDAPMessage. */
 LDAPEntry *
@@ -668,8 +667,8 @@ static PyMethodDef ldapentry_methods[] = {
             "Send LDAPEntry's modification to the LDAP server."},
     {"rename",  (PyCFunction)ldapentry_rename,  METH_VARARGS | METH_KEYWORDS,
             "Rename or remove LDAPEntry on the LDAP server."},
-    /*{"_status",     (PyCFunction)ldapentry_status,  METH_NOARGS,
-                "Get LDAPEntry's modification status." },*/
+    {"_status",     (PyCFunction)ldapentry_status,  METH_NOARGS,
+                "Get LDAPEntry's modification status." },
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
