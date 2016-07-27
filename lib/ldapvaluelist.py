@@ -1,7 +1,17 @@
 import bonsai
 
 class LDAPValueList(list):
+    """
+    Modified list that tracks added and deleted values. It also conatains
+    only unique elements. The elements are compared to their lower-cased
+    string representations.
+
+    A new LDAPValueList can be created optionally from an existing
+    sequence object.
     
+    :param items: a sequence object.
+    :raises ValueError: if `items` has a non-unique element.
+    """
     __slots__ = ("__deleted", "__added", "__status")
     
     def __init__(self, items=None):

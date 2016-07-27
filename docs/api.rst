@@ -326,6 +326,25 @@ Example for working with LDAPDN objects.
 .. autoattribute:: LDAPURL.scope_num
 .. autoattribute:: LDAPURL.scheme
 
+:class:`LDAPValueList`
+======================
+
+.. autoclass:: LDAPValueList
+.. automethod:: LDAPValueList.__contains__
+.. automethod:: LDAPValueList.__delitem__
+.. automethod:: LDAPValueList.__setitem__
+.. automethod:: LDAPValueList.__add__
+.. automethod:: LDAPValueList.__iadd__
+.. automethod:: LDAPValueList.__mul__
+.. automethod:: LDAPValueList.append
+.. automethod:: LDAPValueList.extend
+.. automethod:: LDAPValueList.insert
+.. automethod:: LDAPValueList.remove
+.. automethod:: LDAPValueList.pop
+.. automethod:: LDAPValueList.clear
+.. automethod:: LDAPValueList.copy
+.. autoattribute:: LDAPValueList.status
+
 :class:`ldapsearchiter`
 =======================
 
