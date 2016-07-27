@@ -188,52 +188,6 @@ error:
     return NULL;
 }
 
-
-static PyObject *
-ldapentry_status(LDAPEntry *self) {
-    PyObject *keys = PyMapping_Keys((PyObject *)self);
-    PyObject *iter, *key;
-    PyObject *status_dict = NULL;
-    PyObject *result = NULL;
-    PyObject *value = NULL;
-
-    if (keys == NULL) return NULL;
-
-    result = PyDict_New();
-    if (result == NULL) return NULL;
-
-    iter = PyObject_GetIter(keys);
-    Py_DECREF(keys);
-    if (iter == NULL) return NULL;
-
-    for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
-        value = LDAPEntry_GetItem(self, key);
-        if (value == NULL) goto error;
-
-        status_dict = PyObject_GetAttrString(value, "_status_dict");
-        if (status_dict == NULL) goto error;
-        if (PyDict_SetItem(result, key, status_dict) != 0) {
-            Py_DECREF(status_dict);
-            goto error;
-        }
-        Py_DECREF(status_dict);
-        Py_DECREF(key);
-    }
-    Py_DECREF(iter);
-
-    if (PyDict_SetItemString(result, "@deleted_attr", self->deleted) != 0) {
-        Py_DECREF(result);
-    }
-
-    return result;
-
-error:
-    Py_DECREF(iter);
-    Py_DECREF(key);
-    Py_DECREF(result);
-    return NULL;
-}
-
 /*  Create a LDAPEntry from a LDAPMessage. */
 LDAPEntry *
 LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
@@ -567,6 +521,22 @@ ldapentry_getdn(LDAPEntry *self, void *closure) {
     return self->dn;
 }
 
+/* Disabled modifying deleted keys. */
+static int
+ldapentry_setdeletedkeys(LDAPEntry *self, PyObject *value, void *closure) {
+    PyErr_SetString(PyExc_ValueError, "Cannot change deleted_keys.");
+    return -1;
+}
+
+/* Returns the copy of the deleted keys in the LDAPEntry. */
+static PyObject *
+ldapentry_getdeletedkeys(LDAPEntry *self, void *closure) {
+    PyObject *copy = NULL;
+
+    copy = PyObject_CallMethod(self->deleted, "copy", NULL);
+    return copy;
+}
+
 
 /* Convert a Python string or LDAPDN object into an LDAPDN object. */
 static int
@@ -667,8 +637,6 @@ static PyMethodDef ldapentry_methods[] = {
             "Send LDAPEntry's modification to the LDAP server."},
     {"rename",  (PyCFunction)ldapentry_rename,  METH_VARARGS | METH_KEYWORDS,
             "Rename or remove LDAPEntry on the LDAP server."},
-    {"_status",     (PyCFunction)ldapentry_status,  METH_NOARGS,
-                "Get LDAPEntry's modification status." },
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
@@ -911,6 +879,9 @@ static PyGetSetDef ldapentry_getsetters[] = {
     {"dn",          (getter)ldapentry_getdn,
                     (setter)ldapentry_setdn,
                     "Distinguished name", NULL},
+    {"deleted_keys", (getter)ldapentry_getdeletedkeys,
+                     (setter)ldapentry_setdeletedkeys,
+                     "Deleted keys", NULL},
     {NULL}  /* Sentinel */
 };
 

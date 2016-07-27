@@ -125,3 +125,10 @@ class LDAPEntry(ldapentry):
             return self.dn == other.dn
         else:
             return super().__eq__(other)
+
+    def _status(self):
+        status = {}
+        for key, value in self.items():
+            status[key] = value._status_dict
+        status['@deleted_keys'] = self.deleted_keys
+        return status
