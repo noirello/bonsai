@@ -442,57 +442,6 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
     return 0;
 }
 
-/* Remove entry from the directory server,
-   change all LDAPValueList status to replaced (2) */
-static PyObject *
-ldapentry_delete(LDAPEntry *self) {
-    int msgid = -1;
-    char *dnstr;
-    PyObject *keys = PyMapping_Keys((PyObject *)self);
-    PyObject *iter, *key;
-    PyObject *value;
-
-    /* Connection must be set. */
-    if (self->conn == NULL) {
-        PyErr_SetString(PyExc_ValueError, "LDAPConnection is not set.");
-        return NULL;
-    }
-
-    /* Connection must be open. */
-    if (LDAPConnection_IsClosed(self->conn) != 0) return NULL;
-
-    /* Get DN string. */
-    dnstr = PyObject2char(self->dn);
-    if (dnstr == NULL) return NULL;
-
-    /* Remove the entry. */
-    msgid = LDAPConnection_DelEntryStringDN(self->conn, dnstr);
-    if (msgid < 0) return NULL;
-
-    if (keys == NULL) return NULL;
-
-    iter = PyObject_GetIter(keys);
-    Py_DECREF(keys);
-    if (iter == NULL) return NULL;
-
-    /* The values are kept locally, thus their
-        statuses have to change to replaced . */
-    for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
-        /* Return value: Borrowed reference. */
-        value = LDAPEntry_GetItem(self, key);
-        if (value == NULL) {
-            Py_DECREF(iter);
-            Py_DECREF(key);
-            return NULL;
-        }
-        set_ldapvaluelist_status(value, 2);
-        Py_DECREF(key);
-    }
-    Py_DECREF(iter);
-
-    return PyLong_FromLong((long int)msgid);
-}
-
 /* Sends the modifications of the entry to the directory server. */
 static PyObject *
 ldapentry_modify(LDAPEntry *self) {
@@ -631,8 +580,6 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 }
 
 static PyMethodDef ldapentry_methods[] = {
-    {"delete",  (PyCFunction)ldapentry_delete,  METH_NOARGS,
-            "Delete LDAPEntry on LDAP server."},
     {"modify",  (PyCFunction)ldapentry_modify,  METH_NOARGS,
             "Send LDAPEntry's modification to the LDAP server."},
     {"rename",  (PyCFunction)ldapentry_rename,  METH_VARARGS | METH_KEYWORDS,

@@ -271,7 +271,7 @@ Example for working with LDAPDN objects.
 
 .. automethod:: LDAPEntry.delete(timeout=None)
 .. automethod:: LDAPEntry.modify(timeout=None)
-.. automethod:: LDAPEntry.rename(newdn, timeout=None)
+.. automethod:: LDAPEntry.rename(newdn, timeout=None, recursive=False)
 .. automethod:: LDAPEntry.update
 
 :class:`LDAPSearchScope`

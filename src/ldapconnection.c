@@ -232,39 +232,30 @@ ldapconnection_add(LDAPConnection *self, PyObject *args) {
     return NULL;
 }
 
-/*  Delete an entry with the `dnstr` distinguished name on the server. */
-int
-LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr) {
-    int msgid = -1;
-    int rc = LDAP_SUCCESS;
-
-    if (dnstr != NULL) {
-        rc = ldap_delete_ext(self->ld, dnstr, NULL, NULL, &msgid);
-        if (rc != LDAP_SUCCESS) {
-            set_exception(self->ld, rc);
-            return -1;
-        }
-        /* Add new delete operation to the pending_ops. */
-        if (add_to_pending_ops(self->pending_ops, msgid,  Py_None) != 0) {
-            return -1;
-        }
-        return msgid;
-    }
-    return -1;
-}
-
 /* Delete an entry on the server. */
 static PyObject *
 ldapconnection_delentry(LDAPConnection *self, PyObject *args) {
+    int rc = 0;
     char *dnstr = NULL;
     int msgid = -1;
 
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
     if (!PyArg_ParseTuple(args, "s", &dnstr)) return NULL;
+    if (dnstr == NULL) return NULL;
 
-    msgid = LDAPConnection_DelEntryStringDN(self, dnstr);
-    if (msgid < 0) return NULL;
+    /* Remove the entry. */
+    rc = ldap_delete_ext(self->ld, dnstr, NULL, NULL, &msgid);
+
+    if (rc != LDAP_SUCCESS) {
+        set_exception(self->ld, rc);
+        return NULL;
+    }
+
+    /* Add new delete operation to the pending_ops. */
+    if (add_to_pending_ops(self->pending_ops, msgid, Py_None) != 0) {
+        return NULL;
+    }
 
     return PyLong_FromLong((long int)msgid);
 }

@@ -7,15 +7,21 @@ class LDAPEntry(ldapentry):
     def __init__(self, dn: Union[LDAPDN, str], conn=None):
         super().__init__(str(dn), conn)
 
-    def delete(self, timeout: float=None) -> Union[bool, int]:
+    def delete(self, timeout: float=None,
+               recursive: bool=False) -> Union[bool, int]:
         """
         Remove LDAP entry from the dictionary server.
 
-        :param float timeout: time limit in seconds for the operation.        
+        :param float timeout: time limit in seconds for the operation.
+        :param bool recursive: remove every entry of the given subtree \
+        recursively.
         :return: True, if the operation is finished.
         :rtype: bool
         """
-        return self.connection._evaluate(super().delete(), timeout)
+        res = self.connection.delete(self.dn, timeout, recursive)
+        for value in self.values():
+            value.status = 2
+        return res
 
     def modify(self, timeout: float=None) -> Union[bool, int]:
         """
