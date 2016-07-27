@@ -269,9 +269,9 @@ Example for working with LDAPDN objects.
     >>> str(anna.dn)
     'cn=anna,ou=nerdherd,dc=bonsai,dc=test'
 
-.. automethod:: LDAPEntry.delete(timeout=None)
+.. automethod:: LDAPEntry.delete(timeout=None, recursive=False)
 .. automethod:: LDAPEntry.modify(timeout=None)
-.. automethod:: LDAPEntry.rename(newdn, timeout=None, recursive=False)
+.. automethod:: LDAPEntry.rename(newdn, timeout=None)
 .. automethod:: LDAPEntry.update
 
 :class:`LDAPSearchScope`
