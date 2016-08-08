@@ -30,11 +30,15 @@ class LDAPValueListTest(unittest.TestCase):
         lvl[0:2] = ("test1", "test2", "test3")
         lvl[1] = "test4"
         self.assertEqual(lvl, ["test1", "test4", "test3"])
-        def set_item():
+        def set_item1():
              lvl[1] = "test3"
-        self.assertRaises(ValueError, set_item)
+        def set_item2():
+             lvl[1:2] = ["test5", "test1"]
+        self.assertRaises(ValueError, set_item1)
         del lvl[0:2]
         self.assertEqual(lvl, ["test3"])
+        del lvl[0]
+        self.assertEqual(lvl, [])
         lvl = LDAPValueList([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
         del lvl[slice(1,10,2)]
         self.assertEqual(lvl, [1, 3, 5, 7, 9, 11, 12])
@@ -69,6 +73,10 @@ class LDAPValueListTest(unittest.TestCase):
         lvl = LDAPValueList((1,2,3))
         self.assertEqual(lvl + [4,5], [1,2,3,4,5])
         self.assertRaises(TypeError, lambda: lvl + 3)
+        def wrong():
+            nonlocal lvl
+            lvl += 'x'
+        self.assertRaises(TypeError, wrong)
         lvl += [4,5]
         self.assertEqual(lvl, [1,2,3,4,5])
 
@@ -88,6 +96,13 @@ class LDAPValueListTest(unittest.TestCase):
         self.assertRaises(ValueError, wrong2)
         lvl.status = 2
         self.assertEqual(lvl.status, 2)
+
+    def test_clear(self):
+        """ Test setting LDAPValueList's clear method. """
+        lvl = LDAPValueList((1,2,3))
+        lvl.append(4)
+        lvl.clear()
+        self.assertEqual(lvl, [])
 
 if __name__ == '__main__':
     unittest.main()

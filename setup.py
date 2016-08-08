@@ -131,11 +131,17 @@ if sys.version_info.minor < 4:
     # Enum dependecy for Python 3.3.
     python_deps.append("enum34")
 
+# Get long description from the README.rst file.
 with open('README.rst') as file:
     long_descr = file.read()
 
+# Get version number from the module's __init__.py file.
+with open('./lib/__init__.py') as src:
+    ver = [line.split("'")[1] for line in src.readlines()
+           if line.startswith('__version__')][0]
+
 setup(name="bonsai",
-      version="0.8.9",
+      version=ver,
       description="Python 3 module for accessing LDAP directory servers.",
       author="noirello",
       author_email="noirello@gmail.com",
