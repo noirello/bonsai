@@ -33,7 +33,7 @@ class LDAPValueListTest(unittest.TestCase):
         def set_item1():
              lvl[1] = "test3"
         def set_item2():
-             lvl[1:2] = ["test5", "test1"]
+             lvl[1:3] = ["test5", "test1"]
         self.assertRaises(ValueError, set_item1)
         del lvl[0:2]
         self.assertEqual(lvl, ["test3"])

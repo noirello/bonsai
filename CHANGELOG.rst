@@ -1,6 +1,6 @@
 Change Log
 ==========
-[0.8.9] - 2016-08-08
+[0.8.9] - 2016-10-26
 --------------------
 
 Changed
@@ -9,6 +9,8 @@ Changed
 -  Reimplemented LDAPValuelist in Python, removed C implementations of
    ldapvaluelist and uniquelist.
 -  Reimplemented LDAPEntry.delete method in Python.
+-  LDAPConnection.search method to accept bytes-like object as a filter
+   parameter. (Issue #7)
 
 [0.8.8] - 2016-07-19
 --------------------
