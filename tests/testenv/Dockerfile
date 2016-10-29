@@ -3,7 +3,8 @@ MAINTAINER noirello <noirello@gmail.com>
 
 RUN dnf update -y
 
-RUN dnf install -y procps
+# For service tests and setting etwork delay
+RUN dnf install -y procps iproute kernel-modules-extra
 # OpenLDAP server and utils.
 RUN dnf install -y openldap openldap-servers openldap-clients cyrus-sasl-md5 cyrus-sasl-gssapi cyrus-sasl-ntlm openssl
 # Kerberos server and utils.
