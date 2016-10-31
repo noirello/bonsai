@@ -410,8 +410,8 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|ziz*O!diO!O!iiiiiO", kwlist,
-            &basestr, &scope, &filterstr, &PyList_Type, &attrlist, &timeout,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|ziz#O!diO!O!iiiiiO", kwlist,
+            &basestr, &scope, &filterstr, &len, &PyList_Type, &attrlist, &timeout,
             &sizelimit, &PyBool_Type, &attrsonlyo, &PyList_Type, &sort_order,
             &page_size, &offset, &before_count, &after_count, &list_count,
             &attrvalue_obj)) {
@@ -447,7 +447,7 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     if (attrlist != NULL) attrs = PyList2StringList(attrlist);
 
     if (set_search_params(&params, attrs, attrsonly, basestr,
-            filterstr, scope, sizelimit, timeout) != 0) {
+            filterstr, len, scope, sizelimit, timeout) != 0) {
         return NULL;
     }
 

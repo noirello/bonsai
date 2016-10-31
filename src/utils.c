@@ -480,7 +480,7 @@ close_socketpair(PyObject *tup) {
 /* Set the parameters of an ldapsearchparams struct. */
 int
 set_search_params(ldapsearchparams *params, char **attrs, int attrsonly,
-        char *base, char *filter, int scope, int sizelimit, double timeout) {
+        char *base, char *filter, int len, int scope, int sizelimit, double timeout) {
 
     params->attrs = attrs;
     params->attrsonly = attrsonly;
@@ -491,11 +491,11 @@ set_search_params(ldapsearchparams *params, char **attrs, int attrsonly,
     strcpy(params->base, base);
 
     /* If empty filter string is given, set to NULL. */
-    if (filter == NULL || strlen(filter) == 0) {
+    if (filter == NULL || len == 0) {
         params->filter = NULL;
     } else {
-        params->filter = (char *)malloc(sizeof(char) * (strlen(filter)+1));
-        strcpy(params->filter, filter);
+        params->filter = (char *)malloc(sizeof(char) * len);
+        memcpy(params->filter, filter, len);
     }
     params->scope = scope;
     params->sizelimit = sizelimit;
