@@ -678,7 +678,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
     rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
             &returned_ctrls, 1);
 
-    if (rc != LDAP_SUCCESS ) {
+    if (rc != LDAP_SUCCESS && rc != LDAP_MORE_RESULTS_TO_RETURN) {
         set_exception(self->ld, rc);
         goto error;
     }
