@@ -1,6 +1,6 @@
 Change Log
 ==========
-[0.8.9] - 2016-10-26
+[0.8.9] - 2016-11-01
 --------------------
 
 Changed
@@ -11,6 +11,11 @@ Changed
 -  Reimplemented LDAPEntry.delete method in Python.
 -  LDAPConnection.search method to accept bytes-like object as a filter
    parameter. (Issue #7)
+
+Fixed
+~~~~~
+
+-  Case sensitivity when checking LDAPDN equality.
 
 [0.8.8] - 2016-07-19
 --------------------
