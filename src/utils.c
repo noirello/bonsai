@@ -494,8 +494,8 @@ set_search_params(ldapsearchparams *params, char **attrs, int attrsonly,
     if (filter == NULL || len == 0) {
         params->filter = NULL;
     } else {
-        params->filter = (char *)malloc(sizeof(char) * len);
-        memcpy(params->filter, filter, len);
+        params->filter = (char *)malloc(sizeof(char) * (len + 1));
+        memcpy(params->filter, filter, len + 1);
     }
     params->scope = scope;
     params->sizelimit = sizelimit;
