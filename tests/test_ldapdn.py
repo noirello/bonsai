@@ -30,6 +30,8 @@ class LDAPDNTest(unittest.TestCase):
     def test_equal(self):
         """ Test __eq__ method of LDAPDN object. """
         self.assertEqual(self.dnobj, LDAPDN(self.strdn))
+        self.assertEqual(self.dnobj, LDAPDN(self.strdn.title()))
+        self.assertEqual(self.dnobj, self.strdn.upper())
 
     def test_invaliddn(self):
         """ Test InvalidDN exception. """
