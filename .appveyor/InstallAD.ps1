@@ -1,6 +1,5 @@
 Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
 Install-WindowsFeature -Name DNS
-Install-WindowsFeature -Name AD-Certificate
 Import-Module ADDSDeployment
 
 openssl pkcs12 -export -in ./tests/testenv/certs/cacert.pem -inkey ./tests/testenv/certs/cacert.key -out ./cacert.p12 -name OwnCARootCert  -passin pass:p@ssword -passout pass:p@ssword
@@ -15,6 +14,8 @@ Install-ADDSForest `
     -CreateDnsDelegation:$false `
     -SafeModeAdministratorPassword $Pwd `
     -Force 
+
+Install-WindowsFeature -Name AD-Certificate
 
 Write-Host 'Rebooting...'
 
