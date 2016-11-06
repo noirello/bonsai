@@ -22,19 +22,18 @@ class GeventLDAPConnectionTest(unittest.TestCase):
     def setUpClass(cls):
         """ Set LDAP URL and open connection. """
         curdir = os.path.abspath(os.path.dirname(__file__))
-        cfg = configparser.ConfigParser()
-        cfg.read(os.path.join(curdir, 'test.ini'))
-        cls.url = "ldap://%s:%s/%s?%s?%s" % (cfg["SERVER"]["hostip"], \
-                                             cfg["SERVER"]["port"], \
-                                             cfg["SERVER"]["basedn"], \
-                                             cfg["SERVER"]["search_attr"], \
-                                             cfg["SERVER"]["search_scope"])
-        cls.basedn = cfg["SERVER"]["basedn"]
-        cls.ipaddr = cfg["SERVER"]["hostip"]
+        cls.cfg = configparser.ConfigParser()
+        cls.cfg.read(os.path.join(curdir, 'test.ini'))
+        cls.url = "ldap://%s:%s/%s?%s?%s" % (cls.cfg["SERVER"]["hostip"], \
+                                             cls.cfg["SERVER"]["port"], \
+                                             cls.cfg["SERVER"]["basedn"], \
+                                             cls.cfg["SERVER"]["search_attr"], \
+                                             cls.cfg["SERVER"]["search_scope"])
+        cls.basedn = cls.cfg["SERVER"]["basedn"]
+        cls.ipaddr = cls.cfg["SERVER"]["hostip"]
         cls.client = LDAPClient(cls.url)
-        cls.client.set_credentials("SIMPLE", (cfg["SIMPLEAUTH"]["user"],
-                                               cfg["SIMPLEAUTH"]["password"]))
-        cls.user = cfg["SIMPLEAUTH"]["user"]
+        cls.client.set_credentials("SIMPLE", (cls.cfg["SIMPLEAUTH"]["user"],
+                                            cls.cfg["SIMPLEAUTH"]["password"]))
         cls.client.set_async_connection_class(GeventLDAPConnection)
         
     def test_connection(self):

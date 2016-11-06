@@ -8,6 +8,7 @@ branches:
   only:
     - master
     - dev
+    - testing
 
 python:
   - "3.3"
