@@ -39,6 +39,7 @@ install:
   # Install Active Directory and reboot the machine.
   - ps: .\\.appveyor\\InstallAD.ps1
   - ps: .\\.appveyor\\ConfigAD.ps1
+  - "ldifde -i -v -f .\\tests\\testenv\\ldifs\\users.ldif"
 
   # Prepend newly installed Python to the PATH of this build (this cannot be
   # done from inside the powershell script as it would require to restart

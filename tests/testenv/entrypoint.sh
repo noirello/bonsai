@@ -31,6 +31,7 @@ setLDAP () {
     ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/overlays.ldif
     # Create base entry and populate the dictionary.
     ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldapi:/// -f /root/base.ldif
+    ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldapi:/// -f /root/users.ldif
     # Set default password policy.
     ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldapi:/// -f /root/ppolicy.ldif
     # Stop the slapd. 

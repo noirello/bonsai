@@ -24,7 +24,7 @@ class LDAPEntryTest(unittest.TestCase):
 
     def test_set_get(self):
         """ Test LDAPEntry's SetItem, GetItem and get methods. """  
-        entry = LDAPEntry("cn=test");
+        entry = LDAPEntry("cn=test")
         entry['sn'] = 'Test'
         self.assertDictEqual(entry, {'sn' : ['Test']},
                              "LDAPEntry set is failed.")
@@ -38,7 +38,7 @@ class LDAPEntryTest(unittest.TestCase):
 
     def test_append_extend(self):
         """ Test append and extend methods of LDAPEntry's attribute. """
-        entry = LDAPEntry("cn=test");
+        entry = LDAPEntry("cn=test")
         entry['givenName'] = "test"
         entry['givenname'].append("test2")
         self.assertListEqual(entry['givenname'], ["test", "test2"])
@@ -194,10 +194,10 @@ class LDAPEntryTest(unittest.TestCase):
         entry = LDAPEntry("cn=test,%s" % self.basedn)
         self.client.set_credentials(*self.creds)
         with self.client.connect() as conn:
-            entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
-                                    'organizationalPerson']
             self.assertRaises(bonsai.ObjectClassViolation,
                               lambda: conn.add(entry))
+            entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
+                                    'organizationalPerson']
             entry['sn'] = 'test'
             try:
                 conn.add(entry)
