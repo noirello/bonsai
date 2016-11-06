@@ -52,3 +52,19 @@ objectClass: posixAccount
 uidNumber: 2
 userPassword:: cEBzc3dvcmQ=
 pwdPolicySubentry: cn=nochange,ou=policies,dc=bonsai,dc=test
+
+dn: cn=skip,ou=nerdherd,dc=bonsai,dc=test
+changeType: add
+uid: skip
+gidNumber: 1
+sn: Johnson
+cn: skip
+givenName: Michael
+homeDirectory: /home/skip
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+objectClass: posixAccount
+uidNumber: 3
+userPassword:: cEBzc3dvcmQ=

@@ -73,12 +73,12 @@ class AIOLDAPConnectionTest(unittest.TestCase):
 
     @asyncio_test
     def test_recursive_delete(self):
-        org1 = bonsai.LDAPEntry("ou=users,%s" % self.basedn)
-        org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "users"})
-        org2 = bonsai.LDAPEntry("ou=tops,ou=users,%s" % self.basedn)
+        org1 = bonsai.LDAPEntry("ou=testusers,%s" % self.basedn)
+        org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "testusers"})
+        org2 = bonsai.LDAPEntry("ou=tops,ou=testusers,%s" % self.basedn)
         org2.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "tops"})
-        entry = bonsai.LDAPEntry("cn=user,ou=tops,ou=users,%s" % self.basedn)
-        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "example", "sn" : "example"})
+        entry = bonsai.LDAPEntry("cn=tester,ou=tops,ou=testusers,%s" % self.basedn)
+        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "tester", "sn" : "example"})
         try:
             with (yield from self.client.connect(True)) as conn:
                 yield from conn.add(org1)
@@ -137,8 +137,9 @@ class AIOLDAPConnectionTest(unittest.TestCase):
         """ Test whoami. """
         with (yield from self.client.connect(True)) as conn:
             obj = yield from conn.whoami()
-            expected_res = "dn:%s" % self.user
-            self.assertEqual(obj, expected_res)
+            expected_res = ["dn:%s" % self.cfg["SIMPLEAUTH"]["user"],
+                            self.cfg["SIMPLEAUTH"]["adusername"]]
+            self.assertIn(obj, expected_res)
 
     @asyncio_test
     def test_connection_timeout(self):

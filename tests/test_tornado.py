@@ -83,12 +83,12 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     @gen_test(timeout=20.0)
     def test_recursive_delete(self):
-        org1 = bonsai.LDAPEntry("ou=users,%s" % self.basedn)
-        org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "users"})
-        org2 = bonsai.LDAPEntry("ou=tops,ou=users,%s" % self.basedn)
+        org1 = bonsai.LDAPEntry("ou=testusers,%s" % self.basedn)
+        org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "testusers"})
+        org2 = bonsai.LDAPEntry("ou=tops,ou=testusers,%s" % self.basedn)
         org2.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "tops"})
-        entry = bonsai.LDAPEntry("cn=user,ou=tops,ou=users,%s" % self.basedn)
-        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "example", "sn" : "example"})
+        entry = bonsai.LDAPEntry("cn=tester,ou=tops,ou=testusers,%s" % self.basedn)
+        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "tester", "sn" : "example"})
         try:
             with (yield self.client.connect(True, timeout=10.0, ioloop=self.io_loop)) as conn:
                 yield conn.add(org1)
@@ -151,8 +151,9 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         """ Test whoami. """
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             obj = yield conn.whoami()
-            expected_res = "dn:%s" % self.cfg["SIMPLEAUTH"]["user"]
-            self.assertEqual(obj, expected_res)
+            expected_res = ["dn:%s" % self.cfg["SIMPLEAUTH"]["user"],
+                            self.cfg["SIMPLEAUTH"]["adusername"]]
+            self.assertIn(obj, expected_res)
 
     @gen_test(timeout=12.0)
     def test_connection_timeout(self):

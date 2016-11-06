@@ -13,22 +13,6 @@ objectClass: posixAccount
 uidNumber: 1
 givenName: Laster
 
-dn: cn=skip,ou=nerdherd,dc=bonsai,dc=test
-changeType: add
-uid: skip
-gidNumber: 1
-sn: Johnson
-cn: skip
-givenName: Michael
-homeDirectory: /home/skip
-objectClass: inetOrgPerson
-objectClass: organizationalPerson
-objectClass: person
-objectClass: top
-objectClass: posixAccount
-uidNumber: 3
-userPassword:: cEBzc3dvcmQ=
-
 dn: cn=sam,ou=nerdherd,dc=bonsai,dc=test
 changeType: add
 uid: sam

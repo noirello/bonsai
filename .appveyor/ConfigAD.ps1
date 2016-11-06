@@ -91,3 +91,15 @@ New-ADUser `
     -Enabled $true `
     -CannotChangePassword $true `
     -OtherAttributes @{'uidNumber'="2"}
+New-ADUser `
+    -Name skip `
+    -GivenName "Michael" `
+    -Surname "Johnson" `
+    -PasswordNeverExpires $true `
+    -DisplayName skip `
+    -SamAccountName skip `
+    -UserPrincipalName skip@bonsai.test `
+    -Path "ou=nerdherd,dc=bonsai,dc=test" `
+    -AccountPassword $Pwd `
+    -Enabled $true `
+    -OtherAttributes @{'uidNumber'="3"}
