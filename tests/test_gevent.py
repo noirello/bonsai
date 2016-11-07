@@ -117,8 +117,7 @@ class GeventLDAPConnectionTest(unittest.TestCase):
 
     def test_obj_err(self):
         entry = LDAPEntry("cn=async_test,%s" % self.basedn)
-        entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
-                                'organizationalPerson']
+        entry['cn'] = ['async_test']
         def err():
             with self.client.connect(True) as conn:
                 conn.add(entry)

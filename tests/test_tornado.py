@@ -135,8 +135,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
     @gen_test(timeout=20.0)
     def test_obj_err(self):
         entry = LDAPEntry("cn=async_test,%s" % self.basedn)
-        entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
-                                'organizationalPerson']
+        entry['cn'] = ['async_test']
         try:
             with (yield self.client.connect(True,ioloop=self.io_loop)) as conn:
                 yield conn.add(entry)

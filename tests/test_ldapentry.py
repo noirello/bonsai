@@ -194,11 +194,11 @@ class LDAPEntryTest(unittest.TestCase):
         entry = LDAPEntry("cn=test,%s" % self.basedn)
         self.client.set_credentials(*self.creds)
         with self.client.connect() as conn:
+            entry['sn'] = 'test'
             self.assertRaises(bonsai.ObjectClassViolation,
                               lambda: conn.add(entry))
             entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
                                     'organizationalPerson']
-            entry['sn'] = 'test'
             try:
                 conn.add(entry)
             except bonsai.AlreadyExists:

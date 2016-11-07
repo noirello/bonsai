@@ -123,8 +123,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
 
     def test_obj_err(self):
         entry = LDAPEntry("cn=async_test,%s" % self.basedn)
-        #entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
-        #                        'organizationalPerson']
+        entry['cn'] = ['async_test']
         @asyncio_test
         def err():
             with (yield from self.client.connect(True)) as conn:
