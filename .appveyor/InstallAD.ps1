@@ -2,8 +2,16 @@ Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
 Install-WindowsFeature -Name DNS
 Import-Module ADDSDeployment
 
-openssl pkcs12 -export -in ./tests/testenv/certs/cacert.pem -inkey ./tests/testenv/certs/cacert.key -out ./cacert.p12 -name OwnCARootCert  -passin pass:p@ssword -passout pass:p@ssword
+# Import Root CA.
+Import-Certificate -CertStoreLocation .\\LocalMachine\Root -FilePath .\tests\testenv\certs\cacert.pem
 
+# Generate a new server cert and accept it.
+certreq -new .\.appveyor\request.inf server.csr
+openssl x509 -req -days 3650 -in server.csr -CA .\tests\testenv\certs\cacert.pem -CAkey .\tests\testenv\certs\cacert.key -extfile .\.appveyor\v3ext.txt -set_serial 01 -out server.crt -passin pass:p@ssword
+openssl x509 -in server.crt -text
+certreq -accept server.crt
+
+# Install Active Directory.
 $Pwd = ConvertTo-SecureString 'P@ssw0rd1' -AsPlainText -Force
 Install-ADDSForest `
     -DomainName bonsai.test `
@@ -14,8 +22,6 @@ Install-ADDSForest `
     -CreateDnsDelegation:$false `
     -SafeModeAdministratorPassword $Pwd `
     -Force 
-
-Install-WindowsFeature -Name AD-Certificate
 
 Write-Host 'Rebooting...'
 
