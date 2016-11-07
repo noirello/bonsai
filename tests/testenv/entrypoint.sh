@@ -40,7 +40,7 @@ setLDAP () {
 
 #Set passsword for SASL DIGEST-MD5.
 setDigest () {
-    echo "p@ssword" | saslpasswd2 -p root
+    echo "p@ssword" | saslpasswd2 -p admin
     echo "p@ssword" | saslpasswd2 -p chuck
 }
 

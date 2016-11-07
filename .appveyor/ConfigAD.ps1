@@ -54,6 +54,7 @@ New-ADUser `
     -Enabled $true
 Add-ADGroupMember "cn=Administrators,cn=Builtin,dc=bonsai,dc=test" admin
 Add-ADGroupMember "cn=Domain Admins,cn=Users,dc=bonsai,dc=test" admin
+Add-ADGroupMember "cn=Enterprise Admins,cn=Users,dc=bonsai,dc=test" admin
 
 # Allow anonymus operations, set userPassword attribute and allow password change without secure conn.
 $creds = New-Object System.Management.Automation.PSCredential ("admin", $Pwd)

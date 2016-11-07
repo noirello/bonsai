@@ -32,7 +32,7 @@ objectClass: top
 objectClass: posixAccount
 uidNumber: 0
 givenName: Chuck
-authzTo: u:root
+authzTo: u:admin
 userPassword:: cEBzc3dvcmQ=
 jpegPhoto:< file:///root/test.jpeg
 
