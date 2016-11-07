@@ -6,7 +6,7 @@ Import-Module ADDSDeployment
 Import-Certificate -CertStoreLocation Cert:\LocalMachine\Root -FilePath .\tests\testenv\certs\cacert.pem
 
 # Generate a new server cert and accept it.
-certreq -new .\.appveyor\request.inf server.csr
+certreq -new .\.appveyor\request.info server.csr
 openssl x509 -req -days 3650 -in server.csr -CA .\tests\testenv\certs\cacert.pem -CAkey .\tests\testenv\certs\cacert.key -extfile .\.appveyor\v3ext.txt -set_serial 01 -out server.crt -passin pass:p@ssword
 openssl x509 -in server.crt -text
 certreq -accept server.crt
