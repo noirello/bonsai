@@ -3,7 +3,7 @@ Install-WindowsFeature -Name DNS
 Import-Module ADDSDeployment
 
 # Import Root CA.
-Import-Certificate -CertStoreLocation .\\LocalMachine\Root -FilePath .\tests\testenv\certs\cacert.pem
+Import-Certificate -CertStoreLocation Cert:\LocalMachine\Root -FilePath .\tests\testenv\certs\cacert.pem
 
 # Generate a new server cert and accept it.
 certreq -new .\.appveyor\request.inf server.csr
