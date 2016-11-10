@@ -7,7 +7,6 @@ import tempfile
 import time
 import xmlrpc.client as rpc
 
-
 import bonsai
 from bonsai import LDAPDN
 from bonsai import LDAPClient
@@ -39,7 +38,7 @@ def receive_search_timeout(client, ipaddr, search_dn):
     proxy = rpc.ServerProxy("http://%s:%d/" % (ipaddr, 8000))
     proxy.set_delay(6.1)
     time.sleep(3.0)
-    return conn.search(search_dn, 1, timeout=4.0)
+    return conn.search(search_dn, 1, timeout=3.2)
 
 def receive_whoami_timeout(client, ipaddr):
     """ Set network delay and wait for a TimeoutError during whoami. """
@@ -47,7 +46,7 @@ def receive_whoami_timeout(client, ipaddr):
     proxy = rpc.ServerProxy("http://%s:%d/" % (ipaddr, 8000))
     proxy.set_delay(4.1)
     time.sleep(3.0)
-    return conn.whoami(timeout=4.0)
+    return conn.whoami(timeout=3.2)
 
 class LDAPConnectionTest(unittest.TestCase):
     """ Test LDAPConnection object. """
@@ -115,7 +114,7 @@ class LDAPConnectionTest(unittest.TestCase):
 
     def _bind_gssapi_kinit(self, authzid):
         if sys.platform == "win32":
-             self.skipTest("Cannot use Kerberos auth on Windows"
+             self.skipTest("Cannot use Kerberos kinit auth on Windows"
                            " against OpenLDAP")
         try:
             invoke_kinit(self.cfg["GSSAPIAUTH"]["user"],
@@ -137,7 +136,7 @@ class LDAPConnectionTest(unittest.TestCase):
         authzid = self.cfg["GSSAPIAUTH"]["authzid"]
         conn = self._bind_gssapi_kinit(authzid)
         self.assertEqual(self.cfg["GSSAPIAUTH"]["dn"], conn.whoami(),
-                         "Digest authorization was failed. ")
+                         "GSSAPI authorization was failed. ")
         conn.close()
 
     def test_bind_gssapi(self):
@@ -147,11 +146,9 @@ class LDAPConnectionTest(unittest.TestCase):
         if ("realm" not in self.cfg["GSSAPIAUTH"]
             or self.cfg["GSSAPIAUTH"]["realm"] == "None"):
             self.skipTest("Realm is not set.")
-        if sys.platform == "win32":
-             self.skipTest("Cannot use Kerberos auth on Windows"
-                           " against OpenLDAP")
-        # Make sure keytab is empty.
-        subprocess.check_call("kdestroy")
+        if sys.platform == "linux":
+            # Make sure keytab is empty.
+            subprocess.check_call("kdestroy")
         conn = self._binding("GSSAPIAUTH", "GSSAPI", None,
                              self.cfg["GSSAPIAUTH"]["realm"].upper())
         conn.close()
@@ -165,9 +162,6 @@ class LDAPConnectionTest(unittest.TestCase):
         if ("realm" not in self.cfg["GSSAPIAUTH"]
             or self.cfg["GSSAPIAUTH"]["realm"] == "None"):
             self.skipTest("Realm is not set.")
-        if sys.platform == "win32":
-             self.skipTest("Cannot use Kerberos auth on Windows"
-                           " against OpenLDAP")
         client = LDAPClient(self.url)
         client.set_credentials("GSSAPI", (self.cfg["GSSAPIAUTH"]["user"],
                                       self.cfg["GSSAPIAUTH"]["password"],
@@ -388,12 +382,12 @@ class LDAPConnectionTest(unittest.TestCase):
         """ Test VLV control with attribute value. """
         search_dn = "ou=nerdherd,%s" % self.basedn
         res, ctrl = self.conn.search(search_dn, 1, attrlist=['uidNumber'],
-                                     attrvalue=2, sort_order=["-uidNumber"],
+                                     attrvalue=2, sort_order=["uidNumber"],
                                      before_count=1, after_count=2,
                                      est_list_count=6)
         self.assertEqual(len(res), 4)
-        self.assertEqual(ctrl['target_position'], 4)
-        self.assertEqual(res[0]['uidNumber'][0], 3)
+        self.assertEqual(ctrl['target_position'], 3)
+        self.assertEqual(res[0]['uidNumber'][0], 1)
 
     def test_vlv_without_sort_order(self):
         """ Test VLV control wihtout sort control. """
@@ -584,6 +578,9 @@ class LDAPConnectionTest(unittest.TestCase):
 
     def test_password_modify_extop(self):
         """ Test Password Modify extended operation. """
+        if sys.platform == "win32":
+             self.skipTest("Cannot use password modify extended opertion"
+                           " on Windows")
         user_dn = LDAPDN("cn=skip,ou=nerdherd,dc=bonsai,dc=test")
         cli = LDAPClient("ldap://%s" % self.ipaddr)
         cli.set_credentials("SIMPLE", (str(user_dn), "p@ssword"))
