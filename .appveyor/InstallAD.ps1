@@ -3,7 +3,7 @@ Install-WindowsFeature -Name DNS
 Import-Module ADDSDeployment
 
 # Import Root CA.
-Import-Certificate \
+Import-Certificate `
     -CertStoreLocation Cert:\LocalMachine\Root `
     -FilePath .\tests\testenv\certs\cacert.pem
 
@@ -30,9 +30,9 @@ Install-ADDSForest `
     -SafeModeAdministratorPassword $Pwd `
     -Force 
 
-Write-Host 'Rebooting...'
+Write-Output 'Rebooting...'
 
 Restart-Computer -Force
 Start-Sleep -s 5
 
-Write-Host 'Finished installing Active Directory.'
+Write-Output 'Finished installing Active Directory.'
