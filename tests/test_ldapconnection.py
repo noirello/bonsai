@@ -56,11 +56,10 @@ class LDAPConnectionTest(unittest.TestCase):
         self.cfg = configparser.ConfigParser()
         self.cfg.read(os.path.join(curdir, 'test.ini'))
         self.ipaddr = self.cfg["SERVER"]["hostip"]
-        self.url = "ldap://%s:%s/%s?%s?%s" % (self.cfg["SERVER"]["hostip"], \
-                                        self.cfg["SERVER"]["port"], \
-                                        self.cfg["SERVER"]["basedn"], \
-                                        self.cfg["SERVER"]["search_attr"], \
-                                        self.cfg["SERVER"]["search_scope"])
+        self.url = "ldap://%s:%s/ou=nerdherd,%s?%s?%s" % \
+            (self.cfg["SERVER"]["hostip"], self.cfg["SERVER"]["port"],
+             self.cfg["SERVER"]["basedn"], self.cfg["SERVER"]["search_attr"],
+             self.cfg["SERVER"]["search_scope"])
         self.host = "ldap://%s" % self.cfg['SERVER']['hostname']
         self.basedn = self.cfg["SERVER"]["basedn"]
         client = LDAPClient(self.url)
@@ -218,7 +217,8 @@ class LDAPConnectionTest(unittest.TestCase):
 
     def test_search(self):
         """ Test searching. """
-        obj = self.conn.search(self.basedn, LDAPSearchScope.SUB)
+        obj = self.conn.search("ou=nerdherd,%s" % self.basedn,
+                               LDAPSearchScope.SUB)
         self.assertIsNotNone(obj)
         self.assertEqual(obj, self.conn.search())
 
