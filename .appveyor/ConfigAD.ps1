@@ -104,7 +104,3 @@ New-ADUser `
     -AccountPassword $Pwd `
     -Enabled $true `
     -OtherAttributes @{'uidNumber'="3"}
-
-# Add SPNs for the server.
-setspn -A ldap/bonsai.test appvyr-win
-setspn -A HOST/bonsai.test appvyr-win
