@@ -72,7 +72,7 @@ before_test:
 
 test_script:
   # Run the project tests
-  - "SET INSTALL_PATH=%PYTHON%\\Lib\\site-packages"
+  - for /f "tokens=*" %i in ('python -c "import bonsai; print(bonsai.__file__[:-12])"') do set INSTALL_PATH="%i"
   - "%CMD_IN_ENV% python -m pytest -v --cov-config .coveragerc --cov-report= --cov=%INSTALL_PATH%"
 
 after_test:
