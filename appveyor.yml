@@ -71,8 +71,9 @@ before_test:
   - ps: "(Get-Content .\\tests\\test.ini).replace('hostname = bonsai.test', 'hostname = appvyr-win.bonsai.test') | Set-Content '.\\tests\\test.ini'"
 
 test_script:
-  # Run the project tests
-  - for /f "tokens=*" %i in ('python -c "import bonsai; print(bonsai.__file__[:-12])"') do set INSTALL_PATH="%i"
+  # Set install path for coverage.py.
+  - for /f "tokens=*" %%i in ('python -c "import bonsai; print(bonsai.__file__[:-12])"') do set INSTALL_PATH="%%i"
+  # Run the tests.
   - "%CMD_IN_ENV% python -m pytest -v --cov-config .coveragerc --cov-report= --cov=%INSTALL_PATH%"
 
 after_test:
