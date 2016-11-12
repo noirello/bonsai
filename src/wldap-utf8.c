@@ -1179,6 +1179,7 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
             &crypted_msg);
         if (rc < 0) {
             ldap_set_option(ld, LDAP_OPT_ERROR_NUMBER, &rc);
+            rc = LDAP_INVALID_CREDENTIALS;
             goto clear;
         }
 
