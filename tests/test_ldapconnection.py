@@ -103,6 +103,8 @@ class LDAPConnectionTest(unittest.TestCase):
         """ Test DIGEST-MD5 connection with authorization ID. """
         if self.cfg["DIGESTAUTH"]["authzid"] == "None":
             self.skipTest("Authorization ID is not set.")
+        if sys.platform == "win32":
+            self.skipTest("Authz is not set on AD.")
         authzid = self.cfg["DIGESTAUTH"]["authzid"]
         with self._binding("DIGESTAUTH", "DIGEST-MD5", authzid) as conn:
             self.assertEqual(self.cfg["DIGESTAUTH"]["dn"], conn.whoami(),
@@ -110,6 +112,8 @@ class LDAPConnectionTest(unittest.TestCase):
 
     def test_bind_ntlm(self):
         """ Test NTLM connection. """
+        if sys.platform == "win32":
+            self.skipTest("NTLM is not enabled on Windows.")
         conn = self._binding("NTLMAUTH", "NTLM", None)
         conn.close()
 

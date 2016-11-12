@@ -1,6 +1,3 @@
-init:
-  - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
-
 hosts:
   bonsai.test:  127.0.0.1
 
@@ -58,6 +55,10 @@ install:
   - "pip install --disable-pip-version-check --user --upgrade pip"
   - "pip install pytest"
   - "pip install pydivert"
+  - "pip install gevent"
+  - "pip install tornado"
+  - "pip install codecov"
+  - "pip install pytest-cov"
 
 build_script:
   # Build the compiled extension
@@ -73,6 +74,8 @@ test_script:
   - "%CMD_IN_ENV% python -m pytest -v"
 
 after_test:
+  - "SET INSTALL_PATH=%PYTHON%\\Lib\\site-packages"
+  - "python -m pytest -v --cov-config .coveragerc --cov-report= --cov=%INSTALL_PATH%"
   # If tests are successful, create binary packages for the project.
   - "%CMD_IN_ENV% python setup.py bdist_wheel"
   - "%CMD_IN_ENV% python setup.py bdist_msi"
@@ -82,5 +85,5 @@ artifacts:
   # Archive the generated packages in the ci.appveyor.com build report.
   - path: dist\*
 
-on_finish:
+on_failure:
   - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
