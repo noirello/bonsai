@@ -119,14 +119,6 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
         value = LDAPEntry_GetItem(self, key);
         if (value == NULL) goto error;
 
-        /* Remove empty list values. */
-        if (Py_SIZE(value) == 0) {
-            if (LDAPEntry_SetItem(self, key, NULL) != 0) {
-                goto error;
-            }
-            if (set_ldapvaluelist_status(value, 0) != 0) goto error;
-        }
-
         /* Get LDAPValueList's status. */
         status = get_ldapvaluelist_status(value);
         if (status == -1) goto error;
