@@ -79,6 +79,10 @@ New-ADUser `
     -AccountPassword $Pwd `
     -Enabled $true `
     -OtherAttributes @{'uidNumber'="0"}
+# Add binary picture.
+$photo = [byte[]](Get-Content ".\tests\testenv\test.jpeg" -Encoding byte)            
+Set-ADUser chuck -Replace @{jpegPhoto=$photo}
+
 New-ADUser `
     -Name jeff `
     -GivenName "Jeff" `
