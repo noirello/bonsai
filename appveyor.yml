@@ -77,8 +77,8 @@ test_script:
   - "%CMD_IN_ENV% python -m pytest -v --cov-config .coveragerc --cov-report= --cov=%INSTALL_PATH%"
 
 after_test:
-  - ps: $install_path = python -c "import bonsai; print(bonsai.__file__[:-12].replace('\\', '/'))"; ` 
-        (Get-Content .\\.coverage).replace($install_path, "$env:APPVEYOR_BUILD_FOLDER/lib") | Set-Content '.\\.coverage'
+  - ps: $install_path = python -c "import bonsai; print(bonsai.__file__[:-12].replace('\\', '\\\\\\\\'))"; `
+        (Get-Content .\\.coverage) -replace $install_path, "$env:APPVEYOR_BUILD_FOLDER\\lib" | Set-Content '.\\.coverage'
   - codecov
   # If tests are successful, create binary packages for the project.
   - "%CMD_IN_ENV% python setup.py bdist_wheel"
