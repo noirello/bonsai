@@ -22,3 +22,6 @@ bonsai.sln
 _bonsai.vcxproj
 _bonsai.vcxproj.*
 _bonsai.VC.opendb
+_bonsai.VC.db
+bonsai.VC.db
+vc140.pdb

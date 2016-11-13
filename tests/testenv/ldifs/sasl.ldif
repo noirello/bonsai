@@ -27,7 +27,7 @@ changeType: modify
 replace: olcSaslHost
 olcSaslHost: bonsai.test
 -
-#The Kerberos realm name
+# The Kerberos realm name
 replace: olcSaslRealm
 olcSaslRealm: BONSAI.test
 -
@@ -44,7 +44,7 @@ olcLogFile: /var/log/slapd.log
 #by default, the DN of an authorized Kerberos client takes the form
 #uid=<Kerberos principal name>,cn=<Kerberos Realm>,cn=GSSAPI,cn=auth
 add: olcAuthzRegexp
-olcAuthzRegexp: {0}"^uid=root,.*,cn=auth" "cn=admin,dc=bonsai,dc=test"
+olcAuthzRegexp: {0}"^uid=admin,.*,cn=auth" "cn=admin,dc=bonsai,dc=test"
 olcAuthzRegexp: {1}"^uid=admin,cn=bonsai.test,cn=GSSAPI,cn=auth" "cn=admin,
  dc=bonsai,dc=test"
 olcAuthzRegexp: {2}"uid=([^/]*),cn=bonsai.test,cn=GSSAPI,cn=auth" "cn=$1,
