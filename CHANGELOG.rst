@@ -1,6 +1,6 @@
 Change Log
 ==========
-[0.8.9] - 2016-11-01
+[0.8.9] - 2016-11-15
 --------------------
 
 Changed
@@ -11,6 +11,14 @@ Changed
 -  Reimplemented LDAPEntry.delete method in Python.
 -  LDAPConnection.search method to accept bytes-like object as a filter
    parameter. (Issue #7)
+-  LDAPClient.get_rootDSE method uses anonym bind to search for rootDSE,
+   instead of using the previously set (might be false) credentials.
+
+Added
+~~~~~
+
+-  LDAP_EXTENDED_DN_CONTROL support with LDAPClient.set_extended_dn method
+   and LDAPEntry's new extended_dn string attribute. (Issue #6)
 
 Fixed
 ~~~~~

@@ -262,7 +262,7 @@ the VLV server response: the target position and the real list size.
 
 .. note::
     The OID of virtual list view control is: 2.16.840.1.113730.3.4.9.
-    
+
 Password policy
 ---------------
 
@@ -278,26 +278,50 @@ Setting this control will change the return value of :meth:`LDAPClient.connect` 
 the remaining seconds until the password's expiration and the remaining grace logins. The client
 can also receive new exceptions related to password modifications.
 
-	>>> import bonsai
-	>>> client = bonsai.LDAPClient()
-	>>> client.set_credentials("SIMPLE", ("cn=user,dc=bonsai,dc=test", "secret"))
-	>>> client.set_password_policy(True)
-	>>> conn, ctrl = client.connect()
-	>>> conn
-	<bonsai.ldapconnection.LDAPConnection object at 0x7fa552ab4e28>
-	>>> ctrl
-	{'grace': 1, 'expire': 3612, 'oid': '1.3.6.1.4.1.42.2.27.8.5.1'})
+    >>> import bonsai
+    >>> client = bonsai.LDAPClient()
+    >>> client.set_credentials("SIMPLE", ("cn=user,dc=bonsai,dc=test", "secret"))
+    >>> client.set_password_policy(True)
+    >>> conn, ctrl = client.connect()
+    >>> conn
+    <bonsai.ldapconnection.LDAPConnection object at 0x7fa552ab4e28>
+    >>> ctrl
+    {'grace': 1, 'expire': 3612, 'oid': '1.3.6.1.4.1.42.2.27.8.5.1'})
 
 If the server does not support password policy control or the given credentials does not have
 policies (like anonym or administrator user) the second item in the tuple will be `None`.
 
 .. note::
-	Because the password policy is not standardized, it is not listed by the server among
-	the `supportedControls` even if it is available.
-	
+    Because the password policy is not standardized, it is not listed by the server among
+    the `supportedControls` even if it is available.
+
 .. note::
-	Password policy control cannot be used on MS Windows with WinLDAP. In this case after 
-	opening a connection the control dictionary will always be `None`.
+    Password policy control cannot be used on MS Windows with WinLDAP. In this case after 
+    opening a connection the control dictionary will always be `None`.
+
+Extended DN
+-----------
+
+The LDAP_SERVER_EXTENDED_DN_OID control is only supported by Microsoft's Active Directory.
+Setting this control with :meth:`LDAPClient.set_extended_dn` will extended the standard DN format
+with the SID and GUID attributes to `<GUID=xxxxxxxx>;<SID=yyyyyyyyy>;distinguishedName` during the
+LDAP search. The method's parameter can be either 0 which means that the GUID and SID strings will
+be in a hexadecimal string format or 1 for receiving the extended dn in a standard string format.
+
+Regardless of setting the control, the :attribute:`LDAPEntry.dn` still remains a simple
+:class:`LDAPDN` object without the SID or GUID extensions. The extended DN will be set to the
+:attribute:`LDAPEntry.extended_dn` as a string.
+
+    >>> client = bonsai.LDAPClient()
+    >>> client.set_extended_dn(1)
+    >>> result = conn.search("ou=nerdherd,dc=bonsai,dc=test", 1)
+    >>> result[0].extended_dn
+    <GUID=899e4e01-e88d-4dea-ba64-119ed386b61c>;<SID=S-1-5-21-101232111302-1767724339-724445543-12345>;cn=chuck,ou=nerdherd,dc=bonsai,dc=test
+    >>> result[0].dn
+    <LDAPDN cn=chuck,ou=nerdherd,dc=bonsai,dc=test>
+
+.. note::
+    The OID of extended DN control is: 1.2.840.113556.1.4.529.
 
 Asynchronous operations
 =======================

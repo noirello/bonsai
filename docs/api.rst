@@ -69,12 +69,27 @@ API documentation
 .. automethod:: LDAPClient.set_raw_attributes(raw_list)
 
     An example:
-    
+
     >>> client = bonsai.LDAPClient()
     >>> client.set_raw_attributes(["cn", "sn"])
     >>> conn = client.connect()
     >>> conn.search("cn=jeff,ou=nerdherd,dc=bonsai,dc=test", 0, attrlist=['cn', 'sn', 'gn'])
     [{'givenName': ['Jeff'], 'sn': [b'Barnes'], 'cn': [b'jeff']}]
+
+.. automethod:: LDAPClient.set_extended_dn(extdn_format)
+
+    An example:
+
+    >>> client = bonsai.LDAPClient()
+    >>> client.set_extended_dn(1)
+    >>> result = conn.search("ou=nerdherd,dc=bonsai,dc=test", 1)
+    >>> result[0].extended_dn
+    <GUID=899e4e01-e88d-4dea-ba64-119ed386b61c>;<SID=S-1-5-21-101232111302-1767724339-724445543-12345>;cn=chuck,ou=nerdherd,dc=bonsai,dc=test
+    >>> result[0].dn
+    <LDAPDN cn=chuck,ou=nerdherd,dc=bonsai,dc=test>
+
+.. note:: If the extended dn control is not supported the LDAPEntry's extended_dn attribute
+   will be None. The LDAP_SERVER_EXTENDED_DN_OID is defined as '1.2.840.113556.1.4.529'.
 
 .. autoattribute:: LDAPClient.cert_policy
 .. autoattribute:: LDAPClient.ca_cert
@@ -82,6 +97,7 @@ API documentation
 .. autoattribute:: LDAPClient.client_cert
 .. autoattribute:: LDAPClient.client_key
 .. autoattribute:: LDAPClient.credentials
+.. autoattribute:: LDAPClient.extended_dn_format
 .. autoattribute:: LDAPClient.mechanism
 .. autoattribute:: LDAPClient.password_policy
 .. autoattribute:: LDAPClient.raw_attributes
@@ -273,6 +289,7 @@ Example for working with LDAPDN objects.
 .. automethod:: LDAPEntry.modify(timeout=None)
 .. automethod:: LDAPEntry.rename(newdn, timeout=None)
 .. automethod:: LDAPEntry.update
+.. autoattribute:: LDAPEntry.extended_dn
 
 :class:`LDAPSearchScope`
 ========================
