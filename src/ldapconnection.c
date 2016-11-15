@@ -472,7 +472,7 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     }
 
     /* Get extended dn format attribute form LDAPClient. */
-    tmp = PyObject_GetAttrString(self->client, "extended_dn");
+    tmp = PyObject_GetAttrString(self->client, "extended_dn_format");
     if (tmp == NULL) return NULL;
     if (tmp == Py_None) {
         extdn_format = -1;

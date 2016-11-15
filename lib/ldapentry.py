@@ -9,14 +9,11 @@ class LDAPEntry(ldapentry):
         try:
             super().__init__(str(dn), conn)
             self.__extended_dn = None
-        except InvalidDN as exc:
-            if conn.client.extended_dn is not None:
-                # InvalidDN error caused by extedned DN control
-                splitted_dn = dn.split(';')
-                super().__init__(splitted_dn[-1], conn)
-                self.__extended_dn = dn
-            else:
-                raise exc
+        except InvalidDN:
+            # InvalidDN error caused by extended DN control.
+            splitted_dn = dn.split(';')
+            super().__init__(splitted_dn[-1], conn)
+            self.__extended_dn = dn
 
     def delete(self, timeout: float=None,
                recursive: bool=False) -> Union[bool, int]:
@@ -133,7 +130,7 @@ class LDAPEntry(ldapentry):
     def __eq__(self, other):
         """
         Two LDAPEntry objects are considered equals, if their DN is the same.
-        
+
         :param other: the other comparable object.
         :return: True if the two object are equals.
         :rtyype: bool
@@ -152,6 +149,10 @@ class LDAPEntry(ldapentry):
 
     @property
     def extended_dn(self):
+        """
+        The extended DN of the entry. It is None, if the extended DN control
+        is not set or not supported. The attribute is read-only.
+        """
         return self.__extended_dn
 
     @extended_dn.setter

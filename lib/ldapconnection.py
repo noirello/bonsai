@@ -189,14 +189,6 @@ class LDAPConnection(ldapconnection):
 
         :return: the authorization ID.
         :rtype: str
-         """
+        """
         return self._evaluate(super().whoami(), timeout)
-
-    @property
-    def client(self):
-        return self.__client
-
-    @client.setter
-    def client(self, value):
-        raise ValueError("Client attribute cannot be set.")
 

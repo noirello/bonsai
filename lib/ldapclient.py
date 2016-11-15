@@ -8,7 +8,6 @@ import socket
 from typing import Union, List, Tuple
 
 from .ldapurl import LDAPURL
-from .errors import LDAPError
 from .ldapconnection import LDAPConnection
 from .asyncio import AIOLDAPConnection
 from .ldapconnection import LDAPSearchScope
@@ -69,8 +68,8 @@ class LDAPClient:
             csock.setblocking(0)
             try:
                 csock.connect((addr, port))
-            except socket.error as e:
-                if e.errno != errno.WSAEWOULDBLOCK:
+            except socket.error as serr:
+                if serr.errno != errno.WSAEWOULDBLOCK:
                     raise
             ssock, addr = lsock.accept()
             csock.setblocking(1)
@@ -123,7 +122,7 @@ class LDAPClient:
             raise TypeError("The credential information must be in a tuple.")
         if list(filter(lambda x: type(x) != str and x != None, creds)) != []:
             raise TypeError("All element must be a string or None in the"
-                             " tuple.")
+                            " tuple.")
         if self.__mechanism == "EXTERNAL":
             if len(creds) != 1:
                 raise ValueError("External mechanism needs only one credential"
@@ -173,12 +172,12 @@ class LDAPClient:
         one in the cert/key database (that specified with \
         :meth:`LDAPClient.set_ca_cert_dir`), otherwise it can be the name \
         of the CA cert file.
-        
+
         .. note::
            This method has no effect on MS Windows, because WinLDAP \
            searches for the corresponding CA certificate in the cert \
            store. This means that the necessary certificates have to be \
-           installed manually in to the cert store.  
+           installed manually in to the cert store.
 
         :param str name: the name of the CA cert.
         :raises TypeError: if `name` parameter is not a string or not None.
@@ -193,12 +192,12 @@ class LDAPClient:
         uses the Mozilla NSS as TLS library the `path` should be the path to \
         the existing cert/key database, otherwise it can be the path of the \
         CA cert file.
-        
+
         .. note::
            This method has no effect on MS Windows, because WinLDAP \
            searches for the corresponding CA certificate in the cert \
            store. This means that the necessary certifications have to be \
-           installed manually in to the cert store.            
+           installed manually in to the cert store.
 
         :param str path: the path to the CA directory.
         :raises TypeError: if `path` parameter is not a string or not None.
@@ -214,13 +213,13 @@ class LDAPClient:
         in the cert/key database (that specified with \
         :meth:`LDAPClient.set_ca_cert_dir`), otherwise it can be the name \
         of the client certificate file.
-        
+
         .. note::
            This method has no effect on MS Windows, because WinLDAP \
            searches for the corresponding client certificate based on \
            the servert's CA cert in the cert store. This means that the \
            necessary certificates have to be installed manually in to \
-           the cert store.  
+           the cert store.
 
         :param str name: the name of the client cert.
         :raises TypeError: if `name` parameter is not a string or not None.
@@ -234,13 +233,13 @@ class LDAPClient:
         Set the file that contains the private key that matches the \
         certificate of the client that specified with \
         :meth:`LDAPClient.set_client_cert`).
-        
+
         .. note::
            This method has no effect on MS Windows, because WinLDAP \
            searches for the corresponding client certificate based on \
            the servert's CA cert in the cert store. This means that the \
            necessary certificates have to be installed manually in to \
-           the cert store.  
+           the cert store.
 
         :param str name: the name of the CA cert.
         :raises TypeError: if `name` parameter is not a string or not None.
@@ -254,7 +253,7 @@ class LDAPClient:
         Set the LDAP connection class for asynchronous connection. The \
         default connection class is `AIOLDAPConnection` that uses the
         asyncio event loop.
-        
+
         :param LDAPConnection conn: the new asynchronous connection class \
         that is a subclass of LDAPConnection.
         :raises TypeError: if `conn` parameter is not a subclass \
@@ -294,7 +293,7 @@ class LDAPClient:
         LDAP_SERVER_EXTENDED_DN_OID control which extends the entries'
         distingushed name with GUID and SID attributes. If the server
         supports the control, the LDAPEntry objects' `extended_dn` attribute
-        will be set (as a string) and the `dn` attribute will be kept in 
+        will be set (as a string) and the `dn` attribute will be kept in
         the simple format.
 
         Setting 0 specifies that the GUID and SID values be returned in \
@@ -326,7 +325,7 @@ class LDAPClient:
         attrs = ["namingContexts", "altServer", "supportedExtension",
                  "supportedControl", "supportedSASLMechanisms",
                  "supportedLDAPVersion"]
-        conn = LDAPConnection(self, False).open()
+        conn = LDAPConnection(self.__class__(self.url, self.tls), False).open()
         if self.__ppolicy_ctrl:
             conn = conn[0]
         root_dse = None
@@ -338,7 +337,7 @@ class LDAPClient:
             return None
         finally:
             conn.close()
-            return root_dse
+        return root_dse
 
     @property
     def url(self):
@@ -440,12 +439,15 @@ class LDAPClient:
         self.set_password_policy(value)
 
     @property
-    def extended_dn(self):
-        """ Format of the extended distinguished name."""
+    def extended_dn_format(self):
+        """
+        Format of the extended distinguished name. 0 means hexadecimal string
+        format, 1 standard string format. If it is `None`, then it's not set.
+        """
         return self.__ext_dn
 
-    @extended_dn.setter
-    def extended_dn(self, value):
+    @extended_dn_format.setter
+    def extended_dn_format(self, value):
         self.set_extended_dn(value)
 
     def connect(self, is_async: bool=False,
