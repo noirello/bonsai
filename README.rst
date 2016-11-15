@@ -7,7 +7,7 @@ Bonsai
 
 .. image:: https://img.shields.io/travis/noirello/bonsai/dev.svg?style=flat-square
     :target: https://travis-ci.org/noirello/bonsai
-    :alt: Travic CI Build Status
+    :alt: Travis CI Build Status
 
 .. image:: https://img.shields.io/appveyor/ci/noirello/bonsai/dev.svg?style=flat-square
     :target: https://ci.appveyor.com/project/noirello/bonsai

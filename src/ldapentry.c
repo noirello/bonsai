@@ -215,9 +215,8 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
     self = (LDAPEntry *)PyObject_CallObject(ldapentry_type, args);
     Py_DECREF(args);
     Py_DECREF(ldapentry_type);
-    if (self == NULL) {
-        return (LDAPEntry *)PyErr_NoMemory();
-    }
+    if (self == NULL) return NULL;
+
     /* Get list of attribute's names, whose values have to keep in bytearray.*/
     rawval_list = PyList_New(0);
     tmp = PyObject_GetAttrString(conn->client, "raw_attributes");

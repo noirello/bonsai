@@ -21,6 +21,7 @@ typedef struct {
     int page_size;
     LDAPSortKey **sort_list;
     LDAPVLVInfo *vlv_info;
+    int extdn_format;
 } LDAPSearchIter;
 
 extern PyTypeObject LDAPSearchIterType;

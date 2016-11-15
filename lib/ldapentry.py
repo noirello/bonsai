@@ -1,11 +1,22 @@
 from typing import Union
 
 from ._bonsai import ldapentry
+from .errors import InvalidDN
 from .ldapdn import LDAPDN
 
 class LDAPEntry(ldapentry):
     def __init__(self, dn: Union[LDAPDN, str], conn=None):
-        super().__init__(str(dn), conn)
+        try:
+            super().__init__(str(dn), conn)
+            self.__extended_dn = None
+        except InvalidDN as exc:
+            if conn.client.extended_dn is not None:
+                # InvalidDN error caused by extedned DN control
+                splitted_dn = dn.split(';')
+                super().__init__(splitted_dn[-1], conn)
+                self.__extended_dn = dn
+            else:
+                raise exc
 
     def delete(self, timeout: float=None,
                recursive: bool=False) -> Union[bool, int]:
@@ -138,3 +149,11 @@ class LDAPEntry(ldapentry):
             status[key] = value._status_dict
         status['@deleted_keys'] = self.deleted_keys
         return status
+
+    @property
+    def extended_dn(self):
+        return self.__extended_dn
+
+    @extended_dn.setter
+    def extended_dn(self, value):
+        raise ValueError("Extended_dn attribute cannot be set.")

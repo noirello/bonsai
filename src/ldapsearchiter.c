@@ -53,6 +53,7 @@ ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->params = NULL;
         self->sort_list = NULL;
         self->vlv_info = NULL;
+        self->extdn_format = -1;
     }
 
     return (PyObject *)self;
