@@ -308,9 +308,9 @@ with the SID and GUID attributes to `<GUID=xxxxxxxx>;<SID=yyyyyyyyy>;distinguish
 LDAP search. The method's parameter can be either 0 which means that the GUID and SID strings will
 be in a hexadecimal string format or 1 for receiving the extended dn in a standard string format.
 
-Regardless of setting the control, the :attribute:`LDAPEntry.dn` still remains a simple
-:class:`LDAPDN` object without the SID or GUID extensions. The extended DN will be set to the
-:attribute:`LDAPEntry.extended_dn` as a string.
+Regardless of setting the control, the :attr:`LDAPEntry.dn` still remains a simple :class:`LDAPDN`
+object without the SID or GUID extensions. The extended DN will be set to the :attr:`LDAPEntry.extended_dn`
+as a string.
 
     >>> client = bonsai.LDAPClient()
     >>> client.set_extended_dn(1)

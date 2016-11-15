@@ -47,9 +47,13 @@ class LDAPClientTest(unittest.TestCase):
         def value_err():
             self.client.set_raw_attributes([5])
         self.assertRaises(TypeError, value_err)
-        self.client.set_raw_attributes(["namingContexts"])
-        if type(self.client.get_rootDSE()["namingContexts"][0]) != bytes:
+        self.client.set_raw_attributes(["ou"])
+        conn = self.client.connect()
+        result = conn.search("ou=nerdherd,dc=bonsai,dc=test", 0)
+        if type(result["ou"][0]) != bytes:
             self.fail("The type of the value is not bytes.")
+        if type(result["objectClass"][0]) == bytes:
+            self.fail("Not set attribute is bytes.")
 
     def test_set_credentials(self):
         """

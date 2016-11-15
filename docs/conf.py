@@ -37,7 +37,7 @@ class Mock(MagicMock):
         if on_rtd:
             return Mock()
 
-MOCK_MODULES = ['lib._bonsai']
+MOCK_MODULES = ['lib._bonsai', 'bonsai']
 try:
     import typing
 except ImportError:
