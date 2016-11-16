@@ -137,5 +137,21 @@ class LDAPClientTest(unittest.TestCase):
             self.fail("Invalid second object in the tuple.")
         ret_val[0].close()
 
+    def test_extended_dn(self):
+        """ Test extended dn control. """
+        client = LDAPClient(self.url)
+        self.assertRaises(TypeError, lambda: client.set_extended_dn("A"))
+        self.assertRaises(ValueError, lambda: client.set_extended_dn(2))
+        client.extended_dn_format = 0
+        self.assertEqual(client.extended_dn_format, 0)
+        conn = client.connect()
+        root_dse = client.get_rootDSE()
+        result = conn.search("ou=nerdherd,dc=bonsai,dc=test", 0)[0]
+        if '1.2.840.113556.1.4.529' in root_dse['supportedControl']:
+            self.assertIsNotNone(result.extended_dn)
+            self.assertEqual(result.extended_dn.split(';')[-1], str(result.dn))
+        else:
+            self.assertIsNone(result.extended_dn)
+
 if __name__ == '__main__':
     unittest.main()

@@ -1,4 +1,5 @@
 - Feature: Add LDIF reader and writer function.
+- Feature: change_attribute method.
+- Feature: auto page acquiring for ldapsearchiter.
 - Feature: Possibility to change LDAPEntry and LDAPValueList to other dict and list based objects.
 - Feature: Client-side validation for entries (with defined schemas).
-- Feature: auto page acquiring for ldapsearchiter.

@@ -268,5 +268,12 @@ class LDAPEntryTest(unittest.TestCase):
         except Exception as exc:
             self.assertIsInstance(exc, bonsai.errors.PasswordInHistory)
 
+    def test_extended_dn_attr(self):
+        """ Test that extended dn attribute is read only. """
+        entry = LDAPEntry("cn=test")
+        def readonly_attr():
+            entry.extended_dn = "cn=test2"
+        self.assertRaises(ValueError, readonly_attr)
+
 if __name__ == '__main__':
     unittest.main()
