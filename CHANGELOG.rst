@@ -11,8 +11,8 @@ Changed
 -  Reimplemented LDAPEntry.delete method in Python.
 -  LDAPConnection.search method to accept bytes-like object as a filter
    parameter. (Issue #7)
--  LDAPClient.get_rootDSE method uses anonym bind to search for rootDSE,
-   instead of using the previously set (might be false) credentials.
+-  LDAPClient.get_rootDSE method uses anonym bind without any previsouly set
+   LDAP controls to search for rootDSE.
 
 Added
 ~~~~~

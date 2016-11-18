@@ -325,19 +325,18 @@ class LDAPClient:
         attrs = ["namingContexts", "altServer", "supportedExtension",
                  "supportedControl", "supportedSASLMechanisms",
                  "supportedLDAPVersion"]
-        conn = LDAPConnection(self.__class__(self.url, self.tls), False).open()
-        if self.__ppolicy_ctrl:
-            conn = conn[0]
-        root_dse = None
         try:
+            conn = LDAPConnection(self.__class__(self.url, self.tls),
+                                  False).open()
             # Convert to list to avoid possible LDAPSearchIter object.
-            root_dse = conn.search("", LDAPSearchScope.BASE, "(objectclass=*)",
+            root_dse = conn.search("", LDAPSearchScope.BASE,
+                                   "(objectclass=*)",
                                    attrs, None, False)[0]
+            return root_dse
         except IndexError:
             return None
         finally:
             conn.close()
-        return root_dse
 
     @property
     def url(self):
