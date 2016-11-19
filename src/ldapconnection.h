@@ -22,7 +22,6 @@ typedef struct {
 extern PyTypeObject LDAPConnectionType;
 
 int LDAPConnection_IsClosed(LDAPConnection *self);
-int LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr);
 int LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params, PyObject *iterator);
 
 #endif /* LDAPCONNECTION_H_ */

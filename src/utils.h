@@ -15,6 +15,7 @@ typedef struct {
 } ldapsearchparams;
 
 extern PyObject *LDAPDNObj;
+extern PyObject *LDAPValueListObj;
 
 char *lowercase(char *str);
 struct berval *create_berval(char *value, long int len);
@@ -32,10 +33,14 @@ int add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item);
 int get_socketpair(PyObject *client, PyObject **tup, SOCKET *csock, SOCKET *ssock);
 void close_socketpair(PyObject *tup);
 int set_search_params(ldapsearchparams *params, char **attrs, int attrsonly,
-        char *base, char *filter, int scope, int sizelimit, double timeout);
+        char *base, char *filter, int len, int scope, int sizelimit, double timeout);
 void free_search_params(ldapsearchparams *params);
 int create_ppolicy_control(LDAP *ld, LDAPControl **returned_ctrls,
         PyObject **ctrl_obj,  unsigned int *pperr);
 void set_ppolicy_err(unsigned int pperr, PyObject *ctrl_obj);
+int uniqueness_check(PyObject *list, PyObject *value);
+int uniqueness_remove(PyObject *list, PyObject *value);
+int get_ldapvaluelist_status(PyObject *lvl);
+int set_ldapvaluelist_status(PyObject *lvl, int status);
 
 #endif /* UTILS_H_ */

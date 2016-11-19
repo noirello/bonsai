@@ -25,19 +25,18 @@ class AIOLDAPConnectionTest(unittest.TestCase):
     def setUpClass(cls):
         """ Set LDAP URL and open connection. """
         curdir = os.path.abspath(os.path.dirname(__file__))
-        cfg = configparser.ConfigParser()
-        cfg.read(os.path.join(curdir, 'test.ini'))
-        cls.url = "ldap://%s:%s/%s?%s?%s" % (cfg["SERVER"]["hostip"], \
-                                             cfg["SERVER"]["port"], \
-                                             cfg["SERVER"]["basedn"], \
-                                             cfg["SERVER"]["search_attr"], \
-                                             cfg["SERVER"]["search_scope"])
-        cls.basedn = cfg["SERVER"]["basedn"]
-        cls.ipaddr = cfg["SERVER"]["hostip"]
+        cls.cfg = configparser.ConfigParser()
+        cls.cfg.read(os.path.join(curdir, 'test.ini'))
+        cls.url = "ldap://%s:%s/%s?%s?%s" % (cls.cfg["SERVER"]["hostip"], \
+                                             cls.cfg["SERVER"]["port"], \
+                                             cls.cfg["SERVER"]["basedn"], \
+                                             cls.cfg["SERVER"]["search_attr"], \
+                                             cls.cfg["SERVER"]["search_scope"])
+        cls.basedn = cls.cfg["SERVER"]["basedn"]
+        cls.ipaddr = cls.cfg["SERVER"]["hostip"]
         cls.client = LDAPClient(cls.url)
-        cls.client.set_credentials("SIMPLE", (cfg["SIMPLEAUTH"]["user"],
-                                              cfg["SIMPLEAUTH"]["password"]))
-        cls.user = cfg["SIMPLEAUTH"]["user"]
+        cls.client.set_credentials("SIMPLE", (cls.cfg["SIMPLEAUTH"]["user"],
+                                              cls.cfg["SIMPLEAUTH"]["password"]))
         
     @asyncio_test
     def test_connection(self):
@@ -73,12 +72,12 @@ class AIOLDAPConnectionTest(unittest.TestCase):
 
     @asyncio_test
     def test_recursive_delete(self):
-        org1 = bonsai.LDAPEntry("ou=users,%s" % self.basedn)
-        org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "users"})
-        org2 = bonsai.LDAPEntry("ou=tops,ou=users,%s" % self.basedn)
+        org1 = bonsai.LDAPEntry("ou=testusers,%s" % self.basedn)
+        org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "testusers"})
+        org2 = bonsai.LDAPEntry("ou=tops,ou=testusers,%s" % self.basedn)
         org2.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "tops"})
-        entry = bonsai.LDAPEntry("cn=user,ou=tops,ou=users,%s" % self.basedn)
-        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "example", "sn" : "example"})
+        entry = bonsai.LDAPEntry("cn=tester,ou=tops,ou=testusers,%s" % self.basedn)
+        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "tester", "sn" : "example"})
         try:
             with (yield from self.client.connect(True)) as conn:
                 yield from conn.add(org1)
@@ -124,8 +123,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
 
     def test_obj_err(self):
         entry = LDAPEntry("cn=async_test,%s" % self.basedn)
-        entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
-                                'organizationalPerson']
+        entry['cn'] = ['async_test']
         @asyncio_test
         def err():
             with (yield from self.client.connect(True)) as conn:
@@ -137,8 +135,9 @@ class AIOLDAPConnectionTest(unittest.TestCase):
         """ Test whoami. """
         with (yield from self.client.connect(True)) as conn:
             obj = yield from conn.whoami()
-            expected_res = "dn:%s" % self.user
-            self.assertEqual(obj, expected_res)
+            expected_res = ["dn:%s" % self.cfg["SIMPLEAUTH"]["user"],
+                            self.cfg["SIMPLEAUTH"]["adusername"]]
+            self.assertIn(obj, expected_res)
 
     @asyncio_test
     def test_connection_timeout(self):

@@ -101,9 +101,9 @@ class LDAPDN:
         Check equality of two LDAPDN by their string format or
         their escaped string format.
         """
-        return (str(self) == str(other) or
-                self.__escape_special_char(str(self)) ==
-                self.__escape_special_char(str(other)))
+        return (str(self).lower() == str(other).lower() or
+                self.__escape_special_char(str(self)).lower() ==
+                self.__escape_special_char(str(other)).lower())
 
     def __str__(self):
         """ Return the full string format of the distinguished name. """

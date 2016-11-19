@@ -525,6 +525,34 @@ clear:
     return rc;
 }
 
+/* Create an LDAPControl struct. If `dupval` is non-zero, the berval struct `value`
+   is copied. */
+int ldap_control_createU(char *requestOID, int iscritical, struct berval *value,
+    int dupval, LDAPControlA **ctrlp) {
+    LDAPControlA *tmpControl = NULL;
+
+    tmpControl = (LDAPControlA *)malloc(sizeof(LDAPControlA));
+    if (tmpControl == NULL) return LDAP_NO_MEMORY;
+
+    tmpControl->ldctl_oid = requestOID;
+    tmpControl->ldctl_iscritical = iscritical;
+
+    if (dupval) {
+        tmpControl->ldctl_value.bv_val = (char *)malloc(sizeof(char) * value->bv_len);
+        if (tmpControl->ldctl_value.bv_val == NULL) {
+            free(tmpControl);
+            return LDAP_NO_MEMORY;
+        } 
+        memcpy(tmpControl->ldctl_value.bv_val, value->bv_val, value->bv_len);
+        tmpControl->ldctl_value.bv_len = value->bv_len;
+    } else {
+        tmpControl->ldctl_value = *value;
+    }
+
+    *ctrlp = tmpControl;
+    return LDAP_SUCCESS;
+}
+
 /* This function is a dummy function for keeping compatibility with OpenLDAP. */
 LDAPControlA **
 ldap_control_findU(char *oid, LDAPControlA **ctrls, LDAPControlA ***nextctrlp) {
@@ -1179,6 +1207,7 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
             &crypted_msg);
         if (rc < 0) {
             ldap_set_option(ld, LDAP_OPT_ERROR_NUMBER, &rc);
+            rc = LDAP_INVALID_CREDENTIALS;
             goto clear;
         }
 

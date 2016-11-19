@@ -32,24 +32,9 @@ objectClass: top
 objectClass: posixAccount
 uidNumber: 0
 givenName: Chuck
-authzTo: u:root
+authzTo: u:admin
 userPassword:: cEBzc3dvcmQ=
 jpegPhoto:< file:///root/test.jpeg
-
-dn: cn=lester,ou=nerdherd,dc=bonsai,dc=test
-changeType: add
-uid: lester
-gidNumber: 1
-sn: Patel
-cn: lester
-homeDirectory: /home/laster
-objectClass: inetOrgPerson
-objectClass: organizationalPerson
-objectClass: person
-objectClass: top
-objectClass: posixAccount
-uidNumber: 1
-givenName: Laster
 
 dn: cn=jeff,ou=nerdherd,dc=bonsai,dc=test
 changeType: add
@@ -83,33 +68,3 @@ objectClass: top
 objectClass: posixAccount
 uidNumber: 3
 userPassword:: cEBzc3dvcmQ=
-
-dn: cn=sam,ou=nerdherd,dc=bonsai,dc=test
-changeType: add
-uid: sam
-gidNumber: 1
-sn: Lembeck
-cn: sam
-givenName: Sam
-homeDirectory: /home/sam
-objectClass: inetOrgPerson
-objectClass: organizationalPerson
-objectClass: person
-objectClass: top
-objectClass: posixAccount
-uidNumber: 4
-
-dn: cn=will,ou=nerdherd,dc=bonsai,dc=test
-changeType: add
-uid: will
-gidNumber: 1
-sn: DeBlasio
-cn: will
-givenName: William
-homeDirectory: /home/will
-objectClass: inetOrgPerson
-objectClass: organizationalPerson
-objectClass: person
-objectClass: top
-objectClass: posixAccount
-uidNumber: 5

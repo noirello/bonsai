@@ -232,39 +232,30 @@ ldapconnection_add(LDAPConnection *self, PyObject *args) {
     return NULL;
 }
 
-/*  Delete an entry with the `dnstr` distinguished name on the server. */
-int
-LDAPConnection_DelEntryStringDN(LDAPConnection *self, char *dnstr) {
-    int msgid = -1;
-    int rc = LDAP_SUCCESS;
-
-    if (dnstr != NULL) {
-        rc = ldap_delete_ext(self->ld, dnstr, NULL, NULL, &msgid);
-        if (rc != LDAP_SUCCESS) {
-            set_exception(self->ld, rc);
-            return -1;
-        }
-        /* Add new delete operation to the pending_ops. */
-        if (add_to_pending_ops(self->pending_ops, msgid,  Py_None) != 0) {
-            return -1;
-        }
-        return msgid;
-    }
-    return -1;
-}
-
 /* Delete an entry on the server. */
 static PyObject *
 ldapconnection_delentry(LDAPConnection *self, PyObject *args) {
+    int rc = 0;
     char *dnstr = NULL;
     int msgid = -1;
 
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
     if (!PyArg_ParseTuple(args, "s", &dnstr)) return NULL;
+    if (dnstr == NULL) return NULL;
 
-    msgid = LDAPConnection_DelEntryStringDN(self, dnstr);
-    if (msgid < 0) return NULL;
+    /* Remove the entry. */
+    rc = ldap_delete_ext(self->ld, dnstr, NULL, NULL, &msgid);
+
+    if (rc != LDAP_SUCCESS) {
+        set_exception(self->ld, rc);
+        return NULL;
+    }
+
+    /* Add new delete operation to the pending_ops. */
+    if (add_to_pending_ops(self->pending_ops, msgid, Py_None) != 0) {
+        return NULL;
+    }
 
     return PyLong_FromLong((long int)msgid);
 }
@@ -281,6 +272,7 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
     LDAPControl *page_ctrl = NULL;
     LDAPControl *sort_ctrl = NULL;
     LDAPControl *vlv_ctrl = NULL;
+    LDAPControl *edn_ctrl = NULL;
     LDAPControl **server_ctrls = NULL;
     LDAPSearchIter *search_iter = (LDAPSearchIter *)iterator;
     struct timeval timeout;
@@ -295,6 +287,7 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
         if (search_iter->page_size > 0) num_of_ctrls++;
         if (search_iter->sort_list != NULL) num_of_ctrls++;
         if (search_iter->vlv_info != NULL) num_of_ctrls++;
+        if (search_iter->extdn_format != -1) num_of_ctrls++;
         if (num_of_ctrls > 0) {
             server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *)
                     * (num_of_ctrls + 1));
@@ -319,6 +312,7 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
         }
 
         if (search_iter->sort_list != NULL) {
+            /* Create sort control. */
             rc = ldap_create_sort_control(self->ld, search_iter->sort_list,
                     0, &sort_ctrl);
             if (rc != LDAP_SUCCESS) {
@@ -331,6 +325,7 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
         }
 
         if (search_iter->vlv_info != NULL) {
+            /* Create virtual list value control. */
             rc = ldap_create_vlv_control(self->ld, search_iter->vlv_info, &vlv_ctrl);
             if (rc != LDAP_SUCCESS) {
                 PyErr_BadInternalCall();
@@ -338,6 +333,19 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
                 goto error;
             }
             server_ctrls[num_of_ctrls++] = vlv_ctrl;
+            server_ctrls[num_of_ctrls] = NULL;
+        }
+
+        if (search_iter->extdn_format != -1) {
+            /* Create extended dn control. */
+            rc = _ldap_create_extended_dn_control(self->ld, search_iter->extdn_format,
+                &edn_ctrl);
+            if (rc != LDAP_SUCCESS) {
+                PyErr_BadInternalCall();
+                msgid = -1;
+                goto error;
+            }
+            server_ctrls[num_of_ctrls++] = edn_ctrl;
             server_ctrls[num_of_ctrls] = NULL;
         }
 
@@ -386,6 +394,7 @@ error:
     if (page_ctrl != NULL) ldap_control_free(page_ctrl);
     if (sort_ctrl != NULL) ldap_control_free(sort_ctrl);
     if (vlv_ctrl != NULL) ldap_control_free(vlv_ctrl);
+    if (edn_ctrl != NULL) _ldap_control_free(edn_ctrl);
     free(server_ctrls);
 
     return msgid;
@@ -400,12 +409,14 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     int sizelimit = 0, attrsonly = 0;
     int page_size = 0;
     int offset = 0, after_count = 0, before_count = 0, list_count = 0;
+    int extdn_format = -1;
     long int len = 0;
     double timeout = 0;
     char *basestr = NULL;
     char *filterstr = NULL;
     char **attrs = NULL;
     struct berval *attrvalue = NULL;
+    PyObject *tmp = NULL;
     PyObject *attrlist = NULL;
     PyObject *attrsonlyo = NULL;
     PyObject *sort_order = NULL;
@@ -419,8 +430,8 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|zizO!diO!O!iiiiiO", kwlist,
-            &basestr, &scope, &filterstr, &PyList_Type, &attrlist, &timeout,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|ziz#O!diO!O!iiiiiO", kwlist,
+            &basestr, &scope, &filterstr, &len, &PyList_Type, &attrlist, &timeout,
             &sizelimit, &PyBool_Type, &attrsonlyo, &PyList_Type, &sort_order,
             &page_size, &offset, &before_count, &after_count, &list_count,
             &attrvalue_obj)) {
@@ -456,16 +467,28 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     if (attrlist != NULL) attrs = PyList2StringList(attrlist);
 
     if (set_search_params(&params, attrs, attrsonly, basestr,
-            filterstr, scope, sizelimit, timeout) != 0) {
+            filterstr, len, scope, sizelimit, timeout) != 0) {
         return NULL;
     }
 
-    if (page_size > 0 || sort_list != NULL || offset != 0 || attrvalue_obj != NULL) {
+    /* Get extended dn format attribute form LDAPClient. */
+    tmp = PyObject_GetAttrString(self->client, "extended_dn_format");
+    if (tmp == NULL) return NULL;
+    if (tmp == Py_None) {
+        extdn_format = -1;
+    }  else {
+        extdn_format = PyLong_AsLong(tmp);
+    }
+    Py_DECREF(tmp);
+
+    if (page_size > 0 || sort_list != NULL || offset != 0 || attrvalue_obj != NULL 
+        || extdn_format != -1) {
         /* Create a SearchIter for storing the search params and result. */
         search_iter = LDAPSearchIter_New(self);
         if (search_iter == NULL) return PyErr_NoMemory();
 
         memcpy(search_iter->params, &params, sizeof(ldapsearchparams));
+        search_iter->extdn_format = extdn_format;
 
         /* Create cookie for the page result. */
         search_iter->cookie = (struct berval *)malloc(sizeof(struct berval));
@@ -687,7 +710,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
     rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
             &returned_ctrls, 1);
 
-    if (rc != LDAP_SUCCESS ) {
+    if (rc != LDAP_SUCCESS && rc != LDAP_MORE_RESULTS_TO_RETURN) {
         set_exception(self->ld, rc);
         goto error;
     }
@@ -732,8 +755,8 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
             }
             Py_DECREF(buffer);
             Py_DECREF(search_iter);
-        } else if (search_iter->sort_list != NULL) {
-            /* Return simple list for ordered search. */
+        } else if (search_iter->sort_list != NULL || search_iter->extdn_format != -1) {
+            /* Return simple list for ordered search or extended DN search. */
             value = buffer;
             Py_DECREF(search_iter);
         } else {

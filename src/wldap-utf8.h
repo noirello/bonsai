@@ -109,6 +109,7 @@
 
 /* These functions are not represented in the WinLDAP API. */
 #define ldap_parse_pageresponse_control(ld, ctrls, count, cookie) ldap_parse_pageresponse_controlU(ld, ctrls, count, &(cookie))
+#define ldap_control_create ldap_control_createU
 #define ldap_control_find ldap_control_findU
 #define ldap_initialize ldap_initializeU
 #define ldap_sasl_sspi_bind_s ldap_sasl_sspi_bind_sU
@@ -137,6 +138,7 @@ int ldap_search_extU(LDAP *ld, char *base, int scope, char *filter, char **attrs
 int ldap_extended_operationU(LDAP *ld, char *reqoid, struct berval *reqdata, LDAPControlA **sctrls, LDAPControlA **cctrls, int *msgidp);
 int ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct berval **retdatap, int freeit);
 int ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *count, struct berval **cookie);
+int ldap_control_createU(char *requestOID, int iscritical, struct berval *value, int dupval, LDAPControlA **ctrlp);
 LDAPControlA **ldap_control_findU(char *oid, LDAPControlA **ctrls, LDAPControlA ***nextctrlp);
 int ldap_create_vlv_controlU(LDAP *ld, LDAPVLVInfo *vlvinfo, LDAPControlA **ctrl);
 int ldap_parse_vlvresponse_controlU(LDAP *ld, LDAPControlA **ctrls, long int *target_posp, long int *list_countp, struct berval **contextp, int *errcodep);

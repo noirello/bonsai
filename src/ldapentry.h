@@ -6,13 +6,12 @@
 
 #include "ldapconnection.h"
 #include "ldapmodlist.h"
-#include "ldapvaluelist.h"
 #include "ldap-xplat.h"
 
 typedef struct {
     PyDictObject dict;
     PyObject *dn;
-    UniqueList *deleted;
+    PyObject *deleted;
     LDAPConnection *conn;
 } LDAPEntry;
 

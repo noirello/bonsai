@@ -5,12 +5,16 @@ Bonsai
     :target: https://pypi.python.org/pypi/bonsai/
     :alt: PyPI Version
 
-.. image:: https://img.shields.io/travis/Noirello/bonsai/dev.svg?style=flat-square
-    :target: https://travis-ci.org/Noirello/bonsai
-    :alt: Build Status
-    
-.. image:: https://img.shields.io/codecov/c/github/Noirello/bonsai/dev.svg?style=flat-square
-    :target: https://codecov.io/github/Noirello/bonsai?branch=dev
+.. image:: https://img.shields.io/travis/noirello/bonsai/dev.svg?style=flat-square
+    :target: https://travis-ci.org/noirello/bonsai
+    :alt: Travis CI Build Status
+
+.. image:: https://img.shields.io/appveyor/ci/noirello/bonsai/dev.svg?style=flat-square
+    :target: https://ci.appveyor.com/project/noirello/bonsai
+    :alt: AppVeyor CI Build Status
+
+.. image:: https://img.shields.io/codecov/c/github/noirello/bonsai/dev.svg?style=flat-square
+    :target: https://codecov.io/github/noirello/bonsai?branch=dev
     :alt: Coverage Status
 
 .. image:: https://readthedocs.org/projects/bonsai/badge/?version=latest&style=flat-square
@@ -18,7 +22,7 @@ Bonsai
     :alt: Documentation Status
 
 .. image:: https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square
-    :target: https://raw.githubusercontent.com/Noirello/bonsai/master/LICENSE
+    :target: https://raw.githubusercontent.com/noirello/bonsai/master/LICENSE
     :alt: GitHub License
 
 This is a module for handling LDAP operations in Python. Uses libldap2 on Unix platforms and

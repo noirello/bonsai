@@ -184,11 +184,11 @@ class LDAPConnection(ldapconnection):
     def whoami(self, timeout: float=None) -> Union[str, int]:
         """
         This method can be used to obtain authorization identity.
-        
+
         :param float timeout: time limit in seconds for the operation.
 
         :return: the authorization ID.
         :rtype: str
-         """
+        """
         return self._evaluate(super().whoami(), timeout)
 

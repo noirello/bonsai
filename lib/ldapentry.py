@@ -1,21 +1,35 @@
 from typing import Union
 
 from ._bonsai import ldapentry
+from .errors import InvalidDN
 from .ldapdn import LDAPDN
 
 class LDAPEntry(ldapentry):
     def __init__(self, dn: Union[LDAPDN, str], conn=None):
-        super().__init__(str(dn), conn)
+        try:
+            super().__init__(str(dn), conn)
+            self.__extended_dn = None
+        except InvalidDN:
+            # InvalidDN error caused by extended DN control.
+            splitted_dn = dn.split(';')
+            super().__init__(splitted_dn[-1], conn)
+            self.__extended_dn = dn
 
-    def delete(self, timeout: float=None) -> Union[bool, int]:
+    def delete(self, timeout: float=None,
+               recursive: bool=False) -> Union[bool, int]:
         """
         Remove LDAP entry from the dictionary server.
 
-        :param float timeout: time limit in seconds for the operation.        
+        :param float timeout: time limit in seconds for the operation.
+        :param bool recursive: remove every entry of the given subtree \
+        recursively.
         :return: True, if the operation is finished.
         :rtype: bool
         """
-        return self.connection._evaluate(super().delete(), timeout)
+        res = self.connection.delete(self.dn, timeout, recursive)
+        for value in self.values():
+            value.status = 2
+        return res
 
     def modify(self, timeout: float=None) -> Union[bool, int]:
         """
@@ -116,7 +130,7 @@ class LDAPEntry(ldapentry):
     def __eq__(self, other):
         """
         Two LDAPEntry objects are considered equals, if their DN is the same.
-        
+
         :param other: the other comparable object.
         :return: True if the two object are equals.
         :rtyype: bool
@@ -125,3 +139,22 @@ class LDAPEntry(ldapentry):
             return self.dn == other.dn
         else:
             return super().__eq__(other)
+
+    def _status(self):
+        status = {}
+        for key, value in self.items():
+            status[key] = value._status_dict
+        status['@deleted_keys'] = self.deleted_keys
+        return status
+
+    @property
+    def extended_dn(self):
+        """
+        The extended DN of the entry. It is None, if the extended DN control
+        is not set or not supported. The attribute is read-only.
+        """
+        return self.__extended_dn
+
+    @extended_dn.setter
+    def extended_dn(self, value):
+        raise ValueError("Extended_dn attribute cannot be set.")

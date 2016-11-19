@@ -1,5 +1,30 @@
 Change Log
 ==========
+[0.8.9] - 2016-11-19
+--------------------
+
+Changed
+~~~~~~~
+
+-  Reimplemented LDAPValuelist in Python, removed C implementations of
+   ldapvaluelist and uniquelist.
+-  Reimplemented LDAPEntry.delete method in Python.
+-  LDAPConnection.search method to accept bytes-like object as a filter
+   parameter. (Issue #7)
+-  LDAPClient.get_rootDSE method uses anonym bind without any previsouly set
+   LDAP controls to search for rootDSE.
+
+Added
+~~~~~
+
+-  LDAP_EXTENDED_DN_CONTROL support with LDAPClient.set_extended_dn method
+   and LDAPEntry's new extended_dn string attribute. (Issue #6)
+
+Fixed
+~~~~~
+
+-  Case sensitivity when checking LDAPDN equality.
+
 [0.8.8] - 2016-07-19
 --------------------
 

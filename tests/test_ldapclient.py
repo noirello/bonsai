@@ -44,12 +44,19 @@ class LDAPClientTest(unittest.TestCase):
 
     def test_raw_attributes(self):
         """ Test setting raw attributes to keep in bytearray format. """
-        def value_err():
+        def type_err():
             self.client.set_raw_attributes([5])
-        self.assertRaises(TypeError, value_err)
-        self.client.set_raw_attributes(["namingContexts"])
-        if type(self.client.get_rootDSE()["namingContexts"][0]) != bytes:
+        def value_err():
+            self.client.raw_attributes = ['ou', 'cn', 'ou']
+        self.assertRaises(TypeError, type_err)
+        self.assertRaises(ValueError, value_err)
+        self.client.set_raw_attributes(["ou"])
+        conn = self.client.connect()
+        result = conn.search("ou=nerdherd,dc=bonsai,dc=test", 0)[0]
+        if type(result["ou"][0]) != bytes:
             self.fail("The type of the value is not bytes.")
+        if type(result["objectClass"][0]) == bytes:
+            self.fail("Not set attribute is bytes.")
 
     def test_set_credentials(self):
         """
@@ -116,7 +123,7 @@ class LDAPClientTest(unittest.TestCase):
         """ Test password policy setting. """
         client = LDAPClient(self.url)
         self.assertRaises(TypeError, lambda: client.set_password_policy("F"))
-        client.set_password_policy(True)
+        client.password_policy = True
         client.set_credentials("SIMPLE", ("cn=chuck,ou=nerdherd,dc=bonsai,dc=test",
                                           "p@ssword"))
         ret_val = client.connect()
@@ -132,6 +139,37 @@ class LDAPClientTest(unittest.TestCase):
         else:
             self.fail("Invalid second object in the tuple.")
         ret_val[0].close()
+
+    def test_extended_dn(self):
+        """ Test extended dn control. """
+        client = LDAPClient(self.url)
+        self.assertRaises(TypeError, lambda: client.set_extended_dn("A"))
+        self.assertRaises(ValueError, lambda: client.set_extended_dn(2))
+        client.extended_dn_format = 0
+        self.assertEqual(client.extended_dn_format, 0)
+        conn = client.connect()
+        root_dse = client.get_rootDSE()
+        result = conn.search("ou=nerdherd,dc=bonsai,dc=test", 0)[0]
+        if '1.2.840.113556.1.4.529' in root_dse['supportedControl']:
+            self.assertIsNotNone(result.extended_dn)
+            self.assertEqual(result.extended_dn.split(';')[-1], str(result.dn))
+        else:
+            self.assertIsNone(result.extended_dn)
+
+    def test_readonly_attributes(self):
+        """ Test read-only attributes of LDAPClient. """
+        def set_url():
+            self.client.url = "ldap://test"
+        self.assertRaises(ValueError, set_url)
+        def set_mechanism():
+            self.client.mechanism = "SIMPLE"
+        self.assertRaises(ValueError, set_mechanism)
+        def set_credentials():
+            self.client.credentials = ("test", "test", None, None)
+        self.assertRaises(ValueError, set_credentials)
+        def set_tls():
+            self.client.tls = False
+        self.assertRaises(ValueError, set_tls)
 
 if __name__ == '__main__':
     unittest.main()

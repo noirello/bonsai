@@ -3,6 +3,8 @@ MAINTAINER noirello <noirello@gmail.com>
 
 RUN dnf update -y
 
+# For service tests and setting etwork delay
+RUN dnf install -y procps iproute kernel-modules-extra
 # OpenLDAP server and utils.
 RUN dnf install -y openldap openldap-servers openldap-clients cyrus-sasl-md5 cyrus-sasl-gssapi cyrus-sasl-ntlm openssl
 # Kerberos server and utils.
@@ -50,6 +52,7 @@ RUN chown -Rf ldap:ldap /var/lib/ldap
 
 # Copy the basic LDIF files into the container.
 COPY ./ldifs/base.ldif /root/base.ldif
+COPY ./ldifs/users.ldif /root/users.ldif
 COPY ./ldifs/sasl.ldif /root/sasl.ldif
 COPY ./ldifs/overlays.ldif /root/overlays.ldif
 COPY ./ldifs/ppolicy.ldif /root/ppolicy.ldif

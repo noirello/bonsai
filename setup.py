@@ -82,12 +82,12 @@ class TestCommand(Command):
         sys.exit(0)
 
 sources = ["bonsaimodule.c", "ldapentry.c", "ldapconnectiter.c",
-           "ldapconnection.c", "ldapmodlist.c", "ldapvaluelist.c",
-           "ldap-xplat.c", "ldapsearchiter.c", "utils.c", "uniquelist.c"]
+           "ldapconnection.c", "ldapmodlist.c", "ldap-xplat.c",
+           "ldapsearchiter.c", "utils.c"]
 
 depends = ["ldapconnection.h", "ldapentry.h", "ldapconnectiter.h",
-           "ldapmodlist.h", "ldapvaluelist.h", "ldapsearchiter.h",
-           "ldap-xplat.h", "uniquelist.h", "utils.h"]
+           "ldapmodlist.h", "ldapsearchiter.h", "ldap-xplat.h",
+           "utils.h"]
 
 libdirs = []
 macros = []
@@ -131,12 +131,18 @@ if sys.version_info.minor < 4:
     # Enum dependecy for Python 3.3.
     python_deps.append("enum34")
 
+# Get long description from the README.rst file.
 with open('README.rst') as file:
     long_descr = file.read()
 
+# Get version number from the module's __init__.py file.
+with open('./lib/__init__.py') as src:
+    ver = [line.split("'")[1] for line in src.readlines()
+           if line.startswith('__version__')][0]
+
 setup(name="bonsai",
-      version="0.8.8",
-      description="Module for Python 3 to access LDAP directory servers.",
+      version=ver,
+      description="Python 3 module for accessing LDAP directory servers.",
       author="noirello",
       author_email="noirello@gmail.com",
       url="https://github.com/noirello/bonsai",
