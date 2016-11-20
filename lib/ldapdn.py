@@ -10,12 +10,12 @@ class LDAPDN:
     """
     __slots__ = ("__strdn",)
 
-    _attrtype = '[A-Za-z][\w-]*|\d+(?:\.\d+)*'
+    _attrtype = r'[A-Za-z][\w-]*|\d+(?:\.\d+)*'
     _attrvalue = r'#(?:[\dA-Fa-f]{2})+|(?:[^,=\+<>#;\\"]|\\[,=\+<>#;\\"]' \
     r'|\\[\dA-Fa-f]{2})*|"(?:[^\\"]|\\[,=\+<>#;\\"]|\\[\dA-Fa-f]{2})*"'
-    _namecomp = "({typ})=({val})(?:\+({typ})=({val}))*".format(typ=_attrtype,
-                                                               val=_attrvalue)
-    _dnregex = re.compile("({comp})(?:,({comp}))*\Z".format(comp=_namecomp),
+    _namecomp = r"({typ})=({val})(?:\+({typ})=({val}))*".format(typ=_attrtype,
+                                                                val=_attrvalue)
+    _dnregex = re.compile(r"({comp})(?:,({comp}))*\Z".format(comp=_namecomp),
                           re.IGNORECASE)
 
     def __init__(self, strdn: str):
@@ -33,12 +33,8 @@ class LDAPDN:
         type_value_list = re.split(r'(?<!\\)[+]', str_rdn)
         for attr in type_value_list:
             # Get attribute type and value.
-            try:
-                atype, avalue = re.split(r'(?<!\\)=', attr)
-                rdn.append((atype, avalue))
-            except ValueError:
-                # Expected when the splitting returns more, then 2 component.
-                raise InvalidDN(str_rdn)
+            atype, avalue = re.split(r'(?<!\\)=', attr)
+            rdn.append((atype, avalue))
         return tuple(rdn)
 
     @staticmethod
@@ -84,14 +80,14 @@ class LDAPDN:
         :param int idx: the indeces of the RDNs.
         :param str value: the new RDNs.
         """
-        if not self._dnregex.match(value):
-            raise InvalidDN(value)
         if type(value) != str:
             raise ValueError("New value must be string.")
         if type(idx) == int:
             idx = slice(idx, idx+1)
         elif type(idx) != slice:
             raise TypeError("Indices must be integers or slices.")
+        if not self._dnregex.match(value):
+            raise InvalidDN(value)
         rdns = re.split(r'(?<!\\),', self.__strdn)
         rdns[idx] = re.split(r'(?<!\\),', value)
         self.__strdn = ",".join(rdns)
