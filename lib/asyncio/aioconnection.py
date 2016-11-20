@@ -7,7 +7,7 @@ class AIOLDAPConnection(LDAPConnection):
     def __init__(self, client, loop=None):
         self._loop = loop or asyncio.get_event_loop()
         super().__init__(client, is_async=True)
-        
+
     def _ready(self, msg_id, fut):
         self._loop.remove_reader(self.fileno())
         self._loop.remove_writer(self.fileno())
@@ -21,6 +21,7 @@ class AIOLDAPConnection(LDAPConnection):
         except LDAPError as exc:
             fut.set_exception(exc)
 
+    @asyncio.coroutine
     def _poll(self, msg_id, timeout=None):
         fut = asyncio.Future()
         self._loop.add_reader(self.fileno(), self._ready, msg_id, fut)
@@ -32,10 +33,11 @@ class AIOLDAPConnection(LDAPConnection):
             self._loop.remove_reader(self.fileno())
             self._loop.remove_writer(self.fileno())
             raise exc
-    
+
     def _evaluate(self, msg_id, timeout=None):
         return self._poll(msg_id, timeout)
 
+    @asyncio.coroutine
     def delete(self, dname, timeout=None, recursive=False):
         try:
             res = yield from super().delete(dname, timeout, recursive)

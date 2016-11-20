@@ -13,7 +13,7 @@ class TornadoLDAPConnection(LDAPConnection):
         self._ioloop = ioloop or IOLoop.instance()
         self._fileno = None
         self._timeout = None
-        
+
     def _io_callback(self, fut, msg_id, fd=None, events=None):
         try:
             self._ioloop.remove_handler(self._fileno)
@@ -47,7 +47,8 @@ class TornadoLDAPConnection(LDAPConnection):
                                      IOLoop.WRITE | IOLoop.READ)
             if timeout is not None:
                 self._timeout = self._ioloop.call_later(timeout,
-                                    self._timeout_callback, fut)
+                                                        self._timeout_callback,
+                                                        fut)
         except FileExistsError as exc:
             # Avoid concurrency problems by registring with
             # the same fileno more than once.

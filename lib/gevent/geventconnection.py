@@ -6,7 +6,7 @@ from ..errors import NotAllowedOnNonleaf
 class GeventLDAPConnection(LDAPConnection):
     def __init__(self, client):
         super().__init__(client, is_async=True)
-    
+
     def _poll(self, msg_id, timeout=None):
         while True:
             res = self.get_result(msg_id)

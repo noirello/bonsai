@@ -394,7 +394,7 @@ class LDAPClient:
 
     @property
     def ca_cert_dir(self):
-        """ The path to the CA certificate. """ 
+        """ The path to the CA certificate. """
         return self.__ca_cert_dir
 
     @ca_cert_dir.setter

@@ -82,7 +82,7 @@ class LDAPConnection(ldapconnection):
         except NotAllowedOnNonleaf as exc:
             if recursive and self.is_async == False:
                 results = self.search(dname, LDAPSearchScope.ONELEVEL,
-                                     attrlist=['1.1'], timeout=timeout)
+                                      attrlist=['1.1'], timeout=timeout)
                 for res in results:
                     self.delete(res.dn, timeout, True)
                 return self.delete(dname, timeout, False)
@@ -119,7 +119,7 @@ class LDAPConnection(ldapconnection):
         if sort_order is not None:
             _sort_order = self.__create_sort_list(sort_order)
         else:
-            _sort_order= []
+            _sort_order = []
         if _sort_order == [] and (offset != 0 or attrvalue is not None):
             raise UnwillingToPerform("Sort control is required with"
                                      " virtual list view.")
