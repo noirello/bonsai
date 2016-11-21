@@ -1,5 +1,17 @@
-Change Log
+Changelog
 ==========
+[0.9.0] - 2016-11-22
+--------------------
+
+Changed
+~~~~~~~
+
+Added
+~~~~~
+
+Fixed
+~~~~~
+
 [0.8.9] - 2016-11-19
 --------------------
 
@@ -210,3 +222,95 @@ Fixed
 -  LDAPConnection.whoami() returns ‘anonymous’ after an anonymous bind.
 -  After failed connection LDAPClient.connect() returns ConnectionError
    on MS Windows.
+
+[0.7.0] - 2015-01-28
+--------------------
+
+Changed
+~~~~~~~
+
+-  The set_page_size method is moved from LDAPClient to LDAPConnection.
+
+Added
+~~~~~
+
+-  Support for asynchronous LDAP operations.
+-  Cancel method for LDAPConnection.
+-  New LDAPEntry and LDAPConnection Python objects as wrappers around the
+   C implementations.
+
+Fixed
+~~~~~
+
+-  UniqueList contains method.
+
+[0.6.0] - 2014-09-24
+--------------------
+
+Changed
+~~~~~~~
+
+-  LDAPClient accepts LDAPURL objects as url.
+-  LDAPConnection search accepts LDAPDN objects as basedn parameter.
+
+Added
+~~~~~
+
+-  Method to set certificate policy.
+-  Server side sort control.
+
+Fixed
+~~~~~
+
+-  Getting paged result cookie on MS Windows.
+-  Segmentation fault of LDAPEntry.popitem().
+
+[0.5.0] - 2014-03-08
+--------------------
+
+Changed
+~~~~~~~
+
+-  Module name to lower case.
+-  Removed get_entry method.
+-  LDAP URL parameters are used for search properly.
+
+Added
+~~~~~
+
+-  New LDAPClient object for managing the connection settings.
+-  DIGEST-MD5 support on MS Windows.
+-  Raw attribute support: the given attributes will be kept in bytearray form.
+-  Paged search control support.
+-  Sphinx documentation with tutorial.
+
+Fixed
+~~~~~
+
+- Several memory management issues.
+
+[0.1.5] - 2013-07-31
+--------------------
+
+Changed
+~~~~~~~
+
+-  Errors are implemented in Python.
+-  Using WinLDAP on MS Windows for LDAP operations.
+
+Added
+~~~~~
+
+-  UniqueList for storing case-insensitive unique elements.
+-  LDAPURL and LDAPDN Python classes for handling LDAP URL and distinguished
+   name.
+
+Fixed
+~~~~~
+
+-  Getting empty list for searching non-existing entries.
+
+[0.1.0] - 2013-06-23
+--------------------
+
+-  Initial public release.
