@@ -20,7 +20,7 @@
 #define XTHREAD HANDLE
 
 int _ldap_parse_passwordpolicy_control(LDAP *ld, LDAPControl **ctrls,
-	ber_int_t *expire, ber_int_t *grace, unsigned int *error);
+    ber_int_t *expire, ber_int_t *grace, unsigned int *error);
 
 #else
 //Unix
@@ -43,7 +43,7 @@ int _ldap_parse_passwordpolicy_control(LDAP *ld, LDAPControl **ctrls,
 int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
 char *_ldap_get_opt_errormsg(LDAP *ld);
 int _ldap_parse_passwordpolicy_control(LDAP *ld, LDAPControl *ctrl,
-	ber_int_t *expire, ber_int_t *grace, unsigned int *error);
+    ber_int_t *expire, ber_int_t *grace, unsigned int *error);
 #endif
 
 typedef struct ldap_conndata_s {

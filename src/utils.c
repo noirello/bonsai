@@ -182,10 +182,10 @@ PyList2BervalList(PyObject *list) {
     for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
         rc = PyObject2char_withlength(item, &strvalue, &len);
         Py_DECREF(item);
-        if (rc != 0) goto finish;
+        if (rc != 0) goto end;
         berval_arr[i++] = create_berval(strvalue, len);
     }
-finish:
+end:
     Py_DECREF(iter);
     berval_arr[i] = NULL;
     return berval_arr;
@@ -385,7 +385,7 @@ set_exception(LDAP *ld, int code) {
         if (opt_errorstr != NULL && strlen(opt_errorstr) > 0) {
             if (strcmp(errorstr, opt_errorstr) != 0) {
                 errormsg = PyUnicode_FromFormat("%s. %s", errorstr, opt_errorstr);
-                goto finish;
+                goto end;
             }
         }
         /* Optional string is empty or equals to the error string. */
@@ -393,7 +393,7 @@ set_exception(LDAP *ld, int code) {
     } else if (opt_errorstr != NULL && strlen(opt_errorstr) > 0) {
         errormsg = PyUnicode_FromFormat("%s.", opt_errorstr);
     }
-finish:
+end:
     if (errormsg != NULL) {
         PyErr_SetObject(ldaperror, errormsg);
         Py_DECREF(errormsg);
@@ -480,7 +480,8 @@ close_socketpair(PyObject *tup) {
 /* Set the parameters of an ldapsearchparams struct. */
 int
 set_search_params(ldapsearchparams *params, char **attrs, int attrsonly,
-        char *base, char *filter, int len, int scope, int sizelimit, double timeout) {
+        char *base, char *filter, int len, int scope, int sizelimit, double timeout, 
+        LDAPSortKey **sort_list) {
 
     params->attrs = attrs;
     params->attrsonly = attrsonly;
@@ -501,6 +502,8 @@ set_search_params(ldapsearchparams *params, char **attrs, int attrsonly,
     params->sizelimit = sizelimit;
     params->timeout = timeout;
 
+    params->sort_list = sort_list;
+
     return 0;
 }
 
@@ -518,6 +521,14 @@ free_search_params(ldapsearchparams *params) {
             }
             free(params->attrs);
         }
+        /* Free LDAPSortKey list. */
+        if (params->sort_list != NULL) {
+            for (i = 0; params->sort_list[i] != NULL; i++) {
+                free(params->sort_list[i]->attributeType);
+                free(params->sort_list[i]);
+            }
+            free(params->sort_list);
+        }
     }
 }
 
@@ -529,9 +540,9 @@ create_ppolicy_control(LDAP *ld, LDAPControl **returned_ctrls,
     int grace = -1;
 
     rc = _ldap_parse_passwordpolicy_control(ld, ldap_control_find(
-		LDAP_CONTROL_PASSWORDPOLICYRESPONSE, returned_ctrls, NULL),
-		&expire, &grace, pperr);
-	if (rc == LDAP_CONTROL_NOT_FOUND) return 0;
+        LDAP_CONTROL_PASSWORDPOLICYRESPONSE, returned_ctrls, NULL),
+        &expire, &grace, pperr);
+    if (rc == LDAP_CONTROL_NOT_FOUND) return 0;
     if (rc != LDAP_SUCCESS) return -1;
     /* Create ppolicy ctrl dict. */
     *ctrl_obj = Py_BuildValue("{s,s,s,i,s,i}",
@@ -540,7 +551,7 @@ create_ppolicy_control(LDAP *ld, LDAPControl **returned_ctrls,
             "grace", grace);
     if (*ctrl_obj == NULL) return -1;
 
-	return 1;
+    return 1;
 }
 
 void

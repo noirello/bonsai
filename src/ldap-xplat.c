@@ -151,8 +151,8 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, i
 
 int
 _ldap_parse_passwordpolicy_control(LDAP *ld, LDAPControl **ctrls, ber_int_t *expire,
-	ber_int_t *grace, unsigned int *error) {
-	return ldap_parse_passwordpolicy_control(ld, ctrls, expire, grace, error);
+    ber_int_t *grace, unsigned int *error) {
+    return ldap_parse_passwordpolicy_control(ld, ctrls, expire, grace, error);
 }
 
 void 
@@ -181,31 +181,31 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
     if (len == 0 || strlen(user) == 0) return 0;
 
     rc = krb5_cc_new_unique(ctx, "FILE", NULL, ccache);
-    if (rc != 0) goto clear;
+    if (rc != 0) goto end;
 
     rc = krb5_build_principal(ctx, &princ, len, realm, user, NULL);
-    if (rc != 0) goto clear;
+    if (rc != 0) goto end;
 
     rc = krb5_cc_initialize(ctx, *ccache, princ);
-    if (rc != 0) goto clear;
+    if (rc != 0) goto end;
 
     rc = krb5_get_init_creds_password(ctx, &creds, princ, password, 0, NULL, 0,
             NULL, NULL);
-    if (rc != 0) goto clear;
+    if (rc != 0) goto end;
 
     rc= krb5_cc_store_cred(ctx, *ccache, &creds);
-    if (rc != 0) goto clear;
+    if (rc != 0) goto end;
 
     cname = krb5_cc_get_name(ctx, *ccache);
-    if (cname == NULL) goto clear;
+    if (cname == NULL) goto end;
 
     major_stat = gss_krb5_ccache_name(&minor_stat, cname, NULL);
-    if (major_stat != 0) goto clear;
+    if (major_stat != 0) goto end;
 
     major_stat = gss_acquire_cred(&minor_stat, GSS_C_NO_NAME, 0,
             GSS_C_NULL_OID_SET, GSS_C_INITIATE, gsscred, NULL, NULL);
 
-clear:
+end:
     if (princ != NULL) krb5_free_principal(ctx, princ);
     if (rc != 0) {
         /* Create error message with the error code. */
@@ -528,11 +528,11 @@ _ldap_get_opt_errormsg(LDAP *ld) {
 
 int
 _ldap_parse_passwordpolicy_control(LDAP *ld, LDAPControl *ctrl,
-	ber_int_t *expire, ber_int_t *grace, unsigned int *error) {
+    ber_int_t *expire, ber_int_t *grace, unsigned int *error) {
 
-	if (ctrl == NULL) return LDAP_CONTROL_NOT_FOUND;
+    if (ctrl == NULL) return LDAP_CONTROL_NOT_FOUND;
 
-	return ldap_parse_passwordpolicy_control(ld, ctrl, expire, grace, error);
+    return ldap_parse_passwordpolicy_control(ld, ctrl, expire, grace, error);
 
 }
 

@@ -12,6 +12,7 @@ typedef struct {
     int scope;
     int attrsonly;
     int sizelimit;
+    LDAPSortKey **sort_list;
 } ldapsearchparams;
 
 extern PyObject *LDAPDNObj;
@@ -33,7 +34,8 @@ int add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item);
 int get_socketpair(PyObject *client, PyObject **tup, SOCKET *csock, SOCKET *ssock);
 void close_socketpair(PyObject *tup);
 int set_search_params(ldapsearchparams *params, char **attrs, int attrsonly,
-        char *base, char *filter, int len, int scope, int sizelimit, double timeout);
+        char *base, char *filter, int len, int scope, int sizelimit, double timeout,
+        LDAPSortKey **sort_list);
 void free_search_params(ldapsearchparams *params);
 int create_ppolicy_control(LDAP *ld, LDAPControl **returned_ctrls,
         PyObject **ctrl_obj,  unsigned int *pperr);

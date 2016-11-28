@@ -268,7 +268,8 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
     int rc;
     int msgid = -1;
     int num_of_ctrls = 0;
-    ldapsearchparams *params;
+    int extdn_format = -1;
+    ldapsearchparams *params = NULL;
     LDAPControl *page_ctrl = NULL;
     LDAPControl *sort_ctrl = NULL;
     LDAPControl *vlv_ctrl = NULL;
@@ -278,85 +279,98 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
     struct timeval timeout;
     struct timeval *timeout_p;
     int tout_ms = 0;
-    PyObject *value = Py_None;
+    PyObject *value = NULL;
+
+    /* Get extended dn format attribute form LDAPClient. */
+    value = PyObject_GetAttrString(self->client, "extended_dn_format");
+    if (value == NULL) return -1;
+    if (value == Py_None) {
+        extdn_format = -1;
+    }  else {
+        extdn_format = PyLong_AsLong(value);
+    }
+    Py_DECREF(value);
 
     if (search_iter != NULL) {
         params = search_iter->params;
         value = (PyObject *)search_iter;
-        /* Check the number of server controls and allocate it. */
-        if (search_iter->page_size > 0) num_of_ctrls++;
-        if (search_iter->sort_list != NULL) num_of_ctrls++;
-        if (search_iter->vlv_info != NULL) num_of_ctrls++;
-        if (search_iter->extdn_format != -1) num_of_ctrls++;
-        if (num_of_ctrls > 0) {
-            server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *)
-                    * (num_of_ctrls + 1));
-            if (server_ctrls == NULL) {
-                PyErr_NoMemory();
-                return -1;
-            }
-            num_of_ctrls = 0;
-        }
+    } else {
+        params = params_in;
+        value = Py_None;
+    }
 
-        if (search_iter->page_size > 1) {
+    /* Check the number of server controls and allocate it. */
+    if (extdn_format != -1) num_of_ctrls++;
+    if (params->sort_list != NULL) num_of_ctrls++;
+    if (search_iter != NULL && search_iter->page_size > 0) num_of_ctrls++;
+    if (search_iter != NULL && search_iter->vlv_info != NULL) num_of_ctrls++;
+    if (num_of_ctrls > 0) {
+        server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *)
+                * (num_of_ctrls + 1));
+        if (server_ctrls == NULL) {
+            PyErr_NoMemory();
+            return -1;
+        }
+        num_of_ctrls = 0;
+    }
+
+    if (server_ctrls != NULL) {
+        if (search_iter != NULL && search_iter->page_size > 1) {
             /* Create page control and add to the server controls. */
             rc = ldap_create_page_control(self->ld, search_iter->page_size,
                     search_iter->cookie, 0, &page_ctrl);
             if (rc != LDAP_SUCCESS) {
                 PyErr_BadInternalCall();
                 msgid = -1;
-                goto error;
+                goto end;
             }
             server_ctrls[num_of_ctrls++] = page_ctrl;
             server_ctrls[num_of_ctrls] = NULL;
         }
 
-        if (search_iter->sort_list != NULL) {
+        if (params->sort_list != NULL) {
             /* Create sort control. */
-            rc = ldap_create_sort_control(self->ld, search_iter->sort_list,
-                    0, &sort_ctrl);
+            rc = ldap_create_sort_control(self->ld, params->sort_list, 0,
+                    &sort_ctrl);
             if (rc != LDAP_SUCCESS) {
                 PyErr_BadInternalCall();
                 msgid = -1;
-                goto error;
+                goto end;
             }
             server_ctrls[num_of_ctrls++] = sort_ctrl;
             server_ctrls[num_of_ctrls] = NULL;
         }
 
-        if (search_iter->vlv_info != NULL) {
+        if (search_iter != NULL && search_iter->vlv_info != NULL) {
             /* Create virtual list value control. */
             rc = ldap_create_vlv_control(self->ld, search_iter->vlv_info, &vlv_ctrl);
             if (rc != LDAP_SUCCESS) {
                 PyErr_BadInternalCall();
                 msgid = -1;
-                goto error;
+                goto end;
             }
             server_ctrls[num_of_ctrls++] = vlv_ctrl;
             server_ctrls[num_of_ctrls] = NULL;
         }
 
-        if (search_iter->extdn_format != -1) {
+        if (extdn_format != -1) {
             /* Create extended dn control. */
-            rc = _ldap_create_extended_dn_control(self->ld, search_iter->extdn_format,
-                &edn_ctrl);
+            rc = _ldap_create_extended_dn_control(self->ld, extdn_format, &edn_ctrl);
             if (rc != LDAP_SUCCESS) {
                 PyErr_BadInternalCall();
                 msgid = -1;
-                goto error;
+                goto end;
             }
             server_ctrls[num_of_ctrls++] = edn_ctrl;
             server_ctrls[num_of_ctrls] = NULL;
         }
 
-    } else {
-        params = params_in;
     }
 
     if (params == NULL) {
         PyErr_BadInternalCall();
         msgid= -1;
-        goto error;
+        goto end;
     }
 
     tout_ms = (int)(params->timeout * 1000);
@@ -381,15 +395,14 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
     if (rc != LDAP_SUCCESS) {
         set_exception(self->ld, rc);
         msgid = -1;
-        goto error;
+        goto end;
     }
 
     if (add_to_pending_ops(self->pending_ops, msgid, value) != 0) {
         msgid = -1;
-        goto error;
+        goto end;
     }
-
-error:
+end:
     /* Cleanup. */
     if (page_ctrl != NULL) ldap_control_free(page_ctrl);
     if (sort_ctrl != NULL) ldap_control_free(sort_ctrl);
@@ -409,14 +422,12 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     int sizelimit = 0, attrsonly = 0;
     int page_size = 0;
     int offset = 0, after_count = 0, before_count = 0, list_count = 0;
-    int extdn_format = -1;
     long int len = 0;
     double timeout = 0;
     char *basestr = NULL;
     char *filterstr = NULL;
     char **attrs = NULL;
     struct berval *attrvalue = NULL;
-    PyObject *tmp = NULL;
     PyObject *attrlist = NULL;
     PyObject *attrsonlyo = NULL;
     PyObject *sort_order = NULL;
@@ -467,28 +478,16 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     if (attrlist != NULL) attrs = PyList2StringList(attrlist);
 
     if (set_search_params(&params, attrs, attrsonly, basestr,
-            filterstr, len, scope, sizelimit, timeout) != 0) {
+            filterstr, len, scope, sizelimit, timeout, sort_list) != 0) {
         return NULL;
     }
 
-    /* Get extended dn format attribute form LDAPClient. */
-    tmp = PyObject_GetAttrString(self->client, "extended_dn_format");
-    if (tmp == NULL) return NULL;
-    if (tmp == Py_None) {
-        extdn_format = -1;
-    }  else {
-        extdn_format = PyLong_AsLong(tmp);
-    }
-    Py_DECREF(tmp);
-
-    if (page_size > 0 || sort_list != NULL || offset != 0 || attrvalue_obj != NULL 
-        || extdn_format != -1) {
+    if (page_size > 0 || offset != 0 || attrvalue_obj != NULL) {
         /* Create a SearchIter for storing the search params and result. */
         search_iter = LDAPSearchIter_New(self);
         if (search_iter == NULL) return PyErr_NoMemory();
 
         memcpy(search_iter->params, &params, sizeof(ldapsearchparams));
-        search_iter->extdn_format = extdn_format;
 
         /* Create cookie for the page result. */
         search_iter->cookie = (struct berval *)malloc(sizeof(struct berval));
@@ -497,7 +496,6 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
         search_iter->cookie->bv_len = 0;
         search_iter->cookie->bv_val = NULL;
         search_iter->page_size = page_size;
-        search_iter->sort_list = sort_list;
 
         if (offset != 0 || attrvalue_obj != NULL) {
             search_iter->vlv_info = (LDAPVLVInfo *)malloc(sizeof(LDAPVLVInfo));
@@ -682,7 +680,6 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
     }
 
     if (value != Py_None) search_iter = (LDAPSearchIter *)value;
-
     buffer = PyList_New(0);
     if (buffer == NULL) {
         Py_DECREF(value);
@@ -755,10 +752,6 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
             }
             Py_DECREF(buffer);
             Py_DECREF(search_iter);
-        } else if (search_iter->sort_list != NULL || search_iter->extdn_format != -1) {
-            /* Return simple list for ordered search or extended DN search. */
-            value = buffer;
-            Py_DECREF(search_iter);
         } else {
             /* Return LDAPSearchIter for paged search. */
             Py_XDECREF(search_iter->buffer);
@@ -792,7 +785,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
     unsigned int pperr = 0;
     struct berval *data = NULL;
     struct berval *newpasswd = NULL;
-	char *errstr = NULL, *retoid = NULL;
+    char *errstr = NULL, *retoid = NULL;
     PyObject *oid = NULL;
     PyObject *retval = NULL, *ldaperror = NULL, *errmsg = NULL;
     PyObject *ctrl_obj = NULL;
@@ -836,7 +829,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
     }
 
     rc = ldap_parse_extended_result(self->ld, res, &retoid, &data, 1);
-	ldap_memfree(retoid);
+    ldap_memfree(retoid);
 
     if (rc != LDAP_SUCCESS ) {
         Py_DECREF(oid);

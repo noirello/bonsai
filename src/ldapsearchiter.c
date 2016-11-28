@@ -10,20 +10,10 @@
 /* Dealloc the LDAPSearchIter object. */
 static void
 ldapsearchiter_dealloc(LDAPSearchIter* self) {
-    int i;
-
     Py_XDECREF(self->buffer);
     Py_XDECREF(self->conn);
 
     free_search_params(self->params);
-    /* Free LDAPSortKey list. */
-    if (self->sort_list != NULL) {
-        for (i = 0; self->sort_list[i] != NULL; i++) {
-            free(self->sort_list[i]->attributeType);
-            free(self->sort_list[i]);
-        }
-        free(self->sort_list);
-    }
 
     /* Free VLVInfo struct. */
     if (self->vlv_info != NULL) {
@@ -33,7 +23,6 @@ ldapsearchiter_dealloc(LDAPSearchIter* self) {
         }
         free(self->vlv_info);
     }
-
     free(self->cookie);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -51,9 +40,8 @@ ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->cookie = NULL;
         self->page_size = 0;
         self->params = NULL;
-        self->sort_list = NULL;
         self->vlv_info = NULL;
-        self->extdn_format = -1;
+        self->auto_acquire = 0;
     }
 
     return (PyObject *)self;
@@ -87,8 +75,8 @@ ldapsearchiter_acquirenextpage(LDAPSearchIter *self) {
         return PyLong_FromLong((long int)msgid);
     } else {
         ber_bvfree(self->cookie);
+        if (self->cookie != NULL) Py_DECREF(self);
         self->cookie = NULL;
-        Py_DECREF(self);
         Py_RETURN_NONE;
     }
 }
@@ -104,6 +92,7 @@ ldapsearchiter_getiter(LDAPSearchIter *self) {
 static PyObject *
 ldapsearchiter_iternext(LDAPSearchIter *self) {
     PyObject *item = NULL;
+    PyObject *tmp = NULL, *msg = tmp;
 
     if (self->buffer == NULL) return NULL;
 
@@ -124,27 +113,40 @@ ldapsearchiter_iternext(LDAPSearchIter *self) {
     } else {
         Py_DECREF(self->buffer);
         self->buffer = NULL;
+        if (self->auto_acquire == 1) {
+            msg = ldapsearchiter_acquirenextpage(self);
+            if (msg == NULL) return NULL;
+            if (msg == Py_None) return NULL;
+
+            self = (LDAPSearchIter *)PyObject_CallMethod((PyObject *)self->conn,
+                                                         "_evaluate", "(O)", msg);
+            Py_DECREF(msg);
+            if (self == NULL) return NULL;
+            Py_DECREF(self);
+            return PyIter_Next((PyObject *)self);
+        }
     }
     return NULL;
 }
 
 static Py_ssize_t
-ldapsearchiter_len(LDAPSearchIter* self)  {
+ldapsearchiter_len(LDAPSearchIter *self) {
     if (self->buffer == NULL) return 0;
     return PyObject_Size(self->buffer);
 }
 
+
 static PySequenceMethods ldapsearchiter_sequence = {
-    (lenfunc)ldapsearchiter_len,                  /* sq_length */
-    0,          /* sq_concat */
-    0,        /* sq_repeat */
-    0,                              /* sq_item */
-    0,                              /* sq_slice */
-    0,      /* sq_ass_item */
-    0,                              /* sq_ass_slice */
-    0,       /* sq_contains */
-    0,  /* sq_inplace_concat */
-    0,        /* sq_inplace_repeat */
+    (lenfunc)ldapsearchiter_len,  /* sq_length */
+    0,                          /* sq_concat */
+    0,                          /* sq_repeat */
+    0,                          /* sq_item */
+    0,                          /* sq_slice */
+    0,                          /* sq_ass_item */
+    0,                          /* sq_ass_slice */
+    0,                          /* sq_contains */
+    0,                          /* sq_inplace_concat */
+    0,                          /* sq_inplace_repeat */
 };
 
 static PyMethodDef ldapsearchiter_methods[] = {
@@ -155,14 +157,14 @@ static PyMethodDef ldapsearchiter_methods[] = {
 
 PyTypeObject LDAPSearchIterType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "_bonsai.ldapsearchiter",       /* tp_name */
-    sizeof(LDAPSearchIter),        /* tp_basicsize */
+    "_bonsai.ldapsearchiter",  /* tp_name */
+    sizeof(LDAPSearchIter),    /* tp_basicsize */
     0,                         /* tp_itemsize */
     (destructor)ldapsearchiter_dealloc, /* tp_dealloc */
     0,                         /* tp_print */
     0,                         /* tp_getattr */
     0,                         /* tp_setattr */
-    0,                         /* tp_reserved */
+    0,                         /* tp_as_async */
     0,                         /* tp_repr */
     0,                         /* tp_as_number */
     &ldapsearchiter_sequence,  /* tp_as_sequence */
@@ -175,14 +177,14 @@ PyTypeObject LDAPSearchIterType = {
     0,                         /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT |
         Py_TPFLAGS_BASETYPE,   /* tp_flags */
-    "ldapsearchiter object",       /* tp_doc */
+    "ldapsearchiter object",   /* tp_doc */
     0,                         /* tp_traverse */
     0,                         /* tp_clear */
     0,                         /* tp_richcompare */
     0,                         /* tp_weaklistoffset */
     (getiterfunc)ldapsearchiter_getiter,  /* tp_iter */
     (iternextfunc)ldapsearchiter_iternext,/* tp_iternext */
-    ldapsearchiter_methods,     /* tp_methods */
+    ldapsearchiter_methods,    /* tp_methods */
     0,                         /* tp_members */
     0,                         /* tp_getset */
     0,                         /* tp_base */
@@ -190,7 +192,7 @@ PyTypeObject LDAPSearchIterType = {
     0,                         /* tp_descr_get */
     0,                         /* tp_descr_set */
     0,                         /* tp_dictoffset */
-    0,                          /* tp_init */
+    0,                         /* tp_init */
     0,                         /* tp_alloc */
-    ldapsearchiter_new,         /* tp_new */
+    ldapsearchiter_new,        /* tp_new */
 };

@@ -289,14 +289,14 @@ ldap_add_extU(LDAP *ld, char *dn, LDAPModA **attrs, LDAPControlA **sctrls, LDAPC
     LDAPControlW **wsctrls = NULL;
     LDAPControlW **wcctrls = NULL;
 
-    if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_mod_list(attrs, &wattrs) != LDAP_SUCCESS) goto clear;
+    if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto end;
+    if (rc = convert_mod_list(attrs, &wattrs) != LDAP_SUCCESS) goto end;
 
     rc = ldap_add_extW(ld, wdn, wattrs, wsctrls, wcctrls, msgidp);
 
-clear:
+end:
     free(wdn);
     free_list((void **)wsctrls, (void *)free_ctrl);
     free_list((void **)wcctrls, (void *)free_ctrl);
@@ -315,14 +315,14 @@ ldap_modify_extU(LDAP *ld, char *dn, LDAPModA **attrs, LDAPControlA **sctrls, LD
     LDAPControlW **wsctrls = NULL;
     LDAPControlW **wcctrls = NULL;
 
-    if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_mod_list(attrs, &wattrs) != LDAP_SUCCESS) goto clear;
+    if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto end;
+    if (rc = convert_mod_list(attrs, &wattrs) != LDAP_SUCCESS) goto end;
 
     rc = ldap_modify_extW(ld, wdn, wattrs, wsctrls, wcctrls, msgidp);
 
-clear:
+end:
     free(wdn);
     free_list((void **)wsctrls, (void *)free_ctrl);
     free_list((void **)wcctrls, (void *)free_ctrl);
@@ -338,13 +338,13 @@ ldap_delete_extU(LDAP *ld, char *dn, LDAPControlA **sctrls, LDAPControlA **cctrl
     LDAPControlW **wsctrls = NULL;
     LDAPControlW **wcctrls = NULL;
 
-    if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
+    if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto end;
 
     rc = ldap_delete_extW(ld, wdn, wsctrls, wcctrls, msgidp);
 
-clear:
+end:
     free(wdn);
     free_list((void **)wsctrls, (void *)free_ctrl);
     free_list((void **)wcctrls, (void *)free_ctrl);
@@ -405,15 +405,15 @@ ldap_renameU(LDAP *ld, char *dn, char *newrdn, char *newSuperior, int deleteoldr
     LDAPControlW **wsctrls = NULL;
     LDAPControlW **wcctrls = NULL;
     
-    if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_to_wcs(newrdn, &wnewrdn) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_to_wcs(newSuperior, &wnewSuperior) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
+    if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto end;
+    if (rc = convert_to_wcs(newrdn, &wnewrdn) != LDAP_SUCCESS) goto end;
+    if (rc = convert_to_wcs(newSuperior, &wnewSuperior) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto end;
 
     rc = ldap_rename_extW(ld, wdn, wnewrdn, wnewSuperior, deleteoldrdn, wsctrls, wcctrls, msgidp);
 
-clear:
+end:
     free(wdn);
     free(wnewrdn);
     free(wnewSuperior);
@@ -441,16 +441,16 @@ ldap_search_extU(LDAP *ld, char *base, int scope, char *filter, char **attrs, in
         timelimit = 0;
     }
 
-    if (rc = convert_to_wcs(base, &wbase) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_to_wcs(filter, &wfilter) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_char_list(attrs, &wattrs) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
+    if (rc = convert_to_wcs(base, &wbase) != LDAP_SUCCESS) goto end;
+    if (rc = convert_to_wcs(filter, &wfilter) != LDAP_SUCCESS) goto end;
+    if (rc = convert_char_list(attrs, &wattrs) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto end;
 
     rc = ldap_search_extW(ld, wbase, scope, wfilter, wattrs, attrsonly, wsctrls, wcctrls, timelimit,
             sizelimit, msgidp);
 
-clear:
+end:
     free(wbase);
     free(wfilter);
     free_list((void **)wattrs, (void *)free);
@@ -469,13 +469,13 @@ ldap_extended_operationU(LDAP *ld, char *reqoid, struct berval *reqdata, LDAPCon
     LDAPControlW **wsctrls = NULL;
     LDAPControlW **wcctrls = NULL;
 
-    if (rc = convert_to_wcs(reqoid, &woid) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
+    if (rc = convert_to_wcs(reqoid, &woid) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto end;
 
     rc = ldap_extended_operationW(ld, woid, reqdata, wsctrls, wcctrls, msgidp);
 
-clear:
+end:
     free(woid);
     free_list((void **)wsctrls, (void *)free_ctrl);
     free_list((void **)wcctrls, (void *)free_ctrl);
@@ -512,14 +512,14 @@ ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *coun
     int rc = 0;
     LDAPControlW **wctrls = NULL;
 
-    if (rc = convert_ctrl_list(ctrls, &wctrls) != LDAP_SUCCESS) goto clear;
+    if (rc = convert_ctrl_list(ctrls, &wctrls) != LDAP_SUCCESS) goto end;
 
     if (*cookie != NULL && (*cookie)->bv_val != NULL) {
         ber_bvfree(*cookie);
     }
 
     rc = ldap_parse_page_controlW(ld, wctrls, (unsigned long *)count, cookie);
-clear:
+end:
     free_list((void **)wctrls, (void *)free_ctrl);
 
     return rc;
@@ -588,7 +588,7 @@ ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp,
         refs = (char **)malloc(sizeof(char*) * (size + 1));
         if (refs == NULL) {
             rc = LDAP_NO_MEMORY;
-            goto clear;
+            goto end;
         }
         for (i = 0; wreferralsp[i] != NULL; i++) {
             convert_to_mbs(wreferralsp[i], &refs[i]);
@@ -603,7 +603,7 @@ ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp,
         ctrls = (LDAPControlA **)malloc(sizeof(LDAPControlA*) * (size + 1));
         if (ctrls == NULL) {
             rc = LDAP_NO_MEMORY;
-            goto clear;
+            goto end;
         }
 
         for (i = 0; wsctrls[i] != NULL; i++) {
@@ -612,11 +612,11 @@ ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp,
 
             ctrla->ldctl_iscritical = wsctrls[i]->ldctl_iscritical;
             rc = convert_to_mbs(wsctrls[i]->ldctl_oid, &(ctrla->ldctl_oid));
-            if (rc != LDAP_SUCCESS) goto clear;
+            if (rc != LDAP_SUCCESS) goto end;
             ctrla->ldctl_value.bv_val = (char *)malloc(wsctrls[i]->ldctl_value.bv_len);
             if (ctrla->ldctl_value.bv_val == NULL) {
                 rc = LDAP_NO_MEMORY;
-                goto clear;
+                goto end;
             }
             memcpy(ctrla->ldctl_value.bv_val, wsctrls[i]->ldctl_value.bv_val, wsctrls[i]->ldctl_value.bv_len);
             ctrla->ldctl_value.bv_len = wsctrls[i]->ldctl_value.bv_len;
@@ -627,7 +627,7 @@ ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp,
         *sctrls = ctrls;
     }
 
-clear:
+end:
     ldap_memfreeW(wmatcheddnp);
     ldap_memfreeW(werrmsgp);
     ldap_value_freeW(wreferralsp);
@@ -719,12 +719,12 @@ ldap_start_tls_sU(LDAP *ld, LDAPControlA **sctrls, LDAPControlA **cctrls) {
     LDAPControlW **wsctrls = NULL;
     LDAPControlW **wcctrls = NULL;
 
-    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
+    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto end;
 
     rc = ldap_start_tls_sW(ld, NULL, NULL, wsctrls, wcctrls);
 
-clear:
+end:
     free_list((void **)wsctrls, (void *)free_ctrl);
     free_list((void **)wcctrls, (void *)free_ctrl);
 
@@ -737,12 +737,12 @@ ldap_simple_bind_sU(LDAP *ld, char *who, char *passwd) {
     wchar_t *wwho = NULL;
     wchar_t *wpsw = NULL;
 
-    if (rc = convert_to_wcs(who, &wwho) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_to_wcs(passwd, &wpsw) != LDAP_SUCCESS) goto clear;
+    if (rc = convert_to_wcs(who, &wwho) != LDAP_SUCCESS) goto end;
+    if (rc = convert_to_wcs(passwd, &wpsw) != LDAP_SUCCESS) goto end;
 
     rc = ldap_simple_bind_sW(ld, wwho, wpsw);
 
-clear:
+end:
     free(wwho);
     free(wpsw);
 
@@ -805,11 +805,11 @@ ldap_parse_vlvresponse_controlU(LDAP *ld, LDAPControlA **ctrls, long int *target
     LDAPControlW **wctrls = NULL;
 
     rc = convert_ctrl_list(ctrls, &wctrls);
-    if (rc != LDAP_SUCCESS) goto clear;
+    if (rc != LDAP_SUCCESS) goto end;
 
     rc = ldap_parse_vlv_controlW(ld, wctrls, target_posp, list_countp, contextp, errcodep);
 
-clear:
+end:
     free_list((void **)wctrls, (void *)free_ctrl);
     return rc;
 }
@@ -821,13 +821,13 @@ clear:
 *******************************************************************************/
 int
 ldap_create_passwordpolicy_controlU(LDAP *ld, LDAPControlA **ctrlp) {
-	return LDAP_SUCCESS;
+    return LDAP_SUCCESS;
 }
 
 int
 ldap_parse_passwordpolicy_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *expirep,
-	ber_int_t *gracep, unsigned int *errorp) {
-	return LDAP_CONTROL_NOT_FOUND;
+    ber_int_t *gracep, unsigned int *errorp) {
+    return LDAP_CONTROL_NOT_FOUND;
 }
 
 /******************************************************************************
@@ -890,7 +890,7 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
     bufs[0].pvBuffer = malloc(sizes.cbSecurityTrailer);
     if (bufs[0].pvBuffer == NULL) {
         res = LDAP_NO_MEMORY;
-        goto clear;
+        goto error;
     }
 
     /* This buffer holds the application data. */
@@ -899,7 +899,7 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
     bufs[1].pvBuffer = malloc(inLen);
     if (bufs[1].pvBuffer == NULL) {
         res = LDAP_NO_MEMORY;
-        goto clear;
+        goto error;
     }
 
     memcpy(bufs[1].pvBuffer, inToken, inLen);
@@ -910,7 +910,7 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
     bufs[2].pvBuffer = malloc(sizes.cbBlockSize);
     if (bufs[2].pvBuffer == NULL) {
         res = LDAP_NO_MEMORY;
-        goto clear;
+        goto error;
     }
 
     res = EncryptMessage(handle, SECQOP_WRAP_NO_ENCRYPT, &buff_desc, 0);
@@ -920,7 +920,7 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
         char *tokp = (char *)malloc(maxlen);
         if (tokp == NULL) {
             res = LDAP_NO_MEMORY;
-            goto clear;
+            goto error;
         }
         *outToken = tokp;
         *outLen = maxlen;
@@ -931,7 +931,7 @@ encrypt_reply(CtxtHandle *handle, char *inToken, int inLen, char **outToken, int
         memcpy(tokp, bufs[2].pvBuffer, bufs[2].cbBuffer);
     }
     return res;
-clear:
+error:
     free(bufs[0].pvBuffer);
     free(bufs[1].pvBuffer);
     free(bufs[2].pvBuffer);
@@ -1010,9 +1010,9 @@ create_credentials(CredHandle *hcred, wchar_t *package_name, sasl_defaults_t *de
 
     memset(&wincreds, 0, sizeof(wincreds));
 
-    if (rc = convert_to_wcs(defs->authcid, &wauthcid) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_to_wcs(defs->passwd, &wpasswd) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_to_wcs(defs->realm, &wrealm) != LDAP_SUCCESS) goto clear;
+    if (rc = convert_to_wcs(defs->authcid, &wauthcid) != LDAP_SUCCESS) goto end;
+    if (rc = convert_to_wcs(defs->passwd, &wpasswd) != LDAP_SUCCESS) goto end;
+    if (rc = convert_to_wcs(defs->realm, &wrealm) != LDAP_SUCCESS) goto end;
 
     wincreds.User = (unsigned short *)wauthcid;
     if (wincreds.User != NULL) wincreds.UserLength = (unsigned long)wcslen(wauthcid);
@@ -1027,7 +1027,7 @@ create_credentials(CredHandle *hcred, wchar_t *package_name, sasl_defaults_t *de
 
     rc = AcquireCredentialsHandleW(NULL, package_name, SECPKG_CRED_OUTBOUND, NULL,
         &wincreds, NULL, NULL, hcred, NULL);
-clear:
+end:
     free(wauthcid);
     free(wpasswd);
     free(wrealm);
@@ -1052,7 +1052,7 @@ generate_client_ctxt(CredHandle *hcred, SecHandle *hctxt, wchar_t *package_name,
         newctxt = 1;
 
         rc = create_credentials(hcred, package_name, defs);
-        if (rc < 0) goto clear;
+        if (rc < 0) goto end;
     }
 
     /* Prepare output buffer. */
@@ -1100,18 +1100,18 @@ generate_client_ctxt(CredHandle *hcred, SecHandle *hctxt, wchar_t *package_name,
             0, hctxt, &out_buff_desc, &ctxtattr, NULL);
         if (isauthz) free(input);
     }
-    if (rc < 0) goto clear;
+    if (rc < 0) goto end;
 
     if (rc == SEC_E_OK) *crypted = 1;
 
     if ((rc == SEC_I_COMPLETE_NEEDED) || (rc == SEC_I_COMPLETE_AND_CONTINUE)) {
         /* Complete token. */
         rc = CompleteAuthToken(hctxt, &out_buff_desc);
-        if (rc < 0) goto clear;
+        if (rc < 0) goto end;
     }
 
     *outlen = out_buff.cbBuffer;
-clear:
+end:
     return rc;
 }
 
@@ -1167,10 +1167,10 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
     }
     if (package_name == NULL) return LDAP_AUTH_METHOD_NOT_SUPPORTED;
 
-    if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_to_wcs(mechanism, &wmech) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto clear;
-    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto clear;
+    if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto end;
+    if (rc = convert_to_wcs(mechanism, &wmech) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(sctrls, &wsctrls) != LDAP_SUCCESS) goto end;
+    if (rc = convert_ctrl_list(cctrls, &wcctrls) != LDAP_SUCCESS) goto end;
 
     if (init_package(package_name, &maxlen) != 0) return LDAP_PARAM_ERROR;
 
@@ -1208,7 +1208,7 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
         if (rc < 0) {
             ldap_set_option(ld, LDAP_OPT_ERROR_NUMBER, &rc);
             rc = LDAP_INVALID_CREDENTIALS;
-            goto clear;
+            goto end;
         }
 
         if (strcmp(mechanism, "EXTERNAL") != 0) {
@@ -1227,7 +1227,7 @@ ldap_sasl_sspi_bind_sU(LDAP *ld, char *dn, char *mechanism, LDAPControlA **sctrl
         ldap_get_option(ld, LDAP_OPT_ERROR_NUMBER, &rc);
     } while (rc == LDAP_SASL_BIND_IN_PROGRESS);
 
-clear:
+end:
     free(wdn);
     free(wmech);
     free(target_name);

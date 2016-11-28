@@ -154,13 +154,13 @@ The :class:`LDAPConnection` object can be used with a context manager that will 
 
 .. code-block:: python
 
-	import bonsai
+    import bonsai
 
-	cli = bonsai.LDAPClient("ldap://localhost")
-	with cli.connect() as conn:
-	    res = conn.search("ou=nerdherd,dc=bonsai,dc=test", 1)
-	    print(res)
-	    print(conn.whoami())
-    
-    
+    cli = bonsai.LDAPClient("ldap://localhost")
+    with cli.connect() as conn:
+        res = conn.search("ou=nerdherd,dc=bonsai,dc=test", 1)
+        print(res)
+        print(conn.whoami())
+
+
 To find out more about the Bonsai module functionality read the :doc:`advanced` and the :doc:`api`.

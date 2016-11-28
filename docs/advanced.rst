@@ -87,7 +87,7 @@ The acquired TGT can be listed with `klist`::
 
     Valid starting     Expires            Service principal
     22/02/16 22:06:14  23/02/16 08:06:14  krbtgt/BONSAI.TEST@BONSAI.TEST
-	    renew until 23/02/16 22:06:12
+        renew until 23/02/16 22:06:12
 
 After successfully acquire a TGT, the module can used it for authenticating:
 
