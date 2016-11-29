@@ -50,6 +50,7 @@ ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 /* Creates a new LDAPSearchIter object for internal use. */
 LDAPSearchIter *
 LDAPSearchIter_New(LDAPConnection *conn) {
+    PyObject *tmp = NULL;
     LDAPSearchIter *self =
             (LDAPSearchIter *)LDAPSearchIterType.tp_new(&LDAPSearchIterType,
                     NULL, NULL);
@@ -58,6 +59,13 @@ LDAPSearchIter_New(LDAPConnection *conn) {
         if (self->params == NULL) return NULL;
         Py_INCREF(conn);
         self->conn = conn;
+
+        /* Get client's auto_page_acquire property. */
+        tmp = PyObject_GetAttrString(self->conn->client, "auto_page_acquire");
+        if (tmp == NULL) return NULL;
+
+        self->auto_acquire = (char)PyObject_IsTrue(tmp);
+        Py_DECREF(tmp);
     }
     return self;
 }

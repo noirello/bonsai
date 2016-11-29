@@ -45,6 +45,7 @@ class LDAPClient:
         self.__async_conn = AIOLDAPConnection
         self.__ppolicy_ctrl = False
         self.__ext_dn = None
+        self.__auto_acquire = True
 
     @staticmethod
     def _create_socketpair():
@@ -312,6 +313,18 @@ class LDAPClient:
             raise ValueError("Parameter must be 0, 1 or None.")
         self.__ext_dn = extdn_format
 
+    def set_auto_page_acquire(self, val: bool):
+        """
+        Turn on or off the automatic page acquiring during a paged
+        LDAP search.
+
+        :param bool val: enabling/disabling auto page acquiring.
+        :raises TypeError: If the paramter is not a bool type.
+        """
+        if type(val) != bool:
+            raise TypeError("Parameter's type must be bool.")
+        self.__auto_acquire = val
+
     def get_rootDSE(self) -> LDAPEntry:
         """
         Returns the server's root DSE entry. The root DSE may contain
@@ -448,6 +461,15 @@ class LDAPClient:
     @extended_dn_format.setter
     def extended_dn_format(self, value):
         self.set_extended_dn(value)
+
+    @property
+    def auto_page_acquire(self):
+        """ The status of automatic page acquiring. """
+        return self.__auto_acquire
+
+    @auto_page_acquire.setter
+    def auto_page_acquire(self, value):
+        self.set_auto_page_acquire(value)
 
     def connect(self, is_async: bool=False,
                 timeout: float=None, **kwargs) -> LDAPConnection:

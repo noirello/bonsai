@@ -65,6 +65,7 @@ class LDAPConnectionTest(unittest.TestCase):
         client = LDAPClient(self.url)
         client.set_credentials("SIMPLE", (self.cfg["SIMPLEAUTH"]["user"],
                                           self.cfg["SIMPLEAUTH"]["password"]))
+        client.auto_page_acquire = False
         self.conn = client.connect()
         self.async_conn = LDAPConnection(client, True)
 

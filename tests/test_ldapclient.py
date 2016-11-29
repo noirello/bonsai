@@ -171,5 +171,13 @@ class LDAPClientTest(unittest.TestCase):
             self.client.tls = False
         self.assertRaises(ValueError, set_tls)
 
+    def test_auto_acquire_prop(self):
+        """ Test auto_page_acquire property. """
+        client = LDAPClient(self.url)
+        self.assertRaises(TypeError, lambda: client.set_auto_page_acquire("A"))
+        self.assertTrue(client.auto_page_acquire)
+        client.auto_page_acquire = False
+        self.assertFalse(client.auto_page_acquire)
+
 if __name__ == '__main__':
     unittest.main()
