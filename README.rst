@@ -31,14 +31,6 @@ dictionary, tracking the changes of the dictionary to modify the entry on the se
 
 Supports only Python 3.3 or newer, and LDAPv3.
 
-Requirements for building
--------------------------
-
--  python3.3-dev or newer
--  libldap2-dev
--  libsasl2-dev
--  libkrb5-dev or heimdal-dev (optional)
-
 Features
 --------
 
@@ -48,6 +40,14 @@ Features
 -  Implements an own dictionary-like object for mapping LDAP entries
    that makes easier to add and modify them.
 -  Works with various asynchronous library (like asyncio, gevent).
+
+Requirements for building
+-------------------------
+
+-  python3.3-dev or newer
+-  libldap2-dev
+-  libsasl2-dev
+-  libkrb5-dev or heimdal-dev (optional)
 
 Documentation
 -------------

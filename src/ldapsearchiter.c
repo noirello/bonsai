@@ -127,7 +127,7 @@ ldapsearchiter_iternext(LDAPSearchIter *self) {
             if (msg == Py_None) return NULL;
 
             self = (LDAPSearchIter *)PyObject_CallMethod((PyObject *)self->conn,
-                                                         "_evaluate", "(O)", msg);
+                        "_evaluate", "(O)", msg);
             Py_DECREF(msg);
             if (self == NULL) return NULL;
             Py_DECREF(self);

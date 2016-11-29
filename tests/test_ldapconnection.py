@@ -420,7 +420,7 @@ class LDAPConnectionTest(unittest.TestCase):
         res = self.conn.search(search_dn, 1, page_size=2)
         for ent in res:
             self.assertIsInstance(ent, bonsai.LDAPEntry)
-        page = 0
+        page = 1  # First page already is acquired.
         while True:
             if len(res) > 2:
                 self.fail("The size of the page is greater than expected.")
@@ -429,8 +429,22 @@ class LDAPConnectionTest(unittest.TestCase):
                 break
             res = self.conn.get_result(msgid)
             page += 1
-        # Something not right with scope and paged search.
-        #self.assertEqual(page, 3)
+        self.assertEqual(page, 3)
+
+    def test_paged_search_with_auto_acq(self):
+        """ Test paged results control with automatic page acquiring. """
+        client = LDAPClient(self.url)
+        conn = client.connect()
+        search_dn = "ou=nerdherd,%s" % self.basedn
+        res = conn.search(search_dn, 1, page_size=3)
+        if len(res) != 3:
+            self.fail("The size of the page is not what is expected.")
+        entry = 0
+        for ent in res:
+            self.assertIsInstance(ent, bonsai.LDAPEntry)
+            entry += 1
+        self.assertEqual(entry, 6)
+        self.assertIsNone(res.acquire_next_page())
 
     def test_search_timeout(self):
         """ Test search's timeout. """

@@ -1,16 +1,25 @@
 Changelog
 ==========
-[0.9.0] - 2016-11-22
+[0.9.0] - 2016-11-29
 --------------------
 
 Changed
 ~~~~~~~
 
+-  The LDAPSeachIter object is automaticly acquiring the next page during
+   itertaion for synchronous paged LDAP search by default.
+
 Added
 ~~~~~
 
+-  LDAPClient.set_auto_page_acquire and auto_page_acquire property for
+   setting automatic page acquiring during paged LDAP search.
+
 Fixed
 ~~~~~
+
+-  The value validation of LDAPDN's __setitem__ method.
+-  The missing asyncio.coroutine decorators of AIOLDAPConnection's methods.
 
 [0.8.9] - 2016-11-19
 --------------------
