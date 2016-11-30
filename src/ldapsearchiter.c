@@ -143,6 +143,21 @@ ldapsearchiter_len(LDAPSearchIter *self) {
     return PyObject_Size(self->buffer);
 }
 
+static PyObject *
+ldapsearchiter_anext(LDAPSearchIter *self) {
+    PyObject *res = NULL;
+
+    res = PyObject_CallMethod((PyObject *)self->conn, "_search_iter_anext",
+                        "(O)", (PyObject *)self);
+
+    return res;
+}
+
+static PyAsyncMethods ldapsearchiter_async = {
+    0,                         /* am_await */
+    (unaryfunc)ldapsearchiter_getiter,  /* am_aiter */
+    (unaryfunc)ldapsearchiter_anext  /* am_anext */
+};
 
 static PySequenceMethods ldapsearchiter_sequence = {
     (lenfunc)ldapsearchiter_len,  /* sq_length */
@@ -172,7 +187,7 @@ PyTypeObject LDAPSearchIterType = {
     0,                         /* tp_print */
     0,                         /* tp_getattr */
     0,                         /* tp_setattr */
-    0,                         /* tp_as_async */
+    &ldapsearchiter_async,     /* tp_as_async */
     0,                         /* tp_repr */
     0,                         /* tp_as_number */
     &ldapsearchiter_sequence,  /* tp_as_sequence */
