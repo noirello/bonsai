@@ -23,7 +23,7 @@ class LDAPEntryTest(unittest.TestCase):
         cls.basedn = cls.cfg["SERVER"]["basedn"]
 
     def test_set_get(self):
-        """ Test LDAPEntry's SetItem, GetItem and get methods. """  
+        """ Test LDAPEntry's SetItem, GetItem and get methods. """
         entry = LDAPEntry("cn=test")
         entry['sn'] = 'Test'
         self.assertDictEqual(entry, {'sn' : ['Test']},
@@ -32,7 +32,7 @@ class LDAPEntryTest(unittest.TestCase):
         self.assertEqual(entry.get("None"), None,
                          "LDAPEntry get is failed.")
         self.assertListEqual(entry.get("GivenName"), entry['givenNAME'],
-                         "LDAPEntry get is failed.")
+                             "LDAPEntry get is failed.")
         del entry['sn']
         self.assertRaises(KeyError, lambda: entry['sn'])
 
@@ -139,12 +139,17 @@ class LDAPEntryTest(unittest.TestCase):
     def test_connection(self):
         """ Test set and get connection object form LDAPEntry. """
         entry = LDAPEntry("cn=test,%s" % self.basedn)
+        self.assertRaises(ValueError, lambda: entry.connection)
         conn = self.client.connect()
         entry.connection = conn
         self.assertEqual(entry.connection, conn)
         def invalid_assign():
-             entry.connection = "string"
+            entry.connection = "string"
         self.assertRaises(TypeError, invalid_assign)
+        def invalid_del():
+            del entry.connection
+        self.assertRaises(TypeError, invalid_del)
+
 
     def _add_for_renaming(self, conn, entry):
         entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
@@ -176,6 +181,7 @@ class LDAPEntryTest(unittest.TestCase):
         """ Test LDAPEntry's rename error handling. """
         dname = bonsai.LDAPDN("cn=test,%s" % self.basedn)
         entry = LDAPEntry(dname)
+        self.assertRaises(ValueError, lambda: entry.rename("cn=test2"))
         self.client.set_credentials(*self.creds)
         with self.client.connect() as conn:
             self._add_for_renaming(conn, entry)
@@ -186,12 +192,14 @@ class LDAPEntryTest(unittest.TestCase):
                 self.assertEqual(entry.dn, dname)
             finally:
                 conn.delete(dname)
+        self.assertRaises(bonsai.LDAPError, lambda: entry.rename("cn=test2"))
 
     def test_sync_operations(self):
         """
         Test LDAPEntry's add, modify and delete synchronous operations.
         """
         entry = LDAPEntry("cn=test,%s" % self.basedn)
+        self.assertRaises(ValueError, entry.modify)
         self.client.set_credentials(*self.creds)
         with self.client.connect() as conn:
             entry['sn'] = 'test'
@@ -217,6 +225,7 @@ class LDAPEntryTest(unittest.TestCase):
                 entry.delete()
             except:
                 self.fail("Delete failed.")
+        self.assertRaises(bonsai.LDAPError, entry.modify)
 
     def test_dn_attr(self):
         """ Test LDAPEntry's DN attribute. """
@@ -241,7 +250,7 @@ class LDAPEntryTest(unittest.TestCase):
         password policy.
         """
         if sys.platform == "win32":
-             self.skipTest("Cannot use password policy on Windows")
+            self.skipTest("Cannot use password policy on Windows")
         cli = LDAPClient(self.client.url)
         user_dn = "cn=jeff,ou=nerdherd,dc=bonsai,dc=test"
         cli.set_password_policy(True)
