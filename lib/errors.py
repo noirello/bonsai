@@ -126,7 +126,7 @@ class PasswordInHistory(PasswordPolicyError):
     """
     _dflt_args = ("User's password is in the history.",)
 
-def _get_error(code: int) -> LDAPError:
+def _get_error(code: int) -> type:
     """ Return an error by code number. """
     if code == -1 or code == 0x51 or code == -11:
         # WinLDAP returns 0x51 for Server Down.

@@ -5,13 +5,13 @@ from .errors import InvalidDN
 from .ldapdn import LDAPDN
 
 class LDAPEntry(ldapentry):
-    def __init__(self, dn: Union[LDAPDN, str], conn=None):
+    def __init__(self, dn: Union[LDAPDN, str], conn=None) -> None:
         try:
             super().__init__(str(dn), conn)
             self.__extended_dn = None
         except InvalidDN:
             # InvalidDN error caused by extended DN control.
-            splitted_dn = dn.split(';')
+            splitted_dn = str(dn).split(';')
             super().__init__(splitted_dn[-1], conn)
             self.__extended_dn = dn
 

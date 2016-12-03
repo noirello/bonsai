@@ -538,15 +538,16 @@ int ldap_control_createU(char *requestOID, int iscritical, struct berval *value,
     tmpControl->ldctl_iscritical = iscritical;
 
     if (dupval) {
-        tmpControl->ldctl_value.bv_val = (char *)malloc(sizeof(char) * value->bv_len);
-        if (tmpControl->ldctl_value.bv_val == NULL) {
-            free(tmpControl);
-            return LDAP_NO_MEMORY;
-        }
         if (value == NULL) {
             tmpControl->ldctl_value.bv_val = NULL;
             tmpControl->ldctl_value.bv_len = 0;
         } else {
+            tmpControl->ldctl_value.bv_val = (char *)malloc(sizeof(char) * value->bv_len);
+            if (tmpControl->ldctl_value.bv_val == NULL) {
+                free(tmpControl);
+                return LDAP_NO_MEMORY;
+            }
+
             memcpy(tmpControl->ldctl_value.bv_val, value->bv_val, value->bv_len);
             tmpControl->ldctl_value.bv_len = value->bv_len;
         }

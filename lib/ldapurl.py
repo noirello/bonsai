@@ -1,3 +1,5 @@
+from typing import Any, List
+
 import re
 import urllib.parse
 from .ldapdn import LDAPDN
@@ -16,12 +18,12 @@ class LDAPURL:
     """
     __slots__ = ("__hostinfo", "__searchinfo", "__extensions")
 
-    def __init__(self, strurl: str=None):
+    def __init__(self, strurl: str=None) -> None:
         """ Init method. """
-        self.__hostinfo = ['ldap', 'localhost', 389]
+        self.__hostinfo = ['ldap', 'localhost', 389] # type: List[Any]
         # Default values to the search parameters.
-        self.__searchinfo = ["", [], "", ""]
-        self.__extensions = None
+        self.__searchinfo = ["", [], "", ""]  # type: List[Any]
+        self.__extensions = [] # type: List[str]
         if strurl:
             self.__str2url(strurl)
 
@@ -33,7 +35,11 @@ class LDAPURL:
         """ Parsing string url to LDAPURL."""
         # RegExp for [ldap|ldaps]://[host]:[port]/[basedn]?[attrs]?[scope]
         # ?[filter]?[exts]
-        valid = re.compile(r"^(ldap|ldaps)://((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]))?([:][1-9][0-9]{0,4})?(/.*)?$", re.IGNORECASE)
+        valid = re.compile(r"^(ldap|ldaps)://((([a-zA-Z0-9]|"
+                           r"[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*"
+                           r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]"
+                           r"*[A-Za-z0-9]))?([:][1-9][0-9]{0,4})?(/.*)?$",
+                           re.IGNORECASE)
         match = valid.match(strurl)
         if match:
             self.__hostinfo[0] = match.group(1).lower()
@@ -69,11 +75,6 @@ class LDAPURL:
         else:
             raise ValueError("'%s' is not a valid LDAP URL." % strurl)
 
-    @property
-    def host(self) -> str:
-        """ The hostname. """
-        return self.__hostinfo[1]
-
     @staticmethod
     def is_valid_hostname(hostname: str):
         """"
@@ -86,9 +87,14 @@ class LDAPURL:
         if hostname[-1] == ".":
             # Strip exactly one dot from the right, if present
             hostname = hostname[:-1]
-        allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$",
-            re.IGNORECASE)
+        allowed = re.compile(r"(?!-)[A-Z\d-]{1,63}(?<!-)$",
+                             re.IGNORECASE)
         return all(allowed.match(x) for x in hostname.split("."))
+
+    @property
+    def host(self) -> str:
+        """ The hostname. """
+        return self.__hostinfo[1]
 
     @host.setter
     def host(self, value: str):

@@ -5,7 +5,7 @@
 
 """
 import socket
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Optional
 
 from .ldapurl import LDAPURL
 from .ldapconnection import LDAPConnection
@@ -22,7 +22,8 @@ class LDAPClient:
     :raises TypeError: if the `url` parameter is not string \
     or not a valid LDAP URL.
     """
-    def __init__(self, url: Union[LDAPURL, str]="ldap://", tls: bool=False):
+    def __init__(self, url: Union[LDAPURL, str]="ldap://",
+                 tls: bool=False) -> None:
         """ init method. """
         if type(url) == str:
             self.__url = LDAPURL(url)
@@ -34,8 +35,8 @@ class LDAPClient:
             self.__tls = True
         else:
             self.__tls = False
-        self.__credentials = None
-        self.__raw_list = []
+        self.__credentials = None # type: Optional[Tuple]
+        self.__raw_list = [] # type: List[str]
         self.__mechanism = "SIMPLE"
         self.__cert_policy = -1
         self.__ca_cert = ""
@@ -44,7 +45,7 @@ class LDAPClient:
         self.__client_key = ""
         self.__async_conn = AIOLDAPConnection
         self.__ppolicy_ctrl = False
-        self.__ext_dn = None
+        self.__ext_dn = None # type: Optional[int]
         self.__auto_acquire = True
 
     @staticmethod
@@ -100,8 +101,9 @@ class LDAPClient:
         self.__raw_list = raw_list
 
     def set_credentials(self, mechanism: str,
-                        creds: Union[Tuple[str,str,str,str],
-                                     Tuple[str,str],Tuple[str]]) -> None:
+                        creds: Union[Tuple[Optional[str], Optional[str],
+                                           Optional[str], Optional[str]],
+                                     Tuple[str, str], Tuple[str]]) -> None:
         """
         Set binding mechanism and credential information. The credential
         information must be in a tuple. If the binding mechanism is ``SIMPLE``,
@@ -325,7 +327,7 @@ class LDAPClient:
             raise TypeError("Parameter's type must be bool.")
         self.__auto_acquire = val
 
-    def get_rootDSE(self) -> LDAPEntry:
+    def get_rootDSE(self) -> Union[LDAPEntry, None]:
         """
         Returns the server's root DSE entry. The root DSE may contain
         information about the vendor, the naming contexts, the request

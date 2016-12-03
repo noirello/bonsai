@@ -18,7 +18,7 @@ class LDAPDN:
     _dnregex = re.compile(r"({comp})(?:,({comp}))*\Z".format(comp=_namecomp),
                           re.IGNORECASE)
 
-    def __init__(self, strdn: str):
+    def __init__(self, strdn: str) -> None:
         if strdn != '' and not self._dnregex.match(strdn):
             raise InvalidDN(strdn)
         self.__strdn = strdn

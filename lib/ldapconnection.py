@@ -24,7 +24,7 @@ class LDAPConnection(ldapconnection):
     :param LDAPClient client: a client object.
     :param bool is_async: set True to create an asynchronous connection.
     """
-    def __init__(self, client, is_async: bool=False):
+    def __init__(self, client, is_async: bool=False) -> None:
         self.__client = client
         super().__init__(client, is_async)
 

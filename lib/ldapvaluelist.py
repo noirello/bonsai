@@ -1,3 +1,5 @@
+from typing import Any
+
 import bonsai
 
 class LDAPValueList(list):
@@ -14,17 +16,17 @@ class LDAPValueList(list):
     """
     __slots__ = ("__deleted", "__added", "__status")
 
-    def __init__(self, items=None):
+    def __init__(self, items=None) -> None:
         super().__init__()
-        self.__added = []
-        self.__deleted = []
+        self.__added = [] # type: List[str]
+        self.__deleted = [] # type: List[str]
         self.__status = 0
         if items:
             for item in items:
                 self.append(item)
 
     @staticmethod
-    def __balance(lst1, lst2, value):
+    def __balance(lst1, lst2, value) -> None:
         """
         Balancing between the two list (__added, __deleted),
         make sure the same element is not in both lists.
@@ -34,20 +36,20 @@ class LDAPValueList(list):
         except ValueError:
             lst2.append(value)
 
-    def _append_unchecked(self, value):
+    def _append_unchecked(self, value) -> None:
         super().append(value)
 
     @property
-    def _status_dict(self):
+    def _status_dict(self) -> dict:
         return {"@status": self.__status,
                 "@added": self.__added.copy(),
                 "@deleted": self.__deleted.copy()}
 
     @_status_dict.setter
-    def _status_dict(self, value):
+    def _status_dict(self, value) -> None:
         raise TypeError("Can not change _status_dict")
 
-    def __contains__(self, item):
+    def __contains__(self, item) -> bool:
         return bonsai._unique_contains(self, item)[0]
 
     def __delitem__(self, idx: int):
@@ -75,7 +77,7 @@ class LDAPValueList(list):
         self.extend(other)
         return self
 
-    def __setitem__(self, idx: int, value):
+    def __setitem__(self, idx: int, value: Any):
         old_value = self[idx]
         if type(idx) == slice:
             for item in value:
@@ -156,7 +158,7 @@ class LDAPValueList(list):
         Remove the item at the given position in the LDAPValueList, and
         return it. If no index is specified, pop() removes and returns the
         last item in the list.
-        
+
         :param int idx: optional index.
         """
         value = super().pop(idx)
