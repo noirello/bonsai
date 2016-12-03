@@ -143,6 +143,8 @@ ldapsearchiter_len(LDAPSearchIter *self) {
     return PyObject_Size(self->buffer);
 }
 
+#if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 5
+
 static PyObject *
 ldapsearchiter_anext(LDAPSearchIter *self) {
     PyObject *res = NULL;
@@ -158,6 +160,10 @@ static PyAsyncMethods ldapsearchiter_async = {
     (unaryfunc)ldapsearchiter_getiter,  /* am_aiter */
     (unaryfunc)ldapsearchiter_anext  /* am_anext */
 };
+
+#else
+static int ldapsearchiter_async = 0;
+#endif
 
 static PySequenceMethods ldapsearchiter_sequence = {
     (lenfunc)ldapsearchiter_len,  /* sq_length */

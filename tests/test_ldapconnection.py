@@ -172,8 +172,7 @@ class LDAPConnectionTest(unittest.TestCase):
                                           self.cfg["GSSAPIAUTH"]["password"],
                                           self.cfg["GSSAPIAUTH"]["realm"],
                                           None))
-        self.assertRaises(bonsai.AuthenticationError,
-                          lambda: client.connect())
+        self.assertRaises(bonsai.AuthenticationError, client.connect)
 
     def _bind_external(self, authzid):
         if 'EXTERNALAUTH' not in self.cfg:
@@ -191,7 +190,7 @@ class LDAPConnectionTest(unittest.TestCase):
             cli.set_credentials('EXTERNAL', (authzid,))
             try:
                 conn = cli.connect()
-            except (bonsai.errors.ConnectionError, \
+            except (bonsai.errors.ConnectionError,
                     bonsai.errors.AuthenticationError):
                 self.fail()
             else:
@@ -300,13 +299,13 @@ class LDAPConnectionTest(unittest.TestCase):
     def test_connection_error(self):
         """ Test connection error. """
         client = LDAPClient("ldap://invalid")
-        self.assertRaises(bonsai.ConnectionError, lambda: client.connect())
+        self.assertRaises(bonsai.ConnectionError, client.connect)
 
     def test_simple_auth_error(self):
         """ Test simple authentication error. """
         client = LDAPClient(self.url)
         client.set_credentials("SIMPLE", ("cn=wrong", "wronger"))
-        self.assertRaises(bonsai.AuthenticationError, lambda: client.connect())
+        self.assertRaises(bonsai.AuthenticationError, client.connect)
 
     def test_digest_auth_error(self):
         """ Test DIGEST-MD5 authentication error. """
@@ -317,10 +316,10 @@ class LDAPConnectionTest(unittest.TestCase):
             realm = None
         else:
             realm = self.cfg["DIGESTAUTH"]["realm"]
-        client.set_credentials("DIGEST-MD5", (self.cfg["DIGESTAUTH"]["user"], \
-                                        "wrongpassword", \
-                                        realm, None))
-        self.assertRaises(bonsai.AuthenticationError, lambda: client.connect())
+        client.set_credentials("DIGEST-MD5", (self.cfg["DIGESTAUTH"]["user"],
+                                              "wrongpassword",
+                                              realm, None))
+        self.assertRaises(bonsai.AuthenticationError, client.connect)
 
     def test_sort_order(self):
         """ Test setting sort order. """
@@ -608,8 +607,7 @@ class LDAPConnectionTest(unittest.TestCase):
                           lambda: conn.modify_password(new_password=0))
         conn.modify_password(user_dn, "newpassword", "p@ssword")
         conn.close()
-        self.assertRaises(ClosedConnection,
-                          lambda: conn.modify_password())
+        self.assertRaises(ClosedConnection, conn.modify_password)
         try:
             cli.set_credentials("SIMPLE", (str(user_dn), "newpassword"))
             cli.set_password_policy(True)

@@ -71,3 +71,14 @@ class TornadoLDAPConnection(LDAPConnection):
                 return res
             else:
                 raise exc
+
+    @gen.coroutine
+    def _search_iter_anext(self, search_iter):
+        try:
+            return next(search_iter)
+        except StopIteration:
+            msgid = search_iter.acquire_next_page()
+            if msgid is None:
+                raise StopAsyncIteration
+            search_iter = yield self._evaluate(msgid)
+            return next(search_iter)

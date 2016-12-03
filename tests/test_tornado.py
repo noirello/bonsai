@@ -2,7 +2,6 @@ import configparser
 import os
 import time
 import unittest
-from functools import wraps
 
 from bonsai import LDAPClient
 from bonsai import LDAPEntry
@@ -14,20 +13,18 @@ def dummy(timeout=None):
     return dummy_f
 
 try:
-    from tornado import ioloop
     from tornado import gen
     from tornado.testing import gen_test
     from tornado.testing import AsyncTestCase
     from bonsai.tornado import TornadoLDAPConnection
     TestCaseClass = AsyncTestCase
-    modinstalled = True
+    MOD_INSTALLED = True
 except ImportError:
     TestCaseClass = unittest.TestCase
     gen_test = dummy
-    modinstalled = False
-    pass
+    MOD_INSTALLED = False
 
-@unittest.skipIf(not modinstalled, "Tornado is not installed.")
+@unittest.skipIf(not MOD_INSTALLED, "Tornado is not installed.")
 class TornadoLDAPConnectionTest(TestCaseClass):
     """ Test TornadoLDAPConnection object. """
     def setUp(self):
@@ -35,34 +32,38 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         curdir = os.path.abspath(os.path.dirname(__file__))
         self.cfg = configparser.ConfigParser()
         self.cfg.read(os.path.join(curdir, 'test.ini'))
-        self.url = "ldap://%s:%s/%s?%s?%s" % (self.cfg["SERVER"]["hostip"], \
-                                        self.cfg["SERVER"]["port"], \
-                                        self.cfg["SERVER"]["basedn"], \
-                                        self.cfg["SERVER"]["search_attr"], \
-                                        self.cfg["SERVER"]["search_scope"])
+        self.url = "ldap://%s:%s/%s?%s?%s" % (self.cfg["SERVER"]["hostip"],
+                                              self.cfg["SERVER"]["port"],
+                                              self.cfg["SERVER"]["basedn"],
+                                              self.cfg["SERVER"]["search_attr"],
+                                              self.cfg["SERVER"]["search_scope"])
         self.basedn = self.cfg["SERVER"]["basedn"]
         self.ipaddr = self.cfg["SERVER"]["hostip"]
         self.client = LDAPClient(self.url)
-        self.client.set_credentials("SIMPLE", (self.cfg["SIMPLEAUTH"]["user"],
-                                          self.cfg["SIMPLEAUTH"]["password"]))
+        self.client.set_credentials("SIMPLE",
+                                    (self.cfg["SIMPLEAUTH"]["user"],
+                                     self.cfg["SIMPLEAUTH"]["password"]))
         self.client.set_async_connection_class(TornadoLDAPConnection)
         self.io_loop = self.get_new_ioloop()
 
     @gen_test(timeout=20.0)
     def test_connection(self):
+        """ Test opening a connection. """
         conn = yield self.client.connect(True, ioloop=self.io_loop)
         self.assertIsNotNone(conn)
         self.assertFalse(conn.closed)
         conn.close()
-    
+
     @gen_test(timeout=20.0)
     def test_search(self):
+        """ Test search. """
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             res = yield conn.search()
             self.assertIsNotNone(res)
-   
+
     @gen_test(timeout=20.0)
     def test_add_and_delete(self):
+        """ Test addding and deleting an LDAP entry. """
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)
             entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
@@ -83,12 +84,13 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     @gen_test(timeout=20.0)
     def test_recursive_delete(self):
+        """ Test removing a subtree recursively. """
         org1 = bonsai.LDAPEntry("ou=testusers,%s" % self.basedn)
-        org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "testusers"})
+        org1.update({"objectclass": ['organizationalUnit', 'top'], "ou": "testusers"})
         org2 = bonsai.LDAPEntry("ou=tops,ou=testusers,%s" % self.basedn)
-        org2.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "tops"})
+        org2.update({"objectclass": ['organizationalUnit', 'top'], "ou": "tops"})
         entry = bonsai.LDAPEntry("cn=tester,ou=tops,ou=testusers,%s" % self.basedn)
-        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "tester", "sn" : "example"})
+        entry.update({"objectclass": ["top", "inetorgperson"], "cn": "tester", "sn": "example"})
         try:
             with (yield self.client.connect(True, timeout=10.0, ioloop=self.io_loop)) as conn:
                 yield conn.add(org1)
@@ -106,6 +108,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     @gen_test(timeout=20.0)
     def test_modify_and_rename(self):
+        """ Test modifying and renaming an LDAP entry. """
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)
             entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
@@ -131,13 +134,14 @@ class TornadoLDAPConnectionTest(TestCaseClass):
             res = yield conn.search(oldname, 0)
             self.assertEqual(res, [])
             yield conn.delete(entry.dn)
-    
+
     @gen_test(timeout=20.0)
     def test_obj_err(self):
+        """ Test object class violation error. """
         entry = LDAPEntry("cn=async_test,%s" % self.basedn)
         entry['cn'] = ['async_test']
         try:
-            with (yield self.client.connect(True,ioloop=self.io_loop)) as conn:
+            with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
                 yield conn.add(entry)
         except bonsai.errors.ObjectClassViolation:
             return
@@ -156,14 +160,15 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     @gen_test(timeout=12.0)
     def test_connection_timeout(self):
+        """ Test connection timeout. """
         import xmlrpc.client as rpc
         proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
         proxy.set_delay(6.0)
         time.sleep(3.0)
         try:
-            conn = yield self.client.connect(True,
-                                             ioloop=self.io_loop,
-                                             timeout=8.0)
+            yield self.client.connect(True,
+                                      ioloop=self.io_loop,
+                                      timeout=8.0)
         except Exception as exc:
             self.assertIsInstance(exc, gen.TimeoutError)
         else:
@@ -173,13 +178,14 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     @gen_test(timeout=18.0)
     def test_search_timeout(self):
+        """ Test search timeout. """
         import xmlrpc.client as rpc
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
             proxy.set_delay(5.1)
             time.sleep(3.0)
             try:
-                res = yield conn.search(timeout=4.0)
+                yield conn.search(timeout=4.0)
             except Exception as exc:
                 self.assertIsInstance(exc, gen.TimeoutError)
             else:

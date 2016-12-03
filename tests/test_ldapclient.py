@@ -16,8 +16,8 @@ class LDAPClientTest(unittest.TestCase):
     """ Testing LDAPClient object. """
     @classmethod
     def setUpClass(cls):
-        curdir = os.path.abspath(os.path.dirname(__file__))
         """ Set host url and connection. """
+        curdir = os.path.abspath(os.path.dirname(__file__))
         cfg = configparser.ConfigParser()
         cfg.read(os.path.join(curdir, 'test.ini'))
         cls.ipaddr = cfg["SERVER"]["hostip"]
@@ -28,7 +28,7 @@ class LDAPClientTest(unittest.TestCase):
 
     def test_ldapurl(self):
         """ Test setting LDAPURL. """
-        url =  bonsai.LDAPURL(self.url)
+        url = bonsai.LDAPURL(self.url)
         client = LDAPClient(url)
         self.assertEqual(client.url, url)
         self.assertRaises(TypeError, lambda: LDAPClient(None))
@@ -68,13 +68,13 @@ class LDAPClientTest(unittest.TestCase):
                           lambda: self.client.set_credentials("Simple",
                                                               "pass"))
         self.assertRaises(TypeError, lambda: self.client
-                          .set_credentials("Simple",("Name", 2, None, None)))
+                          .set_credentials("Simple", ("Name", 2, None, None)))
         self.assertRaises(ValueError, lambda: self.client
-                         .set_credentials("EXTERNAL", (None, None)))
+                          .set_credentials("EXTERNAL", (None, None)))
         self.assertRaises(ValueError, lambda: self.client
-                         .set_credentials("SIMPLE", (None, None, None)))
+                          .set_credentials("SIMPLE", (None, None, None)))
         self.assertRaises(ValueError, lambda: self.client
-                         .set_credentials("DIGEST-MD5", (None, None)))
+                          .set_credentials("DIGEST-MD5", (None, None)))
         self.client.set_credentials("SIMPLE", ("cn=admin", "password"))
         self.assertEqual(self.client.mechanism, "SIMPLE")
         self.assertEqual(self.client.credentials, ("cn=admin", "password"))

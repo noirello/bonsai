@@ -1,5 +1,7 @@
 - Feature: Add LDIF reader and writer function.
 - Feature: change_attribute method.
 - Feature: auto page acquiring for ldapsearchiter.
+- Feature: Manage DSA IT control (2.16.840.1.113730.3.4.2)
+- Feature: Tree delete control (1.2.840.113556.1.4.805)
 - Feature: Possibility to change LDAPEntry and LDAPValueList to other dict and list based objects.
 - Feature: Client-side validation for entries (with defined schemas).

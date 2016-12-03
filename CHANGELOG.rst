@@ -1,19 +1,19 @@
 Changelog
 ==========
-[0.9.0] - 2016-11-29
+[0.9.0] - 2016-12-03
 --------------------
 
 Changed
 ~~~~~~~
 
 -  The LDAPSeachIter object is automaticly acquiring the next page during
-   itertaion for synchronous paged LDAP search by default.
+   itertaion for paged LDAP search by default.
 
 Added
 ~~~~~
 
 -  LDAPClient.set_auto_page_acquire and auto_page_acquire property for
-   setting automatic page acquiring during paged LDAP search.
+   enabling/disabling automatic page acquiring during paged LDAP search.
 
 Fixed
 ~~~~~

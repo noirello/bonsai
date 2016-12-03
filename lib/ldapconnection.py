@@ -107,7 +107,7 @@ class LDAPConnection(ldapconnection):
                sort_order: List[str]=None, page_size: int=0, offset: int=0,
                before_count: int=0, after_count: int=0, est_list_count: int=0,
                attrvalue: str=None) -> Union[int, List[LDAPEntry], Iterator,
-                                             Tuple[List[LDAPEntry],dict]]:
+                                             Tuple[List[LDAPEntry], dict]]:
         # Documentation in the docs/api.rst with detailed examples.
         # Load values from the LDAPURL, if it is not presented on the
         # parameter list.
@@ -160,7 +160,7 @@ class LDAPConnection(ldapconnection):
         return sort_attrs
 
     def modify_password(self, user: Union[str, LDAPDN]=None,
-                        new_password:str=None, old_password: str=None,
+                        new_password: str=None, old_password: str=None,
                         timeout: float=None) -> Union[str, int, None]:
         """
         Set a new password for the given user.
@@ -191,4 +191,3 @@ class LDAPConnection(ldapconnection):
         :rtype: str
         """
         return self._evaluate(super().whoami(), timeout)
-

@@ -11,8 +11,8 @@ from bonsai.errors import InvalidDN
 class LDAPEntryTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        curdir = os.path.abspath(os.path.dirname(__file__))
         """ Set LDAP client, get config parameters. """
+        curdir = os.path.abspath(os.path.dirname(__file__))
         cls.cfg = configparser.ConfigParser()
         cls.cfg.read(os.path.join(curdir, 'test.ini'))
         url = "ldap://%s:%s" % (cls.cfg["SERVER"]["hostip"],

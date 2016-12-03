@@ -37,21 +37,24 @@ class AIOLDAPConnectionTest(unittest.TestCase):
         cls.client = LDAPClient(cls.url)
         cls.client.set_credentials("SIMPLE", (cls.cfg["SIMPLEAUTH"]["user"],
                                               cls.cfg["SIMPLEAUTH"]["password"]))
-        
+
     @asyncio_test
     def test_connection(self):
+        """ Test opening a connection. """
         conn = yield from self.client.connect(True)
         self.assertIsNotNone(conn)
         self.assertFalse(conn.closed)
-    
+
     @asyncio_test
     def test_search(self):
+        """ Test search. """
         with (yield from self.client.connect(True)) as conn:
             res = yield from conn.search()
             self.assertIsNotNone(res)
-   
+
     @asyncio_test
     def test_add_and_delete(self):
+        """ Test adding and deleting an LDAP entry. """
         with (yield from self.client.connect(True)) as conn:
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)
             entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
@@ -72,6 +75,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
 
     @asyncio_test
     def test_recursive_delete(self):
+        """ Test removing a subtree recursively. """
         org1 = bonsai.LDAPEntry("ou=testusers,%s" % self.basedn)
         org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "testusers"})
         org2 = bonsai.LDAPEntry("ou=tops,ou=testusers,%s" % self.basedn)
@@ -95,6 +99,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
 
     @asyncio_test
     def test_modify_and_rename(self):
+        """ Test modifying and renaming LDAP entry. """
         with (yield from self.client.connect(True)) as conn:
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)
             entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
@@ -122,6 +127,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
             yield from conn.delete(entry.dn)
 
     def test_obj_err(self):
+        """ Test object class violation error. """
         entry = LDAPEntry("cn=async_test,%s" % self.basedn)
         entry['cn'] = ['async_test']
         @asyncio_test
@@ -141,13 +147,13 @@ class AIOLDAPConnectionTest(unittest.TestCase):
 
     @asyncio_test
     def test_connection_timeout(self):
+        """ Test connection timeout. """
         import xmlrpc.client as rpc
         proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
         proxy.set_delay(6.0)
         time.sleep(3.0)
         try:
-            conn = yield from self.client.connect(True,
-                                                  timeout=8.0)
+            yield from self.client.connect(True, timeout=8.0)
         except Exception as exc:
             self.assertIsInstance(exc, asyncio.TimeoutError)
         else:
@@ -157,13 +163,14 @@ class AIOLDAPConnectionTest(unittest.TestCase):
 
     @asyncio_test
     def test_search_timeout(self):
+        """ Test search timeout. """
         import xmlrpc.client as rpc
         with (yield from self.client.connect(True)) as conn:
             proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
             proxy.set_delay(5.1, 7)
             time.sleep(3.0)
             try:
-                res = yield from conn.search(timeout=4.0)
+                yield from conn.search(timeout=4.0)
             except Exception as exc:
                 self.assertIsInstance(exc, asyncio.TimeoutError)
             else:
