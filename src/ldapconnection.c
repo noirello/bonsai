@@ -238,15 +238,40 @@ ldapconnection_delentry(LDAPConnection *self, PyObject *args) {
     int rc = 0;
     char *dnstr = NULL;
     int msgid = -1;
+    PyObject *recursive = NULL;
+    LDAPControl *tree_ctrl = NULL;
+    LDAPControl **server_ctrls = NULL;
 
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
-    if (!PyArg_ParseTuple(args, "s", &dnstr)) return NULL;
+    if (!PyArg_ParseTuple(args, "s|O!", &dnstr, &PyBool_Type, &recursive)) {
+        return NULL;
+    }
     if (dnstr == NULL) return NULL;
 
-    /* Remove the entry. */
-    rc = ldap_delete_ext(self->ld, dnstr, NULL, NULL, &msgid);
+    if (recursive != NULL && PyObject_IsTrue(recursive)) {
+        /* Create an LDAP_SERVER_TREE_DELETE control . */
+        server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *) * 2);
+        if (server_ctrls == NULL) return PyErr_NoMemory();
 
+        rc = ldap_control_create(LDAP_SERVER_TREE_DELETE_OID, 0, NULL, 1, &tree_ctrl);
+        if (rc != LDAP_SUCCESS) {
+            free(server_ctrls);
+            PyErr_BadInternalCall();
+            return NULL;
+        }
+
+        server_ctrls[0] = tree_ctrl;
+        server_ctrls[1] = NULL;
+    }
+
+    rc = ldap_delete_ext(self->ld, dnstr, server_ctrls, NULL, &msgid);
+
+    /* Clear the control. */
+    if (tree_ctrl != NULL) _ldap_control_free(tree_ctrl);
+    free(server_ctrls);
+
+    /* Check the return value of the delete function. */
     if (rc != LDAP_SUCCESS) {
         set_exception(self->ld, rc);
         return NULL;

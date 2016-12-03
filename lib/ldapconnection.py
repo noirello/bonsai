@@ -78,9 +78,9 @@ class LDAPConnection(ldapconnection):
         try:
             if type(dname) == LDAPDN:
                 dname = str(dname)
-            return self._evaluate(super().delete(dname), timeout)
+            return self._evaluate(super().delete(dname, recursive), timeout)
         except NotAllowedOnNonleaf as exc:
-            if recursive and self.is_async == False:
+            if recursive and self.is_async is False:
                 results = self.search(dname, LDAPSearchScope.ONELEVEL,
                                       attrlist=['1.1'], timeout=timeout)
                 for res in results:

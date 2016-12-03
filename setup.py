@@ -149,7 +149,7 @@ setup(name="bonsai",
       long_description=long_descr,
       license="MIT",
       ext_modules=[bonsai_module],
-      package_dir = {"bonsai": "lib"},
+      package_dir={"bonsai": "lib"},
       packages=["bonsai", "bonsai.asyncio", "bonsai.gevent", "bonsai.tornado"],
       include_package_data=True,
       install_requires=python_deps,
@@ -167,5 +167,4 @@ setup(name="bonsai",
           'Programming Language :: Python :: 3',
           'Topic :: Software Development :: Libraries :: Python Modules',
           'Topic :: System :: Systems Administration :: Authentication/Directory :: LDAP']
-      )
-
+     )

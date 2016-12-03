@@ -93,6 +93,7 @@ typedef struct ldap_thread_data_s {
 } ldapInitThreadData;
 
 #define LDAP_SERVER_EXTENDED_DN_OID "1.2.840.113556.1.4.529"
+#define LDAP_SERVER_TREE_DELETE_OID "1.2.840.113556.1.4.805"
 
 int _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, LDAP **ld);
 int _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, int *msgid);
