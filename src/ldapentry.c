@@ -436,12 +436,6 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
 /* Sends the modifications of the entry to the directory server. */
 static PyObject *
 ldapentry_modify(LDAPEntry *self) {
-    /* Connection must be set. */
-    if (self->conn == NULL) {
-        PyErr_SetString(PyExc_ValueError, "LDAPConnection is not set.");
-        return NULL;
-    }
-
     /* Connection must be open. */
     if (LDAPConnection_IsClosed(self->conn) != 0) return NULL;
 
@@ -509,12 +503,6 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     PyObject *newdn, *newparent, *newrdn;
     PyObject *tmp, *new_ldapdn = NULL;
     char *kwlist[] = {"newdn", NULL};
-
-    /* Connection must be set. */
-    if (self->conn == NULL) {
-        PyErr_SetString(PyExc_ValueError, "LDAPConnection is not set.");
-        return NULL;
-    }
 
     /* Connection must be open. */
     if (LDAPConnection_IsClosed(self->conn) != 0) return NULL;

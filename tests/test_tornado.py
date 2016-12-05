@@ -193,5 +193,24 @@ class TornadoLDAPConnectionTest(TestCaseClass):
             finally:
                 proxy.remove_delay()
 
+    @gen_test(timeout=20.0)
+    def test_paged_search(self):
+        """ Test paged search. """
+        search_dn = "ou=nerdherd,%s" % self.basedn
+        with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
+            # To keep compatibility with 3.4 it does not uses async for,
+            # but its while loop equvivalent.
+            res_iter = yield conn.search(search_dn, 1, page_size=3)
+            res_iter = type(res_iter).__aiter__(res_iter)
+            cnt = 0
+            while True:
+                try:
+                    res = yield type(res_iter).__anext__(res_iter)
+                    self.assertIsInstance(res, LDAPEntry)
+                    cnt += 1
+                except StopAsyncIteration:
+                    break
+            self.assertEqual(cnt, 6)
+
 if __name__ == '__main__':
     unittest.main()

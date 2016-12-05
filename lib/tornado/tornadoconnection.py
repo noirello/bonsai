@@ -1,3 +1,4 @@
+import sys
 from functools import partial
 
 from tornado import gen
@@ -6,6 +7,10 @@ from tornado.concurrent import Future
 
 from ..ldapconnection import LDAPConnection, LDAPSearchScope
 from ..errors import LDAPError, NotAllowedOnNonleaf
+
+# Backwards compatibility from 3.5.
+if sys.version_info.minor < 5:
+    StopAsyncIteration = StopIteration
 
 class TornadoLDAPConnection(LDAPConnection):
     def __init__(self, client, ioloop=None):

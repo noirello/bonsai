@@ -185,6 +185,7 @@ class LDAPEntryTest(unittest.TestCase):
         self.client.set_credentials(*self.creds)
         with self.client.connect() as conn:
             self._add_for_renaming(conn, entry)
+            self.assertRaises(TypeError, lambda: entry.rename(0))
             try:
                 newdn = bonsai.LDAPDN("cn=test2,ou=invalid,%s" % self.basedn)
                 entry.rename(newdn)
@@ -192,7 +193,8 @@ class LDAPEntryTest(unittest.TestCase):
                 self.assertEqual(entry.dn, dname)
             finally:
                 conn.delete(dname)
-        self.assertRaises(bonsai.LDAPError, lambda: entry.rename("cn=test2"))
+        self.assertRaises(bonsai.errors.ClosedConnection,
+                          lambda: entry.rename("cn=test2"))
 
     def test_sync_operations(self):
         """
@@ -225,7 +227,7 @@ class LDAPEntryTest(unittest.TestCase):
                 entry.delete()
             except:
                 self.fail("Delete failed.")
-        self.assertRaises(bonsai.LDAPError, entry.modify)
+        self.assertRaises(bonsai.errors.ClosedConnection, entry.modify)
 
     def test_dn_attr(self):
         """ Test LDAPEntry's DN attribute. """

@@ -83,6 +83,8 @@ ldapconnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 */
 int
 LDAPConnection_IsClosed(LDAPConnection *self) {
+    /* Connection must be set. */
+    if (self == NULL) return -1;
     if (self->closed) {
         /* The connection is closed. */
         PyObject *ldaperror = get_error_by_code(-101);
@@ -737,9 +739,13 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
         goto error;
     }
 
-    if (err == LDAP_NO_SUCH_OBJECT) {
+    if (err == LDAP_NO_SUCH_OBJECT && search_iter == NULL) {
+        /* Shortcut for normal search to return empty list. */
         Py_DECREF(value);
         return buffer;
+    } else {
+        /* Ignore LDAP_NO_SUCH_OBJECT otherwise. */
+        err = LDAP_SUCCESS;
     }
 
     if (err != LDAP_SUCCESS && err != LDAP_PARTIAL_RESULTS) {

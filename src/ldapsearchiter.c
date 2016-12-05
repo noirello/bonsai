@@ -121,7 +121,9 @@ ldapsearchiter_iternext(LDAPSearchIter *self) {
     } else {
         Py_DECREF(self->buffer);
         self->buffer = NULL;
-        if (self->auto_acquire == 1) {
+        if (self->auto_acquire == 1 && self->conn->async == 0) {
+            /* Get next page if the auto acquiring is on
+               and the connection is synchronous. */
             msg = ldapsearchiter_acquirenextpage(self);
             if (msg == NULL) return NULL;
             if (msg == Py_None) return NULL;

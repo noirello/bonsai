@@ -1,7 +1,12 @@
 import asyncio
+import sys
 
 from ..ldapconnection import LDAPConnection, LDAPSearchScope
 from ..errors import LDAPError, NotAllowedOnNonleaf
+
+# Backwards compatibility from 3.5.
+if sys.version_info.minor < 5:
+    StopAsyncIteration = StopIteration
 
 class AIOLDAPConnection(LDAPConnection):
     def __init__(self, client, loop=None):

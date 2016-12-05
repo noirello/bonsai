@@ -18,7 +18,6 @@ def asyncio_test(func):
         loop.run_until_complete(future)
     return wrapper
 
-
 class AIOLDAPConnectionTest(unittest.TestCase):
     """ Test AIOLDAPConnection object. """
     @classmethod
@@ -177,6 +176,25 @@ class AIOLDAPConnectionTest(unittest.TestCase):
                 self.fail("Failed to receive TimeoutError.")
             finally:
                 proxy.remove_delay()
+
+    @asyncio_test
+    def test_paged_search(self):
+        """ Test paged search. """
+        search_dn = "ou=nerdherd,%s" % self.basedn
+        with (yield from self.client.connect(True)) as conn:
+            # To keep compatibility with 3.4 it does not uses async for,
+            # but its while loop equvivalent.
+            res_iter = yield from conn.search(search_dn, 1, page_size=3)
+            res_iter = type(res_iter).__aiter__(res_iter)
+            cnt = 0
+            while True:
+                try:
+                    res = yield from type(res_iter).__anext__(res_iter)
+                    self.assertIsInstance(res, LDAPEntry)
+                    cnt += 1
+                except StopAsyncIteration:
+                    break
+            self.assertEqual(cnt, 6)
 
 if __name__ == '__main__':
     unittest.main()
