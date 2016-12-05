@@ -2,6 +2,7 @@ import configparser
 import os
 import time
 import unittest
+import sys
 
 from bonsai import LDAPClient
 from bonsai import LDAPEntry
@@ -196,6 +197,8 @@ class TornadoLDAPConnectionTest(TestCaseClass):
     @gen_test(timeout=20.0)
     def test_paged_search(self):
         """ Test paged search. """
+        if sys.version_info.minor < 5:
+            self.skipTest("No __aiter__ and __anext__ methods under 3.5.")
         search_dn = "ou=nerdherd,%s" % self.basedn
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             # To keep compatibility with 3.4 it does not uses async for,

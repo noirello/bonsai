@@ -3,6 +3,7 @@ import configparser
 import os
 import time
 import unittest
+import sys
 from functools import wraps
 
 from bonsai import LDAPClient
@@ -180,6 +181,8 @@ class AIOLDAPConnectionTest(unittest.TestCase):
     @asyncio_test
     def test_paged_search(self):
         """ Test paged search. """
+        if sys.version_info.minor < 5:
+            self.skipTest("No __aiter__ and __anext__ methods under 3.5.")
         search_dn = "ou=nerdherd,%s" % self.basedn
         with (yield from self.client.connect(True)) as conn:
             # To keep compatibility with 3.4 it does not uses async for,
