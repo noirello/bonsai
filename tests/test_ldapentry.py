@@ -51,6 +51,9 @@ class LDAPEntryTest(unittest.TestCase):
         """ Test LDAPEntry's pop method. """
         entry = LDAPEntry("cn=test")
         entry['test'] = "test"
+        self.assertRaises(TypeError, entry.pop)
+        self.assertRaises(TypeError, lambda: entry.pop('t', 2, 3))
+        self.assertRaises(KeyError, lambda: entry.pop('t'))
         self.assertEqual(entry.pop("test"), ["test"])
         self.assertEqual(entry.pop("test", None), None)
 
@@ -84,6 +87,8 @@ class LDAPEntryTest(unittest.TestCase):
         entry = LDAPEntry("cn=test")
         entry.update({"GivenName": "test2", "mail" : "test@mail"})
         entry.update([("sn", "test")])
+        self.assertRaises(ValueError,
+                          lambda: entry.update([("sn", "test", 1)]))
         entry.update(uidnumber=1, gidnumber=1)
         self.assertEqual(entry['mail'], ['test@mail'])
         self.assertEqual(entry['givenname'], ['test2'])
@@ -91,11 +96,21 @@ class LDAPEntryTest(unittest.TestCase):
         self.assertEqual(entry['uidnumber'], [1])
         self.assertEqual(entry['gidnumber'], [1])
 
+    def test_equal(self):
+        """ Test equality check. """
+        entry1 = LDAPEntry("cn=test")
+        entry2 = LDAPEntry("cn=test")
+        entry3 = LDAPEntry("cn=test1")
+        self.assertTrue(entry1 == entry2)
+        self.assertFalse(entry1 == entry3)
+        self.assertTrue(entry1 == dict())
+        self.assertFalse(entry1 == 2)
+
     def test_special_char(self):
         """ Test adding entry with special character in its DN. """
         self.client.set_credentials(*self.creds)
         conn = self.client.connect()
-        entry = LDAPEntry("cn=test\, *\+withspec,%s" % self.basedn)
+        entry = LDAPEntry(r"cn=test\, *\+withspec,%s" % self.basedn)
         entry['objectclass'] = ['top', 'inetOrgPerson']
         entry['sn'] = "Test,*special"
         conn.add(entry)

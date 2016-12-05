@@ -246,7 +246,8 @@ class LDAPConnectionTest(unittest.TestCase):
     def test_add_and_delete(self):
         """ Test adding and removing an LDAP entry. """
         entry = bonsai.LDAPEntry("cn=example,%s" % self.basedn)
-        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "example", "sn" : "example"})
+        entry.update({"objectclass" : ["top", "inetorgperson"],
+                      "cn" : "example", "sn" : "example"})
         try:
             self.conn.add(entry)
             res = self.conn.search(entry.dn, 0)
@@ -254,17 +255,21 @@ class LDAPConnectionTest(unittest.TestCase):
             self.conn.delete("cn=example,%s" % self.cfg["SERVER"]["basedn"])
             res = self.conn.search(entry.dn, 0)
             self.assertListEqual(res, [])
+            self.assertRaises(ValueError,
+                              lambda: self.conn.add(bonsai.LDAPEntry("")))
         except bonsai.LDAPError:
             self.fail("Add and delete new entry is failed.")
 
     def test_recursive_delete(self):
         """ Test removing a subtree recursively. """
         org1 = bonsai.LDAPEntry("ou=testusers,%s" % self.basedn)
-        org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "testusers"})
+        org1.update({"objectclass" : ['organizationalUnit', 'top'],
+                     "ou" : "testusers"})
         org2 = bonsai.LDAPEntry("ou=tops,ou=testusers,%s" % self.basedn)
         org2.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "tops"})
         entry = bonsai.LDAPEntry("cn=tester,ou=tops,ou=testusers,%s" % self.basedn)
-        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "tester", "sn" : "example"})
+        entry.update({"objectclass" : ["top", "inetorgperson"],
+                      "cn" : "tester", "sn" : "example"})
         try:
             self.conn.add(org1)
             self.conn.add(org2)
