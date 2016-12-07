@@ -1,3 +1,4 @@
+from ipaddress import IPv6Address
 from typing import Any, List
 
 import re
@@ -35,61 +36,71 @@ class LDAPURL:
         """ Parsing string url to LDAPURL."""
         # RegExp for [ldap|ldaps]://[host]:[port]/[basedn]?[attrs]?[scope]
         # ?[filter]?[exts]
-        valid = re.compile(r"^(ldap|ldaps)://((([a-zA-Z0-9]|"
-                           r"[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*"
-                           r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]"
-                           r"*[A-Za-z0-9]))?([:][1-9][0-9]{0,4})?(/.*)?$",
+        valid = re.compile(r"^(ldap|ldaps)://(([^:/?]*)?([:]([1-9][0-9]{0,4}))?|"
+                           r"([^/?\]]*)([]][:]([1-9][0-9]{0,4}))?)[/]?([^]/:?]*)"
+                           r"[\?]?([^]:?]*)?[\?]?([^]:?]*)?[\?]?([^]:?]*)"
+                           r"?[\?]?([^]:?]*)?$",
                            re.IGNORECASE)
         match = valid.match(strurl)
         if match:
             self.__hostinfo[0] = match.group(1).lower()
             if self.__hostinfo[0] == "ldaps":
                 self.__hostinfo[2] = 636
-            # The full hostname
-            if match.group(2):
-                self.__hostinfo[1] = match.group(2)
-            # The portnumber
-            if match.group(6):
-                self.__hostinfo[2] = int(match.group(6)[1:])
-            # The rest of the LDAP URL.
-            if match.group(7):
-                rest = match.group(7)[1:].split("?")
-                # Bind DN
-                self.__searchinfo[0] = LDAPDN(urllib.parse.unquote(rest[0]))
-                if len(rest) > 1:
-                    # Attributes
-                    if len(rest[1]) != 0:
-                        self.__searchinfo[1] = rest[1].split(',')
-                if len(rest) > 2:
-                    # Scope (base/one/sub)
-                    scope = rest[2].lower()
-                    if scope != "base" and scope != "one" and scope != "sub":
-                        raise ValueError("Invalid scope type.")
-                    self.__searchinfo[2] = scope
-                if len(rest) > 3:
-                    # Filter
-                    self.__searchinfo[3] = urllib.parse.unquote(rest[3])
-                if len(rest) > 4:
-                    # Extensions
-                    self.__extensions = rest[4].split(',')
+            # The hostname
+            if match.group(3) or match.group(6):
+                hostname = match.group(3) or match.group(6)
+                if self.is_valid_hostname(hostname):
+                    self.__hostinfo[1] = hostname
+                else:
+                    raise ValueError("'%s' has an invalid hostname." % strurl)
+            # The portnumber for IPv4
+            if match.group(5):
+                self.__hostinfo[2] = int(match.group(5))
+            # The portnumber for IPv6
+            if match.group(8):
+                self.__hostinfo[2] = int(match.group(8))
+            # The LDAP bind DN
+            if match.group(9):
+                self.__searchinfo[0] = LDAPDN(urllib.parse.unquote(match.group(9)))
+            # Attributes
+            if match.group(10):
+                self.__searchinfo[1] = match.group(10).split(',')
+            # Scope (base/one/sub)
+            if match.group(11):
+                scope = match.group(11).lower()
+                if scope != "base" and scope != "one" and scope != "sub":
+                    raise ValueError("Invalid scope type.")
+                self.__searchinfo[2] = scope
+            # Filter
+            if match.group(12):
+                self.__searchinfo[3] = urllib.parse.unquote(match.group(12))
+            # Extensions
+            if match.group(13):
+                self.__extensions = match.group(13).split(',')
         else:
             raise ValueError("'%s' is not a valid LDAP URL." % strurl)
 
     @staticmethod
     def is_valid_hostname(hostname: str):
-        """"
-        Validate a hostname.
-        Source:
-        http://stackoverflow.com/questions/2532053/validate-a-hostname-string
         """
-        if len(hostname) > 255:
+        Validate a hostname.
+        """
+        hostname_regex = re.compile(r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]"
+                                    r"*[a-zA-Z0-9])\.)*([A-Za-z0-9]|"
+                                    r"[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$")
+        if hostname_regex.match(hostname):
+            return True
+        elif ':' in hostname:
+            # Might be IPv6 address.
+            if hostname.startswith('['):
+                hostname = hostname[1:]
+            try:
+                IPv6Address(hostname)
+                return True
+            except ValueError:
+                return False
+        else:
             return False
-        if hostname[-1] == ".":
-            # Strip exactly one dot from the right, if present
-            hostname = hostname[:-1]
-        allowed = re.compile(r"(?!-)[A-Z\d-]{1,63}(?<!-)$",
-                             re.IGNORECASE)
-        return all(allowed.match(x) for x in hostname.split("."))
 
     @property
     def host(self) -> str:

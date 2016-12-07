@@ -7,7 +7,7 @@ class LDAPURLTest(unittest.TestCase):
     """ Testing LDAPURL object. """
     def setUp(self):
         """ Set test URL. """
-        self.strurl = "ldaps://testurl:444/cn=test,dc=test?sn,gn?base?(objectclass=*)"
+        self.strurl = "ldaps://testurl:444/cn=test,dc=test?sn,gn?base?(objectclass=*)?1.2.3.4"
         self.url = LDAPURL(self.strurl)
 
     def test_get_address(self):
@@ -74,6 +74,23 @@ class LDAPURLTest(unittest.TestCase):
             self.url.host
         except AttributeError:
             self.fail("Attribute not should be deleted.")
+
+    def test_invalid(self):
+        """ Test invalid LDAP URLs. """
+        self.assertRaises(ValueError,
+                          lambda: LDAPURL("http://localhost"))
+        self.assertRaises(ValueError,
+                          lambda: LDAPURL("ldaps://localost."))
+
+    def test_ipv6(self):
+        """ Test IPv6 address """
+        url = LDAPURL("ldap://[2001:db8:85a3::8a2e:370:7334]:1498/"
+                      "o=University%20of%20Michigan,c=US??sub?"
+                      "(cn=Babs%20Jensen)")
+        self.assertEqual(url.host, "[2001:db8:85a3::8a2e:370:7334")
+        self.assertEqual(url.port, 1498)
+        self.assertRaises(ValueError,
+                          lambda: LDAPURL("ldap://2001::85::37:7334"))
 
 if __name__ == '__main__':
     unittest.main()
