@@ -2,6 +2,7 @@ import unittest
 
 from bonsai import LDAPURL
 from bonsai import LDAPDN
+from bonsai.errors import InvalidDN
 
 class LDAPURLTest(unittest.TestCase):
     """ Testing LDAPURL object. """
@@ -50,15 +51,18 @@ class LDAPURLTest(unittest.TestCase):
         """ Test setting LDAPURL bind properties. """
         url = LDAPURL()
         def invalid_basedn():
-            url.basedn = "cn=test"
-        self.assertRaises(ValueError, invalid_basedn)
-        def invalid_scope():
-            url.scope = 'all'
-        self.assertRaises(ValueError, invalid_scope)
+            url.basedn = "test"
+        self.assertRaises(InvalidDN, invalid_basedn)
+        url.basedn = LDAPDN("cn=test")
+        self.assertEqual(str(url.basedn), "cn=test")
 
     def test_str(self):
         """ Test __str__ method of LDAPURL. """
         self.assertEqual(str(self.url), self.strurl)
+        self.assertEqual(str(LDAPURL("ldap://127.0.0.1/cn=x?cn")),
+                         "ldap://127.0.0.1:389/cn=x?cn")
+        self.assertEqual(str(LDAPURL("ldap:///")), "ldap://localhost:389")
+        self.assertIn("<LDAPURL", repr(self.url))
 
     def test_conversion(self):
         """ Test ValueError exception for invalid URL format. """
@@ -82,13 +86,30 @@ class LDAPURLTest(unittest.TestCase):
         self.assertRaises(ValueError,
                           lambda: LDAPURL("ldaps://localost."))
 
+    def test_scope(self):
+        """ Test scope and scope_num property. """
+        url = LDAPURL("ldap:///??one")
+        self.assertEqual(url.scope_num, 1)
+        url.scope = "base"
+        self.assertEqual(url.scope_num, 0)
+        def invalid_scope_type():
+            self.url.scope = 2.1
+        self.assertRaises(TypeError, invalid_scope_type)
+        def invalid_scope_value():
+            url.scope = 'all'
+        self.assertRaises(ValueError, invalid_scope_value)
+
     def test_ipv6(self):
         """ Test IPv6 address """
         url = LDAPURL("ldap://[2001:db8:85a3::8a2e:370:7334]:1498/"
-                      "o=University%20of%20Michigan,c=US??sub?"
+                      "o=University%20of%20Michigan,c=US??one?"
                       "(cn=Babs%20Jensen)")
-        self.assertEqual(url.host, "[2001:db8:85a3::8a2e:370:7334")
+        self.assertEqual(url.host, "2001:db8:85a3::8a2e:370:7334")
         self.assertEqual(url.port, 1498)
+        self.assertEqual(url.scope, "one")
+        self.assertEqual(url.filter, "(cn=Babs Jensen)")
+        addr = url.get_address()
+        self.assertEqual(addr, "ldap://[2001:db8:85a3::8a2e:370:7334]:1498")
         self.assertRaises(ValueError,
                           lambda: LDAPURL("ldap://2001::85::37:7334"))
 

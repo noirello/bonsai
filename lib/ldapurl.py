@@ -1,5 +1,5 @@
 from ipaddress import IPv6Address
-from typing import Any, List
+from typing import Any, List, Union
 
 import re
 import urllib.parse
@@ -17,7 +17,7 @@ class LDAPURL:
 
     :raises ValueError: if the string parameter is not a valid LDAP URL.
     """
-    __slots__ = ("__hostinfo", "__searchinfo", "__extensions")
+    __slots__ = ("__hostinfo", "__searchinfo", "__extensions", "__ipv6")
 
     def __init__(self, strurl: str=None) -> None:
         """ Init method. """
@@ -25,6 +25,7 @@ class LDAPURL:
         # Default values to the search parameters.
         self.__searchinfo = ["", [], "", ""]  # type: List[Any]
         self.__extensions = [] # type: List[str]
+        self.__ipv6 = False
         if strurl:
             self.__str2url(strurl)
 
@@ -36,10 +37,10 @@ class LDAPURL:
         """ Parsing string url to LDAPURL."""
         # RegExp for [ldap|ldaps]://[host]:[port]/[basedn]?[attrs]?[scope]
         # ?[filter]?[exts]
-        valid = re.compile(r"^(ldap|ldaps)://(([^:/?]*)?([:]([1-9][0-9]{0,4}))?|"
-                           r"([^/?\]]*)([]][:]([1-9][0-9]{0,4}))?)[/]?([^]/:?]*)"
-                           r"[\?]?([^]:?]*)?[\?]?([^]:?]*)?[\?]?([^]:?]*)"
-                           r"?[\?]?([^]:?]*)?$",
+        valid = re.compile(r"^(ldap|ldaps)://(([^:/?]*)?([:]([1-9][0-9]{0,4}))?"
+                           r"|[[]?([^/?\]]*)([]][:]([1-9][0-9]{0,4}))?)[/]?"
+                           r"([^]/:?]*)?[\?]?([^]:?]*)?[\?]?([^]:?]*)?[\?]?"
+                           r"([^]:?]*)?[\?]?([^]:?]*)?$",
                            re.IGNORECASE)
         match = valid.match(strurl)
         if match:
@@ -51,6 +52,8 @@ class LDAPURL:
                 hostname = match.group(3) or match.group(6)
                 if self.is_valid_hostname(hostname):
                     self.__hostinfo[1] = hostname
+                    if match.group(6):
+                        self.__ipv6 = True
                 else:
                     raise ValueError("'%s' has an invalid hostname." % strurl)
             # The portnumber for IPv4
@@ -88,18 +91,14 @@ class LDAPURL:
         hostname_regex = re.compile(r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]"
                                     r"*[a-zA-Z0-9])\.)*([A-Za-z0-9]|"
                                     r"[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$")
-        if hostname_regex.match(hostname):
+        try:
+            # Try parsing IPv6 address.
+            IPv6Address(hostname)
             return True
-        elif ':' in hostname:
-            # Might be IPv6 address.
-            if hostname.startswith('['):
-                hostname = hostname[1:]
-            try:
-                IPv6Address(hostname)
+        except ValueError:
+            # Try IPv4 and standard hostname.
+            if hostname_regex.match(hostname):
                 return True
-            except ValueError:
-                return False
-        else:
             return False
 
     @property
@@ -150,12 +149,9 @@ class LDAPURL:
         return self.__searchinfo[0]
 
     @basedn.setter
-    def basedn(self, value: LDAPDN):
+    def basedn(self, value: Union[LDAPDN, str]):
         """ Setter for LDAP distinguished name for binding. """
-        if type(value) == LDAPDN:
-            self.__searchinfo[0] = value
-        else:
-            raise ValueError("Bind DN must be a type of LDAPDN.")
+        self.__searchinfo[0] = LDAPDN(str(value))
 
     @property
     def attributes(self):
@@ -178,7 +174,7 @@ class LDAPURL:
                 raise ValueError("""Scope must be one of these:
                             'base', 'one', 'sub'.""")
         else:
-            raise ValueError("Scope must be a string.")
+            raise TypeError("Scope must be a string.")
 
     @property
     def scope_num(self) -> int:
@@ -201,7 +197,10 @@ class LDAPURL:
         """
         Return the full address of the host.
         """
-        return "%s://%s:%d" % tuple(self.__hostinfo)
+        if self.__ipv6:
+            return "%s://[%s]:%d" % tuple(self.__hostinfo)
+        else:
+            return "%s://%s:%d" % tuple(self.__hostinfo)
 
     def __str__(self) -> str:
         """ Returns the full format of LDAP URL. """
