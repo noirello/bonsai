@@ -665,15 +665,20 @@ ldap_initializeU(LDAP **ldp, char *url) {
     char *host = NULL;
     wchar_t *whost = NULL;
     char *chunk = NULL;
+    const char *token;
     char *nxtoken = NULL;
 
+    /* Check for IPv6 address. */
+    if (strchr(url, '[') != NULL) token = "[]";
+    else token = ":/";
+
     /* Parse string address. */
-    chunk = strtok_s(url, ":/", &nxtoken);
+    chunk = strtok_s(url, token, &nxtoken);
     while (chunk != NULL) {
         switch (chunk_num) {
         case 0:
             /* Check scheme. */
-            if (strcmp("ldaps", chunk) == 0) {
+            if (strstr(chunk, "ldaps") != NULL) {
                 ssl = 1;
             } else {
                 ssl = 0;
@@ -690,6 +695,10 @@ ldap_initializeU(LDAP **ldp, char *url) {
             break;
         case 2:
             /* Convert the port. */
+            if (strcmp(token, "[]") == 0) {
+                /* If it's an IPv6 address the ':' needs to be cut. */
+                chunk += 1;
+            } 
             port = (int)strtol(chunk, NULL, 10);
             if (port <= 0) {
                 if (host) free(host);
@@ -700,7 +709,7 @@ ldap_initializeU(LDAP **ldp, char *url) {
         default:
             break;
         }
-        chunk = strtok_s(NULL, ":/", &nxtoken);
+        chunk = strtok_s(NULL, token, &nxtoken);
     }
 init:
     if (rc = convert_to_wcs(host, &whost) != LDAP_SUCCESS) return rc;
