@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, List
 
 import bonsai
 
@@ -77,7 +77,7 @@ class LDAPValueList(list):
         self.extend(other)
         return self
 
-    def __setitem__(self, idx: int, value: Any):
+    def __setitem__(self, idx: int, value: Any) -> None:
         old_value = self[idx]
         if type(idx) == slice:
             for item in value:
@@ -94,7 +94,7 @@ class LDAPValueList(list):
             self.__balance(self.__deleted, self.__added, value)
         super().__setitem__(idx, value)
 
-    def append(self, item):
+    def append(self, item) -> None:
         """
         Add a unique item to the end of the LDAPValueList.
 
@@ -108,7 +108,7 @@ class LDAPValueList(list):
         self.__status = 1
         super().append(item)
 
-    def extend(self, items):
+    def extend(self, items) -> None:
         """
         Extend the LDAPValueList by appending all the items in the given
         list. All element in `items` must be unqiue and also not
@@ -125,7 +125,7 @@ class LDAPValueList(list):
         self.__status = 1
         super().extend(items)
 
-    def insert(self, idx: int, value):
+    def insert(self, idx: int, value) -> None:
         """
         Insert a unique item at a given position.
 
@@ -139,7 +139,7 @@ class LDAPValueList(list):
         self.__status = 1
         super().insert(idx, value)
 
-    def remove(self, value):
+    def remove(self, value) -> None:
         """
         Remove the first item from the LDAPValueList whose value is `value`.
 
@@ -153,7 +153,7 @@ class LDAPValueList(list):
         self.__status = 1
         self.__balance(self.__added, self.__deleted, obj)
 
-    def pop(self, idx: int=-1):
+    def pop(self, idx: int=-1) -> Any:
         """
         Remove the item at the given position in the LDAPValueList, and
         return it. If no index is specified, pop() removes and returns the
@@ -166,7 +166,7 @@ class LDAPValueList(list):
         self.__status = 1
         return value
 
-    def clear(self):
+    def clear(self) -> None:
         """ Remove all items from the LDAPValueList. """
         del self[:]
 
@@ -187,7 +187,25 @@ class LDAPValueList(list):
         return new_list
 
     @property
-    def status(self):
+    def added(self) -> List:
+        """ List of the added values. """
+        return self.__added
+
+    @added.setter
+    def added(self, value) -> None:
+        raise ValueError("Added attribute cannot be changed.")
+
+    @property
+    def deleted(self) -> List:
+        """ List of the deleted values. """
+        return self.__deleted
+
+    @deleted.setter
+    def deleted(self, value) -> None:
+        raise ValueError("Deleted attribute cannot be changed.")
+
+    @property
+    def status(self) -> int:
         """
         The status of the LDAPValueList. The status can be:
             - 0: unchanged.
@@ -197,7 +215,7 @@ class LDAPValueList(list):
         return self.__status
 
     @status.setter
-    def status(self, value):
+    def status(self, value) -> None:
         if type(value) != int:
             raise TypeError("Status must be int.")
         if value > -1 and value < 3:

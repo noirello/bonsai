@@ -89,7 +89,7 @@ ldapentry_init(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     return 0;
 }
 
-/*  Returns a NULL-delimitered LDAPMod list for adds new or modifies existing LDAP entries.
+/*  Returns a NULL-delimitered LDAPMod list for adding new or modifing existing LDAP entries.
     It uses only those LDAPValueList, whose status is 1 - add or delete, or 2 - replace, and
     the deleted keys listed in LDAPEntry's deleted list.
 */
@@ -124,11 +124,11 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
         if (status == -1) goto error;
 
         /* Get LDAPValueList's __added list. */
-        added = PyObject_GetAttrString(value, "_LDAPValueList__added");
+        added = PyObject_GetAttrString(value, "added");
         if (added == NULL) goto error;
 
         /* Get LDAPValueList's __deleted list. */
-        deleted = PyObject_GetAttrString(value, "_LDAPValueList__deleted");
+        deleted = PyObject_GetAttrString(value, "deleted");
         if (deleted == NULL) goto error;
 
         if (status == 1) {
