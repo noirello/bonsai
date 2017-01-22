@@ -104,8 +104,8 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
     PyObject *added = NULL, *deleted = NULL;
 
     /* Create an LDAPModList for the LDAPEntry values and deleted attributes. */
-    mods = LDAPModList_New((PyObject *)self,
-            Py_SIZE(self) + Py_SIZE(self->deleted));
+    mods = LDAPModList_New((PyObject *)self, Py_SIZE(self) * 2
+                            + Py_SIZE(self->deleted));
     if (mods == NULL) return NULL;
 
     if (keys == NULL) return NULL;
@@ -381,11 +381,11 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
             if (status == -1) return -1;
 
             /* Get LDAPValueList's __added list. */
-            added = PyObject_GetAttrString(attr, "_LDAPValueList__added");
+            added = PyObject_GetAttrString(attr, "added");
             if (added == NULL) return -1;
 
             /* Get LDAPValueList's __deleted list. */
-            deleted = PyObject_GetAttrString(attr, "_LDAPValueList__deleted");
+            deleted = PyObject_GetAttrString(attr, "deleted");
             if (deleted == NULL) return -1;
 
             /* When status is `replaced`, then drop the previous changes. */
@@ -559,10 +559,10 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 }
 
 static PyMethodDef ldapentry_methods[] = {
-    {"modify",  (PyCFunction)ldapentry_modify,  METH_NOARGS,
-            "Send LDAPEntry's modification to the LDAP server."},
-    {"rename",  (PyCFunction)ldapentry_rename,  METH_VARARGS | METH_KEYWORDS,
-            "Rename or remove LDAPEntry on the LDAP server."},
+    {"modify", (PyCFunction)ldapentry_modify, METH_NOARGS,
+        "Send LDAPEntry's modification to the LDAP server."},
+    {"rename", (PyCFunction)ldapentry_rename, METH_VARARGS | METH_KEYWORDS,
+        "Rename or remove LDAPEntry on the LDAP server."},
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
@@ -672,7 +672,7 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
         }
     } else {
         free(newkey);
-        /* This means, it has to remove the item. */
+        /* This means, the item has to be removed. */
         if (PyDict_DelItem((PyObject *)self, key) != 0) return -1;
         if (PyList_Append(self->deleted, key) != 0) return -1;
     }

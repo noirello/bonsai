@@ -3,6 +3,7 @@ from typing import Union
 from ._bonsai import ldapentry
 from .errors import InvalidDN
 from .ldapdn import LDAPDN
+from .ldapvaluelist import LDAPValueList
 
 class LDAPEntry(ldapentry):
     def __init__(self, dn: Union[LDAPDN, str], conn=None) -> None:
@@ -158,3 +159,36 @@ class LDAPEntry(ldapentry):
     @extended_dn.setter
     def extended_dn(self, value):
         raise ValueError("Extended_dn attribute cannot be set.")
+
+    def change_attribute(self, name: str, optype: int, value):
+        """
+        Change an attribute of the entry with explicit LDAP operation type.
+
+        :param str name: the name of the attribute.
+        :param int optype: the operation type, 0 for adding, 1 for deleting \
+        and 2 for replacing.
+        :param value: the new value of the attribute.
+        """
+        lvl = self.get(name, LDAPValueList())
+        if optype == 0:
+            lvl.added.append(value)
+        elif optype == 1:
+            lvl.deleted.append(value)
+        elif optype == 2:
+            lvl.append(value)
+        else:
+            raise ValueError("Wrong operation type.")
+        self[name] = lvl
+        lvl.status = optype if optype == 2 else 1
+
+    def clear_attribute_changes(self, name: str):
+        """
+        Clear all added and deleted changes of an attribute.
+
+        :param str name: the name of the attribute.
+        """
+        lvl = self.get(name, LDAPValueList())
+        lvl.added.clear()
+        lvl.deleted.clear()
+        self[name] = lvl
+        lvl.status = 0

@@ -91,7 +91,7 @@ LDAPModList_Add(LDAPModList *self, int mod_op, PyObject *key, PyObject *value) {
     return 0;
 }
 
-/* Remove an return with the last element as a tuple of
+/* Remove and return with the last element as a tuple of
    (mod_type, mod_op, value) of the list. The value can be None
    or a list of the modified attribute values. */
 PyObject *
@@ -130,7 +130,7 @@ LDAPModList_Pop(LDAPModList *self) {
             ret = Py_BuildValue("(ziO)", mod->mod_type,
                     mod->mod_op ^ LDAP_MOD_BVALUES, Py_None);
         }
-        /* Free LDAPMod and Move NULL to the new end of the LDAPMods. */
+        /* Free LDAPMod and move NULL to the new end of the LDAPMods. */
         free(mod->mod_type);
         free(mod);
         self->mod_list[self->last] = NULL;
