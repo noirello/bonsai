@@ -1,9 +1,16 @@
+from enum import IntEnum
 from typing import Union
 
 from ._bonsai import ldapentry
 from .errors import InvalidDN
 from .ldapdn import LDAPDN
 from .ldapvaluelist import LDAPValueList
+
+class LDAPModOp(IntEnum):
+    """ Enumeration for LDAP modification operations. """
+    ADD = 0  #: For adding new values to the attribute.
+    DELETE = 1  #: For deleting existing values from the attribute list.
+    REPLACE = 2  #: For replacing the existing attribute values.
 
 class LDAPEntry(ldapentry):
     def __init__(self, dn: Union[LDAPDN, str], conn=None) -> None:
@@ -160,22 +167,30 @@ class LDAPEntry(ldapentry):
     def extended_dn(self, value):
         raise ValueError("Extended_dn attribute cannot be set.")
 
-    def change_attribute(self, name: str, optype: int, value):
+    def change_attribute(self, name: str, optype: int, *values):
         """
-        Change an attribute of the entry with explicit LDAP operation type.
+        Change an attribute of the entry with explicit LDAP modification type
+        by listing the values as parameters.
+        An attribute can be removed entirely if the `optype` is delete and no
+        `values` are passed.
 
         :param str name: the name of the attribute.
         :param int optype: the operation type, 0 for adding, 1 for deleting \
-        and 2 for replacing.
-        :param value: the new value of the attribute.
+        and 2 for replacing. An :class:`LDAPModOp` also can be used as value.
+        :param *values: the new value or values of the attribute.
         """
         lvl = self.get(name, LDAPValueList())
-        if optype == 0:
-            lvl.added.append(value)
-        elif optype == 1:
-            lvl.deleted.append(value)
-        elif optype == 2:
-            lvl.append(value)
+        if optype == LDAPModOp.ADD:
+            lvl.added.extend(values)
+        elif optype == LDAPModOp.DELETE:
+            if len(values) == 0:
+                self.__setitem__(name, None)
+                del self[name]
+                return
+            else:
+                lvl.deleted.extend(values)
+        elif optype == LDAPModOp.REPLACE:
+            lvl.extend(values)
         else:
             raise ValueError("Wrong operation type.")
         self[name] = lvl

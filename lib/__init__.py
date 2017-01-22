@@ -3,6 +3,7 @@ from .ldapurl import LDAPURL
 from .ldapconnection import LDAPConnection
 from .ldapconnection import LDAPSearchScope
 from .ldapentry import LDAPEntry
+from .ldapentry import LDAPModOp
 from .ldapclient import LDAPClient
 from .ldapvaluelist import LDAPValueList
 from .errors import *

@@ -55,6 +55,12 @@ class SizeLimitError(LDAPError):
 class NotAllowedOnNonleaf(LDAPError):
     """Raised, when the operation is not allowed on a nonleaf object."""
 
+class TypeOrValueExists(LDAPError):
+    """
+    Raised, when the attribute already exists or the value
+    has been already assigned.
+    """
+
 class PasswordPolicyError(LDAPError):
     """ General exception for password policy errors. """
     _dflt_args = ("Password policy error.",)
@@ -138,6 +144,8 @@ def _get_error(code: int) -> type:
         return SizeLimitError
     elif code == 0x07:
         return AuthMethodNotSupported
+    elif code == 0x14:
+        return TypeOrValueExists
     elif code == 0x20:
         return NoSuchObjectError
     elif code == 0x22:

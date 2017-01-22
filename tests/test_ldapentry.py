@@ -5,6 +5,7 @@ import sys
 
 from bonsai import LDAPClient
 from bonsai import LDAPEntry
+from bonsai import LDAPModOp
 import bonsai.errors
 from bonsai.errors import InvalidDN
 
@@ -300,6 +301,63 @@ class LDAPEntryTest(unittest.TestCase):
         def readonly_attr():
             entry.extended_dn = "cn=test2"
         self.assertRaises(ValueError, readonly_attr)
+
+    def test_change_attribute(self):
+        """ Test change_attribute method. """
+        user_dn = "cn=sam,ou=nerdherd,dc=bonsai,dc=test"
+        self.client.set_credentials(*self.creds)
+        with self.client.connect() as conn:
+            entry = LDAPEntry(user_dn, conn)
+            entry.change_attribute("mail", LDAPModOp.ADD, "sam@bonsai.test")
+            self.assertEqual(entry['mail'].status, 1)
+            entry.modify()
+            self.assertEqual(conn.search(user_dn, 0)[0]['mail'][0],
+                             "sam@bonsai.test")
+            entry.change_attribute("mail", 1, "sam@bonsai.test")
+            self.assertEqual(entry['mail'].status, 1)
+            entry.modify()
+            self.assertRaises(KeyError,
+                              lambda: conn.search(user_dn, 0)[0]['mail'])
+            entry.change_attribute("mail", LDAPModOp.REPLACE, "sam@bonsai.test",
+                                   "x@bonsai.test")
+            self.assertEqual(entry['mail'].status, 2)
+            entry.modify()
+            self.assertEqual(conn.search(user_dn, 0)[0]['mail'],
+                             ["sam@bonsai.test", "x@bonsai.test"])
+            entry.change_attribute("mail", 1, "x@bonsai.test")
+            entry.change_attribute("mail", 0, "sam2@bonsai.test")
+            entry.modify()
+            self.assertEqual(conn.search(user_dn, 0)[0]['mail'],
+                             ["sam@bonsai.test", "sam2@bonsai.test"])
+            entry.change_attribute("mail", 1)
+            entry.modify()
+            self.assertNotIn("mail", conn.search(user_dn, 0)[0].keys())
+
+    def test_change_attribute_error(self):
+        """ Test change_attribute method's error handling. """
+        user_dn = "cn=sam,ou=nerdherd,dc=bonsai,dc=test"
+        self.client.set_credentials(*self.creds)
+        with self.client.connect() as conn:
+            entry = LDAPEntry(user_dn, conn)
+            self.assertRaises(ValueError,
+                              lambda: entry.change_attribute("mail", 4, "t"))
+            entry.change_attribute("uidNumber", 0, 4)
+            self.assertRaises(bonsai.TypeOrValueExists, entry.modify)
+            entry.change_attribute("uidNumber", LDAPModOp.DELETE, 4)
+            self.assertRaises(bonsai.ObjectClassViolation, entry.modify)
+
+    def test_clear_attribute_changes(self):
+        """ Test clear_attribute_changes method. """
+        user_dn = "cn=sam,ou=nerdherd,dc=bonsai,dc=test"
+        entry = LDAPEntry(user_dn)
+        entry.change_attribute("uidNumber", 0, 4)
+        self.assertEqual(entry['uidNumber'].added, [4])
+        entry.change_attribute("uidNumber", 1, 4)
+        self.assertEqual(entry['uidNumber'].deleted, [4])
+        entry.clear_attribute_changes('uidNumber')
+        self.assertEqual(entry['uidNumber'].status, 0)
+        self.assertEqual(entry['uidNumber'].added, [])
+        self.assertEqual(entry['uidNumber'].deleted, [])
 
 if __name__ == '__main__':
     unittest.main()
