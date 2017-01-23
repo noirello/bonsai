@@ -55,6 +55,9 @@ class SizeLimitError(LDAPError):
 class NotAllowedOnNonleaf(LDAPError):
     """Raised, when the operation is not allowed on a nonleaf object."""
 
+class NoSuchAttribute(LDAPError):
+    """Raised, when the given attribute of an entry does not exist."""
+
 class TypeOrValueExists(LDAPError):
     """
     Raised, when the attribute already exists or the value
@@ -144,6 +147,8 @@ def _get_error(code: int) -> type:
         return SizeLimitError
     elif code == 0x07:
         return AuthMethodNotSupported
+    elif code == 0x10:
+        return NoSuchAttribute
     elif code == 0x14:
         return TypeOrValueExists
     elif code == 0x20:

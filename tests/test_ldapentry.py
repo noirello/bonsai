@@ -341,10 +341,10 @@ class LDAPEntryTest(unittest.TestCase):
             entry = LDAPEntry(user_dn, conn)
             self.assertRaises(ValueError,
                               lambda: entry.change_attribute("mail", 4, "t"))
-            entry.change_attribute("uidNumber", 0, 4)
+            entry.change_attribute("sn", 0, "Lembeck")
             self.assertRaises(bonsai.TypeOrValueExists, entry.modify)
-            entry.change_attribute("uidNumber", LDAPModOp.DELETE, 4)
-            self.assertRaises(bonsai.ObjectClassViolation, entry.modify)
+            entry.change_attribute("gn", LDAPModOp.DELETE, "sam")
+            self.assertRaises(bonsai.NoSuchAttribute, entry.modify)
 
     def test_clear_attribute_changes(self):
         """ Test clear_attribute_changes method. """
