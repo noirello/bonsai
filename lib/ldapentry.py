@@ -194,7 +194,7 @@ class LDAPEntry(ldapentry):
         else:
             raise ValueError("Wrong operation type.")
         self[name] = lvl
-        lvl.status = optype if optype == 2 else 1
+        lvl.status = 2 if optype == 2 else 1
 
     def clear_attribute_changes(self, name: str):
         """
