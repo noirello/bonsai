@@ -306,6 +306,10 @@ class LDAPEntryTest(unittest.TestCase):
         """ Test change_attribute method. """
         user_dn = "cn=sam,ou=nerdherd,dc=bonsai,dc=test"
         self.client.set_credentials(*self.creds)
+        if sys.platform == "win32":
+            multiattr = 'otherTelephone'
+        else:
+            multiattr = 'mail'
         with self.client.connect() as conn:
             entry = LDAPEntry(user_dn, conn)
             entry.change_attribute("mail", LDAPModOp.ADD, "sam@bonsai.test")
@@ -318,20 +322,22 @@ class LDAPEntryTest(unittest.TestCase):
             entry.modify()
             self.assertRaises(KeyError,
                               lambda: conn.search(user_dn, 0)[0]['mail'])
-            entry.change_attribute("mail", LDAPModOp.REPLACE, "sam@bonsai.test",
+            entry.change_attribute(multiattr, LDAPModOp.REPLACE, "sam@bonsai.test",
                                    "x@bonsai.test")
-            self.assertEqual(entry['mail'].status, 2)
+            self.assertEqual(entry[multiattr].status, 2)
             entry.modify()
-            self.assertEqual(conn.search(user_dn, 0)[0]['mail'],
-                             ["sam@bonsai.test", "x@bonsai.test"])
-            entry.change_attribute("mail", 1, "x@bonsai.test")
-            entry.change_attribute("mail", 0, "sam2@bonsai.test")
+            res = conn.search(user_dn, 0)[0][multiattr]
+            self.assertIn("sam@bonsai.test", res)
+            self.assertIn("x@bonsai.test", res)
+            entry.change_attribute(multiattr, 1, "x@bonsai.test")
+            entry.change_attribute(multiattr, 0, "sam2@bonsai.test")
             entry.modify()
-            self.assertEqual(conn.search(user_dn, 0)[0]['mail'],
-                             ["sam@bonsai.test", "sam2@bonsai.test"])
-            entry.change_attribute("mail", 1)
+            res = conn.search(user_dn, 0)[0][multiattr]
+            self.assertIn("sam@bonsai.test", res)
+            self.assertIn("sam2@bonsai.test", res)
+            entry.change_attribute(multiattr, 1)
             entry.modify()
-            self.assertNotIn("mail", conn.search(user_dn, 0)[0].keys())
+            self.assertNotIn(multiattr, conn.search(user_dn, 0)[0].keys())
 
     def test_change_attribute_error(self):
         """ Test change_attribute method's error handling. """
