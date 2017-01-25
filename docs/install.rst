@@ -103,4 +103,24 @@ After this Bonsai can be compiled and installed the usual way::
     $ python setup.py build
     $ python setup.py install
 
+Alternative way to install
+**************************
+
+Install `openldap` library by homebrew/dupes' formula::
+
+    $ brew install homebrew/dupes/openldap
+
+Then create `setup.cfg` in the root folder to customize the library and headers directory:
+
+.. code-block:: ini
+
+ [build_ext]
+ include_dirs=/usr/local/opt/openldap/include
+ library_dirs=/usr/local/opt/openldap/lib
+
+and then you can follow the standard build commands::
+    
+    $ python setup.py build
+    $ python setup.py install
+
 .. _description: http://projects.skurfer.com/posts/2011/python_ldap_lion/
