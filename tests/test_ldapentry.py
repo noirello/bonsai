@@ -349,7 +349,7 @@ class LDAPEntryTest(unittest.TestCase):
                               lambda: entry.change_attribute("mail", 4, "t"))
             entry.change_attribute("sn", 0, "Lembeck")
             self.assertRaises(bonsai.TypeOrValueExists, entry.modify)
-            entry.change_attribute("gn", LDAPModOp.DELETE, "sam")
+            entry.change_attribute("description", LDAPModOp.DELETE, "sam")
             self.assertRaises(bonsai.NoSuchAttribute, entry.modify)
 
     def test_clear_attribute_changes(self):
