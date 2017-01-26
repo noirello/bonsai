@@ -1,19 +1,25 @@
 Changelog
 ==========
-[0.9.0] - 2016-12-03
+[0.9.0] - 2017-01-26
 --------------------
 
 Changed
 ~~~~~~~
 
+-  Python 3.3 is no longer considered to be supported. The package won't be
+   tested with 3.3 anymore.
 -  The LDAPSeachIter object is automaticly acquiring the next page during
    itertaion for paged LDAP search by default.
+-  Installing the package from source on Mac OS X become simpler with
+   setup.cfg (Thanks to @LukeXuan).
 
 Added
 ~~~~~
 
 -  LDAPClient.set_auto_page_acquire and auto_page_acquire property for
    enabling/disabling automatic page acquiring during paged LDAP search.
+-  LDAPEntry.change_attribute and LDAPEntry.clear_attribute_changes methods
+   for handling LDAP attributes with explicity modification operation types.
 
 Fixed
 ~~~~~

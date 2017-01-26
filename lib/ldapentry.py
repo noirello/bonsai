@@ -173,6 +173,8 @@ class LDAPEntry(ldapentry):
         by listing the values as parameters.
         An attribute can be removed entirely if the `optype` is delete and no
         `values` are passed.
+        This method can be useful for changing write-only attributes (e.g.
+        passwords).
 
         :param str name: the name of the attribute.
         :param int optype: the operation type, 0 for adding, 1 for deleting \
