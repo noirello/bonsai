@@ -689,6 +689,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
     int err = 0;
     int target_pos = 0, list_count = 0;
     LDAPMessage *entry;
+    LDAPControl *ctrl = NULL;
     LDAPControl **returned_ctrls = NULL;
     LDAPEntry *entryobj = NULL;
     LDAPSearchIter *search_iter = NULL;
@@ -754,10 +755,19 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
     }
 
     if (search_iter != NULL) {
-        rc = ldap_parse_pageresponse_control(self->ld,
-                ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL),
-                NULL, search_iter->cookie);
-
+        ctrl = ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL);
+        if (ctrl != NULL) {
+            rc = ldap_parse_pageresponse_control(self->ld, ctrl, NULL,
+                                            search_iter->cookie);
+            if (rc != LDAP_SUCCESS) {
+                set_exception(self->ld, rc);
+                goto error;
+            }
+        } else {
+            /* No paged result control is received, clear cookie. */
+            ber_bvfree(search_iter->cookie);
+            search_iter->cookie = NULL;
+        }
         if (search_iter->vlv_info != NULL) {
             rc = ldap_parse_vlvresponse_control(self->ld,
                     ldap_control_find(LDAP_CONTROL_VLVRESPONSE, returned_ctrls, NULL),

@@ -56,6 +56,7 @@ COPY ./ldifs/users.ldif /root/users.ldif
 COPY ./ldifs/sasl.ldif /root/sasl.ldif
 COPY ./ldifs/overlays.ldif /root/overlays.ldif
 COPY ./ldifs/ppolicy.ldif /root/ppolicy.ldif
+COPY ./ldifs/referrals.ldif /root/referrals.ldif
 COPY ./test.jpeg /root/test.jpeg
 
 # Open LDAP and LDAPS port.

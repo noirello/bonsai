@@ -9,7 +9,7 @@ Changed
 -  Python 3.3 is no longer considered to be supported. The package won't be
    tested with 3.3 anymore.
 -  The LDAPSeachIter object is automaticly acquiring the next page during
-   itertaion for paged LDAP search by default.
+   iteration for paged LDAP search by default.
 -  Installing the package from source on Mac OS X become simpler with
    setup.cfg (Thanks to @LukeXuan).
 
