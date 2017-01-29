@@ -508,7 +508,7 @@ ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct b
 int
 ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *count,
         struct berval **cookie) {
-    
+
     int rc = 0;
     LDAPControlW **wctrls = NULL;
 
@@ -806,6 +806,27 @@ ldap_get_optionU(LDAP *ld, int option, void *outvalue) {
     }
 
     return ldap_get_optionW(ld, option, outvalue);
+}
+
+int
+ldap_parse_sortresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *result,
+        char **attribute) {
+
+    int rc = 0;
+    wchar_t *wattr = NULL;
+    LDAPControlW **wctrls = NULL;
+
+    if (rc = convert_ctrl_list(ctrls, &wctrls) != LDAP_SUCCESS) goto end;
+
+    rc = ldap_parse_sort_controlW(ld, wctrls, result, &wattr);
+    convert_to_mbs(wattr, attribute);
+    if (rc == LDAP_CONTROL_NOT_FOUND) {
+        rc = LDAP_SUCCESS;
+    } 
+end:
+    free_list((void **)wctrls, (void *)free_ctrl);
+    ldap_memfreeW(wattr);
+    return rc;
 }
 
 int

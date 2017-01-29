@@ -40,6 +40,7 @@
 #define LDAP_CONTROL_PAGEDRESULTS "1.2.840.113556.1.4.319"
 #define LDAP_CONTROL_PASSWORDPOLICYREQUEST "1.3.6.1.4.1.42.2.27.8.5.1"
 #define LDAP_CONTROL_PASSWORDPOLICYRESPONSE "1.3.6.1.4.1.42.2.27.8.5.1"
+#define LDAP_CONTROL_SORTRESPONSE "1.2.840.113556.1.4.474"
 
 /* All of the used WinLDAP macros are redefined. */
 #undef LDAPControl
@@ -106,6 +107,7 @@
 #define ldap_parse_vlvresponse_control ldap_parse_vlvresponse_controlU
 #define ldap_create_passwordpolicy_control ldap_create_passwordpolicy_controlU
 #define ldap_parse_passwordpolicy_control ldap_parse_passwordpolicy_controlU
+#define ldap_parse_sortresponse_control ldap_parse_sortresponse_controlU
 
 /* These functions are not represented in the WinLDAP API. */
 #define ldap_parse_pageresponse_control(ld, ctrls, count, cookie) ldap_parse_pageresponse_controlU(ld, ctrls, count, &(cookie))
@@ -140,6 +142,7 @@ int ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, stru
 int ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *count, struct berval **cookie);
 int ldap_control_createU(char *requestOID, int iscritical, struct berval *value, int dupval, LDAPControlA **ctrlp);
 LDAPControlA **ldap_control_findU(char *oid, LDAPControlA **ctrls, LDAPControlA ***nextctrlp);
+int ldap_parse_sortresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *result, char **attribute);
 int ldap_create_vlv_controlU(LDAP *ld, LDAPVLVInfo *vlvinfo, LDAPControlA **ctrl);
 int ldap_parse_vlvresponse_controlU(LDAP *ld, LDAPControlA **ctrls, long int *target_posp, long int *list_countp, struct berval **contextp, int *errcodep);
 int ldap_create_passwordpolicy_controlU(LDAP *ld, LDAPControlA **ctrlp);

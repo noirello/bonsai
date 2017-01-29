@@ -18,6 +18,7 @@
 #include "wldap-utf8.h"
 
 #define XTHREAD HANDLE
+#define FINDCTRL LDAPControl**
 
 int _ldap_parse_passwordpolicy_control(LDAP *ld, LDAPControl **ctrls,
     ber_int_t *expire, ber_int_t *grace, unsigned int *error);
@@ -39,6 +40,7 @@ int _ldap_parse_passwordpolicy_control(LDAP *ld, LDAPControl **ctrls,
 
 #define SOCKET int
 #define XTHREAD pthread_t
+#define FINDCTRL LDAPControl*
 
 int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
 char *_ldap_get_opt_errormsg(LDAP *ld);

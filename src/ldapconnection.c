@@ -688,11 +688,13 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
     int rc = -1;
     int err = 0;
     int target_pos = 0, list_count = 0;
+    char *attr = NULL;
     LDAPMessage *entry;
-    LDAPControl *ctrl = NULL;
+    FINDCTRL ctrl = NULL;
     LDAPControl **returned_ctrls = NULL;
     LDAPEntry *entryobj = NULL;
     LDAPSearchIter *search_iter = NULL;
+    PyObject *ldaperror = NULL, *errmsg = NULL;
     PyObject *buffer = NULL;
     PyObject *value = NULL;
     PyObject *ctrl_obj = NULL;
@@ -754,19 +756,46 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
         goto error;
     }
 
-    if (search_iter != NULL) {
-        ctrl = ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL);
-        if (ctrl != NULL) {
-            rc = ldap_parse_pageresponse_control(self->ld, ctrl, NULL,
-                                            search_iter->cookie);
-            if (rc != LDAP_SUCCESS) {
-                set_exception(self->ld, rc);
-                goto error;
+    ctrl = ldap_control_find(LDAP_CONTROL_SORTRESPONSE, returned_ctrls, NULL);
+    if (ctrl != NULL) {
+        rc = ldap_parse_sortresponse_control(self->ld, ctrl, &err, &attr);
+
+        if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
+            ldaperror = get_error_by_code(err);
+            if (ldaperror == NULL) goto error;
+            if (attr != NULL) {
+                errmsg = PyUnicode_FromFormat("Server side sorting failed "
+                                              "on attribute '%s'.", attr);
+                ldap_memfree(attr);
             }
-        } else {
-            /* No paged result control is received, clear cookie. */
-            ber_bvfree(search_iter->cookie);
-            search_iter->cookie = NULL;
+            if (errmsg != NULL) {
+                PyErr_SetObject(ldaperror, errmsg);
+                Py_DECREF(errmsg);
+            } else {
+                PyErr_SetString(ldaperror, "");
+            }
+            Py_DECREF(ldaperror);
+            goto error;
+        }
+
+        ctrl = NULL;
+    }
+
+    if (search_iter != NULL) {
+        if (search_iter->page_size > 0) {
+            ctrl = ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL);
+            if (ctrl != NULL) {
+                rc = ldap_parse_pageresponse_control(self->ld, ctrl, NULL,
+                                                search_iter->cookie);
+                if (rc != LDAP_SUCCESS) {
+                    set_exception(self->ld, rc);
+                    goto error;
+                }
+            } else {
+                /* No paged result control is received, clear cookie. */
+                ber_bvfree(search_iter->cookie);
+                search_iter->cookie = NULL;
+            }
         }
         if (search_iter->vlv_info != NULL) {
             rc = ldap_parse_vlvresponse_control(self->ld,

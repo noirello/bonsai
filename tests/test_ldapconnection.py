@@ -220,7 +220,7 @@ class LDAPConnectionTest(unittest.TestCase):
         obj = self.conn.search("ou=nerdherd,%s" % self.basedn,
                                LDAPSearchScope.SUB)
         self.assertIsNotNone(obj)
-        self.assertEqual(obj, self.conn.search())
+        self.assertCountEqual(obj, self.conn.search())
 
     def test_search_ldapdn(self):
         """ Test searching with LDAPDN object. """
