@@ -663,6 +663,7 @@ ldap_init_thread_func(void *params) {
     }
     /* Set version to LDAPv3. */
     ldap_set_option(data->ld, LDAP_OPT_PROTOCOL_VERSION, &version);
+    ldap_set_option(data->ld, LDAP_OPT_REFERRALS, (void *)data->referrals);
     if (data->cert_policy != -1) {
         set_cert_policy(data->ld, data->cert_policy);
     }

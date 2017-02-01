@@ -78,6 +78,7 @@ typedef struct ldap_thread_data_s {
     LDAP *ld;
     char *url;
     int tls;
+    int referrals;
     int cert_policy;
     char *ca_cert_dir;
     char *ca_cert;

@@ -306,6 +306,12 @@ create_init_thread_data(PyObject *client, SOCKET sock) {
     data->cert_policy = (int)PyLong_AsLong(tmp);
     Py_DECREF(tmp);
 
+     /* Set referrals from LDAPClient. */
+    tmp = PyObject_GetAttrString(client, "server_chase_referrals");
+    if (tmp == NULL) goto error;
+    data->referrals = PyObject_IsTrue(tmp);
+    Py_DECREF(tmp);
+
     /* Set CA cert directory from LDAPClient. */
     rc = get_tls_attribute(client, "ca_cert_dir", &(data->ca_cert_dir));
     if (rc != 0) goto error;

@@ -47,6 +47,7 @@ class LDAPClient:
         self.__ppolicy_ctrl = False
         self.__ext_dn = None # type: Optional[int]
         self.__auto_acquire = True
+        self.__chase_referrals = True
 
     @staticmethod
     def _create_socketpair():
@@ -327,6 +328,17 @@ class LDAPClient:
             raise TypeError("Parameter's type must be bool.")
         self.__auto_acquire = val
 
+    def set_server_chase_referrals(self, val: bool):
+        """
+        Turn on or off chasing LDAP referrals by the server.
+
+        :param bool val: enabling/disabling LDAP referrals chasing.
+        :raises TypeError: If the paramter is not a bool type.
+        """
+        if type(val) != bool:
+            raise TypeError("Parameter's type must be bool.")
+        self.__chase_referrals = val
+
     def get_rootDSE(self) -> Union[LDAPEntry, None]:
         """
         Returns the server's root DSE entry. The root DSE may contain
@@ -472,6 +484,15 @@ class LDAPClient:
     @auto_page_acquire.setter
     def auto_page_acquire(self, value):
         self.set_auto_page_acquire(value)
+
+    @property
+    def server_chase_referrals(self):
+        """ The status of chasing referrals by the server. """
+        return self.__chase_referrals
+
+    @server_chase_referrals.setter
+    def server_chase_referrals(self, value):
+        self.set_server_chase_referrals(value)
 
     def connect(self, is_async: bool=False,
                 timeout: float=None, **kwargs) -> LDAPConnection:

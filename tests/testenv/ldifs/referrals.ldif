@@ -15,3 +15,4 @@ objectClass: referral
 objectClass: extensibleObject
 o: invalid-ref
 ref: ldap://bonsai.test/cn=invalid,ou=nerdherd,dc=bonsai,dc=test
+ref: ldap://invalid.bonsai.test/cn=jeff,ou=nerdherd,dc=bonsai,dc=test

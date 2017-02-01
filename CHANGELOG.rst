@@ -12,6 +12,8 @@ Changed
    iteration for paged LDAP search by default.
 -  Installing the package from source on Mac OS X become simpler with
    setup.cfg (Thanks to @LukeXuan).
+-  LDAPConnection.delete uses LDAP_SERVER_TREE_DELETE control (if it is
+   possible).
 
 Added
 ~~~~~
@@ -20,12 +22,16 @@ Added
    enabling/disabling automatic page acquiring during paged LDAP search.
 -  LDAPEntry.change_attribute and LDAPEntry.clear_attribute_changes methods
    for handling LDAP attributes with explicity modification operation types.
+-  Async for support for LDAPSearchIter.
+-  LDAPClient.server_chase_referrals attribute to set chasing LDAP referrals
+   by the server.
 
 Fixed
 ~~~~~
 
 -  The value validation of LDAPDN's __setitem__ method.
 -  The missing asyncio.coroutine decorators of AIOLDAPConnection's methods.
+-  IPv6 parsing for LDAPURL.
 
 [0.8.9] - 2016-11-19
 --------------------
