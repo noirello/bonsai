@@ -641,6 +641,7 @@ ldap_init_thread_func(void *params) {
     int rc = -1;
     const int version = LDAP_VERSION3;
     ldapInitThreadData *data = (ldapInitThreadData *)params;
+    void *ref_opt = NULL;
 
     if (data == NULL) {
 #ifdef WIN32
@@ -649,7 +650,7 @@ ldap_init_thread_func(void *params) {
         return NULL;
 #endif
     }
-
+    ref_opt = data->referrals ? LDAP_OPT_ON : LDAP_OPT_OFF;
 #ifdef WIN32
 #else
     pthread_mutex_lock(data->mux);
@@ -663,7 +664,7 @@ ldap_init_thread_func(void *params) {
     }
     /* Set version to LDAPv3. */
     ldap_set_option(data->ld, LDAP_OPT_PROTOCOL_VERSION, &version);
-    ldap_set_option(data->ld, LDAP_OPT_REFERRALS, (void *)data->referrals);
+    ldap_set_option(data->ld, LDAP_OPT_REFERRALS, ref_opt);
     if (data->cert_policy != -1) {
         set_cert_policy(data->ld, data->cert_policy);
     }

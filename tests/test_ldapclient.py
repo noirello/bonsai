@@ -2,6 +2,7 @@ import configparser
 import os.path
 import unittest
 import time
+import sys
 import xmlrpc.client as rpc
 
 import bonsai
@@ -178,6 +179,32 @@ class LDAPClientTest(unittest.TestCase):
         self.assertTrue(client.auto_page_acquire)
         client.auto_page_acquire = False
         self.assertFalse(client.auto_page_acquire)
+
+    def test_server_chase_referrals(self):
+        """ Test server_chase_referrals property. """
+        client = LDAPClient(self.url)
+        self.assertRaises(TypeError,
+                          lambda: client.set_server_chase_referrals(2))
+        self.assertTrue(client.server_chase_referrals)
+        client.server_chase_referrals = False
+        self.assertFalse(client.server_chase_referrals)
+
+    def test_referral_chasing(self):
+        """ Testing referral chasing option. """
+        if sys.platform == "win32":
+            self.skipTest("Referrals are not set in AD.")
+        refdn = "o=admin-ref,ou=nerdherd,dc=bonsai,dc=test"
+        client = LDAPClient(self.url)
+        conn = client.connect()
+        res = conn.search(refdn, 0)
+        self.assertIsInstance(res[0], bonsai.LDAPEntry)
+        conn.close()
+        client.server_chase_referrals = False
+        conn = client.connect()
+        res = conn.search(refdn, 0)
+        self.assertEqual(len(res), 0)
+
+
 
 if __name__ == '__main__':
     unittest.main()
