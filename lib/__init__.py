@@ -5,6 +5,7 @@ from .ldapconnection import LDAPSearchScope
 from .ldapentry import LDAPEntry
 from .ldapentry import LDAPModOp
 from .ldapclient import LDAPClient
+from .ldapreference import LDAPReference
 from .ldapvaluelist import LDAPValueList
 from .errors import *
 

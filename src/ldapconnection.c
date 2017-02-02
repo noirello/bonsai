@@ -682,13 +682,54 @@ ldapconnection_modpasswd(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     return PyLong_FromLong((long int)msgid);
 }
 
+static PyObject *
+create_reference_object(LDAPConnection *self, char **referrals) {
+    int i = 0;
+    PyObject *list = NULL;
+    PyObject *args = NULL;
+    PyObject *tmp = NULL;
+    PyObject *ldapreference_type = NULL;
+
+    list = PyList_New(0);
+    if (list == NULL) return NULL;
+
+    /* Load LDAPReference Python type. */
+    ldapreference_type = load_python_object("bonsai.ldapreference", "LDAPReference");
+    if (ldapreference_type == NULL) goto error;
+
+    for (i = 0; referrals[i] != NULL; i++) {
+        tmp = PyUnicode_FromString(referrals[i]);
+        free(referrals[i]);
+        if (tmp == NULL) goto error;
+        if (PyList_Append(list, tmp) != 0) {
+            Py_DECREF(tmp);
+            goto error;
+        }
+        Py_DECREF(tmp);
+        args = Py_BuildValue("OO", self->client, list);
+        if (args == NULL) goto error;
+
+        /* Create a new LDAPReference. */
+        tmp = PyObject_CallObject(ldapreference_type, args);
+        Py_DECREF(args);
+        Py_DECREF(ldapreference_type);
+        if (tmp == NULL) goto error;
+    }
+    Py_DECREF(list);
+    return tmp;
+error:
+    Py_DECREF(list);
+    return NULL;
+}
 /* Process the server result after a search request. */
 static PyObject *
-parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
+parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
     int rc = -1;
     int err = 0;
+    int ref_opt = 0;
     int target_pos = 0, list_count = 0;
     char *attr = NULL;
+    char **referrals = NULL;
     LDAPMessage *entry;
     FINDCTRL ctrl = NULL;
     LDAPControl **returned_ctrls = NULL;
@@ -698,6 +739,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
     PyObject *buffer = NULL;
     PyObject *value = NULL;
     PyObject *ctrl_obj = NULL;
+    PyObject *refobj = NULL;
 
     /* Get SearchIter from pending operations. */
     value = PyDict_GetItemString(self->pending_ops, msgidstr);
@@ -733,6 +775,29 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr){
         }
         Py_DECREF(entryobj);
     }
+
+    ldap_get_option(self->ld, LDAP_OPT_REFERRALS, &ref_opt);
+
+    if (ref_opt == 0) {
+        /* Iterate over the received referrals. */
+        for (entry = ldap_first_reference(self->ld, res); entry != NULL;
+            entry = ldap_next_reference(self->ld, entry)) {
+            rc = ldap_parse_reference(self->ld, entry, &referrals, NULL, 0);
+            if (rc != LDAP_SUCCESS) {
+                set_exception(self->ld, rc);
+                goto error;
+            }
+            if (referrals != NULL) {
+                refobj = create_reference_object(self, referrals);
+                if (refobj == NULL) goto error;
+                if (PyList_Append(buffer, refobj) != 0) {
+                    Py_DECREF(refobj);
+                    goto error;
+                }
+            }
+        }
+    }
+
     /* Check for any error during the searching. */
     rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
             &returned_ctrls, 1);

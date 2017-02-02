@@ -98,7 +98,7 @@ convert_to_wcs(char *tmp, wchar_t **str) {
 }
 
 
-/* Convert a list of narrow character strings into a list of UTF-16 (narrow)
+/* Convert a list of narrow character strings into a list of UTF-16 (wide)
    strings. */
 static int
 convert_char_list(char **list, wchar_t ***wlist) {
@@ -118,6 +118,31 @@ convert_char_list(char **list, wchar_t ***wlist) {
         /* At least one of the item's conversion is failed,
         thus the list is not converted properly. */
         free_list(*wlist, &free);
+    }
+
+    return rc;
+}
+
+/* Convert a list of UTf-16 (wide) character strings into a list of narrow
+strings. */
+static int
+convert_wchar_list(wchar_t **wlist, char ***list) {
+    int size = 0;
+    int rc = 0;
+
+    if (wlist == NULL) return LDAP_SUCCESS;
+
+    size = get_size(wlist);
+
+    *list = (char **)malloc(sizeof(char *) * (size + 1));
+    if (*list == NULL) return LDAP_NO_MEMORY;
+
+    rc = copy_list(wlist, *list, ((int(*)(void*, void**))convert_to_mbs));
+
+    if (rc != LDAP_SUCCESS) {
+        /* At least one of the item's conversion is failed,
+        thus the list is not converted properly. */
+        free_list(*list, &free);
     }
 
     return rc;
@@ -848,6 +873,24 @@ ldap_parse_vlvresponse_controlU(LDAP *ld, LDAPControlA **ctrls, long int *target
 end:
     free_list((void **)wctrls, (void *)free_ctrl);
     return rc;
+}
+
+int
+ldap_parse_referenceU(LDAP *ld, LDAPMessage *reference, char ***referralsp,
+    LDAPControlA ***serverctrlsp, int freeit) {
+    int rc = 0;
+    LDAPControlW **wctrls = NULL;
+    wchar_t **wreferrals = NULL;
+
+    rc = ldap_parse_referenceW(ld, reference, &wreferrals);
+    if (rc != LDAP_SUCCESS) goto end;
+    rc = convert_wchar_list(wreferrals, referralsp);
+    if (freeit) ldap_msgfree(reference);
+
+end:
+    ldap_value_freeW(wreferrals);
+    return rc;
+
 }
 
 /******************************************************************************

@@ -66,6 +66,7 @@
 #undef ldap_create_sort_control
 #undef ldap_extended_operation
 #undef ldap_parse_extended_result
+#undef ldap_parse_reference
 #undef ldap_parse_result
 #undef ldap_err2string
 #undef ldap_memfree
@@ -108,6 +109,7 @@
 #define ldap_create_passwordpolicy_control ldap_create_passwordpolicy_controlU
 #define ldap_parse_passwordpolicy_control ldap_parse_passwordpolicy_controlU
 #define ldap_parse_sortresponse_control ldap_parse_sortresponse_controlU
+#define ldap_parse_reference ldap_parse_referenceU
 
 /* These functions are not represented in the WinLDAP API. */
 #define ldap_parse_pageresponse_control(ld, ctrls, count, cookie) ldap_parse_pageresponse_controlU(ld, ctrls, count, &(cookie))
@@ -145,6 +147,7 @@ LDAPControlA **ldap_control_findU(char *oid, LDAPControlA **ctrls, LDAPControlA 
 int ldap_parse_sortresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *result, char **attribute);
 int ldap_create_vlv_controlU(LDAP *ld, LDAPVLVInfo *vlvinfo, LDAPControlA **ctrl);
 int ldap_parse_vlvresponse_controlU(LDAP *ld, LDAPControlA **ctrls, long int *target_posp, long int *list_countp, struct berval **contextp, int *errcodep);
+int ldap_parse_referenceU(LDAP *ld, LDAPMessage *reference, char ***referralsp, LDAPControlA ***serverctrlsp, int freeit);
 int ldap_create_passwordpolicy_controlU(LDAP *ld, LDAPControlA **ctrlp);
 int ldap_parse_passwordpolicy_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *expirep, ber_int_t *gracep, unsigned int *errorp);
 int ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp, char **errmsgp, char ***referralsp, LDAPControlA ***sctrls, int freeit);
