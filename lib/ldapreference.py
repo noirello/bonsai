@@ -30,8 +30,9 @@ class LDAPReference:
 
     @client.setter
     def client(self, value):
-       if type(value) != LDAPClient:
+        if type(value) != LDAPClient:
             raise TypeError("Client property must be an LDAPClient.")
+        self.__client = value
 
     @property
     def references(self):

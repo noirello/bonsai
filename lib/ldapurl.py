@@ -202,6 +202,23 @@ class LDAPURL:
         else:
             return "%s://%s:%d" % tuple(self.__hostinfo)
 
+    def __eq__(self, other) -> bool:
+        """
+        Check equality of two LDAPURL or an LDAPURL and a string.
+        """
+        if isinstance(other, LDAPURL):
+            return (self.scheme == other.scheme and
+                    self.host == other.host and
+                    self.port == other.port and
+                    self.basedn == other.basedn and
+                    self.scope == other.scope and
+                    self.filter == other.filter and
+                    self.attributes == other.attributes)
+        elif isinstance(other, str):
+            return str(self) == other
+        else:
+            return False
+
     def __str__(self) -> str:
         """ Returns the full format of LDAP URL. """
         strurl = self.get_address()

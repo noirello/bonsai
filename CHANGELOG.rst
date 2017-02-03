@@ -25,6 +25,8 @@ Added
 -  Async iterator (async for) support for LDAPSearchIter.
 -  LDAPClient.server_chase_referrals property to set chasing LDAP referrals
    by the server.
+-  LDAPReference object for handling LDAP referrals.
+-  LDAPURL.__eq__ method to check LDAPURL objects and string equality.
 
 Fixed
 ~~~~~

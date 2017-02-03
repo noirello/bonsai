@@ -189,22 +189,5 @@ class LDAPClientTest(unittest.TestCase):
         client.server_chase_referrals = False
         self.assertFalse(client.server_chase_referrals)
 
-    def test_referral_chasing(self):
-        """ Testing referral chasing option. """
-        if sys.platform == "win32":
-            self.skipTest("Referrals are not set in AD.")
-        refdn = "o=admin-ref,ou=nerdherd,dc=bonsai,dc=test"
-        client = LDAPClient(self.url)
-        conn = client.connect()
-        res = conn.search(refdn, 0)
-        self.assertIsInstance(res[0], bonsai.LDAPEntry)
-        conn.close()
-        client.server_chase_referrals = False
-        conn = client.connect()
-        res = conn.search(refdn, 0)
-        self.assertEqual(len(res), 0)
-
-
-
 if __name__ == '__main__':
     unittest.main()
