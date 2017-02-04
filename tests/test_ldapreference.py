@@ -50,10 +50,10 @@ class LDAPClientTest(unittest.TestCase):
             ref.references = None
         self.assertRaises(ValueError, error)
 
+    @unittest.skipIf(sys.platform.startswith("win"),
+                     "Referrals are not set in AD.")
     def test_referral_chasing(self):
         """ Testing referral chasing option. """
-        if sys.platform == "win32":
-            self.skipTest("Referrals are not set in AD.")
         refdn = "o=admin-ref,ou=nerdherd,dc=bonsai,dc=test"
         client = LDAPClient(self.url)
         conn = client.connect()

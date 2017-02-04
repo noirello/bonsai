@@ -1,6 +1,6 @@
 Changelog
 ==========
-[0.9.0] - 2017-02-02
+[0.9.0] - 2017-02-04
 --------------------
 
 Changed
@@ -10,10 +10,11 @@ Changed
    tested with 3.3 anymore.
 -  The LDAPSeachIter object is automatically acquiring the next page during
    iteration for paged LDAP search by default.
--  Installing the package from source on Mac OS X become simpler with
+-  Installing the package from source on Mac OS X became simpler with
    setup.cfg (Thanks to @LukeXuan).
 -  When recursive is True, LDAPConnection.delete uses LDAP_SERVER_TREE_DELETE
    control (if it is possible).
+-  LDAPClient.url property became writable.
 
 Added
 ~~~~~
@@ -27,6 +28,7 @@ Added
    by the server.
 -  LDAPReference object for handling LDAP referrals.
 -  LDAPURL.__eq__ method to check LDAPURL objects and string equality.
+-  LDAPClient.set_url method to set url attribute.
 
 Fixed
 ~~~~~

@@ -25,16 +25,8 @@ class LDAPClient:
     def __init__(self, url: Union[LDAPURL, str]="ldap://",
                  tls: bool=False) -> None:
         """ init method. """
-        if type(url) == str:
-            self.__url = LDAPURL(url)
-        elif type(url) == LDAPURL:
-            self.__url = url
-        else:
-            raise TypeError("The url parameter must be string or an LDAPURL.")
-        if self.__url.scheme != "ldaps" and tls:
-            self.__tls = True
-        else:
-            self.__tls = False
+        self.__tls = tls
+        self.set_url(url)
         self.__credentials = None # type: Optional[Tuple]
         self.__raw_list = [] # type: List[str]
         self.__mechanism = "SIMPLE"
@@ -352,31 +344,46 @@ class LDAPClient:
         attrs = ["namingContexts", "altServer", "supportedExtension",
                  "supportedControl", "supportedSASLMechanisms",
                  "supportedLDAPVersion"]
-        try:
-            conn = LDAPConnection(self.__class__(self.url, self.tls),
-                                  False).open()
-            # Convert to list to avoid possible LDAPSearchIter object.
-            root_dse = conn.search("", LDAPSearchScope.BASE,
-                                   "(objectclass=*)",
-                                   attrs, None, False)[0]
-            return root_dse
-        except IndexError:
-            return None
-        finally:
-            conn.close()
+        with LDAPConnection(self.__class__(self.url, self.tls), False).open() \
+        as conn:
+            try:
+                # Convert to list to avoid possible LDAPSearchIter object.
+                root_dse = conn.search("", LDAPSearchScope.BASE,
+                                       "(objectclass=*)",
+                                       attrs, None, False)[0]
+                return root_dse
+            except IndexError:
+                return None
+
+    def set_url(self, url: Union[LDAPURL, str]) -> None:
+        """
+        Set LDAP url for the client.
+
+        :params LDAPURL|str url: the LDAP url.
+        """
+        if type(url) == str:
+            self.__url = LDAPURL(url)
+        elif type(url) == LDAPURL:
+            self.__url = url
+        else:
+            raise TypeError("The url parameter must be string or an LDAPURL.")
+        if self.__url.scheme != "ldaps" and self.__tls:
+            self.__tls = True
+        else:
+            self.__tls = False
 
     @property
     def url(self):
-        """ The URL of the directory server. It cannot be set. """
+        """ The URL of the directory server. """
         return self.__url
 
     @url.setter
     def url(self, value=None):
-        raise ValueError("URL attribute cannot be set.")
+        self.set_url(value)
 
     @property
     def mechanism(self):
-        """ The choosen mechanism for authentication. It cannot be set. """
+        """ The chosen mechanism for authentication. It cannot be set. """
         return self.__mechanism
 
     @mechanism.setter

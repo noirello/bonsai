@@ -215,7 +215,11 @@ class LDAPURL:
                     self.filter == other.filter and
                     self.attributes == other.attributes)
         elif isinstance(other, str):
-            return str(self) == other
+            try:
+                other = LDAPURL(other)
+            except ValueError:
+                return False
+            return self == other
         else:
             return False
 

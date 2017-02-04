@@ -33,6 +33,8 @@ class LDAPClientTest(unittest.TestCase):
         client = LDAPClient(url)
         self.assertEqual(client.url, url)
         self.assertRaises(TypeError, lambda: LDAPClient(None))
+        client.url = "ldap://localhost"
+        self.assertEqual(client.url, "ldap://localhost")
 
     def test_connect(self):
         """ Test connect method. """
@@ -159,9 +161,6 @@ class LDAPClientTest(unittest.TestCase):
 
     def test_readonly_attributes(self):
         """ Test read-only attributes of LDAPClient. """
-        def set_url():
-            self.client.url = "ldap://test"
-        self.assertRaises(ValueError, set_url)
         def set_mechanism():
             self.client.mechanism = "SIMPLE"
         self.assertRaises(ValueError, set_mechanism)

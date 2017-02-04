@@ -110,10 +110,10 @@ class LDAPConnectionTest(unittest.TestCase):
             self.assertEqual(self.cfg["DIGESTAUTH"]["dn"], conn.whoami(),
                              "Digest authorization was failed. ")
 
+    @unittest.skipIf(sys.platform.startswith("win"),
+                     "NTLM is not enabled on Windows.")
     def test_bind_ntlm(self):
         """ Test NTLM connection. """
-        if sys.platform == "win32":
-            self.skipTest("NTLM is not enabled on Windows.")
         conn = self._binding("NTLMAUTH", "NTLM", None)
         conn.close()
 
@@ -144,10 +144,10 @@ class LDAPConnectionTest(unittest.TestCase):
                          "GSSAPI authorization was failed. ")
         conn.close()
 
+    @unittest.skipIf(not bonsai.has_krb5_support(),
+                     "Module doesn't have KRB5 support.")
     def test_bind_gssapi(self):
         """ Test GSSAPI connection with automatic TGT requesting. """
-        if not bonsai.has_krb5_support():
-            self.skipTest("Module doesn't have KRB5 support.")
         if ("realm" not in self.cfg["GSSAPIAUTH"]
                 or self.cfg["GSSAPIAUTH"]["realm"] == "None"):
             self.skipTest("Realm is not set.")
@@ -558,10 +558,10 @@ class LDAPConnectionTest(unittest.TestCase):
                 del entry['pwdAccountLockedTime']
                 entry.modify()
 
+    @unittest.skipIf(sys.platform.startswith("win"),
+                     "Cannot use password policy on Windows")
     def test_password_expire(self):
         """ Test password expiring with password policy. """
-        if sys.platform == "win32":
-            self.skipTest("Cannot use password policy on Windows")
         user_dn = "cn=skip,ou=nerdherd,dc=bonsai,dc=test"
         cli = LDAPClient("ldap://%s" % self.ipaddr)
         cli.set_password_policy(True)
@@ -599,11 +599,10 @@ class LDAPConnectionTest(unittest.TestCase):
                 del entry['pwdGraceUseTime']
                 entry.modify()
 
+    @unittest.skipIf(sys.platform.startswith("win"),
+                     "Cannot use password modify extended opertion on Windows")
     def test_password_modify_extop(self):
         """ Test Password Modify extended operation. """
-        if sys.platform == "win32":
-            self.skipTest("Cannot use password modify extended opertion"
-                          " on Windows")
         user_dn = LDAPDN("cn=skip,ou=nerdherd,dc=bonsai,dc=test")
         cli = LDAPClient("ldap://%s" % self.ipaddr)
         cli.set_credentials("SIMPLE", (str(user_dn), "p@ssword"))
