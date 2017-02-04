@@ -1,6 +1,6 @@
+import configparser
 import os
 import sys
-import shutil
 import tempfile
 
 from contextlib import contextmanager
@@ -41,6 +41,9 @@ def have_krb5(libs, libdirs=None):
         return 0;
     }
     """
+    curdir = os.path.abspath(os.path.dirname(__file__))
+    cfg = configparser.ConfigParser()
+    cfg.read(os.path.join(curdir, 'setup.cfg'))
     with tempfile.TemporaryDirectory() as tmp_dir:
         name = os.path.join(tmp_dir, 'test_krb5')
         src_name = name + '.c'
@@ -49,14 +52,22 @@ def have_krb5(libs, libdirs=None):
 
         comp = distutils.ccompiler.new_compiler()
         distutils.sysconfig.customize_compiler(comp)
+        for include_dir in cfg.get("build_ext", "include_dirs",
+                                   fallback="").split(":"):
+            if include_dir:
+                comp.add_include_dir(include_dir)
+        for library_dir in cfg.get("build_ext", "library_dirs",
+                                   fallback="").split(":"):
+            if library_dir:
+                comp.add_library_dir(library_dir)
         try:
             with silent_stderr():
                 if "-coverage" in os.getenv("CFLAGS", ""):
                     # If coverage flag is set.
                     libs.append("gcov")
                 comp.link_executable(
-                        comp.compile([src_name],output_dir=tmp_dir),
-                        name, libraries=libs, library_dirs=libdirs)
+                    comp.compile([src_name], output_dir=tmp_dir),
+                    name, libraries=libs, library_dirs=libdirs)
         except (CompileError, LinkError):
             return False
         else:
@@ -81,78 +92,78 @@ class TestCommand(Command):
         unittest.TextTestRunner().run(suite)
         sys.exit(0)
 
-sources = ["bonsaimodule.c", "ldapentry.c", "ldapconnectiter.c",
+SOURCES = ["bonsaimodule.c", "ldapentry.c", "ldapconnectiter.c",
            "ldapconnection.c", "ldapmodlist.c", "ldap-xplat.c",
            "ldapsearchiter.c", "utils.c"]
 
-depends = ["ldapconnection.h", "ldapentry.h", "ldapconnectiter.h",
+DEPENDS = ["ldapconnection.h", "ldapentry.h", "ldapconnectiter.h",
            "ldapmodlist.h", "ldapsearchiter.h", "ldap-xplat.h",
            "utils.h"]
 
-libdirs = []
-macros = []
+LIBDIRS = []
+MACROS = []
 if sys.platform == "darwin":
-    libdirs.append("/usr/local/lib")
-    macros.append(("MACOSX", 1))
+    LIBDIRS.append("/usr/local/lib")
+    MACROS.append(("MACOSX", 1))
 
 if sys.platform == "win32":
-    libs = ["wldap32", "secur32", "Ws2_32"]
-    sources.append("wldap-utf8.c")
-    depends.append("wldap-utf8.h")
-    macros.append(("WIN32", 1))
+    LIBS = ["wldap32", "secur32", "Ws2_32"]
+    SOURCES.append("wldap-utf8.c")
+    DEPENDS.append("wldap-utf8.h")
+    MACROS.append(("WIN32", 1))
 else:
-    libs = ["ldap", "lber"]
-    if have_krb5(["krb5", "gssapi"], libdirs):
-        libs.extend(["krb5", "gssapi"])
-        macros.append(("HAVE_KRB5", 1))
-    elif have_krb5(["krb5", "gssapi_krb5"], libdirs):
-        libs.extend(["krb5", "gssapi_krb5"])
-        macros.append(("HAVE_KRB5", 1))
+    LIBS = ["ldap", "lber"]
+    if have_krb5(["krb5", "gssapi"], LIBDIRS):
+        LIBS.extend(["krb5", "gssapi"])
+        MACROS.append(("HAVE_KRB5", 1))
+    elif have_krb5(["krb5", "gssapi_krb5"], LIBDIRS):
+        LIBS.extend(["krb5", "gssapi_krb5"])
+        MACROS.append(("HAVE_KRB5", 1))
     else:
         print("INFO: Kerberos headers and libraries are not found."
               " Additional GSSAPI capabilities won't be installed.")
 
-sources = [os.path.join('src', x) for x in sources]
-depends = [os.path.join('src', x) for x in depends]
+SOURCES = [os.path.join('src', x) for x in SOURCES]
+DEPENDS = [os.path.join('src', x) for x in DEPENDS]
 
-bonsai_module = Extension("bonsai._bonsai",
-                          libraries=libs,
-                          sources=sources,
-                          depends=depends,
-                          define_macros=macros,
-                          library_dirs=libdirs)
-python_deps = []
+BONSAI_MODULE = Extension("bonsai._bonsai",
+                          libraries=LIBS,
+                          sources=SOURCES,
+                          depends=DEPENDS,
+                          define_macros=MACROS,
+                          library_dirs=LIBDIRS)
+PYTHON_DEPS = []
 
 if sys.version_info.minor < 5:
     # Typing dependecy for Python 3.4 and earlier.
-    python_deps.append("typing")
+    PYTHON_DEPS.append("typing")
 
 if sys.version_info.minor < 4:
     # Enum dependecy for Python 3.3.
-    python_deps.append("enum34")
+    PYTHON_DEPS.append("enum34")
 
 # Get long description from the README.rst file.
 with open('README.rst') as file:
-    long_descr = file.read()
+    LONG_DESC = file.read()
 
 # Get version number from the module's __init__.py file.
 with open('./lib/__init__.py') as src:
-    ver = [line.split("'")[1] for line in src.readlines()
+    VER = [line.split("'")[1] for line in src.readlines()
            if line.startswith('__version__')][0]
 
 setup(name="bonsai",
-      version=ver,
+      version=VER,
       description="Python 3 module for accessing LDAP directory servers.",
       author="noirello",
       author_email="noirello@gmail.com",
       url="https://github.com/noirello/bonsai",
-      long_description=long_descr,
+      long_description=LONG_DESC,
       license="MIT",
-      ext_modules=[bonsai_module],
+      ext_modules=[BONSAI_MODULE],
       package_dir={"bonsai": "lib"},
       packages=["bonsai", "bonsai.asyncio", "bonsai.gevent", "bonsai.tornado"],
       include_package_data=True,
-      install_requires=python_deps,
+      install_requires=PYTHON_DEPS,
       cmdclass={"test": TestCommand},
       keywords=["python3", "ldap", "libldap", "winldap", "asyncio",
                 "gevent", "tornado"],
