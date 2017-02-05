@@ -188,5 +188,14 @@ class LDAPClientTest(unittest.TestCase):
         client.server_chase_referrals = False
         self.assertFalse(client.server_chase_referrals)
 
+    def test_managedsait(self):
+        """ Test managedsait property. """
+        client = LDAPClient(self.url)
+        self.assertRaises(TypeError,
+                          lambda: client.set_managedsait("B"))
+        self.assertFalse(client.managedsait)
+        client.managedsait = True
+        self.assertTrue(client.managedsait)
+
 if __name__ == '__main__':
     unittest.main()

@@ -40,6 +40,7 @@ class LDAPClient:
         self.__ext_dn = None # type: Optional[int]
         self.__auto_acquire = True
         self.__chase_referrals = True
+        self.__managedsait_ctrl = False
 
     @staticmethod
     def _create_socketpair():
@@ -259,7 +260,7 @@ class LDAPClient:
             raise TypeError("Class must be a subclass of LDAPConnection. ")
         self.__async_conn = conn
 
-    def set_password_policy(self, ppolicy: bool):
+    def set_password_policy(self, ppolicy: bool) -> None:
         """
         Enable password policy control, if it is provided by the directory \
         server. Setting it `True` will change the return value of \
@@ -283,7 +284,7 @@ class LDAPClient:
             raise TypeError("Parameter must be bool.")
         self.__ppolicy_ctrl = ppolicy
 
-    def set_extended_dn(self, extdn_format: int):
+    def set_extended_dn(self, extdn_format: int) -> None:
         """
         Set the format of extended distinguished name for \
         LDAP_SERVER_EXTENDED_DN_OID control which extends the entries'
@@ -308,7 +309,7 @@ class LDAPClient:
             raise ValueError("Parameter must be 0, 1 or None.")
         self.__ext_dn = extdn_format
 
-    def set_auto_page_acquire(self, val: bool):
+    def set_auto_page_acquire(self, val: bool) -> None:
         """
         Turn on or off the automatic page acquiring during a paged
         LDAP search.
@@ -320,7 +321,7 @@ class LDAPClient:
             raise TypeError("Parameter's type must be bool.")
         self.__auto_acquire = val
 
-    def set_server_chase_referrals(self, val: bool):
+    def set_server_chase_referrals(self, val: bool) -> None:
         """
         Turn on or off chasing LDAP referrals by the server.
 
@@ -331,29 +332,16 @@ class LDAPClient:
             raise TypeError("Parameter's type must be bool.")
         self.__chase_referrals = val
 
-    def get_rootDSE(self) -> Union[LDAPEntry, None]:
+    def set_managedsait(self, val: bool) -> None:
         """
-        Returns the server's root DSE entry. The root DSE may contain
-        information about the vendor, the naming contexts, the request
-        controls the server supports, the supported SASL mechanisms,
-        features, schema location, and other information.
+        Set ManageDsaIT control for LDAP opertaions.abs
 
-        :return: the root DSE entry.
-        :rtype: :class:`LDAPEntry`
+        :param bool val: enabling/disabling ManageDsaIT control.
+        :raises TypeError: If the paramter is not a bool type.
         """
-        attrs = ["namingContexts", "altServer", "supportedExtension",
-                 "supportedControl", "supportedSASLMechanisms",
-                 "supportedLDAPVersion"]
-        with LDAPConnection(self.__class__(self.url, self.tls), False).open() \
-        as conn:
-            try:
-                # Convert to list to avoid possible LDAPSearchIter object.
-                root_dse = conn.search("", LDAPSearchScope.BASE,
-                                       "(objectclass=*)",
-                                       attrs, None, False)[0]
-                return root_dse
-            except IndexError:
-                return None
+        if type(val) != bool:
+            raise TypeError("Parameter's type must be bool.")
+        self.__managedsait_ctrl = val
 
     def set_url(self, url: Union[LDAPURL, str]) -> None:
         """
@@ -500,6 +488,38 @@ class LDAPClient:
     @server_chase_referrals.setter
     def server_chase_referrals(self, value):
         self.set_server_chase_referrals(value)
+
+    @property
+    def managedsait(self):
+        """ The status of using ManageDsaIT control. """
+        return self.__managedsait_ctrl
+
+    @managedsait.setter
+    def managedsait(self, value):
+        self.set_managedsait(value)
+
+    def get_rootDSE(self) -> Union[LDAPEntry, None]:
+        """
+        Returns the server's root DSE entry. The root DSE may contain
+        information about the vendor, the naming contexts, the request
+        controls the server supports, the supported SASL mechanisms,
+        features, schema location, and other information.
+
+        :return: the root DSE entry.
+        :rtype: :class:`LDAPEntry`
+        """
+        attrs = ["namingContexts", "altServer", "supportedExtension",
+                 "supportedControl", "supportedSASLMechanisms",
+                 "supportedLDAPVersion"]
+        with LDAPConnection(self.__class__(self.url, self.tls), False).open() \
+        as conn:
+            try:
+                root_dse = conn.search("", LDAPSearchScope.BASE,
+                                       "(objectclass=*)",
+                                       attrs, None, False)[0]
+                return root_dse
+            except IndexError:
+                return None
 
     def connect(self, is_async: bool=False,
                 timeout: float=None, **kwargs) -> LDAPConnection:

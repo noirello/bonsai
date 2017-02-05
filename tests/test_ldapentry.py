@@ -365,5 +365,24 @@ class LDAPEntryTest(unittest.TestCase):
         self.assertEqual(entry['uidNumber'].added, [])
         self.assertEqual(entry['uidNumber'].deleted, [])
 
+    @unittest.skipIf(sys.platform.startswith("win"),
+                     "Cannot use ManageDsaIT on Windows")
+    def test_modify_referrals(self):
+        """ Test modifying an LDAP refrerral with ManageDdsIT control. """
+        refdn = bonsai.LDAPDN("o=invalid-ref,ou=nerdherd,dc=bonsai,dc=test")
+        newref = "ldap://invalid.host/cn=nobody"
+        cli = LDAPClient(self.client.url)
+        cli.set_credentials(*self.creds)
+        cli.managedsait = True
+        with cli.connect() as conn:
+            entry = LDAPEntry(refdn, conn)
+            entry.change_attribute("ref", LDAPModOp.ADD, newref)
+            entry.modify()
+            res = conn.search(refdn, 0, attrlist=['ref'])[0]
+            self.assertEqual(len(res['ref']), 3)
+            self.assertIn(newref, res['ref'])
+            entry.change_attribute("ref", LDAPModOp.DELETE, newref)
+            entry.modify()
+
 if __name__ == '__main__':
     unittest.main()

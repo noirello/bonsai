@@ -69,6 +69,12 @@ ldapconnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     self->ppolicy = (char)PyObject_IsTrue(tmp);
     Py_DECREF(tmp);
 
+    /* Set manageDsaIT option. */
+    tmp = PyObject_GetAttrString(client, "managedsait");
+    if (tmp == NULL) return -1;
+    self->managedsait = (char)PyObject_IsTrue(tmp);
+    Py_DECREF(tmp);
+
     /* Set client object to LDAPConnection. */
     tmp = self->client;
     Py_INCREF(client);
@@ -294,15 +300,17 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
         PyObject *iterator) {
     int rc;
     int msgid = -1;
-    int num_of_ctrls = 0;
     int extdn_format = -1;
+    unsigned short num_of_ctrls = 0;
     ldapsearchparams *params = NULL;
     LDAPControl *page_ctrl = NULL;
     LDAPControl *sort_ctrl = NULL;
     LDAPControl *vlv_ctrl = NULL;
     LDAPControl *edn_ctrl = NULL;
+    LDAPControl *mdi_ctrl = NULL;
     LDAPControl **server_ctrls = NULL;
     LDAPSearchIter *search_iter = (LDAPSearchIter *)iterator;
+    struct berval ctrl_null_value = {0, NULL};
     struct timeval timeout;
     struct timeval *timeout_p;
     int tout_ms = 0;
@@ -328,6 +336,7 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
 
     /* Check the number of server controls and allocate it. */
     if (extdn_format != -1) num_of_ctrls++;
+    if (self->managedsait == 1) num_of_ctrls++;
     if (params->sort_list != NULL) num_of_ctrls++;
     if (search_iter != NULL && search_iter->page_size > 0) num_of_ctrls++;
     if (search_iter != NULL && search_iter->vlv_info != NULL) num_of_ctrls++;
@@ -389,6 +398,19 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
                 goto end;
             }
             server_ctrls[num_of_ctrls++] = edn_ctrl;
+            server_ctrls[num_of_ctrls] = NULL;
+        }
+
+        if (self->managedsait == 1) {
+            /* Create ManageDsaIT dcontrol. */
+            rc = ldap_control_create(LDAP_CONTROL_MANAGEDSAIT, 0,
+                                     &ctrl_null_value, 1, &mdi_ctrl);
+            if (rc != LDAP_SUCCESS) {
+                PyErr_BadInternalCall();
+                msgid = -1;
+                goto end;
+            }
+            server_ctrls[num_of_ctrls++] = mdi_ctrl;
             server_ctrls[num_of_ctrls] = NULL;
         }
 

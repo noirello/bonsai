@@ -637,5 +637,21 @@ class LDAPConnectionTest(unittest.TestCase):
                 del entry['pwdGraceUseTime']
                 entry.modify()
 
+    @unittest.skipIf(sys.platform.startswith("win"),
+                     "Cannot use ManageDsaIT on Windows")
+    def test_search_with_managedsait_ctrl(self):
+        """ Test searching with manageDsaIT control. """
+        refdn = LDAPDN("o=admin-ref,ou=nerdherd,dc=bonsai,dc=test")
+        cli = LDAPClient("ldap://%s" % self.ipaddr)
+        with cli.connect() as conn:
+            res = conn.search(refdn, LDAPSearchScope.BASE, attrlist=['ref'])[0]
+            self.assertEqual(str(res.dn), "cn=admin,dc=bonsai,dc=test")
+        cli.set_managedsait(True)
+        with cli.connect() as conn:
+            res = conn.search(refdn, LDAPSearchScope.BASE, attrlist=['ref'])[0]
+            self.assertEqual(refdn, res.dn)
+            self.assertEqual('ldap://bonsai.test/cn=admin,dc=bonsai,dc=test',
+                             res['ref'][0])
+
 if __name__ == '__main__':
     unittest.main()

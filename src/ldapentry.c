@@ -283,9 +283,12 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
     int rc = -1;
     int msgid = -1;
     char *dnstr = NULL;
+    unsigned short num_of_ctrls = 0;
+    struct berval ctrl_null_value = {0, NULL};
     LDAPModList *mods = NULL;
     LDAPControl **server_ctrls = NULL;
     LDAPControl *ppolicy_ctrl = NULL;
+    LDAPControl *mdi_ctrl = NULL;
 
     /* Get DN string. */
     dnstr = PyObject2char(self->dn);
@@ -302,6 +305,15 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
         return NULL;
     }
 
+    if (self->conn->ppolicy == 1) num_of_ctrls++;
+    if (self->conn->managedsait == 1) num_of_ctrls++;
+    if (num_of_ctrls > 0) {
+        server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *) *
+                                              (num_of_ctrls + 1));
+        if (server_ctrls == NULL) return PyErr_NoMemory();
+        num_of_ctrls = 0;
+    }
+
     if (self->conn->ppolicy == 1) {
         /* Create password policy control if it is set. */
         rc = ldap_create_passwordpolicy_control(self->conn->ld, &ppolicy_ctrl);
@@ -309,12 +321,20 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
             PyErr_BadInternalCall();
             return NULL;
         }
+        server_ctrls[num_of_ctrls++] = ppolicy_ctrl;
+        server_ctrls[num_of_ctrls] = NULL;
+    }
 
-        server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *) * (1 + 1));
-        if (server_ctrls == NULL) return PyErr_NoMemory();
-
-        server_ctrls[0] = ppolicy_ctrl;
-        server_ctrls[1] = NULL;
+    if (self->conn->managedsait == 1) {
+        /* Create ManageDsaIT dcontrol. */
+        rc = ldap_control_create(LDAP_CONTROL_MANAGEDSAIT, 0, &ctrl_null_value,
+                                 1, &mdi_ctrl);
+        if (rc != LDAP_SUCCESS) {
+            PyErr_BadInternalCall();
+            return NULL;
+        }
+        server_ctrls[num_of_ctrls++] = mdi_ctrl;
+        server_ctrls[num_of_ctrls] = NULL;
     }
 
     if (mod == 0) {

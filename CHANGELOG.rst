@@ -29,6 +29,8 @@ Added
 -  LDAPReference object for handling LDAP referrals.
 -  LDAPURL.__eq__ method to check LDAPURL objects and string equality.
 -  LDAPClient.set_url method to set url attribute.
+-  LDAPClient.set_managedsait method to support LDAP ManageDsaIT control
+   during search, add and modify operations.
 
 Fixed
 ~~~~~
