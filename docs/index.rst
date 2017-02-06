@@ -11,7 +11,7 @@ library on Microsoft Windows to handle communications with LDAP capable director
 The module main goal is to give a simple way to use the LDAP protocol as pythonic as it can be.
 
 .. note::
-   The module compatibles only with Python 3.3 or newer releases.
+   The module compatibles only with Python 3.4 or newer releases.
 
 Features
 ========

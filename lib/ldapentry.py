@@ -85,11 +85,16 @@ class LDAPEntry(ldapentry):
                 self.__setitem__(key, value)
 
     def clear(self) -> None:
+        """ Remove all items from the dictionary. """
         keys = list(self.keys())
         for key in keys:
             del self[key]
 
     def get(self, key, default=None):
+        """
+        Return the value for `key` if `key` is in the LDAPEntry,
+        else `default`. (Same as dict's get method.)
+        """
         try:
             return self[key]
         except KeyError:
@@ -167,7 +172,7 @@ class LDAPEntry(ldapentry):
     def extended_dn(self, value):
         raise ValueError("Extended_dn attribute cannot be set.")
 
-    def change_attribute(self, name: str, optype: int, *values):
+    def change_attribute(self, name: str, optype: int, *values) -> None:
         """
         Change an attribute of the entry with explicit LDAP modification type
         by listing the values as parameters.
@@ -179,7 +184,7 @@ class LDAPEntry(ldapentry):
         :param str name: the name of the attribute.
         :param int optype: the operation type, 0 for adding, 1 for deleting \
         and 2 for replacing. An :class:`LDAPModOp` also can be used as value.
-        :param *values: the new value or values of the attribute.
+        :param \*values: the new value or values of the attribute.
         """
         lvl = self.get(name, LDAPValueList())
         if optype == LDAPModOp.ADD:
@@ -198,7 +203,7 @@ class LDAPEntry(ldapentry):
         self[name] = lvl
         lvl.status = 2 if optype == 2 else 1
 
-    def clear_attribute_changes(self, name: str):
+    def clear_attribute_changes(self, name: str) -> None:
         """
         Clear all added and deleted changes of an attribute.
 

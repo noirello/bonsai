@@ -7,8 +7,8 @@ class LDAPReference:
     Object for handling an LDAP reference.
 
     :param LDAPClient client: a client object.
-    :param list references: list of valid LDAP URLs (as string or LDAPURL \
-     objects).
+    :param list references: list of valid LDAP URLs (as string or \
+    :class:`LDAPURL` objects).
     """
     def __init__(self, client, references):
         if type(client) != LDAPClient:

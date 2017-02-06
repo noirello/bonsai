@@ -312,7 +312,9 @@ class LDAPClient:
     def set_auto_page_acquire(self, val: bool) -> None:
         """
         Turn on or off the automatic page acquiring during a paged
-        LDAP search.
+        LDAP search. By turning automatic page acquiring on, it is
+        unnecessary to call :meth:`ldapsearchiter.acquire_next_page`.
+        It will be implicitly called during iteration.
 
         :param bool val: enabling/disabling auto page acquiring.
         :raises TypeError: If the paramter is not a bool type.
@@ -323,7 +325,10 @@ class LDAPClient:
 
     def set_server_chase_referrals(self, val: bool) -> None:
         """
-        Turn on or off chasing LDAP referrals by the server.
+        Turn on or off chasing LDAP referrals by the server. By turning
+        off server-side referral chasing search result can contain
+        :class:`LDAPReference` objects along with :class:`LDAPEntry`
+        objects.
 
         :param bool val: enabling/disabling LDAP referrals chasing.
         :raises TypeError: If the paramter is not a bool type.
@@ -334,7 +339,9 @@ class LDAPClient:
 
     def set_managedsait(self, val: bool) -> None:
         """
-        Set ManageDsaIT control for LDAP opertaions.abs
+        Set ManageDsaIT control for LDAP operations. With ManageDsaIT an
+        LDAP referral can be searched, added and modified as a common
+        LDAP entry.
 
         :param bool val: enabling/disabling ManageDsaIT control.
         :raises TypeError: If the paramter is not a bool type.
@@ -347,7 +354,7 @@ class LDAPClient:
         """
         Set LDAP url for the client.
 
-        :params LDAPURL|str url: the LDAP url.
+        :param LDAPURL|str url: the LDAP url.
         """
         if type(url) == str:
             self.__url = LDAPURL(url)
