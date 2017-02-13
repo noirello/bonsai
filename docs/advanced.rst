@@ -227,8 +227,10 @@ if the `page_size` is set for the :meth:`LDAPConnection.search` method:
     <_bonsai.ldapsearchiter object at 0x7f006ad455d0>
 
 Please note that the return value is changed from list to :class:`ldapsearchiter`. This object can
-be iterated over the entries of the page. With the :meth:`ldapsearchiter.acquire_next_page` method
-a new search request can be initiated to get the next page.
+be iterated over the entries of the page. By default the next page of results is acquired automatically
+during the interation. This behaviour can be changed by setting the :attr:`LDAPClient.auto_page_acquire`
+to `False` and using the :meth:`ldapsearchiter.acquire_next_page` method which explicitly initiates
+a new search request to get the next page.
 
 Paged search result cannot be used with virtual list view.
 
@@ -302,15 +304,16 @@ policies (like anonym or administrator user) the second item in the tuple will b
 Extended DN
 -----------
 
-The LDAP_SERVER_EXTENDED_DN_OID control is only supported by Microsoft's Active Directory.
-Setting this control with :meth:`LDAPClient.set_extended_dn` will extended the standard DN format
-with the SID and GUID attributes to `<GUID=xxxxxxxx>;<SID=yyyyyyyyy>;distinguishedName` during the
-LDAP search. The method's parameter can be either 0 which means that the GUID and SID strings will
-be in a hexadecimal string format or 1 for receiving the extended dn in a standard string format.
+Setting LDAP_SERVER_EXTENDED_DN control with :meth:`LDAPClient.set_extended_dn` will extend the
+standard DN format with the SID and GUID attributes to `<GUID=xxxxxxxx>;<SID=yyyyyyyyy>;distinguishedName`
+during the LDAP search. The method's parameter can be either 0 which means that the GUID and SID
+strings will be in a hexadecimal string format or 1 for receiving the extended dn in a standard
+string format. This control is only supported by Microsoft's Active Directory.
 
 Regardless of setting the control, the :attr:`LDAPEntry.dn` still remains a simple :class:`LDAPDN`
 object without the SID or GUID extensions. The extended DN will be set to the :attr:`LDAPEntry.extended_dn`
-as a string.
+as a string. The extended DN control also affects other LDAP attributes that use distinguished names
+(e.g. `memberOf` attribute).
 
     >>> client = bonsai.LDAPClient()
     >>> client.set_extended_dn(1)
@@ -322,6 +325,36 @@ as a string.
 
 .. note::
     The OID of extended DN control is: 1.2.840.113556.1.4.529.
+
+Server tree delete
+------------------
+
+Server tree delete control allows the client to remove entire subtrees with a single request if
+the user has appropriate permissions to remove every corresponding entries. Setting the `recursive` 
+parameter of :meth:`LDAPConnection.delete` and :meth:`LDAPEntry.delete` to `True` will send 
+the control with the delete request automatically, no further settings are required.
+
+.. note::
+    The OID of server tree delete control is: 1.2.840.113556.1.4.805
+
+ManageDsaIT
+-----------
+
+The ManageDsaIT control can be used to work with LDAP referrals as simple LDAP entries. After 
+setting it with the :meth:`LDAPClient.set_managedsait` method, the referrals can be added
+removed, and modified just like entries.
+
+    >>> client = bonsai.LDAPClient()
+    >>> client.set_managedsait(True)
+    >>> conn = client.connect()
+    >>> ref = conn.search("o=admin-ref,ou=nerdherd,dc=bonsai,dc=test", 0)[0]
+    >>> ref
+    {'objectClass': ['referral', 'extensibleObject'], 'o': ['admin-ref']}
+    >>> type(ref)
+    <class 'bonsai.ldapentry.LDAPEntry'>
+
+.. note::
+    The OID of ManageDsaIT control is: 2.16.840.1.113730.3.4.2
 
 Asynchronous operations
 =======================

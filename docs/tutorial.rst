@@ -78,7 +78,7 @@ The other possible parameters are listed on the API page of :meth:`LDAPConnectio
 Add and modify LDAP entry
 =========================
 
-To add a new entry to our dictionary we need to create an LDAPEntry object with a valid new
+To add a new entry to our dictionary we need to create an :class:`LDAPEntry` object with a valid new
 LDAP DN:
 
     >>> from bonsai import LDAPEntry
@@ -97,7 +97,7 @@ then call :meth:`LDAPConnection.add` to add to the server:
     True
     
 It's important, that we must set the schemas and every other attributes, that the schemas require.
-If we miss a required attribute, the server will not finish the operation and return an
+If we miss a required attribute, the server will not finish the operation and return with an
 :class:`bonsai.ObjectClassViolation` error.
 
 To modify an entry we need to have one that is already in the dictionary (got it back after a
@@ -108,6 +108,18 @@ call :meth:`LDAPEntry.modify` method at the end to save our modifications on the
     >>> anna['givenName'] = "Anna" # Set new givenName attribute.
     >>> anna['cn'].append('wu') # Add new common name attribute without remove the already set ones.
     >>> del anna['mail'] # Remove all values of the mail attribute.
+    >>> anna.modify()
+    True
+
+In certain cases, an LDAP entry can have write-only attribute (e.g. password) that cannot be
+represented in an LDAPEntry or we just want to change the value of an attribute without reading
+it first. The :meth:`LDAPEntry.change_attribute` method expects an attribute name, the type
+of the modification (as an integer or an :class:`LDAPModOp` enum) and the values as parameters
+to change an entry:
+
+    >>> from bonsai import LDAPEntry, LDAPModOp
+    >>> anna = LDAPEntry("cn=anna,ou=nerdherd,dc=bonsai,dc=test")
+    >>> anna.change_attribute("userPassword", LDAPModOp.REPLACE, "newsecret")
     >>> anna.modify()
     True
 
