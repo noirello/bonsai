@@ -12,4 +12,4 @@ from .errors import *
 from ._bonsai import get_tls_impl_name, get_vendor_info, \
                     has_krb5_support, _unique_contains
 
-__version__ = '0.9.0'
+__version__ = '0.9.1'

@@ -199,5 +199,26 @@ class AIOLDAPConnectionTest(unittest.TestCase):
                     break
             self.assertEqual(cnt, 6)
 
+    @asyncio_test
+    def test_async_with(self):
+        """
+        Test async with context manager
+        (with backwrdcompatibility)
+        """
+        mgr = self.client.connect(True)
+        aexit = type(mgr).__aexit__
+        aenter = type(mgr).__aenter__(mgr)
+
+        conn = yield from aenter
+        try:
+            self.assertFalse(conn.closed)
+            _ = yield from conn.whoami()
+        except:
+            if not (yield from aexit(mgr, *sys.exc_info())):
+                raise
+        else:
+            yield from aexit(mgr, None, None, None)
+        self.assertTrue(conn.closed)
+
 if __name__ == '__main__':
     unittest.main()

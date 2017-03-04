@@ -11,7 +11,26 @@ if sys.version_info.minor < 5:
 class AIOLDAPConnection(LDAPConnection):
     def __init__(self, client, loop=None):
         self._loop = loop or asyncio.get_event_loop()
+        self.__open_gen = None
         super().__init__(client, is_async=True)
+
+    @asyncio.coroutine
+    def __aenter__(self):
+        """ Async context manager entry point. """
+        res = yield from self.__open_gen
+        return res
+
+    @asyncio.coroutine
+    def __aexit__(self, *exc):
+        """ Async context manager exit point. """
+        self.close()
+
+    def __await__(self):
+        res = yield from self.__open_gen
+        return res
+
+    def __iter__(self):
+        return self.__await__()
 
     def _ready(self, msg_id, fut):
         self._loop.remove_reader(self.fileno())
@@ -41,6 +60,10 @@ class AIOLDAPConnection(LDAPConnection):
 
     def _evaluate(self, msg_id, timeout=None):
         return self._poll(msg_id, timeout)
+
+    def open(self, timeout=None):
+        self.__open_gen = super().open(timeout)
+        return self
 
     @asyncio.coroutine
     def delete(self, dname, timeout=None, recursive=False):
