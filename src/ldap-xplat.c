@@ -286,8 +286,9 @@ _pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
 
         gettimeofday(&timenow, NULL);
 
-        if (timenow.tv_sec >= abs_timeout->tv_sec &&
-                (timenow.tv_usec * 1000) >= abs_timeout->tv_nsec) {
+        if (timenow.tv_sec > abs_timeout->tv_sec || 
+            (timenow.tv_sec == abs_timeout->tv_sec &&
+            (timenow.tv_usec * 1000) >= abs_timeout->tv_nsec)) {
             return ETIMEDOUT;
         }
         /* Little sleep to avoid hammering on the lock. */

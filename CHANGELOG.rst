@@ -1,5 +1,19 @@
 Changelog
 ==========
+[0.9.1] - 2017-03-
+--------------------
+
+Changed
+~~~~~~~
+
+Added
+~~~~~
+
+-  Async with support for AIOLDAPConnection.
+
+Fixed
+~~~~~
+
 [0.9.0] - 2017-02-15
 --------------------
 
