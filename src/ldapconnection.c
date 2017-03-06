@@ -1066,18 +1066,9 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             return NULL;
         }
         ret = LDAPConnectIter_Next((LDAPConnectIter *)conniter, millisec);
-        if (ret == NULL) {
-            /* An error is happened. */
-            /* Remove operations from pending_ops. */
-            if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
-                PyErr_BadInternalCall();
-                return NULL;
-            }
-            return NULL;
-        }
         if (ret == Py_None) Py_RETURN_NONE;
         else {
-            /* The init and bind are finished. */
+            /* The init and bind are finished either success or error. */
             /* Remove operations from pending_ops. */
             if (PyDict_DelItemString(self->pending_ops, msgidstr) != 0) {
                 PyErr_BadInternalCall();

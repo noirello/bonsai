@@ -456,9 +456,9 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, i
         if (info->passwd  == NULL) {
             passwd.bv_len = 0;
         } else {
-            passwd.bv_len = strlen(info->passwd );
+            passwd.bv_len = strlen(info->passwd);
         }
-        passwd.bv_val = info->passwd ;
+        passwd.bv_val = info->passwd;
         rc = ldap_sasl_bind(ld, info->binddn, LDAP_SASL_SIMPLE, &passwd, server_ctrls,
                 NULL, msgid);
     }
@@ -651,9 +651,7 @@ ldap_init_thread_func(void *params) {
         return NULL;
 #endif
     }
-    ref_opt = data->referrals ? LDAP_OPT_ON : LDAP_OPT_OFF;
-#ifdef WIN32
-#else
+#ifndef WIN32
     pthread_mutex_lock(data->mux);
     /* Lock already acquired by this thread, flag can be set now. */
     data->flag = 1;
@@ -665,7 +663,15 @@ ldap_init_thread_func(void *params) {
     }
     /* Set version to LDAPv3. */
     ldap_set_option(data->ld, LDAP_OPT_PROTOCOL_VERSION, &version);
+    ref_opt = data->referrals ? LDAP_OPT_ON : LDAP_OPT_OFF;
     ldap_set_option(data->ld, LDAP_OPT_REFERRALS, ref_opt);
+#ifndef WIN32
+    struct timeval tv;
+    tv.tv_sec = 0;
+    /* Set asynchronous connect. */
+    ldap_set_option(data->ld, LDAP_OPT_NETWORK_TIMEOUT, &tv);
+    ldap_set_option(data->ld, LDAP_OPT_CONNECT_ASYNC, LDAP_OPT_ON);
+#endif
     if (data->cert_policy != -1) {
         set_cert_policy(data->ld, data->cert_policy);
     }
