@@ -665,13 +665,6 @@ ldap_init_thread_func(void *params) {
     ldap_set_option(data->ld, LDAP_OPT_PROTOCOL_VERSION, &version);
     ref_opt = data->referrals ? LDAP_OPT_ON : LDAP_OPT_OFF;
     ldap_set_option(data->ld, LDAP_OPT_REFERRALS, ref_opt);
-#ifndef WIN32
-    struct timeval tv;
-    tv.tv_sec = 0;
-    /* Set asynchronous connect. */
-    ldap_set_option(data->ld, LDAP_OPT_NETWORK_TIMEOUT, &tv);
-    ldap_set_option(data->ld, LDAP_OPT_CONNECT_ASYNC, LDAP_OPT_ON);
-#endif
     if (data->cert_policy != -1) {
         set_cert_policy(data->ld, data->cert_policy);
     }
