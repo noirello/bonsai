@@ -9,6 +9,25 @@
 
 PyObject *LDAPDNObj = NULL;
 PyObject *LDAPValueListObj = NULL;
+char debugmod = 0;
+
+/* Turn on and off debug mod. */
+static PyObject *
+bonsai_set_debug(PyObject *self, PyObject *args, PyObject *kwds) {
+    int deb_level = 0;
+    PyObject *flag = NULL;
+    static char *kwlist[] = {"debug", "level", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|i", kwlist,
+        &PyBool_Type, &flag, &deb_level)) {
+        return NULL;
+    }
+
+    debugmod = (char)PyObject_IsTrue(flag);
+    ldap_set_option(NULL, LDAP_OPT_DEBUG_LEVEL, &deb_level);
+
+    Py_RETURN_NONE;
+}
 
 /* Get the vendor's name and version of the LDAP library. */
 static PyObject *
@@ -103,6 +122,8 @@ static PyMethodDef bonsai_methods[] = {
         "Returns the name of the underlying TLS implementation."},
     {"has_krb5_support", (PyCFunction)bonsai_has_krb5_support, METH_NOARGS,
         "Check that the module is build with additional Kerberos support."},
+    {"set_debug", (PyCFunction)bonsai_set_debug, METH_VARARGS | METH_KEYWORDS,
+        "Turn on and off debug mode."},
     {"_unique_contains", (PyCFunction)bonsai_unique_contains, METH_VARARGS,
         "Check that the item is in the LDAPValueList. Returns with a tuple of"
         "status of the search and the matched element."},
@@ -120,6 +141,9 @@ static PyModuleDef bonsai2module = {
 PyMODINIT_FUNC
 PyInit__bonsai(void) {
     PyObject* module = NULL;
+
+    /* Set debug mod off. */
+    debugmod = 0;
 
     /* Import LDAPDN object. */
     LDAPDNObj = load_python_object("bonsai.ldapdn", "LDAPDN");

@@ -14,6 +14,7 @@ static void
 set_cert_policy(LDAP *ld, int cert_policy) {
     const int tls_settings = SCH_CRED_MANUAL_CRED_VALIDATION | SCH_CRED_NO_SERVERNAME_CHECK;
 
+    DEBUG("set_cert_policy (ld:%p, cert_policy:%d)", ld, cert_policy);
     switch (cert_policy) {
     case -1:
         /* Cert policy is not set, nothing to do.*/
@@ -57,6 +58,8 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
     /* Sanity check. */
     if (val == NULL || thread == NULL) return -1;
 
+    DEBUG("_ldap_finish_init_thread (async:%d, thread:%lu, timeout:%d, misc:%p)",
+        async, thread, *timeout, misc);
     if (async) {
         rc = WaitForSingleObject(thread, 10);
     } else {
@@ -118,6 +121,7 @@ ldap_thread_bind(void *params) {
     ldap_conndata_t *data = (ldap_conndata_t *)params;
     sasl_defaults_t defaults;
 
+    DEBUG("ldap_thread_bind (params:%p)", params);
     defaults.authcid = data->authcid;
     defaults.passwd = data->passwd;
     defaults.realm = data->realm;
@@ -143,6 +147,8 @@ SASL function call cannot be parsed (because of some kind of bug in WinLDAP). */
 int
 _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, int *msgid) {
 
+    DEBUG("_ldap_bind (ld:%p, info:%p, ppolicy:%d, result:%p, msgid:%d)",
+            ld, info, ppolicy, result, *msgid);
     info->ld = ld;
     info->thread = (void *)CreateThread(NULL, 0, ldap_thread_bind, (void *)info, 0, NULL);
 
@@ -179,6 +185,9 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
     len = strlen(realm);
 
     if (len == 0 || strlen(user) == 0) return 0;
+
+    DEBUG("create_krb5_cred (ctx:%p, realm:%s, user:%s, password:%s, ccache:%p,"
+        " gsscred:%p)", ctx, realm, user, "****", ccache, gsscred);
 
     rc = krb5_cc_new_unique(ctx, "FILE", NULL, ccache);
     if (rc != 0) goto end;
@@ -230,6 +239,8 @@ remove_krb5_cred(krb5_context ctx, krb5_ccache ccache, gss_cred_id_t *gsscred) {
     int rc = 0;
     unsigned int minor_stat = 0;
 
+    DEBUG("remove_krb5_cred (ctx:%p, cchache:%p, gsscred:%p)",
+        ctx, ccache, gsscred);
     rc = gss_release_cred(&minor_stat, gsscred);
     if (rc != 0) return minor_stat;
 
@@ -243,6 +254,7 @@ remove_krb5_cred(krb5_context ctx, krb5_ccache ccache, gss_cred_id_t *gsscred) {
 
 static void
 set_cert_policy(LDAP *ld, int cert_policy) {
+    DEBUG("set_cert_policy (ld:%p, cert_policy:%d)", ld, cert_policy);
     ldap_set_option(ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &cert_policy);
     /* Set TLS option globally. */
     ldap_set_option(NULL, LDAP_OPT_X_TLS_REQUIRE_CERT, &cert_policy);
@@ -252,6 +264,8 @@ static void
 set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert, char *clientkey) {
     const int true = 1;
 
+    DEBUG("set_certificates (ld:%p, cacertdir:%s, cacert:%s, clientcert:%s,"
+            " clientkey:%s)", ld, cacertdir, cacert, clientcert, clientkey);
     if (cacertdir == NULL || strcmp(cacertdir, "") != 0) {
         ldap_set_option(ld, LDAP_OPT_X_TLS_CACERTDIR, cacertdir);
     }
@@ -281,6 +295,7 @@ _pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
     rest.tv_sec = 0;
     rest.tv_nsec = 10000000;
 
+    DEBUG("%s", "_pthread_mutex_timedlock");
     do {
         rc = pthread_mutex_trylock(mutex);
 
@@ -300,6 +315,7 @@ _pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
 #else
 static int
 _pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
+    DEBUG("%s", "_pthread_mutex_timedlock");
     return pthread_mutex_timedlock(mutex, abs_timeout);
 }
 #endif
@@ -323,6 +339,8 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
     /* Sanity check. */
     if (val == NULL) return -1;
 
+    DEBUG("_ldap_finish_init_thread (async:%d, thread:%lu, timeout:%d, misc:%p)",
+            async, thread, *timeout, misc);
     if (async || *timeout == -1) {
         wait_msec = 100;
     } else {
@@ -436,6 +454,8 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, i
     LDAPControl *ppolicy_ctrl = NULL;
     struct berval passwd;
 
+    DEBUG("_ldap_bind (ld:%p, info:%p, ppolicy:%d, result:%p, msgid:%d)",
+            ld, info, ppolicy, result, *msgid);
     if (ppolicy == 1) {
         rc = ldap_create_passwordpolicy_control(ld, &ppolicy_ctrl);
         if (rc != LDAP_SUCCESS) return rc;
@@ -481,6 +501,7 @@ sasl_interact(LDAP *ld, unsigned flags, void *defs, void *in) {
     const char *dflt = interact->defresult;
     ldap_conndata_t *defaults = (ldap_conndata_t *)defs;
 
+    DEBUG("sasl_interact (ld:%p, flags:%u, defs:%p, in:%p)", ld, flags, defs, in);
 #ifdef HAVE_KRB5
     int rc = 0;
     if (defaults->request_tgt == 1) {
@@ -557,6 +578,7 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
     char *passwd = NULL;
     char *realm = NULL;
 
+    DEBUG("create_conn_info (mech:%s, sock:%d, creds:%p)", mech, sock, creds);
     /* Get credential information, if it's given. */
     if (PyTuple_Check(creds) && PyTuple_Size(creds) > 1) {
         if (strcmp(mech, "SIMPLE") == 0) {
@@ -614,6 +636,7 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
 /* Dealloc an ldapConnectionInfo struct. */
 void
 dealloc_conn_info(ldap_conndata_t* info) {
+    DEBUG("dealloc_conn_info (info:%p)", info);
     free(info->authcid);
     free(info->authzid);
     free(info->binddn);
@@ -644,6 +667,7 @@ ldap_init_thread_func(void *params) {
     ldapInitThreadData *data = (ldapInitThreadData *)params;
     void *ref_opt = NULL;
 
+    DEBUG("ldap_init_thread_func (params:%p)", params);
     if (data == NULL) {
 #ifdef WIN32
         return 0;
@@ -696,6 +720,7 @@ end:
             /* Signalling is failed. */
             data->retval = -1;
         }
+        DEBUG("ldap_init_thread_func signal (%d)", data->retval);
     }
 #ifdef WIN32
     return 0;
@@ -713,7 +738,8 @@ int
 create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread) {
     int rc = 0;
     ldapInitThreadData *data = (ldapInitThreadData *)param;
-
+    
+    DEBUG("create_init_thread (ld:%p, info:%p, thread:%lu)", param, info, *thread);
 #ifdef WIN32
     *thread = CreateThread(NULL, 0, ldap_init_thread_func, (void *)data, 0, NULL);
     if (*thread == NULL) rc = -1;

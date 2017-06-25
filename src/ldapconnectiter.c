@@ -20,6 +20,7 @@ binding(LDAPConnectIter *self) {
     char buff[1];
     PyObject *value = NULL;
 
+    DEBUG("binding [bind_inprogress:%d]", self->bind_inprogress);
     if (self->bind_inprogress == 0) {
         /* First call of bind. */
         rc = _ldap_bind(self->conn->ld, self->info, self->conn->ppolicy,
@@ -109,6 +110,7 @@ binding(LDAPConnectIter *self) {
         polltime.tv_usec = (self->timeout % 1000) * 1000;
     }
 
+    DEBUG("binding [bind_inprogress:%d]", self->bind_inprogress);
     if (self->bind_inprogress == 0) {
         /* First call of bind. */
         rc = _ldap_bind(self->conn->ld, self->info, self->conn->ppolicy,
@@ -222,6 +224,7 @@ binding(LDAPConnectIter *self) {
 /*  Dealloc the LDAPConnectIter object. */
 static void
 ldapconnectiter_dealloc(LDAPConnectIter* self) {
+    DEBUG("ldapconnectiter_dealloc (self:%p)", self);
     Py_XDECREF(self->conn);
     if (self->info != NULL) dealloc_conn_info(self->info);
     Py_TYPE(self)->tp_free((PyObject*)self);
@@ -234,6 +237,7 @@ ldapconnectiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
     self = (LDAPConnectIter *)type->tp_alloc(type, 0);
 
+    DEBUG("ldapconnectiter_new (self:%p)", self);
     if (self != NULL) {
         self->conn = NULL;
         self->init_finished = 0;
@@ -271,6 +275,7 @@ create_init_thread_data(PyObject *client, SOCKET sock) {
     PyObject *tmp = NULL;
     PyObject *tls = NULL;
 
+    DEBUG("create_init_thread_data (client:%p, sock:%d)", client, sock);
     data = (ldapInitThreadData *)malloc(sizeof(ldapInitThreadData));
     if (data == NULL) {
         PyErr_NoMemory();
@@ -375,6 +380,8 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int timeout) {
         return PyErr_Format(PyExc_StopIteration, "Connection is already open.");
     }
 
+    DEBUG("LDAPConnectIter_Next (self:%p, timeout:%d) [init_finished:%d]",
+        self, timeout, self->init_finished);
     if (self->timeout == -1 && timeout >= 0) {
         self->timeout = timeout;
     }

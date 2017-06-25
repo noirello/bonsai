@@ -17,6 +17,13 @@ typedef struct {
 
 extern PyObject *LDAPDNObj;
 extern PyObject *LDAPValueListObj;
+extern char debugmod;
+
+#define DEBUG(fmt, ...) \
+    do { if (debugmod) { \
+        fprintf(stdout, "DBG: "); \
+        fprintf(stdout, fmt, __VA_ARGS__); \
+        fprintf(stdout, "\n");} } while (0)
 
 char *lowercase(char *str);
 struct berval *create_berval(char *value, long int len);
