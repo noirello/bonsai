@@ -24,8 +24,9 @@ bonsai_set_debug(PyObject *self, PyObject *args, PyObject *kwds) {
     }
 
     debugmod = (char)PyObject_IsTrue(flag);
+#ifndef WIN32
     ldap_set_option(NULL, LDAP_OPT_DEBUG_LEVEL, &deb_level);
-
+#endif
     Py_RETURN_NONE;
 }
 
