@@ -689,7 +689,7 @@ ldap_init_thread_func(void *params) {
         }
     }
 #endif
-
+end:
     if (data->sock != -1) {
         /* Send a signal through an internal socketpair. */
         if (send(data->sock, "s", 1, 0) == -1) {
@@ -697,7 +697,6 @@ ldap_init_thread_func(void *params) {
             data->retval = -1;
         }
     }
-end:
 #ifdef WIN32
     return 0;
 #else
