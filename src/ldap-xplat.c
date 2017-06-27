@@ -644,7 +644,9 @@ dealloc_conn_info(ldap_conndata_t* info) {
     free(info->passwd);
     free(info->realm);
 #ifdef HAVE_KRB5
-    remove_krb5_cred(info->ctx, info->ccache, &(info->gsscred));
+    if (info->gsscred != GSS_C_NO_CREDENTIAL || info->ctx != NULL) {
+        remove_krb5_cred(info->ctx, info->ccache, &(info->gsscred));
+    }
     free(info->errmsg);
 #endif
     free(info);

@@ -15,6 +15,7 @@ ldapmodlist_dealloc(LDAPModList* self) {
     int i, j;
     struct berval **bvals;
 
+    DEBUG("ldapmodlist_dealloc (self:%p)", self);
     if (self->mod_list != NULL) {
         for (i = 0; self->mod_list[i] != NULL; i++) {
             bvals = self->mod_list[i]->mod_vals.modv_bvals;
@@ -45,6 +46,7 @@ ldapmodlist_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->last = 0;
     }
 
+    DEBUG("ldapmodlist_new (self:%p)", self);
     return (PyObject *)self;
 }
 
@@ -54,6 +56,7 @@ LDAPModList *
 LDAPModList_New(PyObject* entry, Py_ssize_t size) {
     LDAPModList *self = (LDAPModList *)LDAPModListType.tp_new(&LDAPModListType, NULL, NULL);
 
+    DEBUG("LDAPModList_New (entry:%p, size:%ld)", entry, size);
     if (self == NULL) return NULL;
     /*  Malloc a new `size` length LDAPMod list. */
     self->mod_list = (LDAPMod **)malloc(sizeof(LDAPMod *) * (size + 1));
@@ -70,6 +73,7 @@ int
 LDAPModList_Add(LDAPModList *self, int mod_op, PyObject *key, PyObject *value) {
     LDAPMod *mod;
 
+    DEBUG("LDAPModList_Add (self:%p, mod_op:%d)", self, mod_op);
     /* Add to the next free slot, if there is one. */
     if (self->last == self->size) {
         PyErr_Format(PyExc_OverflowError, "The LDAPModList is full.");
@@ -103,6 +107,7 @@ LDAPModList_Pop(LDAPModList *self) {
     PyObject *list = NULL;
     struct berval **mod_bvals = NULL;
 
+    DEBUG("LDAPModList_Pop (self:%p)", self);
     if (self->last > 0) {
         mod = self->mod_list[--self->last];
         mod_bvals = mod->mod_vals.modv_bvals;

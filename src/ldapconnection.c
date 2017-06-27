@@ -6,6 +6,7 @@
 /*  Dealloc the LDAPConnection object. */
 static void
 ldapconnection_dealloc(LDAPConnection* self) {
+    DEBUG("ldapconnection_dealloc (self:%p)", self);
     Py_XDECREF(self->client);
     Py_XDECREF(self->pending_ops);
     //Py_XDECREF(self->socketpair); // Cause invalid freeing random occasion.
@@ -30,6 +31,7 @@ ldapconnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->socketpair = NULL;
     }
 
+    DEBUG("ldapconnection_new (self:%p)", self);
     return (PyObject *)self;
 }
 
@@ -42,6 +44,7 @@ ldapconnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     PyObject *tmp = NULL;
     static char *kwlist[] = {"client", "async", NULL};
 
+    DEBUG("ldapconnection_init (self:%p)", self);
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO!", kwlist, &client,
             &PyBool_Type, &async)) {
         return -1;
@@ -91,6 +94,7 @@ int
 LDAPConnection_IsClosed(LDAPConnection *self) {
     /* Connection must be set. */
     if (self == NULL) return -1;
+    DEBUG("LDAPConnection_IsClosed (self:%p)", self);
     if (self->closed) {
         /* The connection is closed. */
         PyObject *ldaperror = get_error_by_code(-101);
@@ -113,6 +117,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
     PyObject *creds = NULL;
     ldap_conndata_t *info = NULL;
 
+    DEBUG("connecting (self:%p)", self);
     /* Get mechanism and credentials. */
     creds = PyObject_GetAttrString(self->client, "credentials");
     if (creds == NULL) return -1;
@@ -151,6 +156,7 @@ ldapconnection_open(LDAPConnection *self) {
     int rc = 0;
     LDAPConnectIter *iter = NULL;
 
+    DEBUG("ldapconnection_open (self:%p)", self);
     rc = connecting(self, &iter);
     if (rc != 0) return NULL;
 
@@ -171,6 +177,7 @@ ldapconnection_close(LDAPConnection *self) {
     PyObject *keys = PyDict_Keys(self->pending_ops);
     PyObject *iter, *key, *tmp;
 
+    DEBUG("ldapconnection_close (self:%p)", self);
     if (keys == NULL) return NULL;
 
     if (self->closed == 1) {
@@ -225,6 +232,7 @@ ldapconnection_add(LDAPConnection *self, PyObject *args) {
     PyObject *param = NULL;
     PyObject *msgid = NULL;
 
+    DEBUG("ldapconnection_add (self:%p, args:%p)", self, args);
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
     if (!PyArg_ParseTuple(args, "O!", &LDAPEntryType, &param)) return NULL;
@@ -250,6 +258,7 @@ ldapconnection_delentry(LDAPConnection *self, PyObject *args) {
     LDAPControl *tree_ctrl = NULL;
     LDAPControl **server_ctrls = NULL;
 
+    DEBUG("ldapconnection_delentry (self:%p, args:%p)", self, args);
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
     if (!PyArg_ParseTuple(args, "s|O!", &dnstr, &PyBool_Type, &recursive)) {
@@ -316,6 +325,8 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
     int tout_ms = 0;
     PyObject *value = NULL;
 
+    DEBUG("LDAPConnection_Searching (self:%p, params_in:%p, iterator:%p)",
+            self, params_in, iterator);
     /* Get extended dn format attribute form LDAPClient. */
     value = PyObject_GetAttrString(self->client, "extended_dn_format");
     if (value == NULL) return -1;
@@ -488,6 +499,8 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
             "sizelimit", "attrsonly", "sort_order", "page_size", "offset",
             "before_count", "after_count", "est_list_count", "attrvalue", NULL};
 
+    DEBUG("ldapconnection_search (self:%p, args:%p, kwds:%p)",
+            self, args, kwds);
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "|ziz#O!diO!O!iiiiiO", kwlist,
@@ -596,6 +609,7 @@ ldapconnection_whoami(LDAPConnection *self) {
     int msgid = -1;
     PyObject *oid = NULL;
 
+    DEBUG("ldapconnection_whoami (self:%p)", self);
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
     /* Start an LDAP Who Am I operation. */
     rc = ldap_extended_operation(self->ld, "1.3.6.1.4.1.4203.1.11.3", NULL,
@@ -628,6 +642,8 @@ ldapconnection_modpasswd(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     LDAPControl **server_ctrls = NULL;
     static char *kwlist[] = { "user", "new_password", "old_password", NULL };
 
+    DEBUG("ldapconnection_modpasswd (self:%p, args:%p, kwds:%p)",
+        self, args, kwds);
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "|z#z#z#", kwlist,
@@ -715,6 +731,7 @@ create_reference_object(LDAPConnection *self, char **referrals) {
     list = PyList_New(0);
     if (list == NULL) return NULL;
 
+    DEBUG("create_reference_object (self:%p)", self);
     /* Load LDAPReference Python type. */
     ldapreference_type = load_python_object("bonsai.ldapreference", "LDAPReference");
     if (ldapreference_type == NULL) goto error;
@@ -763,6 +780,8 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
     PyObject *ctrl_obj = NULL;
     PyObject *refobj = NULL;
 
+    DEBUG("parse_search_result (self:%p, res:%p, msgidstr:%s)",
+        self, res, msgidstr);
     /* Get SearchIter from pending operations. */
     value = PyDict_GetItemString(self->pending_ops, msgidstr);
     Py_XINCREF(value);
@@ -950,6 +969,8 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
     BerElement *ber = NULL;
     ber_tag_t tag;
 
+    DEBUG("parse_extended_result (self:%p, res:%p, msgidstr:%s)",
+        self, res, msgidstr);
     /* Get oid and remove operations from pending_ops. */
     oid = PyDict_GetItemString(self->pending_ops, msgidstr);
     if (oid == NULL) return NULL;
@@ -1053,6 +1074,8 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
     PyObject *ret = NULL;
     PyObject *ctrl_obj = NULL;
 
+    DEBUG("LDAPConnection_Result (self:%p, msgid:%d, millisec:%d)",
+        self, msgid, millisec);
     /*- Create a char* from int message id. */
     sprintf(msgidstr, "%d", msgid);
 
@@ -1237,6 +1260,8 @@ ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
         goto end;
     }
 
+    DEBUG("ldapconnection_result (self:%p, args:%p, kwds:%p)[msgid:%d]",
+        self, args, kwds, msgid);
     if (timeout_obj == Py_None || timeout_obj == NULL) {
         timeout = -1;
     } else if (PyNumber_Check(timeout_obj) && !PyBool_Check(timeout_obj)) {
@@ -1284,6 +1309,8 @@ ldapconnection_abandon(LDAPConnection *self, PyObject *args) {
     if (!PyArg_ParseTuple(args, "i", &msgid)) {
         return NULL;
     }
+    DEBUG("ldapconnection_abandon (self:%p, args:%p)[msgid:%d]",
+        self, args, msgid);
 
     rc = ldap_abandon_ext(self->ld, msgid, NULL, NULL);
     if (rc != LDAP_SUCCESS) {
@@ -1318,6 +1345,7 @@ ldapconnection_fileno(LDAPConnection *self) {
         set_exception(self->ld, rc);
         return NULL;
     }
+    DEBUG("ldapconnection_fileno (self:%p)[desc:%d]", self, desc);
     return PyLong_FromLong((long int)desc);
 }
 
