@@ -6,6 +6,7 @@ static int
 ldapentry_clear(LDAPEntry *self) {
     PyObject *tmp;
 
+    DEBUG("ldapentry_clear (self:%p)", self);
     tmp = (PyObject *)self->conn;
     self->conn = NULL;
     Py_XDECREF(tmp);
@@ -25,6 +26,7 @@ ldapentry_clear(LDAPEntry *self) {
 /*  Deallocate the LDAPEntry. */
 static void
 ldapentry_dealloc(LDAPEntry *self) {
+    DEBUG("ldapentry_dealloc (self:%p)", self);
     ldapentry_clear(self);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -56,6 +58,7 @@ ldapentry_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
             return NULL;
         }
     }
+    DEBUG("ldapentry_new [self:%p]", self);
     return (PyObject *)self;
 }
 
@@ -67,6 +70,7 @@ ldapentry_init(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     static char *kwlist[] = {"dn", "conn", NULL};
     char *dnstr;
 
+    DEBUG("ldapentry_init (self:%p)", self);
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|O", kwlist, &dnstr, &conn)) {
         return -1;
     }
@@ -114,6 +118,7 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
     Py_DECREF(keys);
     if (iter == NULL) return NULL;
 
+    DEBUG("LDAPEntry_CreateLDAPMods (self:%p)", self);
     for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
         /* Return value: Borrowed reference. */
         value = LDAPEntry_GetItem(self, key);
@@ -198,6 +203,8 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
 
     /* Create an attribute list for LDAPEntry (which is implemented in Python). */
     dn = ldap_get_dn(conn->ld, entrymsg);
+    DEBUG("LDAPEntry_FromLDAPMessage (entrymsg:%p, conn:%p)[dn:%s]",
+        entrymsg, conn, dn);
     if (dn == NULL) {
         set_exception(conn->ld, 0);
         return NULL;
@@ -290,6 +297,7 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
     LDAPControl *ppolicy_ctrl = NULL;
     LDAPControl *mdi_ctrl = NULL;
 
+    DEBUG("LDAPEntry_AddOrModify (self:%p, mod:%d)", self, mod);
     /* Get DN string. */
     dnstr = PyObject2char(self->dn);
     if (dnstr == NULL || strlen(dnstr) == 0) {
@@ -379,6 +387,7 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
     PyObject *attr = NULL;
     PyObject *added = NULL, *deleted = NULL;
 
+    DEBUG("LDAPEntry_Rollback (self:%p, mods:%p)", self, mods);
     while (!LDAPModList_Empty(mods)) {
         /* Get every item for the LDAPModList. */
         res_tuple = LDAPModList_Pop(mods);
@@ -457,6 +466,7 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
 static PyObject *
 ldapentry_modify(LDAPEntry *self) {
     /* Connection must be open. */
+    DEBUG("ldapentry_modify (self:%p)", self);
     if (LDAPConnection_IsClosed(self->conn) != 0) return NULL;
 
     return LDAPEntry_AddOrModify(self, 1);
@@ -527,6 +537,7 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     /* Connection must be open. */
     if (LDAPConnection_IsClosed(self->conn) != 0) return NULL;
 
+    DEBUG("ldapentry_rename (self:%p)", self);
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &newdn)) return NULL;
 
     /* Save old dn string. */
@@ -649,7 +660,7 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
         PyErr_BadInternalCall();
         return -1;
     }
-
+    DEBUG("LDAPEntry_SetItem (self:%p)[key:%s]", self, newkey);
     /* Search for a match. */
     key = searchLowerCaseKeyMatch(self, key, 1, &found);
     if (found == 1) {
@@ -753,6 +764,7 @@ int
 LDAPEntry_SetConnection(LDAPEntry *self, LDAPConnection *conn) {
     PyObject *tmp;
 
+    DEBUG("LDAPEntry_SetConnection (self:%p, conn:%p)", self, conn);
     if (conn) {
         tmp = (PyObject *)self->conn;
         Py_INCREF(conn);
@@ -798,6 +810,7 @@ int
 LDAPEntry_SetDN(LDAPEntry *self, PyObject *value) {
     PyObject *dn = NULL;
 
+    DEBUG("LDAPEntry_SetDN (self:%p, value:%p)", self, value);
     if (value == NULL) {
         PyErr_SetString(PyExc_TypeError, "Cannot delete the DN attribute.");
         return -1;

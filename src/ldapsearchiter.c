@@ -10,6 +10,7 @@
 /* Dealloc the LDAPSearchIter object. */
 static void
 ldapsearchiter_dealloc(LDAPSearchIter* self) {
+    DEBUG("ldapsearchiter_dealloc (self:%p)", self);
     Py_XDECREF(self->buffer);
     Py_XDECREF(self->conn);
 
@@ -44,6 +45,7 @@ ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->auto_acquire = 0;
     }
 
+    DEBUG("ldapsearchiter_new [self:%p]", self);
     return (PyObject *)self;
 }
 
@@ -54,6 +56,7 @@ LDAPSearchIter_New(LDAPConnection *conn) {
     LDAPSearchIter *self =
             (LDAPSearchIter *)LDAPSearchIterType.tp_new(&LDAPSearchIterType,
                     NULL, NULL);
+    DEBUG("LDAPSearchIter_New (conn:%p)[self:%p]", conn, self);
     if (conn != NULL && self != NULL) {
         self->params = (ldapsearchparams *)malloc(sizeof(ldapsearchparams));
         if (self->params == NULL) return NULL;
@@ -74,6 +77,8 @@ LDAPSearchIter_New(LDAPConnection *conn) {
 static PyObject *
 ldapsearchiter_acquirenextpage(LDAPSearchIter *self) {
     int msgid = -1;
+
+    DEBUG("ldapsearchiter_acquirenextpage (self:%p)", self);
     /* If paged LDAP search is in progress. */
     if ((self->cookie != NULL) && (self->cookie->bv_val != NULL) &&
             (strlen(self->cookie->bv_val) > 0)) {
@@ -102,6 +107,7 @@ ldapsearchiter_iternext(LDAPSearchIter *self) {
     PyObject *item = NULL;
     PyObject *tmp = NULL, *msg = tmp;
 
+    DEBUG("ldapsearchiter_iternext (self:%p)", self);
     if (self->buffer == NULL) return NULL;
 
     if (Py_SIZE(self->buffer) != 0) {
@@ -151,6 +157,7 @@ static PyObject *
 ldapsearchiter_anext(LDAPSearchIter *self) {
     PyObject *res = NULL;
 
+    DEBUG("ldapsearchiter_anext (self:%p)", self);
     res = PyObject_CallMethod((PyObject *)self->conn, "_search_iter_anext",
                         "(O)", (PyObject *)self);
 

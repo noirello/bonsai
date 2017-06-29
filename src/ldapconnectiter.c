@@ -237,7 +237,6 @@ ldapconnectiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
     self = (LDAPConnectIter *)type->tp_alloc(type, 0);
 
-    DEBUG("ldapconnectiter_new (self:%p)", self);
     if (self != NULL) {
         self->conn = NULL;
         self->init_finished = 0;
@@ -247,6 +246,7 @@ ldapconnectiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->timeout = -1;
     }
 
+    DEBUG("ldapconnectiter_new [self:%p]", self);
     return (PyObject *)self;
 }
 

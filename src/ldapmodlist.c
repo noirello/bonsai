@@ -46,7 +46,7 @@ ldapmodlist_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->last = 0;
     }
 
-    DEBUG("ldapmodlist_new (self:%p)", self);
+    DEBUG("ldapmodlist_new [self:%p]", self);
     return (PyObject *)self;
 }
 

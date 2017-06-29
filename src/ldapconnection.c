@@ -31,7 +31,7 @@ ldapconnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->socketpair = NULL;
     }
 
-    DEBUG("ldapconnection_new (self:%p)", self);
+    DEBUG("ldapconnection_new [self:%p]", self);
     return (PyObject *)self;
 }
 
