@@ -85,6 +85,21 @@ binding(LDAPConnectIter *self) {
     }
 }
 
+
+/* Dummy function, because there are no options for setting
+   CA or client certs for WinLDAP. */
+static int
+set_certificates(LDAPConnectIter *self) {
+    return 0;
+}
+
+/* Dummy function, because it is unecessary to check the file
+   descriptor's state on Windows. */
+static int 
+check_fd_ready(LDAP *ld) {
+    return -1;
+}
+
 #else
 
  /* Poll the answer of the async function calls of the binding process.
@@ -219,6 +234,158 @@ binding(LDAPConnectIter *self) {
     }
 }
 
+/* Return a char* attribute from the LDAPClient object. */
+static int
+get_tls_attribute(PyObject *client, const char *name, char **value) {
+    PyObject *tmp = NULL;
+
+    tmp = PyObject_GetAttrString(client, name);
+    if (tmp == NULL) return -1;
+
+    if (tmp == Py_None) *value = NULL;
+    else *value= PyObject2char(tmp);
+    Py_DECREF(tmp);
+
+    return 0;
+}
+
+/* Set CA and client certificates for the connection. */
+static int
+set_certificates(LDAPConnectIter* self) {
+    int rc = 0;
+    const int true_val = 1;
+    char *ca_cert_dir = NULL;
+    char *ca_cert = NULL;
+    char *client_cert = NULL;
+    char *client_key = NULL;
+
+    DEBUG("set_certificates (self:%p)", self);
+    /* Set CA cert directory from LDAPClient. */
+    rc = get_tls_attribute(self->conn->client, "ca_cert_dir", &ca_cert_dir);
+    if (rc != 0) goto error;
+    /* Set CA cert from LDAPClient. */
+    rc = get_tls_attribute(self->conn->client, "ca_cert", &ca_cert);
+    if (rc != 0) goto error;
+    /* Set client cert from LDAPClient. */
+    rc = get_tls_attribute(self->conn->client, "client_cert", &client_cert);
+    if (rc != 0) goto error;
+    /* Set client key from LDAPClient. */
+    rc = get_tls_attribute(self->conn->client, "client_key", &client_key);
+    if (rc != 0) goto error;
+
+    if (ca_cert_dir == NULL || strcmp(ca_cert_dir, "") != 0) {
+        ldap_set_option(self->conn->ld, LDAP_OPT_X_TLS_CACERTDIR, ca_cert_dir);
+    }
+    if (ca_cert == NULL || strcmp(ca_cert, "") != 0) {
+        ldap_set_option(self->conn->ld, LDAP_OPT_X_TLS_CACERTFILE, ca_cert);
+    }
+    if (client_cert == NULL || strcmp(client_cert, "") != 0) {
+        ldap_set_option(self->conn->ld, LDAP_OPT_X_TLS_CERTFILE, client_cert);
+    }
+    if (client_key == NULL || strcmp(client_key, "") != 0) {
+        ldap_set_option(self->conn->ld, LDAP_OPT_X_TLS_KEYFILE, client_key);
+    }
+    /* Force libldap to create new context for the connection. */
+    ldap_set_option(self->conn->ld, LDAP_OPT_X_TLS_NEWCTX, &true_val);
+
+error:
+    free(ca_cert);
+    free(ca_cert_dir);
+    free(client_cert);
+    free(client_key);
+    return rc;
+}
+
+/* Checked that the file descriptor is ready. Asynchronous settings
+   may cause immature network operations with OpenLDAP libraries.
+   Returns a positive number on success, 0 if the poll is timed out
+   negative number on failure. */
+static int 
+check_fd_ready(LDAP *ld) {
+    struct pollfd fd;
+
+    DEBUG("check_fd_ready (ld:%p)", ld);
+    ldap_get_option(ld, LDAP_OPT_DESC, &(fd.fd));
+    fd.events = POLLOUT;
+    fd.revents = 0;
+    return poll(&fd, 1, 100);
+}
+
+static int
+check_tls_result(LDAP *ld, int msgid, int timeout, char async) {
+    int rc = 0;
+    int err = 0;
+    char *errstr = NULL;
+    LDAPMessage *res;
+    LDAPControl **ctrls = NULL;
+    struct timeval polltime;
+    PyObject *ldaperror = NULL, *errmsg = NULL;
+
+    DEBUG("check_tls_result (ld:%p, msgid:%d, timeout:%d, async:%d)",
+        ld, msgid, timeout, async);
+    if (timeout == -1) {
+        polltime.tv_sec = 0L;
+        polltime.tv_usec = 10L;
+    } else {
+        polltime.tv_sec = timeout / 1000;
+        polltime.tv_usec = (timeout % 1000) * 1000;
+    }
+
+    if (async == 0) {
+        if (timeout == -1) {
+            rc = ldap_result(ld, msgid, LDAP_MSG_ALL, NULL, &res);
+        } else {
+            rc = ldap_result(ld, msgid, LDAP_MSG_ALL, &polltime, &res);
+        }
+    } else {
+        rc = ldap_result(ld, msgid, LDAP_MSG_ALL, &polltime, &res);
+    }
+
+    switch (rc) {
+        case -1:
+            /* Error occurred during the operation. */
+            ldap_msgfree(res);
+            set_exception(ld, 0);
+            return -1;
+        case 0:
+            /* Timeout exceeded.*/
+            ldap_msgfree(res);
+            if (async == 0) {
+                set_exception(ld, -5);
+                return -1;
+            }
+            return 0;
+        case LDAP_RES_EXTENDED:
+            rc = ldap_parse_result(ld, res, &err, NULL, &errstr, NULL, &ctrls, 0);
+            if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
+                ldaperror = get_error_by_code(err);
+                if (ldaperror == NULL) return -1;
+                errmsg = PyUnicode_FromFormat("%s.", errstr);
+                if (errmsg != NULL) {
+                    PyErr_SetObject(ldaperror, errmsg);
+                    Py_DECREF(errmsg);
+                } else PyErr_SetString(ldaperror, "");
+                Py_DECREF(ldaperror);
+                return -1;
+            }
+
+            rc = ldap_parse_extended_result(ld, res, NULL, NULL, 1);
+            if (rc != LDAP_SUCCESS) {
+                set_exception(ld, rc);
+                return -1;
+            }
+            rc = ldap_install_tls(ld);
+            if (rc != LDAP_SUCCESS) {
+                set_exception(ld, rc);
+                return -1;
+            }
+            return 0;
+        default:
+            PyErr_BadInternalCall();
+            return -1;
+    }
+}
+
 #endif
 
 /*  Dealloc the LDAPConnectIter object. */
@@ -244,36 +411,20 @@ ldapconnectiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->init_thread_data = NULL;
         self->init_thread = 0;
         self->timeout = -1;
+        self->tls = 0;
+        self->tls_inprogress = 0;
     }
 
     DEBUG("ldapconnectiter_new [self:%p]", self);
     return (PyObject *)self;
 }
 
-
-/* Return a char* attribute from the LDAPClient object. */
-static int
-get_tls_attribute(PyObject *client, const char *name, char **value) {
-    PyObject *tmp = NULL;
-
-    tmp = PyObject_GetAttrString(client, name);
-    if (tmp == NULL) return -1;
-
-    if (tmp == Py_None) *value = NULL;
-    else *value= PyObject2char(tmp);
-    Py_DECREF(tmp);
-
-    return 0;
-}
-
 /* Create and return a ldapInitThreadData struct for the initialisation thread. */
 static ldapInitThreadData *
 create_init_thread_data(PyObject *client, SOCKET sock) {
-    int rc = 0;
     ldapInitThreadData *data = NULL;
     PyObject *url = NULL;
     PyObject *tmp = NULL;
-    PyObject *tls = NULL;
 
     DEBUG("create_init_thread_data (client:%p, sock:%d)", client, sock);
     data = (ldapInitThreadData *)malloc(sizeof(ldapInitThreadData));
@@ -281,10 +432,6 @@ create_init_thread_data(PyObject *client, SOCKET sock) {
         PyErr_NoMemory();
         return NULL;
     }
-    data->ca_cert = NULL;
-    data->ca_cert_dir = NULL;
-    data->client_cert = NULL;
-    data->client_key = NULL;
     data->url = NULL;
 
     /* Get URL policy from LDAPClient. */
@@ -299,15 +446,9 @@ create_init_thread_data(PyObject *client, SOCKET sock) {
     Py_DECREF(tmp);
     if (data->url == NULL) goto error;
 
-    /* Check the TLS state. */
-    tls = PyObject_GetAttrString(client, "tls");
-    if (tls == NULL) goto error;
-    data->tls = PyObject_IsTrue(tls);
-    Py_DECREF(tls);
-
     /* Set cert policy from LDAPClient. */
     tmp = PyObject_GetAttrString(client, "cert_policy");
-    if (tmp == NULL) goto error;
+    if (tmp == NULL) return NULL;
     data->cert_policy = (int)PyLong_AsLong(tmp);
     Py_DECREF(tmp);
 
@@ -317,27 +458,11 @@ create_init_thread_data(PyObject *client, SOCKET sock) {
     data->referrals = PyObject_IsTrue(tmp);
     Py_DECREF(tmp);
 
-    /* Set CA cert directory from LDAPClient. */
-    rc = get_tls_attribute(client, "ca_cert_dir", &(data->ca_cert_dir));
-    if (rc != 0) goto error;
-    /* Set CA cert from LDAPClient. */
-    rc = get_tls_attribute(client, "ca_cert", &(data->ca_cert));
-    if (rc != 0) goto error;
-    /* Set client cert from LDAPClient. */
-    rc = get_tls_attribute(client, "client_cert", &(data->client_cert));
-    if (rc != 0) goto error;
-    /* Set client key from LDAPClient. */
-    rc = get_tls_attribute(client, "client_key", &(data->client_key));
-    if (rc != 0) goto error;
-
     data->ld = NULL;
     data->sock = sock;
+    data->retval = 0;
     return data;
 error:
-    free(data->ca_cert);
-    free(data->ca_cert_dir);
-    free(data->client_cert);
-    free(data->client_key);
     free(data->url);
     free(data);
     PyErr_BadInternalCall();
@@ -347,6 +472,7 @@ error:
 /* Create a new LDAPConnectIter object for internal use. */
 LDAPConnectIter *
 LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info, SOCKET sock) {
+    PyObject *tmp = NULL;
     LDAPConnectIter *self =
             (LDAPConnectIter *)LDAPConnectIterType.tp_new(&LDAPConnectIterType,
                     NULL, NULL);
@@ -355,6 +481,13 @@ LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info, SOCKET sock) {
         Py_INCREF(conn);
         self->conn = conn;
         self->info = info;
+
+        /* Check the TLS state. */
+        tmp = PyObject_GetAttrString(self->conn->client, "tls");
+        if (tmp == NULL) return NULL;
+        self->tls = PyObject_IsTrue(tmp);
+        Py_DECREF(tmp);
+
 
         self->init_thread_data = create_init_thread_data(self->conn->client, sock);
         if (self->init_thread_data == NULL) return NULL;
@@ -380,12 +513,14 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int timeout) {
         return PyErr_Format(PyExc_StopIteration, "Connection is already open.");
     }
 
-    DEBUG("LDAPConnectIter_Next (self:%p, timeout:%d) [init_finished:%d]",
-        self, timeout, self->init_finished);
+    DEBUG("LDAPConnectIter_Next (self:%p, timeout:%d)"
+        " [tls:%d, init_finished:%d, tls_inprogress:%d]", self, timeout,
+        self->tls, self->init_finished, self->tls_inprogress);
     if (self->timeout == -1 && timeout >= 0) {
         self->timeout = timeout;
     }
 
+    /* Initialise LDAP struct. */
     if (self->init_finished == 0) {
         rc = _ldap_finish_init_thread(self->conn->async, self->init_thread, &(self->timeout),
                 self->init_thread_data, &(self->conn->ld));
@@ -397,11 +532,47 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int timeout) {
                 /* Read and drop the data from the dummy socket. */
                 if (recv(self->conn->csock, buff, 1, 0) == -1) return NULL;
             }
+            /* Set CA cert dir, CA cert and client cert. */
+            if (set_certificates(self) != 0) {
+                PyErr_BadInternalCall();
+                return NULL;
+            }
         }
     }
 
-    if (self->init_finished == 1) {
-        /* Init for the LDAP structure is finished, TLS (if it is needed) already set, start binding. */
+    /* Start building TLS Connection, if needed. */
+    if (self->init_finished == 1 && self->tls_inprogress == 0) {
+        if (self->tls == 1) {
+            rc = ldap_start_tls(self->conn->ld, NULL, NULL, &(self->message_id));
+            if (rc == LDAP_SUCCESS) {
+                self->tls_inprogress = 1;
+            } else {
+                if (check_fd_ready(self->conn->ld) != 0) {
+                    /* The connection is ready or the polling is failed. */
+                    set_exception(self->conn->ld, rc);
+                    return NULL;
+                }
+                /* Otherwise, the connection is not ready,
+                   try to start TLS again in the next call. */
+            }
+        } else {
+            /* TLS connection is not needed. */
+            self->tls_inprogress = 2;
+        }
+    }
+
+    /* Finish building TLS connection. */
+    if (self->init_finished == 1 && self->tls_inprogress == 1) {
+        rc = check_tls_result(self->conn->ld, self->message_id, self->timeout,
+            self->conn->async);
+        if (rc == -1) return NULL;
+        if (rc == 0) {
+            self->tls_inprogress = 2;
+        }
+    }
+
+    /* Start binding procedure. */
+    if (self->init_finished == 1 && self->tls_inprogress == 2) {
         val = binding(self);
         if (val == NULL) return NULL; /* It is an error. */
         if (val != Py_None) return val;

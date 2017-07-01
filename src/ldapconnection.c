@@ -1009,7 +1009,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
     rc = ldap_parse_extended_result(self->ld, res, &retoid, &data, 1);
     ldap_memfree(retoid);
 
-    if (rc != LDAP_SUCCESS ) {
+    if (rc != LDAP_SUCCESS) {
         Py_DECREF(oid);
         set_exception(self->ld, rc);
         return NULL;
@@ -1113,7 +1113,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
     if (self->async == 0) {
         /* The ldap_result will block, and wait for server response or timeout. */
         Py_BEGIN_ALLOW_THREADS
-        if (millisec >= 0)  {
+        if (millisec >= 0) {
             rc = ldap_result(self->ld, msgid, LDAP_MSG_ALL, &timeout, &res);
         } else {
             /* Wait until response or global timeout. */

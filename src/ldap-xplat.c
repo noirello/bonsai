@@ -32,11 +32,6 @@ set_cert_policy(LDAP *ld, int cert_policy) {
     }
 }
 
-static void
-set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert, char *clientkey) {
-
-}
-
 /* Finish the initialisation by checking the result of the separate thread for TLS.
    The `misc` parameter is a pointer to the thread's  data structure that contains the
    LDAP struct. The initialised LDAP struct is passed to the `ld` parameter. */
@@ -106,10 +101,6 @@ end:
     /* Clean up the mess. */
     CloseHandle(thread);
     free(val->url);
-    free(val->ca_cert);
-    free(val->ca_cert_dir);
-    free(val->client_cert);
-    free(val->client_key);
     free(val);
     return retval;
 }
@@ -258,28 +249,6 @@ set_cert_policy(LDAP *ld, int cert_policy) {
     ldap_set_option(ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &cert_policy);
     /* Set TLS option globally. */
     ldap_set_option(NULL, LDAP_OPT_X_TLS_REQUIRE_CERT, &cert_policy);
-}
-
-static void
-set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert, char *clientkey) {
-    const int true = 1;
-
-    DEBUG("set_certificates (ld:%p, cacertdir:%s, cacert:%s, clientcert:%s,"
-            " clientkey:%s)", ld, cacertdir, cacert, clientcert, clientkey);
-    if (cacertdir == NULL || strcmp(cacertdir, "") != 0) {
-        ldap_set_option(ld, LDAP_OPT_X_TLS_CACERTDIR, cacertdir);
-    }
-    if (cacert == NULL || strcmp(cacert, "") != 0) {
-        ldap_set_option(ld, LDAP_OPT_X_TLS_CACERTFILE, cacert);
-    }
-    if (clientcert == NULL || strcmp(clientcert, "") != 0) {
-        ldap_set_option(ld, LDAP_OPT_X_TLS_CERTFILE, clientcert);
-    }
-    if (clientkey == NULL || strcmp(clientkey, "") != 0) {
-        ldap_set_option(ld, LDAP_OPT_X_TLS_KEYFILE, clientkey);
-    }
-    /* Force libldap to create new context for the connection. */
-    ldap_set_option(ld, LDAP_OPT_X_TLS_NEWCTX, &true);
 }
 
 #ifdef MACOSX
@@ -437,10 +406,6 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 end:
     /* Clean-up. */
     free(val->url);
-    free(val->ca_cert);
-    free(val->ca_cert_dir);
-    free(val->client_cert);
-    free(val->client_key);
     pthread_mutex_destroy(val->mux);
     free(val->mux);
     free(val);
@@ -694,15 +659,14 @@ ldap_init_thread_func(void *params) {
     if (data->cert_policy != -1) {
         set_cert_policy(data->ld, data->cert_policy);
     }
-    /* Set CA cert dir, CA cert and client cert. */
-    set_certificates(data->ld, data->ca_cert_dir,
-            data->ca_cert, data->client_cert,
-            data->client_key);
-    if (data->tls == 1) {
-        /* Start TLS if it's required. */
-        rc = ldap_start_tls_s(data->ld, NULL, NULL);
-    }
-    data->retval = rc;
+
+#ifndef WIN32
+    struct timeval tv;
+    tv.tv_sec = 0;
+    /* Set asynchronous connect for OpenLDAP. */
+    ldap_set_option(data->ld, LDAP_OPT_CONNECT_ASYNC, LDAP_OPT_ON);
+    ldap_set_option(data->ld, LDAP_OPT_NETWORK_TIMEOUT, &tv);
+#endif
 
 #ifdef HAVE_KRB5
     if (data->info->request_tgt == 1) {
@@ -722,8 +686,8 @@ end:
             /* Signalling is failed. */
             data->retval = -1;
         }
-        DEBUG("ldap_init_thread_func signal (%d)", data->retval);
     }
+    DEBUG("ldap_init_thread_func [retval:%d]", data->retval);
 #ifdef WIN32
     return 0;
 #else

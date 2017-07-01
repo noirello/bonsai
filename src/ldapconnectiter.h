@@ -11,13 +11,18 @@
 #include <Python.h>
 #include "ldap-xplat.h"
 #include "ldapconnection.h"
+#ifndef WIN32
+#include <poll.h>
+#endif
 
 typedef struct {
     PyObject_HEAD
     LDAPConnection *conn;
     ldap_conndata_t *info;
-    unsigned short int bind_inprogress;
-    unsigned short int init_finished;
+    char bind_inprogress;
+    char init_finished;
+    char tls;
+    char tls_inprogress;
     int message_id;
     XTHREAD init_thread;
     void *init_thread_data;
