@@ -379,7 +379,7 @@ check_tls_result(LDAP *ld, int msgid, int timeout, char async) {
                 set_exception(ld, rc);
                 return -1;
             }
-            return 0;
+            return 1;
         default:
             PyErr_BadInternalCall();
             return -1;
@@ -566,7 +566,7 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int timeout) {
         rc = check_tls_result(self->conn->ld, self->message_id, self->timeout,
             self->conn->async);
         if (rc == -1) return NULL;
-        if (rc == 0) {
+        if (rc == 1) {
             self->tls_inprogress = 2;
         }
     }
