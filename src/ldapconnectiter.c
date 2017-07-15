@@ -100,6 +100,48 @@ check_fd_ready(LDAP *ld) {
     return -1;
 }
 
+static int
+check_tls_result(LDAP *ld, HANDLE msgid, int timeout, char async, SOCKET csock) {
+    int rc = 0;
+    char buff[1];
+    DWORD x = 0;
+
+    DEBUG("check_tls_result (ld:%p, msgid:%p, timeout:%d, async:%d, csock:%d)",
+        ld, msgid, timeout, async, (int)csock);
+    if (async == 0) {
+        rc = WaitForSingleObject(msgid, timeout);
+    } else {
+        rc = WaitForSingleObject(msgid, 10);
+    }
+    switch (rc) {
+    case WAIT_TIMEOUT:
+        if (async == 0) {
+            TerminateThread(msgid, -1);
+            CloseHandle(msgid);
+            set_exception(NULL, LDAP_TIMEOUT);
+            return -1;
+        }
+        return 0;
+    case WAIT_OBJECT_0:
+        GetExitCodeThread(msgid, &rc);
+        CloseHandle(msgid);
+        if (rc != LDAP_SUCCESS) {
+            /* The ldap_connect is failed. Set a Python error. */
+            set_exception(ld, rc);
+            return -1;
+        }
+        if (csock != -1) {
+            /* Read and drop the data from the dummy socket. */
+            if (recv(csock, buff, 1, 0) == -1) return -1;
+        }
+        return 1;
+    default:
+        /* The thread is failed. */
+        PyErr_BadInternalCall();
+        return -1;
+    }
+}
+
 #else
 
  /* Poll the answer of the async function calls of the binding process.
@@ -312,7 +354,7 @@ check_fd_ready(LDAP *ld) {
 }
 
 static int
-check_tls_result(LDAP *ld, int msgid, int timeout, char async) {
+check_tls_result(LDAP *ld, int msgid, int timeout, char async, SOCKET csock) {
     int rc = 0;
     int err = 0;
     char *errstr = NULL;
@@ -321,8 +363,8 @@ check_tls_result(LDAP *ld, int msgid, int timeout, char async) {
     struct timeval polltime;
     PyObject *ldaperror = NULL, *errmsg = NULL;
 
-    DEBUG("check_tls_result (ld:%p, msgid:%d, timeout:%d, async:%d)",
-        ld, msgid, timeout, async);
+    DEBUG("check_tls_result (ld:%p, msgid:%d, timeout:%d, async:%d, csock:%d)",
+        ld, msgid, timeout, async, csock);
     if (timeout == -1) {
         polltime.tv_sec = 0L;
         polltime.tv_usec = 10L;
@@ -426,7 +468,7 @@ create_init_thread_data(PyObject *client, SOCKET sock) {
     PyObject *url = NULL;
     PyObject *tmp = NULL;
 
-    DEBUG("create_init_thread_data (client:%p, sock:%d)", client, sock);
+    DEBUG("create_init_thread_data (client:%p, sock:%d)", client, (int)sock);
     data = (ldapInitThreadData *)malloc(sizeof(ldapInitThreadData));
     if (data == NULL) {
         PyErr_NoMemory();
@@ -543,7 +585,7 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int timeout) {
     /* Start building TLS Connection, if needed. */
     if (self->init_finished == 1 && self->tls_inprogress == 0) {
         if (self->tls == 1) {
-            rc = ldap_start_tls(self->conn->ld, NULL, NULL, &(self->message_id));
+            rc = ldap_start_tls(self->conn->ld, NULL, NULL, &(self->tls_id));
             if (rc == LDAP_SUCCESS) {
                 self->tls_inprogress = 1;
             } else {
@@ -563,8 +605,8 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int timeout) {
 
     /* Finish building TLS connection. */
     if (self->init_finished == 1 && self->tls_inprogress == 1) {
-        rc = check_tls_result(self->conn->ld, self->message_id, self->timeout,
-            self->conn->async);
+        rc = check_tls_result(self->conn->ld, self->tls_id, self->timeout,
+            self->conn->async, self->conn->csock);
         if (rc == -1) return NULL;
         if (rc == 1) {
             self->tls_inprogress = 2;

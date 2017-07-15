@@ -1318,6 +1318,34 @@ end:
     return rc;
 }
 
+static int WINAPI
+ldap_thread_tls(void *thread_data) {
+    int rc = 0;
+    ldap_tls_data_t *data = (ldap_tls_data_t *)thread_data;
+
+    rc = ldap_start_tls_sU(data->ld, data->serverctrls, data->clientctrls);
+    free(data);
+
+    return rc;
+}
+
+int
+ldap_start_tlsU(LDAP *ld, LDAPControlA **serverctrls, LDAPControlA **clientctrls, HANDLE *msgidp) {
+    ldap_tls_data_t *data = NULL;
+
+    data = (ldap_tls_data_t *)malloc(sizeof(ldap_tls_data_t));
+    if (data == NULL) return LDAP_NO_MEMORY;
+
+    data->ld = ld;
+    data->clientctrls = clientctrls;
+    data->serverctrls = serverctrls;
+
+    *msgidp = CreateThread(NULL, 0, ldap_thread_tls, (void *)data, 0, NULL);
+    if (*msgidp == NULL) return LDAP_LOCAL_ERROR;
+
+    return LDAP_SUCCESS;
+}
+
 /* Get the optional error message. */
 char *
 _ldap_get_opt_errormsgU(LDAP *ld) {

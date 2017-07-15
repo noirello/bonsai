@@ -56,7 +56,7 @@ LDAPModList *
 LDAPModList_New(PyObject* entry, Py_ssize_t size) {
     LDAPModList *self = (LDAPModList *)LDAPModListType.tp_new(&LDAPModListType, NULL, NULL);
 
-    DEBUG("LDAPModList_New (entry:%p, size:%ld)", entry, size);
+    DEBUG("LDAPModList_New (entry:%p, size:%ld)", entry, (long)size);
     if (self == NULL) return NULL;
     /*  Malloc a new `size` length LDAPMod list. */
     self->mod_list = (LDAPMod **)malloc(sizeof(LDAPMod *) * (size + 1));

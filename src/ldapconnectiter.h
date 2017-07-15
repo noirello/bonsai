@@ -25,6 +25,11 @@ typedef struct {
     char tls_inprogress;
     int message_id;
     XTHREAD init_thread;
+#ifdef WIN32
+    HANDLE tls_id;
+#else
+    int tls_id;
+#endif
     void *init_thread_data;
     int timeout;
 } LDAPConnectIter;

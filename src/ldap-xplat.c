@@ -53,7 +53,7 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
     /* Sanity check. */
     if (val == NULL || thread == NULL) return -1;
 
-    DEBUG("_ldap_finish_init_thread (async:%d, thread:%lu, timeout:%d, misc:%p)",
+    DEBUG("_ldap_finish_init_thread (async:%d, thread:%p, timeout:%d, misc:%p)",
         async, thread, *timeout, misc);
     if (async) {
         rc = WaitForSingleObject(thread, 10);
@@ -543,7 +543,7 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
     char *passwd = NULL;
     char *realm = NULL;
 
-    DEBUG("create_conn_info (mech:%s, sock:%d, creds:%p)", mech, sock, creds);
+    DEBUG("create_conn_info (mech:%s, sock:%d, creds:%p)", mech, (int)sock, creds);
     /* Get credential information, if it's given. */
     if (PyTuple_Check(creds) && PyTuple_Size(creds) > 1) {
         if (strcmp(mech, "SIMPLE") == 0) {
