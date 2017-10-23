@@ -28,7 +28,7 @@ before_install:
   - sudo apt-get install -y libldap2-dev libsasl2-dev ldap-utils
   # For GSSAPI authentication.
   - sudo apt-get install -y krb5-user libsasl2-modules-gssapi-mit libkrb5-dev
-  - pip install gevent
+  - if [[ $TRAVIS_PYTHON_VERSION != 'nightly' ]]; then pip install gevent; fi
   - pip install tornado
   - pip install codecov
   - pip install pytest-cov
