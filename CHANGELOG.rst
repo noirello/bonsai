@@ -1,6 +1,6 @@
 Changelog
 ==========
-[0.9.1] - 2017-03-
+[0.9.1] - 2017-10-
 --------------------
 
 Changed
@@ -10,6 +10,7 @@ Added
 ~~~~~
 
 -  Async with support for AIOLDAPConnection.
+-  New set_debug module function that enables debug mode.
 
 Fixed
 ~~~~~
@@ -22,7 +23,7 @@ Changed
 
 -  Python 3.3 is no longer considered to be supported. The package won't be
    tested with 3.3 anymore.
--  The LDAPSeachIter object is automatically acquiring the next page during
+-  The LDAPSearchIter object is automatically acquiring the next page during
    iteration for paged LDAP search by default.
 -  Installing the package from source on Mac OS X became simpler with
    setup.cfg (Thanks to @LukeXuan).
@@ -36,7 +37,7 @@ Added
 -  LDAPClient.set_auto_page_acquire and auto_page_acquire property for
    enabling/disabling automatic page acquiring during paged LDAP search.
 -  LDAPEntry.change_attribute and LDAPEntry.clear_attribute_changes methods
-   for handling LDAP attributes with explicity modification operation types.
+   for handling LDAP attributes with explicit modification operation types.
 -  Async iterator (async for) support for LDAPSearchIter.
 -  LDAPClient.server_chase_referrals property to set chasing LDAP referrals
    by the server.
@@ -59,12 +60,12 @@ Fixed
 Changed
 ~~~~~~~
 
--  Reimplemented LDAPValuelist in Python, removed C implementations of
+-  Reimplemented LDAPValueList in Python, removed C implementations of
    ldapvaluelist and uniquelist.
 -  Reimplemented LDAPEntry.delete method in Python.
 -  LDAPConnection.search method to accept bytes-like object as a filter
    parameter. (Issue #7)
--  LDAPClient.get_rootDSE method uses anonym bind without any previsouly set
+-  LDAPClient.get_rootDSE method uses anonym bind without any previously set
    LDAP controls to search for rootDSE.
 
 Added
@@ -136,7 +137,7 @@ Added
 ~~~~~
 
 -  New SizeLimitError.
--  Some typing info and typing module dependecy for 3.4 and earlier versions.
+-  Some typing info and typing module dependency for 3.4 and earlier versions.
 
 Fixed
 ~~~~~

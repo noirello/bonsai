@@ -399,7 +399,7 @@ class LDAPConnectionTest(unittest.TestCase):
         self.assertEqual(res[0]['uidNumber'][0], 1)
 
     def test_vlv_without_sort_order(self):
-        """ Test VLV control wihtout sort control. """
+        """ Test VLV control without sort control. """
         search_dn = "ou=nerdherd,%s" % self.basedn
         self.assertRaises(bonsai.UnwillingToPerform,
                           lambda: self.conn.search(search_dn, 1,
@@ -409,7 +409,7 @@ class LDAPConnectionTest(unittest.TestCase):
                                                    est_list_count=6))
 
     def test_vlv_with_page_size(self):
-        """ Test VLV control wiht page size. """
+        """ Test VLV control with page size. """
         search_dn = "ou=nerdherd,%s" % self.basedn
         self.assertRaises(bonsai.UnwillingToPerform,
                           lambda: self.conn.search(search_dn, 1, page_size=3,
@@ -600,7 +600,7 @@ class LDAPConnectionTest(unittest.TestCase):
                 entry.modify()
 
     @unittest.skipIf(sys.platform.startswith("win"),
-                     "Cannot use password modify extended opertion on Windows")
+                     "Cannot use password modify extended operation on Windows")
     def test_password_modify_extop(self):
         """ Test Password Modify extended operation. """
         user_dn = LDAPDN("cn=skip,ou=nerdherd,dc=bonsai,dc=test")

@@ -71,7 +71,7 @@ Simple search and modify:
             res[0]['sn'] = "Carmichael"
             res[0].modify()
 
-Using with asnycio:
+Using with asyncio:
 
 .. code:: python
 

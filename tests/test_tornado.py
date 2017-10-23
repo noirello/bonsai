@@ -76,7 +76,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
                 yield conn.delete(entry.dn)
                 yield conn.add(entry)
             except:
-                self.fail("Unexcepected error.")
+                self.fail("Unexpected error.")
             res = yield conn.search()
             self.assertIn(entry, res)
             yield entry.delete()
@@ -126,7 +126,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
                 yield conn.delete(entry.dn)
                 yield conn.add(entry)
             except:
-                self.fail("Unexcepected error.")
+                self.fail("Unexpected error.")
             entry['sn'] = "async_test2"
             yield entry.modify()
             yield entry.rename(newname)
@@ -202,7 +202,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         search_dn = "ou=nerdherd,%s" % self.basedn
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             # To keep compatibility with 3.4 it does not uses async for,
-            # but its while loop equvivalent.
+            # but its while loop equivalent.
             res_iter = yield conn.search(search_dn, 1, page_size=3)
             res_iter = type(res_iter).__aiter__(res_iter)
             cnt = 0

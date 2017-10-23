@@ -1,5 +1,5 @@
 FROM fedora:latest
-MAINTAINER noirello <noirello@gmail.com>
+LABEL maintainer="noirello@gmail.com"
 
 RUN dnf update -y
 

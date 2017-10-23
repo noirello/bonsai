@@ -59,7 +59,7 @@ class GeventLDAPConnectionTest(unittest.TestCase):
                 conn.delete(entry.dn)
                 conn.add(entry)
             except:
-                self.fail("Unexcepected error.")
+                self.fail("Unexpected error.")
             res = conn.search()
             self.assertIn(entry, res)
             entry.delete()
@@ -107,7 +107,7 @@ class GeventLDAPConnectionTest(unittest.TestCase):
                 conn.delete(entry.dn)
                 conn.add(entry)
             except:
-                self.fail("Unexcepected error.")
+                self.fail("Unexpected error.")
             entry['sn'] = "async_test2"
             entry.modify()
             entry.rename(newname)

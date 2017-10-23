@@ -2,7 +2,6 @@ import configparser
 import os.path
 import unittest
 import time
-import sys
 import xmlrpc.client as rpc
 
 import bonsai

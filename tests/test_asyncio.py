@@ -66,7 +66,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
                 yield from conn.delete(entry.dn)
                 yield from conn.add(entry)
             except:
-                self.fail("Unexcepected error.")
+                self.fail("Unexpected error.")
             res = yield from conn.search()
             self.assertIn(entry, res)
             yield from entry.delete()
@@ -116,7 +116,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
                 yield from conn.delete(entry.dn)
                 yield from conn.add(entry)
             except:
-                self.fail("Unexcepected error.")
+                self.fail("Unexpected error.")
             entry['sn'] = "async_test2"
             yield from entry.modify()
             yield from entry.rename(newname)
@@ -203,7 +203,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
     def test_async_with(self):
         """
         Test async with context manager
-        (with backwrdcompatibility)
+        (with backward compatibility)
         """
         mgr = self.client.connect(True)
         aexit = type(mgr).__aexit__

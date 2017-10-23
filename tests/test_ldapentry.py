@@ -266,7 +266,7 @@ class LDAPEntryTest(unittest.TestCase):
                      "Cannot use password policy on Windows")
     def test_password_modify(self):
         """
-        Test modifing password with simple modify operation and
+        Test modifying password with simple modify operation and
         password policy.
         """
         cli = LDAPClient(self.client.url)
@@ -368,7 +368,7 @@ class LDAPEntryTest(unittest.TestCase):
     @unittest.skipIf(sys.platform.startswith("win"),
                      "Cannot use ManageDsaIT on Windows")
     def test_modify_referrals(self):
-        """ Test modifying an LDAP refrerral with ManageDdsIT control. """
+        """ Test modifying an LDAP referral with ManageDdsIT control. """
         refdn = bonsai.LDAPDN("o=invalid-ref,ou=nerdherd,dc=bonsai,dc=test")
         newref = "ldap://invalid.host/cn=nobody"
         cli = LDAPClient(self.client.url)

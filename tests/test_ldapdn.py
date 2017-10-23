@@ -45,8 +45,8 @@ class LDAPDNTest(unittest.TestCase):
 
     def test_special_char(self):
         """ Test parsing special characters in DN string. """
-        spec = LDAPDN("cn=specal\, name,dc=test,dc=local")
-        self.assertEqual(str(spec), "cn=specal\, name,dc=test,dc=local")
+        spec = LDAPDN("cn=special\, name,dc=test,dc=local")
+        self.assertEqual(str(spec), "cn=special\, name,dc=test,dc=local")
 
     def test_setitem(self):
         """ Test setting RDNs for DN object. """
