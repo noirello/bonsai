@@ -290,7 +290,7 @@ _pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
 #endif
 
 /* Check on the initialisation thread and set cert policy. The `misc`
-   parameter is never used (on Linux plaform). The pointer of initialised
+   parameter is never used (on Linux platform). The pointer of initialised
    LDAP struct is passed to the `ld` parameter. Return 1 if the initialisation
    thread is finished, 0 if it is still in progress, and -1 for error. */
 int
@@ -661,11 +661,13 @@ ldap_init_thread_func(void *params) {
     }
 
 #ifndef WIN32
-    struct timeval tv;
-    tv.tv_sec = 0;
+    // Unfortunately, the truly asynchronous connection build causes
+    // different problems on different platforms (immature connection use).
+    //struct timeval tv;
+    //tv.tv_sec = 0;
     /* Set asynchronous connect for OpenLDAP. */
-    ldap_set_option(data->ld, LDAP_OPT_CONNECT_ASYNC, LDAP_OPT_ON);
-    ldap_set_option(data->ld, LDAP_OPT_NETWORK_TIMEOUT, &tv);
+    //ldap_set_option(data->ld, LDAP_OPT_CONNECT_ASYNC, LDAP_OPT_ON);
+    //ldap_set_option(data->ld, LDAP_OPT_NETWORK_TIMEOUT, &tv);
 #endif
 
 #ifdef HAVE_KRB5
