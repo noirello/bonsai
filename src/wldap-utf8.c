@@ -277,7 +277,7 @@ convert_mod_list(LDAPModA **mods, LDAPModW ***wmods) {
 /******************************************************************************
 * All of the following functions behave just like they documented in the WinLDAP
 * or OpenLDAP documentations (except where the comment says otherwise), but they
-* can return with encoding or decoding error code, if the convertation is failed.
+* can return with encoding or decoding error code, if the conversation is failed.
 ******************************************************************************/
 
 int

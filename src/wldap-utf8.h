@@ -10,7 +10,7 @@
 * called. The returned values are decoded back to UTF-8. Some of the functions
 * are renamed or their signatures are changed to match with the ones defined
 * in the OpenLDAP's API. The disadvantage of this approach is that the
-* convertations generate extra overhead for every LDAP operations on Windows,
+* conversations generate extra overhead for every LDAP operations on Windows,
 * but better platform independent unicode support can be achieved without
 * breaking the rest of the codebase's integrity with platfrom dependent code.
 ******************************************************************************/

@@ -340,7 +340,7 @@ load_python_object(char *module_name, char *object_name) {
 }
 
 /* Get an error by code calling the get_error function from
-   the pyldap.errors Python module. */
+   the bonsai.errors Python module. */
 PyObject *
 get_error_by_code(int code) {
     PyObject *error;
@@ -420,7 +420,7 @@ add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item)  {
     return 0;
 }
 
-/* Get a soketpair in `tup` by calling LDAPClient's _create_socketpair
+/* Get a socketpair in `tup` by calling LDAPClient's _create_socketpair
    method. The socket descriptors are set to `csock` and `ssock` parameters
    respectively. If the function call is failed, it returns with -1. */
 int

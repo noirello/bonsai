@@ -1,9 +1,3 @@
-/*
- * ldapconnectiter.c
- *
- *  Created on: 22 Jun 2015
- *      Author: noirello
- */
 #include "ldapconnectiter.h"
 
 #include "utils.h"
@@ -20,8 +14,8 @@ binding(LDAPConnectIter *self) {
     char buff[1];
     PyObject *value = NULL;
 
-    DEBUG("binding [bind_inprogress:%d]", self->bind_inprogress);
-    if (self->bind_inprogress == 0) {
+    DEBUG("binding [state:%d]", self->state);
+    if (self->state == 3) {
         /* First call of bind. */
         rc = _ldap_bind(self->conn->ld, self->info, self->conn->ppolicy,
             NULL, &(self->message_id));
@@ -29,7 +23,7 @@ binding(LDAPConnectIter *self) {
             set_exception(self->conn->ld, rc);
             return NULL;
         }
-        self->bind_inprogress = 1;
+        self->state = 4;
         Py_RETURN_NONE;
     } else {
         if (self->conn->async == 0) {
@@ -63,7 +57,7 @@ binding(LDAPConnectIter *self) {
                 close_socketpair(self->conn->socketpair);
             }
             /* The binding is successfully finished. */
-            self->bind_inprogress = 0;
+            self->state = 5;
             self->conn->closed = 0;
             if (self->conn->ppolicy == 1) {
                 /* Create (result, ctrl) tuple as return value.
@@ -167,8 +161,8 @@ binding(LDAPConnectIter *self) {
         polltime.tv_usec = (self->timeout % 1000) * 1000;
     }
 
-    DEBUG("binding [bind_inprogress:%d]", self->bind_inprogress);
-    if (self->bind_inprogress == 0) {
+    DEBUG("binding [state:%d]", self->state);
+    if (self->state == 3) {
         /* First call of bind. */
         rc = _ldap_bind(self->conn->ld, self->info, self->conn->ppolicy,
                 NULL, &(self->message_id));
@@ -182,7 +176,7 @@ binding(LDAPConnectIter *self) {
             self->conn->csock = -1;
             close_socketpair(self->conn->socketpair);
         }
-        self->bind_inprogress = 1;
+        self->state = 4;
         Py_RETURN_NONE;
     } else {
         if (self->conn->async == 0) {
@@ -251,7 +245,7 @@ binding(LDAPConnectIter *self) {
 
             if (rc == LDAP_SUCCESS) {
                 /* The binding is successfully finished. */
-                self->bind_inprogress = 0;
+                self->state = 5;
                 self->conn->closed = 0;
                 if (self->conn->ppolicy == 1) {
                     /* If ppolicy is not available set control to None. */
@@ -448,13 +442,12 @@ ldapconnectiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
     if (self != NULL) {
         self->conn = NULL;
-        self->init_finished = 0;
+        self->state = 0;
         self->message_id = 0;
         self->init_thread_data = NULL;
         self->init_thread = 0;
         self->timeout = -1;
         self->tls = 0;
-        self->tls_inprogress = 0;
     }
 
     DEBUG("ldapconnectiter_new [self:%p]", self);
@@ -556,20 +549,19 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int timeout) {
     }
 
     DEBUG("LDAPConnectIter_Next (self:%p, timeout:%d)"
-        " [tls:%d, init_finished:%d, tls_inprogress:%d]", self, timeout,
-        self->tls, self->init_finished, self->tls_inprogress);
+        " [tls:%d, state:%d]", self, timeout, self->tls, self->state);
     if (self->timeout == -1 && timeout >= 0) {
         self->timeout = timeout;
     }
 
     /* Initialise LDAP struct. */
-    if (self->init_finished == 0) {
+    if (self->state == 0) {
         rc = _ldap_finish_init_thread(self->conn->async, self->init_thread, &(self->timeout),
                 self->init_thread_data, &(self->conn->ld));
         if (rc == -1) return NULL; /* Error is happened. */
         if (rc == 1) {
             /* Initialisation is finished. */
-            self->init_finished = 1;
+            self->state = 1;
             if (self->conn->csock != -1) {
                 /* Read and drop the data from the dummy socket. */
                 if (recv(self->conn->csock, buff, 1, 0) == -1) return NULL;
@@ -583,11 +575,11 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int timeout) {
     }
 
     /* Start building TLS Connection, if needed. */
-    if (self->init_finished == 1 && self->tls_inprogress == 0) {
+    if (self->state == 1) {
         if (self->tls == 1) {
             rc = ldap_start_tls(self->conn->ld, NULL, NULL, &(self->tls_id));
             if (rc == LDAP_SUCCESS) {
-                self->tls_inprogress = 1;
+                self->state = 2;
             } else {
                 if (check_fd_ready(self->conn->ld) != 0) {
                     /* The connection is ready or the polling is failed. */
@@ -599,22 +591,22 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int timeout) {
             }
         } else {
             /* TLS connection is not needed. */
-            self->tls_inprogress = 2;
+            self->state = 3;
         }
     }
 
     /* Finish building TLS connection. */
-    if (self->init_finished == 1 && self->tls_inprogress == 1) {
+    if (self->state == 2) {
         rc = check_tls_result(self->conn->ld, self->tls_id, self->timeout,
             self->conn->async, self->conn->csock);
         if (rc == -1) return NULL;
         if (rc == 1) {
-            self->tls_inprogress = 2;
+            self->state = 3;
         }
     }
 
     /* Start binding procedure. */
-    if (self->init_finished == 1 && self->tls_inprogress == 2) {
+    if (self->state > 2) {
         val = binding(self);
         if (val == NULL) return NULL; /* It is an error. */
         if (val != Py_None) return val;
