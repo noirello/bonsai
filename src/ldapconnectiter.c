@@ -87,13 +87,6 @@ set_certificates(LDAPConnectIter *self) {
     return 0;
 }
 
-/* Dummy function, because it is unecessary to check the file
-   descriptor's state on Windows. */
-static int 
-check_fd_ready(LDAP *ld) {
-    return -1;
-}
-
 static int
 check_tls_result(LDAP *ld, HANDLE msgid, int timeout, char async, SOCKET csock) {
     int rc = 0;
@@ -332,21 +325,6 @@ error:
     return rc;
 }
 
-/* Checked that the file descriptor is ready. Asynchronous settings
-   may cause immature network operations with OpenLDAP libraries.
-   Returns a positive number on success, 0 if the poll is timed out
-   negative number on failure. */
-static int 
-check_fd_ready(LDAP *ld) {
-    struct pollfd fd;
-
-    DEBUG("check_fd_ready (ld:%p)", ld);
-    ldap_get_option(ld, LDAP_OPT_DESC, &(fd.fd));
-    fd.events = POLLOUT;
-    fd.revents = 0;
-    return poll(&fd, 1, 100);
-}
-
 static int
 check_tls_result(LDAP *ld, int msgid, int timeout, char async, SOCKET csock) {
     int rc = 0;
@@ -581,13 +559,8 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int timeout) {
             if (rc == LDAP_SUCCESS) {
                 self->state = 2;
             } else {
-                if (check_fd_ready(self->conn->ld) != 0) {
-                    /* The connection is ready or the polling is failed. */
-                    set_exception(self->conn->ld, rc);
-                    return NULL;
-                }
-                /* Otherwise, the connection is not ready,
-                   try to start TLS again in the next call. */
+                set_exception(self->conn->ld, rc);
+                return NULL;
             }
         } else {
             /* TLS connection is not needed. */
