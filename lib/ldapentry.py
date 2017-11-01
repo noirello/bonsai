@@ -146,7 +146,7 @@ class LDAPEntry(ldapentry):
 
         :param other: the other comparable object.
         :return: True if the two object are equals.
-        :rtyype: bool
+        :rtype: bool
         """
         if isinstance(other, self.__class__):
             return self.dn == other.dn

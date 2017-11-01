@@ -4,7 +4,7 @@ import bonsai
 
 class LDAPValueList(list):
     """
-    Modified list that tracks added and deleted values. It also conatains
+    Modified list that tracks added and deleted values. It also contains
     only unique elements. The elements are compared to their lower-cased
     string representations.
 
@@ -111,7 +111,7 @@ class LDAPValueList(list):
     def extend(self, items) -> None:
         """
         Extend the LDAPValueList by appending all the items in the given
-        list. All element in `items` must be unqiue and also not
+        list. All element in `items` must be unique and also not
         represented in the LDAPValueList.
 
         :param items: List of new items.

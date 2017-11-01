@@ -218,7 +218,6 @@ binding(LDAPConnectIter *self) {
                 return NULL;
             }
 
-
             if (strcmp(self->info->mech, "SIMPLE") != 0) {
                 /* Continue SASL binding procedure. */
                 rc = _ldap_bind(self->conn->ld, self->info, self->conn->ppolicy,
@@ -346,57 +345,59 @@ check_tls_result(LDAP *ld, int msgid, int timeout, char async, SOCKET csock) {
     }
 
     if (async == 0) {
+        Py_BEGIN_ALLOW_THREADS
         if (timeout == -1) {
             rc = ldap_result(ld, msgid, LDAP_MSG_ALL, NULL, &res);
         } else {
             rc = ldap_result(ld, msgid, LDAP_MSG_ALL, &polltime, &res);
         }
+        Py_END_ALLOW_THREADS
     } else {
         rc = ldap_result(ld, msgid, LDAP_MSG_ALL, &polltime, &res);
     }
 
     switch (rc) {
-        case -1:
-            /* Error occurred during the operation. */
-            ldap_msgfree(res);
-            set_exception(ld, 0);
+    case -1:
+        /* Error occurred during the operation. */
+        ldap_msgfree(res);
+        set_exception(ld, 0);
+        return -1;
+    case 0:
+        /* Timeout exceeded.*/
+        ldap_msgfree(res);
+        if (async == 0) {
+            set_exception(ld, -5);
             return -1;
-        case 0:
-            /* Timeout exceeded.*/
-            ldap_msgfree(res);
-            if (async == 0) {
-                set_exception(ld, -5);
-                return -1;
-            }
-            return 0;
-        case LDAP_RES_EXTENDED:
-            rc = ldap_parse_result(ld, res, &err, NULL, &errstr, NULL, &ctrls, 0);
-            if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
-                ldaperror = get_error_by_code(err);
-                if (ldaperror == NULL) return -1;
-                errmsg = PyUnicode_FromFormat("%s.", errstr);
-                if (errmsg != NULL) {
-                    PyErr_SetObject(ldaperror, errmsg);
-                    Py_DECREF(errmsg);
-                } else PyErr_SetString(ldaperror, "");
-                Py_DECREF(ldaperror);
-                return -1;
-            }
+        }
+        return 0;
+    case LDAP_RES_EXTENDED:
+        rc = ldap_parse_result(ld, res, &err, NULL, &errstr, NULL, &ctrls, 0);
+        if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
+            ldaperror = get_error_by_code(err);
+            if (ldaperror == NULL) return -1;
+            errmsg = PyUnicode_FromFormat("%s.", errstr);
+            if (errmsg != NULL) {
+                PyErr_SetObject(ldaperror, errmsg);
+                Py_DECREF(errmsg);
+            } else PyErr_SetString(ldaperror, "");
+            Py_DECREF(ldaperror);
+            return -1;
+        }
 
-            rc = ldap_parse_extended_result(ld, res, NULL, NULL, 1);
-            if (rc != LDAP_SUCCESS) {
-                set_exception(ld, rc);
-                return -1;
-            }
-            rc = ldap_install_tls(ld);
-            if (rc != LDAP_SUCCESS) {
-                set_exception(ld, rc);
-                return -1;
-            }
-            return 1;
-        default:
-            PyErr_BadInternalCall();
+        rc = ldap_parse_extended_result(ld, res, NULL, NULL, 1);
+        if (rc != LDAP_SUCCESS) {
+            set_exception(ld, rc);
             return -1;
+        }
+        rc = ldap_install_tls(ld);
+        if (rc != LDAP_SUCCESS) {
+            set_exception(ld, rc);
+            return -1;
+        }
+        return 1;
+    default:
+        PyErr_BadInternalCall();
+        return -1;
     }
 }
 

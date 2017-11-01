@@ -235,7 +235,7 @@ class LDAPURL:
         strbind = "?".join((str(self.__searchinfo[0]), strattrs,
                             self.__searchinfo[2], self.__searchinfo[3],
                             strexts))
-        # Remove unneccesary question marks at the end of the string.
+        # Remove unnecessary question marks at the end of the string.
         while strbind[-1] == '?':
             strbind = strbind[:-1]
             if len(strbind) == 0:

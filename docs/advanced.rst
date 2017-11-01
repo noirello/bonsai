@@ -228,7 +228,7 @@ if the `page_size` is set for the :meth:`LDAPConnection.search` method:
 
 Please note that the return value is changed from list to :class:`ldapsearchiter`. This object can
 be iterated over the entries of the page. By default the next page of results is acquired automatically
-during the interation. This behaviour can be changed by setting the :attr:`LDAPClient.auto_page_acquire`
+during the iteration. This behaviour can be changed by setting the :attr:`LDAPClient.auto_page_acquire`
 to `False` and using the :meth:`ldapsearchiter.acquire_next_page` method which explicitly initiates
 a new search request to get the next page.
 
@@ -269,8 +269,8 @@ Password policy
 ---------------
 
 Password policy defines a set of rules about accounts and modification of passwords. It allows
-for the system administrator to set experation time for passwords and a maximal number of failed
-login attemps before the account become locked. Is also specifies rules about the qualitiy of
+for the system administrator to set expiration time for passwords and a maximal number of failed
+login attempts before the account become locked. Is also specifies rules about the quality of
 password.
 
 Enabling the password policy control with :meth:`LDAPClient.set_password_policy` method, the client
@@ -329,7 +329,7 @@ as a string. The extended DN control also affects other LDAP attributes that use
 Server tree delete
 ------------------
 
-Server tree delete control allows the client to remove entire subtrees with a single request if
+Server tree delete control allows the client to remove entire subtree with a single request if
 the user has appropriate permissions to remove every corresponding entries. Setting the `recursive` 
 parameter of :meth:`LDAPConnection.delete` and :meth:`LDAPEntry.delete` to `True` will send 
 the control with the delete request automatically, no further settings are required.

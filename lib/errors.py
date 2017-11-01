@@ -144,7 +144,7 @@ class MustSupplyOldPassword(PasswordPolicyError):
     and the existing password is not specified.
     """
     code = -204
-    _dflt_args = ("Old password must be provieded.",)
+    _dflt_args = ("Old password must be provided.",)
 
 class InsufficientPasswordQuality(PasswordPolicyError):
     """

@@ -58,7 +58,7 @@ class LDAPDN:
         Return the string format of the relative distinguished names
         in the LDAPDN.
 
-        :param int idx: the indeces of the RDNs.
+        :param int idx: the indices of the RDNs.
         :return: the string format of the RDNs.
         :rtype: str
         """
@@ -77,7 +77,7 @@ class LDAPDN:
         Set the string format of the relative distinguished names
         in the LDAPDN.
 
-        :param int idx: the indeces of the RDNs.
+        :param int idx: the indices of the RDNs.
         :param str value: the new RDNs.
         """
         if type(value) != str:

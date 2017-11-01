@@ -55,7 +55,7 @@ class TornadoLDAPConnection(LDAPConnection):
                                                         self._timeout_callback,
                                                         fut)
         except FileExistsError as exc:
-            # Avoid concurrency problems by registring with
+            # Avoid concurrency problems by registering with
             # the same fileno more than once.
             if exc.errno != 17:
                 raise exc

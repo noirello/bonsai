@@ -1,10 +1,13 @@
 Changelog
 ==========
-[0.9.1] - 2017-10-
+[0.9.1] - 2017-11-
 --------------------
 
 Changed
 ~~~~~~~
+
+-  LDAPError messages have the original LDAP error codes.
+-  TLS initialisation is separated from LDAP struct initialisation.
 
 Added
 ~~~~~
@@ -14,6 +17,8 @@ Added
 
 Fixed
 ~~~~~
+
+-  Signaling after LDAP initialisation is failed.
 
 [0.9.0] - 2017-02-15
 --------------------

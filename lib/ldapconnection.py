@@ -124,7 +124,7 @@ class LDAPConnection(ldapconnection):
             raise UnwillingToPerform("Sort control is required with"
                                      " virtual list view.")
         if page_size != 0 and (offset != 0 or attrvalue is not None):
-            raise UnwillingToPerform("Virual list view incompatible"
+            raise UnwillingToPerform("Virtual list view incompatible"
                                      " with paged search.")
         msg_id = super().search(_base, _scope, _filter, _attrlist,
                                 _timeout, sizelimit, attrsonly, _sort_order,

@@ -79,7 +79,7 @@ class LDAPClient:
         values of the listed LDAP attribute's names in `raw_list` will be
         kept in bytearray format.
 
-        :param list raw_list: a list of LDAP attributum's names. \
+        :param list raw_list: a list of LDAP attribute's names. \
         The elements must be string and unique.
 
         :raises TypeError: if any of the list's element is not a \
@@ -317,7 +317,7 @@ class LDAPClient:
         It will be implicitly called during iteration.
 
         :param bool val: enabling/disabling auto page acquiring.
-        :raises TypeError: If the paramter is not a bool type.
+        :raises TypeError: If the parameter is not a bool type.
         """
         if type(val) != bool:
             raise TypeError("Parameter's type must be bool.")
@@ -331,7 +331,7 @@ class LDAPClient:
         objects.
 
         :param bool val: enabling/disabling LDAP referrals chasing.
-        :raises TypeError: If the paramter is not a bool type.
+        :raises TypeError: If the parameter is not a bool type.
         """
         if type(val) != bool:
             raise TypeError("Parameter's type must be bool.")
@@ -344,7 +344,7 @@ class LDAPClient:
         LDAP entry.
 
         :param bool val: enabling/disabling ManageDsaIT control.
-        :raises TypeError: If the paramter is not a bool type.
+        :raises TypeError: If the parameter is not a bool type.
         """
         if type(val) != bool:
             raise TypeError("Parameter's type must be bool.")
