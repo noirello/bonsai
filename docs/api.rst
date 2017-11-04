@@ -469,3 +469,14 @@ Module functions
 
     :return: True if the module is built with the optional Kerberos/GSSAPI headers.
     :rtype: bool
+
+.. function:: bonsai.set_debug(debug, level=0)
+
+    Set debug mode for the module. Turning it on will provide traceback information
+    of C function calls on the standard output.
+
+    If the module uses OpenLDAP, then setting the `level` parameter to a non-zero
+    integer will also give additional info about the libldap function calls.
+
+    :param bool debug: Enabling/disabling debug mode.
+    :param int level: The debug level (for OpenLDAP only).

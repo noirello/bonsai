@@ -11,7 +11,7 @@ library on Microsoft Windows to handle communications with LDAP capable director
 The module main goal is to give a simple way to use the LDAP protocol as pythonic as it can be.
 
 .. note::
-   The module compatibles only with Python 3.4 or newer releases.
+   The module is compatible only with Python 3.4 or newer releases.
 
 Features
 ========
@@ -41,7 +41,7 @@ Contribution
 Any contributions are welcome. If you would like to help in development fork or report issue on the
 project's `GitHub site`_. You can also help in improving the documentation.
 
-.. _github site: https://github.com/Noirello/bonsai
+.. _github site: https://github.com/noirello/bonsai
 
 Indices and tables
 ==================
