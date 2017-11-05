@@ -1,10 +1,3 @@
-/*
- * ldapmodlist.c
- *
- *  Created on: 7 Nov 2014
- *      Author: noirello
- */
-
 #include "ldapmodlist.h"
 
 #include "utils.h"

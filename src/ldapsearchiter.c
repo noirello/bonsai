@@ -1,9 +1,3 @@
-/*
- * ldapsearchiter.c
- *
- *  Created on: Mar 3, 2014
- *      Author: noirello
- */
 #include "ldapsearchiter.h"
 #include "ldapconnection.h"
 

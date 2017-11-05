@@ -23,6 +23,7 @@ class LDAPClientTest(unittest.TestCase):
         cls.ipaddr = cfg["SERVER"]["hostip"]
         cls.url = "ldap://%s:%s" % (cls.ipaddr, cfg["SERVER"]["port"])
         cls.client = LDAPClient(cls.url)
+        cls.has_tls = cfg['SERVER']['has_tls'] != 'False'
         proxy = rpc.ServerProxy("http://%s:%d/" % (cls.ipaddr, 8000))
         proxy.remove_delay()
 
@@ -195,6 +196,45 @@ class LDAPClientTest(unittest.TestCase):
         self.assertFalse(client.managedsait)
         client.managedsait = True
         self.assertTrue(client.managedsait)
+
+    def test_tls(self):
+        """ Test TLS connection. """
+        if not self.has_tls:
+            self.skipTest("TLS is not set.")
+        client = LDAPClient(self.url, True)
+        client.set_cert_policy("ALLOW")
+        client.set_ca_cert(None)
+        client.set_ca_cert_dir(None)
+        try:
+            conn = client.connect()
+            conn.close()
+        except Exception as exc:
+            self.fail("TLS connection is failed with: %s" % str(exc))
+
+    def test_tls_timeout(self):
+        """ Test TLS connection timeout. """
+        if not self.has_tls:
+            self.skipTest("TLS is not set.")
+        import multiprocessing
+        client = LDAPClient(self.url, True)
+        client.set_cert_policy("ALLOW")
+        client.set_ca_cert(None)
+        client.set_ca_cert_dir(None)
+        proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
+        proxy.set_delay(9.0, 15)
+        time.sleep(2.0)
+        pool = multiprocessing.Pool(processes=1)
+        try:
+            result = pool.apply_async(receive_timeout_error, args=(client,))
+            result.get(timeout=18.0)
+        except Exception as exc:
+            self.assertIsInstance(exc, bonsai.TimeoutError)
+        else:
+            self.fail("Failed to receive TimeoutError.")
+        finally:
+            pool.terminate()
+            proxy.remove_delay()
+
 
 if __name__ == '__main__':
     unittest.main()

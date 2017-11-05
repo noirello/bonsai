@@ -1,12 +1,5 @@
-/*
- * ldapmodlist.h
- *
- *  Created on: 7 Nov 2014
- *      Author: noirello
- */
-
-#ifndef PYLDAP_LDAPMODLIST_H_
-#define PYLDAP_LDAPMODLIST_H_
+#ifndef LDAPMODLIST_H_
+#define LDAPMODLIST_H_
 
 #include <Python.h>
 #include "structmember.h"
@@ -28,4 +21,4 @@ int LDAPModList_Add(LDAPModList *self, int mod_op, PyObject *key, PyObject *valu
 PyObject *LDAPModList_Pop(LDAPModList *self);
 int LDAPModList_Empty(LDAPModList *self);
 
-#endif /* PYLDAP_LDAPMODLIST_H_ */
+#endif /* LDAPMODLIST_H_ */

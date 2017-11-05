@@ -1,12 +1,5 @@
-/*
- * ldap-xplat.h
- *
- *  Created on: 12 Jun 2015
- *      Author: noirello
- */
-
-#ifndef PYLDAP_LDAP_XPLAT_H_
-#define PYLDAP_LDAP_XPLAT_H_
+#ifndef LDAP_XPLAT_H_
+#define LDAP_XPLAT_H_
 
 #include <Python.h>
 
@@ -102,4 +95,4 @@ int create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread);
 void *create_conn_info(char *mech, SOCKET sock, PyObject *creds);
 void dealloc_conn_info(ldap_conndata_t* info);
 
-#endif /* PYLDAP_LDAP_XPLAT_H_ */
+#endif /* LDAP_XPLAT_H_ */

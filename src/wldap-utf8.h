@@ -1,5 +1,5 @@
-#ifndef PYLDAP_WLDAP_UTF8_H_
-#define PYLDAP_WLDAP_UTF8_H_
+#ifndef WLDAP_UTF8_H_
+#define WLDAP_UTF8_H_
 
 /*****************************************************************************
 * These functions and structs are (mostly) redefinitions of the used WinLDAP
@@ -171,4 +171,4 @@ char *_ldap_get_opt_errormsgU(LDAP *ld);
 
 #endif
 
-#endif /* PYLDAP_WLDAP_UTF8_H_ */
+#endif /* WLDAP_UTF8_H_ */

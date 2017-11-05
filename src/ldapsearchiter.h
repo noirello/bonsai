@@ -1,10 +1,3 @@
-/*
- * ldapsearchiter.h
- *
- *  Created on: Mar 3, 2014
- *      Author: noirello
- */
-
 #ifndef LDAPSEARCHITER_H_
 #define LDAPSEARCHITER_H_
 
