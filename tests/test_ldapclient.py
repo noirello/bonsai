@@ -97,6 +97,16 @@ class LDAPClientTest(unittest.TestCase):
         tls_impl = bonsai.get_tls_impl_name()
         self.assertIn(tls_impl, ("GnuTLS", "MozNSS", "OpenSSL", "SChannel"))
 
+    def test_debug(self):
+        """ Test setting debug mode. """
+        import sys
+        import subprocess
+        code = "import bonsai; bonsai.set_debug(True); bonsai.LDAPClient('ldap://a.com').connect()"
+        try:
+            output = subprocess.check_output([sys.executable, "-c", code], universal_newlines=True)
+        except subprocess.CalledProcessError as exc:
+            output = exc.output
+        self.assertIn("DBG: ldapconnection_new ", output)
 
     def test_connection_timeout(self):
         """
