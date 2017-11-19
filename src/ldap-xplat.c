@@ -171,6 +171,8 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
     int rc = 0, len = 0;
     unsigned int minor_stat = 0, major_stat = 0;
     const char *errmsg_tmp = NULL;
+    const char *cctype = NULL;
+    krb5_ccache defcc = NULL;
     krb5_creds creds;
     krb5_principal princ = NULL;
 
@@ -179,7 +181,12 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
 
     if (len == 0 || strlen(user) == 0) return 0;
 
-    rc = krb5_cc_new_unique(ctx, "FILE", NULL, ccache);
+    rc = krb5_cc_default(ctx, &defcc);
+    if (rc != 0) goto end;
+
+    cctype = krb5_cc_get_type(ctx, defcc);
+
+    rc = krb5_cc_new_unique(ctx, cctype, NULL, ccache);
     if (rc != 0) goto end;
 
     rc = krb5_build_principal(ctx, &princ, len, realm, user, NULL);
@@ -201,6 +208,8 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
 
 end:
     if (princ != NULL) krb5_free_principal(ctx, princ);
+    if (defcc != NULL) krb5_cc_close(ctx, defcc);
+
     if (rc != 0) {
         /* Create error message with the error code. */
         errmsg_tmp = krb5_get_error_message(ctx, rc);
