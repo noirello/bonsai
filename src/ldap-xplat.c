@@ -174,7 +174,7 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
     krb5_creds creds;
     krb5_principal princ = NULL;
 
-    if (realm == NULL || user == NULL || password == NULL) return 1;
+    if (realm == NULL || user == NULL) return 1;
     len = strlen(realm);
 
     if (len == 0 || strlen(user) == 0) return 0;
@@ -188,12 +188,14 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
     rc = krb5_cc_initialize(ctx, *ccache, princ);
     if (rc != 0) goto end;
 
-    rc = krb5_get_init_creds_password(ctx, &creds, princ, password, 0, NULL, 0,
-            NULL, NULL);
-    if (rc != 0) goto end;
+    if (password != NULL) {
+        rc = krb5_get_init_creds_password(ctx, &creds, princ, password, 0, NULL, 0,
+                NULL, NULL);
+        if (rc != 0) goto end;
 
-    rc= krb5_cc_store_cred(ctx, *ccache, &creds);
-    if (rc != 0) goto end;
+        rc= krb5_cc_store_cred(ctx, *ccache, &creds);
+        if (rc != 0) goto end;
+    }
 
     major_stat = gss_krb5_import_cred(&minor_stat, *ccache, princ, NULL, gsscred);
 
@@ -440,7 +442,6 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, i
 
     /* Mechanism is set, use SASL interactive bind. */
     if (strcmp(info->mech, "SIMPLE") != 0) {
-        if (info->passwd == NULL) info->passwd = "";
         rc = ldap_sasl_interactive_bind(ld, info->binddn, info->mech, server_ctrls, NULL,
                 LDAP_SASL_QUIET, sasl_interact, info, result, &(info->rmech), msgid);
     } else {
@@ -562,7 +563,7 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
             authzid = PyObject2char(tmp);
         }
         tmp = PyTuple_GetItem(creds, 1);
-        passwd = PyObject2char(tmp);
+        passwd = (tmp != Py_None ? PyObject2char(tmp) : NULL);
     }
 
     defaults = malloc(sizeof(ldap_conndata_t));
