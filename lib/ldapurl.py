@@ -19,7 +19,7 @@ class LDAPURL:
     """
     __slots__ = ("__hostinfo", "__searchinfo", "__extensions", "__ipv6")
 
-    def __init__(self, strurl: str=None) -> None:
+    def __init__(self, strurl: str = None) -> None:
         """ Init method. """
         self.__hostinfo = ['ldap', 'localhost', 389] # type: List[Any]
         # Default values to the search parameters.

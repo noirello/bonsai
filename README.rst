@@ -71,22 +71,24 @@ Simple search and modify:
             res[0]['sn'] = "Carmichael"
             res[0].modify()
 
-Using with asyncio:
+Using with asyncio (on Python 3.5 or newer):
 
 .. code:: python
 
         import asyncio
         import bonsai
 
-        @asyncio.coroutine
-        def do():
+        async def do():
             client = bonsai.LDAPClient("ldap://localhost")
             client.set_credentials("DIGEST-MD5", ("admin", "secret", None, None))
-            with (yield from client.connect(is_async=True)) as conn:
-                res = yield from conn.search("ou=nerdherd,dc=bonsai,dc=test", 2)
+            async with client.connect(is_async=True) as conn:
+                res = await conn.search("ou=nerdherd,dc=bonsai,dc=test", 2)
                 print(res)
-                who = yield from conn.whoami()
+                who = await conn.whoami()
                 print(who)
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(do())
 
 Changelog
 ---------

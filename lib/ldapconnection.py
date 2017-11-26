@@ -24,7 +24,7 @@ class LDAPConnection(ldapconnection):
     :param LDAPClient client: a client object.
     :param bool is_async: set True to create an asynchronous connection.
     """
-    def __init__(self, client, is_async: bool=False) -> None:
+    def __init__(self, client, is_async: bool = False) -> None:
         self.__client = client
         super().__init__(client, is_async)
 
@@ -36,7 +36,7 @@ class LDAPConnection(ldapconnection):
         """ Context manager exit point. """
         self.close()
 
-    def _evaluate(self, msg_id: int, timeout: float=None) -> Any:
+    def _evaluate(self, msg_id: int, timeout: float = None) -> Any:
         """
         Depending on the connection's type (asynchronous or synchronous),
         it returns a message ID or the result of the LDAP operation.
@@ -51,7 +51,7 @@ class LDAPConnection(ldapconnection):
         else:
             return self.get_result(msg_id, timeout)
 
-    def add(self, entry: LDAPEntry, timeout: float=None) -> Union[int, bool]:
+    def add(self, entry: LDAPEntry, timeout: float = None) -> Union[int, bool]:
         """
         Add new entry to the directory server.
 
@@ -63,7 +63,7 @@ class LDAPConnection(ldapconnection):
         return self._evaluate(super().add(entry), timeout)
 
     def delete(self, dname: Union[str, LDAPDN],
-               timeout: float=None, recursive: bool=False) -> Union[int, bool]:
+               timeout: float = None, recursive: bool = False) -> Union[int, bool]:
         """
         Remove entry from the directory server.
 
@@ -89,7 +89,7 @@ class LDAPConnection(ldapconnection):
             else:
                 raise exc
 
-    def open(self, timeout: float=None) -> Union[int, 'LDAPConnection', Iterator]:
+    def open(self, timeout: float = None) -> Union[int, 'LDAPConnection', Iterator]:
         """
         Open the LDAP connection.
 
@@ -100,14 +100,14 @@ class LDAPConnection(ldapconnection):
         """
         return self._evaluate(super().open(), timeout)
 
-    def search(self, base: Union[str, LDAPDN]=None,
-               scope: Union[LDAPSearchScope, int]=None, filter: str=None,
-               attrlist: List[str]=None, timeout: float=None,
-               sizelimit: int=0, attrsonly: bool=False,
-               sort_order: List[str]=None, page_size: int=0, offset: int=0,
-               before_count: int=0, after_count: int=0, est_list_count: int=0,
-               attrvalue: str=None) -> Union[int, List[LDAPEntry], Iterator,
-                                             Tuple[List[LDAPEntry], dict]]:
+    def search(self, base: Union[str, LDAPDN] = None,
+               scope: Union[LDAPSearchScope, int] = None, filter: str = None,
+               attrlist: List[str] = None, timeout: float = None,
+               sizelimit: int = 0, attrsonly: bool = False,
+               sort_order: List[str] = None, page_size: int = 0, offset: int = 0,
+               before_count: int = 0, after_count: int = 0, est_list_count: int = 0,
+               attrvalue: str = None) -> Union[int, List[LDAPEntry], Iterator,
+                                               Tuple[List[LDAPEntry], dict]]:
         # Documentation in the docs/api.rst with detailed examples.
         # Load values from the LDAPURL, if it is not presented on the
         # parameter list.
@@ -159,9 +159,9 @@ class LDAPConnection(ldapconnection):
                              " from each other.")
         return sort_attrs
 
-    def modify_password(self, user: Union[str, LDAPDN]=None,
-                        new_password: str=None, old_password: str=None,
-                        timeout: float=None) -> Union[str, int, None]:
+    def modify_password(self, user: Union[str, LDAPDN] = None,
+                        new_password: str = None, old_password: str = None,
+                        timeout: float = None) -> Union[str, int, None]:
         """
         Set a new password for the given user.
 
@@ -181,7 +181,7 @@ class LDAPConnection(ldapconnection):
         return self._evaluate(super().modify_password(user, new_password,
                                                       old_password), timeout)
 
-    def whoami(self, timeout: float=None) -> Union[str, int]:
+    def whoami(self, timeout: float = None) -> Union[str, int]:
         """
         This method can be used to obtain authorization identity.
 

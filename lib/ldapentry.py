@@ -23,7 +23,7 @@ class LDAPEntry(ldapentry):
             super().__init__(splitted_dn[-1], conn)
             self.__extended_dn = dn
 
-    def delete(self, timeout: float=None,
+    def delete(self, timeout: float = None,
                recursive: bool=False) -> Union[bool, int]:
         """
         Remove LDAP entry from the dictionary server.
@@ -39,7 +39,7 @@ class LDAPEntry(ldapentry):
             value.status = 2
         return res
 
-    def modify(self, timeout: float=None) -> Union[bool, int]:
+    def modify(self, timeout: float = None) -> Union[bool, int]:
         """
         Send entry's modifications to the dictionary server.
 
@@ -50,7 +50,7 @@ class LDAPEntry(ldapentry):
         return self.connection._evaluate(super().modify(), timeout)
 
     def rename(self, newdn: Union[str, LDAPDN],
-               timeout: float=None) -> Union[bool, int]:
+               timeout: float = None) -> Union[bool, int]:
         """
         Change the entry's distinguished name.
 
@@ -138,7 +138,6 @@ class LDAPEntry(ldapentry):
             return (key, value)
         except IndexError:
             raise KeyError("popitem(): LDAPEntry is empty")
-
 
     def __eq__(self, other):
         """

@@ -42,9 +42,9 @@ Searching
 =========
 
 To execute a simple search in the dictionary we have to use the :meth:`LDAPConnection.search`
-method. The function first parameter - the base DN - sets where we would like to start the search
+method. The function's first parameter - the base DN - sets where we would like to start the search
 in the dictionary tree, the second parameter - the search scope - can have the following values:
-    
+
     - 0 (base): searching only the base DN.
     - 1 (one): searching only one tree level under the base DN.
     - 2 (sub): searching of all entries at all levels under, including the base DN.

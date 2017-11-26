@@ -22,8 +22,8 @@ class LDAPClient:
     :raises TypeError: if the `url` parameter is not string \
     or not a valid LDAP URL.
     """
-    def __init__(self, url: Union[LDAPURL, str]="ldap://",
-                 tls: bool=False) -> None:
+    def __init__(self, url: Union[LDAPURL, str] = "ldap://",
+                 tls: bool = False) -> None:
         """ init method. """
         self.__tls = tls
         self.set_url(url)
