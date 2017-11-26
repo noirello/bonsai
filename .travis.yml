@@ -46,8 +46,15 @@ matrix:
         - virtualenv env -p python3
         - source env/bin/activate
         - brew install homebrew/dupes/openldap
-        - echo "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
+        - pip3 install tornado
+        - pip3 install codecov
+        - pip3 install pytest-cov
+        - printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
         - cat ./setup.cfg
+      before_script:
+        - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/tests/testenv/krb5/krb5.conf"
+        - INSTALL_PATH=`python3 -c "import bonsai; print(bonsai.__file__[:-12])"`
+        - echo $INSTALL_PATH
 
 before_install:
   - sudo apt-get update
