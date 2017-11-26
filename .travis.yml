@@ -8,36 +8,23 @@ branches:
     - testing
     - refactor
 
+dist: trusty
+group: edge
+sudo: required
+
+services:
+  - docker
+
 matrix:
   include:
     - language: python
       python: "3.4"
-      sudo: required
-      dist: trusty
-      group: edge
-      services:
-        - docker
     - language: python
       python: "3.5"
-      sudo: required
-      dist: trusty
-      group: edge
-      services:
-        - docker
     - language: python
       python: "3.6"
-      sudo: required
-      dist: trusty
-      group: edge
-      services:
-        - docker
     - language: python
       python: "nightly"
-      sudo: required
-      dist: trusty
-      group: edge
-      services:
-        - docker
     - language: generic
       os: osx
       before_install:
@@ -45,12 +32,15 @@ matrix:
         - brew install python3
         - virtualenv env -p python3
         - source env/bin/activate
-        - brew install homebrew/dupes/openldap
+        - brew install homebrew/dupes/openldap --with-berkeley-db4
         - pip3 install tornado
         - pip3 install codecov
         - pip3 install pytest-cov
+        - pip3 install wheel
+        - pip3 install delocate
         - printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
         - cat ./setup.cfg
+        - python --version
       before_script:
         - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/tests/testenv/krb5/krb5.conf"
         - INSTALL_PATH=`python3 -c "import bonsai; print(bonsai.__file__[:-12])"`
