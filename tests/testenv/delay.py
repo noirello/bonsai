@@ -11,7 +11,7 @@ try:
 except ImportError:
     pass
 
-class UnixDelayHandler:
+class LinuxDelayHandler:
 
     @staticmethod
     def get_interface_name():
@@ -44,6 +44,35 @@ class UnixDelayHandler:
         thr.start()
         return True
 
+class MacDelayHandler:
+    def set_delay(self, sec, duration=10.0):
+        with open('/etc/pf.conf') as fp:
+            conf = fp.read()
+            conf += '\ndummynet-anchor "mop"\nanchor "mop"\n'
+            rule = "dummynet in quick proto tcp from any to any port {389, 636} pipe 1\n"
+
+            try:
+                subprocess.run(["pfctl", "-f", "-"], input=conf, encoding="utf-8", check=True)
+                subprocess.run(["pfctl", "-a", "mop", "-f", "-"], input=rule,
+                               encoding="utf-8", check=True)
+                subprocess.check_call(["dnctl", "pipe", "1", "config", "delay",
+                                       "%d" % int(sec * 1000)])
+
+                thr = threading.Timer(duration, self.remove_delay)
+                thr.start()
+
+                return True
+            except subprocess.CalledProcessError:
+                return False
+
+    def remove_delay(self):
+        try:
+            subprocess.check_call(["dnctl", "-q", "flush"])
+            subprocess.check_call(["pfctl", "-f", "/etc/pf.conf"])
+            return True
+        except subprocess.CalledProcessError:
+            return False
+
 class WinDelayHandler:
     proc = None
 
@@ -63,7 +92,7 @@ class WinDelayHandler:
         self.proc = mp.Process(target=self.delay, args=(sec, duration))
         self.proc.start()
         return True
-    
+
     def remove_delay(self):
         """ Remove network delay, return with the call's result. """
         if self.proc is not None and self.proc.is_alive():
@@ -73,8 +102,10 @@ class WinDelayHandler:
 if __name__ == "__main__":
     if sys.platform == "win32":
         handler = WinDelayHandler()
+    elif sys.platform == "darwin":
+        handler = MacDelayHandler()
     else:
-        handler = UnixDelayHandler()
+        handler = LinuxDelayHandler()
     server = rpc.SimpleXMLRPCServer(("0.0.0.0", 8000))
     server.register_function(handler.set_delay, "set_delay")
     server.register_function(handler.remove_delay, "remove_delay")
