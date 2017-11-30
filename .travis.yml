@@ -39,16 +39,16 @@ matrix:
         - source env/bin/activate
         - brew install openldap --with-sssvlv
         - pip3 install tornado
+        - pip3 install gevent
         - pip3 install codecov
         - pip3 install pytest-cov
         - pip3 install delocate
         - printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
-        - cp ./tests/testenv/slapd.conf /usr/local/etc/
+        - rm /usr/local/etc/openldap/slapd.conf
+        - cp ./tests/testenv/slapd.conf /usr/local/etc/openldap/
         - mkdir /usr/local/var/openldap-data
         - ./tests/testenv/configure_ldap.sh
-        - ls /usr/local/var/openldap-data
-        - ls /usr/local/var/openldap-certs
-        - sudo python3 ./tests/testenv/delay.py &
+        - sudo nohup python3 ./tests/testenv/delay.py &
         - sudo /usr/local/opt/openldap/libexec/slapd -h "ldap:// ldaps://"
       before_script:
         - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/tests/testenv/krb5/krb5.conf"

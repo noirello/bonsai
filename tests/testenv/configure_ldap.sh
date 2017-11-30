@@ -17,9 +17,10 @@ generateCert () {
 
 setLDAP () {
     sudo /usr/local/opt/openldap/libexec/slapd -h "ldap:// ldapi:// ldaps://"
-    sleep 2
+    sleep 4
     echo "Slapd is started..."
-    # Change jepg file path.
+    ps aux | grep slapd
+    # Change jpeg file path.
     sed -i.bak "s|/root/test.jpeg|$TRAVIS_BUILD_DIR/tests/testenv/test.jpeg|g" ./tests/testenv/ldifs/base.ldif
     # Create base entry and populate the dictionary.
     ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldapi:/// -f ./tests/testenv/ldifs/base.ldif
