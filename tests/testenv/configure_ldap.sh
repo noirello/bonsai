@@ -23,16 +23,24 @@ setLDAP () {
     # Change jpeg file path.
     sed -i.bak "s|/root/test.jpeg|$TRAVIS_BUILD_DIR/tests/testenv/test.jpeg|g" ./tests/testenv/ldifs/base.ldif
     # Create base entry and populate the dictionary.
-    ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldapi:/// -f ./tests/testenv/ldifs/base.ldif
-    ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldapi:/// -f ./tests/testenv/ldifs/users.ldif
-    ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldapi:/// -f ./tests/testenv/ldifs/referrals.ldif
+    ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldap:/// -f ./tests/testenv/ldifs/base.ldif
+    ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldap:/// -f ./tests/testenv/ldifs/users.ldif
+    ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldap:/// -f ./tests/testenv/ldifs/referrals.ldif
     echo "Directory is populated..."
     # Set default password policy.
-    ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldapi:/// -f ./tests/testenv/ldifs/ppolicy.ldif
+    ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldap:/// -f ./tests/testenv/ldifs/ppolicy.ldif
     # Stop the slapd. 
     sudo kill $(ps aux | grep /usr/local/opt/openldap/libexec/slapd | grep -v grep | awk '{print $2}')
     echo "Slapd is stopped..."
 }
 
+#Set passsword for SASL DIGEST-MD5.
+setDigest () {
+    echo "p@ssword" | /usr/local/opt/cyrussasl/sbin/saslpasswd2 -p admin
+    echo "p@ssword" | /usr/local/opt/cyrussasl/sbin/saslpasswd2 -p chuck
+    echo "Passwords are set..."
+}
+
 generateCert
+setDigest
 setLDAP

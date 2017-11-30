@@ -43,13 +43,24 @@ matrix:
         - pip3 install codecov
         - pip3 install pytest-cov
         - pip3 install delocate
-        - printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
+        # Install Cyrus SASL.
+        - curl https://pastebin.com/raw/dHtWv7k0 -o cyrussasl.rb
+        - cat ./cyrussasl.rb
+        - brew install --build-from-formula ./cyrussasl.rb --with-ntlm
+        # Set alias for localhost.
+        - sudo sed -i.bak "/^127.0.0.1/ s/$/ bonsai.test/" /etc/hosts
+        - ping -c 2 bonsai.test
+        - sudo pfctl -e
+        # Settings for OpenLDAP.
         - rm /usr/local/etc/openldap/slapd.conf
         - cp ./tests/testenv/slapd.conf /usr/local/etc/openldap/
         - mkdir /usr/local/var/openldap-data
         - ./tests/testenv/configure_ldap.sh
+        # Start services.
         - sudo nohup python3 ./tests/testenv/delay.py &
         - sudo /usr/local/opt/openldap/libexec/slapd -h "ldap:// ldaps://"
+        # Set include and library path.
+        - printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
       before_script:
         - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/tests/testenv/krb5/krb5.conf"
         - INSTALL_PATH=`python3 -c "import bonsai; print(bonsai.__file__[:-12])"`
