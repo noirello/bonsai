@@ -10,7 +10,6 @@ RUN dnf install -y openldap openldap-servers openldap-clients cyrus-sasl-md5 cyr
 # Kerberos server and utils.
 RUN dnf install -y krb5-server krb5-libs krb5-workstation
 RUN dnf install -y supervisor
-#RUN dnf downgrade -y nss-tools --allowerasing
 
 # Setting Kerberos
 COPY ./krb5/kdc.conf /var/kerberos/krb5kdc/kdc.conf
@@ -23,8 +22,6 @@ RUN echo "qweadhfkjwol4vb11yxadsa2389223qwqweeqwe" >> /etc/openldap/certs/noise.
 
 # Create a new cert database.
 RUN modutil -create -dbdir /etc/openldap/certs -force
-# Well, this one makes no sense but works.
-RUN modutil -dbdir /etc/openldap/certs -changepw 'NSS Certificate DB' -force -newpwfile /etc/openldap/certs/password -pwfile /etc/openldap/certs/password
 
 # Copy the root CA cert and key.
 COPY ./certs/cacert.pem /root/cacert.pem
