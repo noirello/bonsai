@@ -118,9 +118,8 @@ class LDAPConnectionTest(unittest.TestCase):
         conn.close()
 
     def _bind_gssapi_kinit(self, authzid):
-        if sys.platform == "win32":
-            self.skipTest("Cannot use Kerberos kinit auth on Windows "
-                          "against OpenLDAP")
+        if sys.platform == "win32" or sys.platform == "darwin":
+            self.skipTest("Kerberos kinit is available only on Linux.")
         try:
             invoke_kinit(self.cfg["GSSAPIAUTH"]["user"],
                          self.cfg["GSSAPIAUTH"]["password"])
@@ -144,7 +143,7 @@ class LDAPConnectionTest(unittest.TestCase):
                          "GSSAPI authorization was failed. ")
         conn.close()
 
-    @unittest.skipIf(not bonsai.has_krb5_support(),
+    @unittest.skipIf(not bonsai.has_krb5_support() or sys.platform == "darwin",
                      "Module doesn't have KRB5 support.")
     def test_bind_gssapi(self):
         """ Test GSSAPI connection with automatic TGT requesting. """
@@ -164,6 +163,8 @@ class LDAPConnectionTest(unittest.TestCase):
             self.skipTest("GSSAPI authentication is not set.")
         if not bonsai.has_krb5_support():
             self.skipTest("Module doesn't have KRB5 support.")
+        if sys.platform == "darwin":
+            self.skipTest("Kerberos is not available on Mac.")
         if ("realm" not in self.cfg["GSSAPIAUTH"]
                 or self.cfg["GSSAPIAUTH"]["realm"] == "None"):
             self.skipTest("Realm is not set.")
