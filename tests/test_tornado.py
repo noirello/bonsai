@@ -164,7 +164,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         """ Test connection timeout. """
         import xmlrpc.client as rpc
         proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
-        proxy.set_delay(6.0)
+        proxy.set_delay(7.0)
         time.sleep(3.0)
         try:
             yield self.client.connect(True,
@@ -183,7 +183,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         import xmlrpc.client as rpc
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
-            proxy.set_delay(5.1)
+            proxy.set_delay(7.0)
             time.sleep(3.0)
             try:
                 yield conn.search(timeout=4.0)

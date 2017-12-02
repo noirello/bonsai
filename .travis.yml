@@ -59,17 +59,20 @@ matrix:
         # Start services.
         - sudo nohup python3 ./tests/testenv/delay.py &
         - sudo /usr/local/opt/openldap/libexec/slapd -h "ldap:// ldaps://"
-      install:
+        # Set library and include path.
         - printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
-        - export CFLAGS="-coverage"
-        - python setup.py build
-        - python setup.py bdist_wheel
-        - delocate-wheel -v ./dist/bonsai-*.whl
-        - pip install ./dist/bonsai-*.whl
       before_script:
         - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/tests/testenv/krb5/krb5.conf"
         - INSTALL_PATH=`python3 -c "import bonsai; print(bonsai.__file__[:-12])"`
         - echo $INSTALL_PATH
+      after_success:
+        - sed -i.bak 's|'$INSTALL_PATH'|'$TRAVIS_BUILD_DIR/lib'|g' .coverage
+        - codecov
+        - export CFLAGS=
+        - python setup.py clean
+        - python setup.py build -f
+        - python setup.py bdist_wheel
+        - delocate-wheel -v ./dist/bonsai-*.whl
 
 before_install:
   - sudo apt-get update

@@ -44,7 +44,7 @@ def receive_whoami_timeout(client, ipaddr):
     """ Set network delay and wait for a TimeoutError during whoami. """
     conn = client.connect()
     proxy = rpc.ServerProxy("http://%s:%d/" % (ipaddr, 8000))
-    proxy.set_delay(4.1)
+    proxy.set_delay(6.1)
     time.sleep(3.0)
     return conn.whoami(timeout=3.2)
 
