@@ -375,7 +375,7 @@ check_tls_result(LDAP *ld, int msgid, int timeout, char async, SOCKET csock) {
         if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
             ldaperror = get_error_by_code(err);
             if (ldaperror == NULL) return -1;
-            errmsg = PyUnicode_FromFormat("%s.", errstr);
+            if (errstr != NULL) errmsg = PyUnicode_FromFormat("%s.", errstr);
             if (errmsg != NULL) {
                 PyErr_SetObject(ldaperror, errmsg);
                 Py_DECREF(errmsg);

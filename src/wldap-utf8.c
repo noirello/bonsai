@@ -27,7 +27,7 @@ copy_list(void **list, void **newlist, int(*copyfunc)(void *, void**)) {
     for (i = 0; list[i] != NULL; i++) {
         rc = (copyfunc)(list[i], &newlist[i]);
         if (rc != LDAP_SUCCESS) {
-            /* Copy is failed, break the cicle and set the failed
+            /* Copy is failed, break the cycle and set the failed
             item to NULL thus the successfully converted items
             can be freed without overrunning the list. */
             break;

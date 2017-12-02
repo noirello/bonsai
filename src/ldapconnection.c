@@ -995,7 +995,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, char *msgidstr) {
         } else {
             ldaperror = get_error_by_code(err);
             if (ldaperror == NULL) return NULL;
-            errmsg = PyUnicode_FromFormat("%s.", errstr);
+            if (errstr != NULL) errmsg = PyUnicode_FromFormat("%s.", errstr);
             if (errmsg != NULL) {
                 PyErr_SetObject(ldaperror, errmsg);
                 Py_DECREF(errmsg);
