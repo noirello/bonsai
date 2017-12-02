@@ -109,6 +109,10 @@ if __name__ == "__main__":
         handler = MacDelayHandler()
     else:
         handler = LinuxDelayHandler()
+        # Fix network collapse on certain Linux distros.
+        subprocess.call(["ip", "link", "set", handler.get_interface_name(),
+                         "qlen", "1000"])
+
     server = rpc.SimpleXMLRPCServer(("0.0.0.0", 8000))
     server.register_function(handler.set_delay, "set_delay")
     server.register_function(handler.remove_delay, "remove_delay")
