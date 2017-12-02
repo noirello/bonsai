@@ -73,6 +73,10 @@ matrix:
         - python setup.py build -f
         - python setup.py bdist_wheel
         - delocate-wheel -v ./dist/bonsai-*.whl
+        - pip3 install clint pycryptodome requests requests_toolbelt
+        - curl https://raw.githubusercontent.com/nneonneo/ffsend/master/ffsend.py -o ffsend.py
+        - python ./ffsend.py ./dist/bonsai-*.whl
+        - sleep 2
 
 before_install:
   - sudo apt-get update
