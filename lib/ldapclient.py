@@ -518,8 +518,16 @@ class LDAPClient:
         attrs = ["namingContexts", "altServer", "supportedExtension",
                  "supportedControl", "supportedSASLMechanisms",
                  "supportedLDAPVersion"]
-        with LDAPConnection(self.__class__(self.url, self.tls), False).open() \
-        as conn:
+        tls_options = {0: 'never', 2: 'demand', 3: 'allow', 4: 'try', -1: None}
+        this = self.__class__(self.url, self.tls)
+        cert_policy = tls_options[self.cert_policy]
+        if cert_policy is not None:
+            this.cert_policy = cert_policy
+        this.ca_cert = self.ca_cert
+        this.ca_cert_dir = self.ca_cert_dir
+        this.client_cert = self.client_cert
+        this.client_key = self.client_key
+        with LDAPConnection(this, False).open() as conn:
             try:
                 root_dse = conn.search("", LDAPSearchScope.BASE,
                                        "(objectclass=*)",
@@ -528,8 +536,8 @@ class LDAPClient:
             except IndexError:
                 return None
 
-    def connect(self, is_async: bool=False,
-                timeout: float=None, **kwargs) -> LDAPConnection:
+    def connect(self, is_async: bool = False,
+                timeout: float = None, **kwargs) -> LDAPConnection:
         """
         Open a connection to the LDAP server.
 
