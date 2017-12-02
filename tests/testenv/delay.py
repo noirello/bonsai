@@ -1,6 +1,5 @@
 import os
 import subprocess
-import threading
 import xmlrpc.server as rpc
 import time
 import sys
@@ -20,29 +19,37 @@ class LinuxDelayHandler:
         net.remove("lo")
         return net[0]
 
-    def _set_delay(self, sec, duration=10.0):
-        thr = threading.Timer(duration, self._remove_delay)
-        thr.start()
-        return subprocess.call(["tc", "qdisc", "add", "dev",
-                                self.get_interface_name(), "root",
-                                "handle", "1:0", "netem", "delay",
-                                ("%dmsec" % (sec * 1000))])
-
     def set_delay(self, sec, duration=10.0):
         """ Set network delay, return with the call's result. """
-        thr = threading.Timer(2.0, self._set_delay, (sec, duration))
-        thr.start()
-        return True
+        try:
+            subprocess.check_call(["tc", "qdisc", "add", "dev",
+                                   self.get_interface_name(), "root",
+                                   "handle", "1:", "prio"])
+            subprocess.check_call(["tc", "qdisc", "add", "dev",
+                                   self.get_interface_name(), "parent",
+                                   "1:3", "handle", "30:", "netem",
+                                   "delay", ("%dmsec" % (sec * 1000))])
+            for port in ("389", "636"):
+                subprocess.check_call(["tc", "filter", "add",
+                                       "dev", self.get_interface_name(),
+                                       "protocol", "ip", "parent",
+                                       "1:0", "u32", "match", "ip",
+                                       "sport", port, "0xffff", "flowid",
+                                       "1:3"])
 
-    def _remove_delay(self):
-        return subprocess.call(["tc", "qdisc", "del", "dev",
-                                self.get_interface_name(), "root"])
+            return True
+        except subprocess.CalledProcessError:
+            return False
 
     def remove_delay(self):
-        """ Remove network delay, return with the call's result. """
-        thr = threading.Timer(1.0, self._remove_delay)
-        thr.start()
-        return True
+        """ Remove network delay. """
+        try:
+            subprocess.check_call(["tc", "qdisc", "del", "dev",
+                                   self.get_interface_name(), "root"])
+            return True
+        except subprocess.CalledProcessError:
+            return False
+
 
 class MacDelayHandler:
     def set_delay(self, sec, duration=10.0):
@@ -57,9 +64,6 @@ class MacDelayHandler:
                                encoding="utf-8", check=True)
                 subprocess.check_call(["dnctl", "pipe", "1", "config", "delay",
                                        "%d" % int(sec * 1000)])
-
-                thr = threading.Timer(duration, self.remove_delay)
-                thr.start()
 
                 return True
             except subprocess.CalledProcessError:
@@ -88,7 +92,6 @@ class WinDelayHandler:
 
     def set_delay(self, sec, duration=10.0):
         """ Set network delay, return with the call's result. """
-        WinDelayHandler.stop = False
         self.proc = mp.Process(target=self.delay, args=(sec, duration))
         self.proc.start()
         return True
