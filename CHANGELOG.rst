@@ -1,6 +1,6 @@
 Changelog
 ==========
-[0.9.1] - 2017-11-
+[0.9.1] - 2017-12-03
 --------------------
 
 Changed
@@ -12,13 +12,14 @@ Changed
 Added
 ~~~~~
 
--  Async with support for AIOLDAPConnection.
+-  Async with support for AIOLDAPConnection. (Issue #12)
 -  New set_debug module function that enables debug mode.
 
 Fixed
 ~~~~~
 
 -  Signaling after LDAP initialisation is failed.
+-  Using TLS settings while getting the root DSE in get_rootDSE method.
 
 [0.9.0] - 2017-02-15
 --------------------
