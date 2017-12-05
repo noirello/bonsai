@@ -416,8 +416,17 @@ ldapconnectiter_dealloc(LDAPConnectIter* self) {
 static PyObject *
 ldapconnectiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     LDAPConnectIter *self = NULL;
+    PyObject *ts_empty_tuple = PyTuple_New(0);
+    PyObject *ts_empty_dict = PyDict_New();
 
-    self = (LDAPConnectIter *)type->tp_alloc(type, 0);
+    if (ts_empty_tuple == NULL || ts_empty_dict == NULL) {
+        Py_XDECREF(ts_empty_tuple);
+        Py_XDECREF(ts_empty_dict);
+        return NULL;
+    }
+
+    self = (LDAPConnectIter *)PyBaseObject_Type.tp_new(type, ts_empty_tuple,
+                                                       ts_empty_dict);
 
     if (self != NULL) {
         self->conn = NULL;
@@ -429,6 +438,8 @@ ldapconnectiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->tls = 0;
     }
 
+    Py_DECREF(ts_empty_tuple);
+    Py_DECREF(ts_empty_dict);
     DEBUG("ldapconnectiter_new [self:%p]", self);
     return (PyObject *)self;
 }

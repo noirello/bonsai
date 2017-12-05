@@ -62,9 +62,9 @@ Because Mac OS X is shipped with an older version of libldap which lacks of
 several features that Bonsai relies on, a newer library needs to be installed
 before compiling the module.
 
-Install `openldap` library by homebrew/dupes' formula::
+Install `openldap` homebrew-core formula::
 
-    $ brew install homebrew/dupes/openldap
+    $ brew install openldap
 
 Modify the `setup.cfg` in the root folder to customize the library and headers
 directory:

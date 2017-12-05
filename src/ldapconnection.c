@@ -18,8 +18,17 @@ ldapconnection_dealloc(LDAPConnection* self) {
 static PyObject *
 ldapconnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     LDAPConnection *self = NULL;
+    PyObject *ts_empty_tuple = PyTuple_New(0);
+    PyObject *ts_empty_dict = PyDict_New();
 
-    self = (LDAPConnection *)type->tp_alloc(type, 0);
+    if (ts_empty_tuple == NULL || ts_empty_dict == NULL) {
+        Py_XDECREF(ts_empty_tuple);
+        Py_XDECREF(ts_empty_dict);
+        return NULL;
+    }
+
+    self = (LDAPConnection *)PyBaseObject_Type.tp_new(type, ts_empty_tuple,
+                                                      ts_empty_dict);
     if (self != NULL) {
         self->client = NULL;
         self->pending_ops = NULL;
@@ -31,6 +40,8 @@ ldapconnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->socketpair = NULL;
     }
 
+    Py_DECREF(ts_empty_tuple);
+    Py_DECREF(ts_empty_dict);
     DEBUG("ldapconnection_new [self:%p]", self);
     return (PyObject *)self;
 }

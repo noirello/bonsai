@@ -26,9 +26,17 @@ ldapsearchiter_dealloc(LDAPSearchIter* self) {
 static PyObject *
 ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     LDAPSearchIter *self = NULL;
+    PyObject *ts_empty_tuple = PyTuple_New(0);
+    PyObject *ts_empty_dict = PyDict_New();
 
-    //self = (LDAPSearchIter *)PyType_GenericAlloc(type, 0);
-    self = (LDAPSearchIter *)type->tp_alloc(type, 0);
+    if (ts_empty_tuple == NULL || ts_empty_dict == NULL) {
+        Py_XDECREF(ts_empty_tuple);
+        Py_XDECREF(ts_empty_dict);
+        return NULL;
+    }
+
+    self = (LDAPSearchIter *)PyBaseObject_Type.tp_new(type, ts_empty_tuple,
+                                                      ts_empty_dict);
 
     if (self != NULL) {
         self->buffer = NULL;
@@ -39,6 +47,8 @@ ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->auto_acquire = 0;
     }
 
+    Py_DECREF(ts_empty_tuple);
+    Py_DECREF(ts_empty_dict);
     DEBUG("ldapsearchiter_new [self:%p]", self);
     return (PyObject *)self;
 }
