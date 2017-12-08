@@ -1,5 +1,5 @@
 import re
-from typing import Union, Tuple, Any
+from typing import Union, Tuple, Any, NoReturn
 
 from .errors import InvalidDN
 
@@ -121,6 +121,6 @@ class LDAPDN:
                      for rdn in re.split(r'(?<!\\),', self.__strdn))
 
     @rdns.setter
-    def rdns(self, value: Any = None) -> None:
+    def rdns(self, value: Any = None) -> NoReturn:
         """ The tuple of relative distinguished names."""
         raise ValueError("RDNs attribute cannot be set.")

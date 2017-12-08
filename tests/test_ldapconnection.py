@@ -14,6 +14,14 @@ from bonsai import LDAPConnection
 from bonsai import LDAPSearchScope
 import bonsai.errors
 from bonsai.errors import ClosedConnection
+from bonsai.ldapconnection import BaseLDAPConnection
+
+class SimpleAsyncConn(BaseLDAPConnection):
+    def __init__(self, client):
+        super().__init__(client, True)
+
+    def _evaluate(self, msg_id, timeout):
+        return msg_id
 
 def invoke_kinit(user, password):
     """ Invoke kinit command with credential parameters. """
@@ -67,15 +75,12 @@ class LDAPConnectionTest(unittest.TestCase):
                                           self.cfg["SIMPLEAUTH"]["password"]))
         client.auto_page_acquire = False
         self.conn = client.connect()
-        self.async_conn = LDAPConnection(client, True)
+        self.async_conn = SimpleAsyncConn(client)
 
     def tearDown(self):
         """ Close connection. """
         self.conn.close()
-        if not self.async_conn.closed:
-            self.async_conn.close()
         del self.conn
-        del self.async_conn
 
     def _binding(self, auth, mech, authzid, realm=None):
         if auth not in self.cfg:
@@ -487,7 +492,7 @@ class LDAPConnectionTest(unittest.TestCase):
     def test_wrong_conn_param(self):
         """ Test passing wrong parameters for LDAPConnection. """
         self.assertRaises(TypeError, lambda: LDAPConnection("wrong"))
-        self.assertRaises(TypeError, lambda: LDAPConnection(LDAPClient(), 1))
+        self.assertRaises(TypeError, lambda: LDAPConnection(1))
 
     def test_wrong_search_param(self):
         """ Test passing wrong parameters for search method. """

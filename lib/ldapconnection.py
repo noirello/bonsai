@@ -1,5 +1,6 @@
+from abc import ABCMeta, abstractmethod
 from enum import IntEnum
-from typing import Union, Any, List, Iterator, Tuple
+from typing import Union, Any, List, Iterator, Tuple, Optional
 
 from ._bonsai import ldapconnection
 from .ldapdn import LDAPDN
@@ -14,16 +15,8 @@ class LDAPSearchScope(IntEnum):
     SUBTREE = 2  #: For searching the entire subtree, including the base DN.
     SUB = SUBTREE  #: Alias for :attr:`LDAPSearchScope.SUBTREE`.
 
-class LDAPConnection(ldapconnection):
-    """
-    Handles the connection to an LDAP server.
-    If `is_async` is set to True, then all LDAP operations that belong \
-    to this connection will return a message ID. This ID can be used to \
-    poll the status of the operation.
+class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
 
-    :param LDAPClient client: a client object.
-    :param bool is_async: set True to create an asynchronous connection.
-    """
     def __init__(self, client, is_async: bool = False) -> None:
         self.__client = client
         super().__init__(client, is_async)
@@ -32,82 +25,39 @@ class LDAPConnection(ldapconnection):
         """ Context manager entry point. """
         return self
 
-    def __exit__(self, *exc):
+    def __exit__(self, *exc: Tuple):
         """ Context manager exit point. """
         self.close()
 
-    def _evaluate(self, msg_id: int, timeout: float = None) -> Any:
-        """
-        Depending on the connection's type (asynchronous or synchronous),
-        it returns a message ID or the result of the LDAP operation.
-
-        :param int msg_id: the ID of the LDAP operation.
-        :param float timeout: time limit in seconds for the operation.
-        :return: msg_id if the connection is async, otherwise the result \
-        of the operation.
-        """
-        if self.is_async:
-            return msg_id
-        else:
-            return self.get_result(msg_id, timeout)
-
-    def add(self, entry: LDAPEntry, timeout: float = None) -> Union[int, bool]:
-        """
-        Add new entry to the directory server.
-
-        :param LDAPEntry entry: the new entry.
-        :param float timeout: time limit in seconds for the operation.
-        :return: True, if the operation is finished.
-        :rtype: bool
-        """
+    def add(self, entry: LDAPEntry, timeout: Optional[float] = None) -> Any:
         return self._evaluate(super().add(entry), timeout)
 
     def delete(self, dname: Union[str, LDAPDN],
-               timeout: float = None, recursive: bool = False) -> Union[int, bool]:
-        """
-        Remove entry from the directory server.
+               timeout: Optional[float] = None, recursive: bool = False) -> Any:
+        if type(dname) == LDAPDN:
+            dname = str(dname)
+        return self._evaluate(super().delete(dname, recursive), timeout)
 
-        :param str|LDAPDN dname: the string or LDAPDN format of the \
-        entry's DN.
-        :param float timeout: time limit in seconds for the operation.
-        :param bool recursive: remove every entry of the given subtree \
-        recursively.
-        :return: True, if the operation is finished.
-        :rtype: bool
-        """
-        try:
-            if type(dname) == LDAPDN:
-                dname = str(dname)
-            return self._evaluate(super().delete(dname, recursive), timeout)
-        except NotAllowedOnNonleaf as exc:
-            if recursive and self.is_async is False:
-                results = self.search(dname, LDAPSearchScope.ONELEVEL,
-                                      attrlist=['1.1'], timeout=timeout)
-                for res in results:
-                    self.delete(res.dn, timeout, True)
-                return self.delete(dname, timeout, False)
-            else:
-                raise exc
-
-    def open(self, timeout: float = None) -> Union[int, 'LDAPConnection', Iterator]:
-        """
-        Open the LDAP connection.
-
-        :param float timeout: time limit in seconds for the operation.
-        :return: The :class:`LDAPConnection` object itself, if \
-        it is a synchronous or a message ID if it's an asynchronous connection.
-        :rtype: :class:`LDAPConnection` or iterator.
-        """
+    def open(self, timeout: Optional[float] = None) -> Any:
         return self._evaluate(super().open(), timeout)
 
-    def search(self, base: Union[str, LDAPDN] = None,
-               scope: Union[LDAPSearchScope, int] = None, filter: str = None,
-               attrlist: List[str] = None, timeout: float = None,
-               sizelimit: int = 0, attrsonly: bool = False,
-               sort_order: List[str] = None, page_size: int = 0, offset: int = 0,
-               before_count: int = 0, after_count: int = 0, est_list_count: int = 0,
-               attrvalue: str = None) -> Union[int, List[LDAPEntry], Iterator,
-                                               Tuple[List[LDAPEntry], dict]]:
+    def modify_password(self, user: Optional[Union[str, LDAPDN]] = None,
+                        new_password: Optional[str] = None,
+                        old_password: Optional[str] = None,
+                        timeout: Optional[float] = None) -> Any:
+        if type(user) == LDAPDN:
+            user = str(user)
+        return self._evaluate(super().modify_password(user, new_password,
+                                                      old_password), timeout)
+
+    def search(self, base: Optional[Union[str, LDAPDN]] = None,
+               scope: Optional[Union[LDAPSearchScope, int]] = None,
+               filter: Optional[str] = None, attrlist: Optional[List[str]] = None,
+               timeout: Optional[float] = None, sizelimit: int = 0,
+               attrsonly: bool = False, sort_order: Optional[List[str]] = None,
+               page_size: int = 0, offset: int = 0, before_count: int = 0,
+               after_count: int = 0, est_list_count: int = 0, 
+               attrvalue: Optional[str] = None) -> Any:
         # Documentation in the docs/api.rst with detailed examples.
         # Load values from the LDAPURL, if it is not presented on the
         # parameter list.
@@ -132,7 +82,6 @@ class LDAPConnection(ldapconnection):
                                 est_list_count, attrvalue)
         return self._evaluate(msg_id, timeout)
 
-
     @staticmethod
     def __create_sort_list(sort_list: List[str]):
         """
@@ -146,7 +95,7 @@ class LDAPConnection(ldapconnection):
         """
         sort_attrs = []
         for attr in sort_list:
-            if type(attr) != str or len(attr) == 0:
+            if not isinstance(attr, str) or len(attr) == 0:
                 raise ValueError("All element of sort_list must be"
                                  " a non empty string.")
             if attr[0] == '-':
@@ -159,9 +108,100 @@ class LDAPConnection(ldapconnection):
                              " from each other.")
         return sort_attrs
 
-    def modify_password(self, user: Union[str, LDAPDN] = None,
-                        new_password: str = None, old_password: str = None,
-                        timeout: float = None) -> Union[str, int, None]:
+    def whoami(self, timeout: Optional[float] = None) -> Any:
+        return self._evaluate(super().whoami(), timeout)
+
+    @abstractmethod
+    def _evaluate(self, msg_id: int, timeout: Optional[float] = None) -> Any:
+        pass
+
+class LDAPConnection(BaseLDAPConnection):
+    """
+    Handles the connection to an LDAP server.
+    If `is_async` is set to True, then all LDAP operations that belong \
+    to this connection will return a message ID. This ID can be used to \
+    poll the status of the operation.
+
+    :param LDAPClient client: a client object.
+    """
+    def __init__(self, client) -> None:
+        super().__init__(client, False)
+
+    def _evaluate(self, msg_id: int, timeout: Optional[float] = None) -> Any:
+        """
+        It returns a message ID or the result of the LDAP operation.
+
+        :param int msg_id: the ID of the LDAP operation.
+        :param float timeout: time limit in seconds for the operation.
+        :return: the result of the operation.
+        """
+        return self.get_result(msg_id, timeout)
+
+    def add(self, entry: LDAPEntry, timeout: Optional[float] = None) -> bool:
+        """
+        Add new entry to the directory server.
+
+        :param LDAPEntry entry: the new entry.
+        :param float timeout: time limit in seconds for the operation.
+        :return: True, if the operation is finished.
+        :rtype: bool
+        """
+        return super().add(entry, timeout)
+
+    def delete(self, dname: Union[str, LDAPDN],
+               timeout: Optional[float] = None, recursive: bool = False) -> bool:
+        """
+        Remove entry from the directory server.
+
+        :param str|LDAPDN dname: the string or LDAPDN format of the \
+        entry's DN.
+        :param float timeout: time limit in seconds for the operation.
+        :param bool recursive: remove every entry of the given subtree \
+        recursively.
+        :return: True, if the operation is finished.
+        :rtype: bool
+        """
+        try:
+            return super().delete(dname, timeout, recursive)
+        except NotAllowedOnNonleaf as exc:
+            if recursive:
+                results = self.search(dname, LDAPSearchScope.ONELEVEL,
+                                      attrlist=['1.1'], timeout=timeout)
+                for res in results:
+                    self.delete(res.dn, timeout, True)
+                return self.delete(dname, timeout, False)
+            else:
+                raise exc
+
+    def open(self, timeout: Optional[float] = None) -> 'LDAPConnection':
+        """
+        Open the LDAP connection.
+
+        :param float timeout: time limit in seconds for the operation.
+        :return: The :class:`LDAPConnection` object itself.
+        :rtype: :class:`LDAPConnection`.
+        """
+        return super().open(timeout)
+
+    def search(self, base: Optional[Union[str, LDAPDN]] = None,
+               scope: Optional[Union[LDAPSearchScope, int]] = None,
+               filter: Optional[str] = None, attrlist: Optional[List[str]] = None,
+               timeout: Optional[float] = None, sizelimit: int = 0,
+               attrsonly: bool = False, sort_order: Optional[List[str]] = None,
+               page_size: int = 0, offset: int = 0, before_count: int = 0,
+               after_count: int = 0, est_list_count: int = 0, 
+               attrvalue: Optional[str] = None) -> Union[List[LDAPEntry], Iterator,
+                                                         Tuple[List[LDAPEntry], dict]]:
+        return super().search(base, scope, filter, attrlist,
+                              timeout, sizelimit, attrsonly, sort_order,
+                              page_size, offset, before_count, after_count,
+                              est_list_count, attrvalue)
+
+
+    def modify_password(self, user: Optional[Union[str, LDAPDN]] = None,
+                        new_password: Optional[str] = None,
+                        old_password: Optional[str] = None,
+                        timeout: Optional[float] = None) -> Optional[str]:
         """
         Set a new password for the given user.
 
@@ -176,12 +216,9 @@ class LDAPConnection(ldapconnection):
         password, None otherwise.
         :rtype: str|None
         """
-        if type(user) == LDAPDN:
-            user = str(user)
-        return self._evaluate(super().modify_password(user, new_password,
-                                                      old_password), timeout)
+        return super().modify_password(user, new_password, old_password, timeout)
 
-    def whoami(self, timeout: float = None) -> Union[str, int]:
+    def whoami(self, timeout: Optional[float] = None) -> str:
         """
         This method can be used to obtain authorization identity.
 
@@ -190,4 +227,4 @@ class LDAPConnection(ldapconnection):
         :return: the authorization ID.
         :rtype: str
         """
-        return self._evaluate(super().whoami(), timeout)
+        return super().whoami(timeout)

@@ -1,9 +1,9 @@
 from gevent.socket import wait_readwrite
 
-from ..ldapconnection import LDAPConnection, LDAPSearchScope
+from ..ldapconnection import BaseLDAPConnection, LDAPSearchScope
 from ..errors import NotAllowedOnNonleaf
 
-class GeventLDAPConnection(LDAPConnection):
+class GeventLDAPConnection(BaseLDAPConnection):
     def __init__(self, client):
         super().__init__(client, is_async=True)
 
