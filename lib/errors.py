@@ -1,19 +1,21 @@
+from typing import Optional, Type
+
 class LDAPError(Exception):
     """General LDAP error."""
     code = 0
 
     @classmethod
-    def create(cls, code):
+    def create(cls, code: int) -> Type['LDAPError']:
         """ Create a new LDAPError type with `code` error code. """
         cls.code = code
         return cls
 
     @property
-    def hexcode(self):
+    def hexcode(self) -> int:
         """ Error code in 16 bit length hexadecimal format. """
         return (self.code + (1 << 16)) % (1 << 16)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "{} (0x{:04X} [{:d}])".format(self.args[0] if self.args else "",
                                              self.hexcode, self.code)
 
@@ -101,7 +103,7 @@ class TypeOrValueExists(LDAPError):
 class PasswordPolicyError(LDAPError):
     """ General exception for password policy errors. """
     _dflt_args = ("Password policy error.",)
-    def __init__(self, msg=None):
+    def __init__(self, msg: Optional[str] = None) -> None:
         super().__init__(msg)
         self.args = self._dflt_args if msg is None else (msg,)
 
