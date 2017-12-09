@@ -53,16 +53,16 @@ matrix:
         - sudo pfctl -e
         # Settings for OpenLDAP.
         - rm /usr/local/etc/openldap/slapd.conf
-        - cp ./tests/testenv/slapd.conf /usr/local/etc/openldap/
+        - cp ./.travis/openldap/slapd.conf /usr/local/etc/openldap/
         - mkdir /usr/local/var/openldap-data
-        - ./tests/testenv/configure_ldap.sh
+        - ./.travis/openldap/configure_ldap.sh
         # Start services.
-        - sudo nohup python3 ./tests/testenv/delay.py &
+        - sudo nohup python3 ./.travis/delay.py &
         - sudo /usr/local/opt/openldap/libexec/slapd -h "ldap:// ldaps://"
         # Set library and include path.
         - printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
       before_script:
-        - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/tests/testenv/krb5/krb5.conf"
+        - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/.travis/krb5/krb5.conf"
         - INSTALL_PATH=`python3 -c "import bonsai; print(bonsai.__file__[:-12])"`
         - echo $INSTALL_PATH
       after_success:
@@ -87,7 +87,7 @@ before_install:
   - pip install tornado
   - pip install codecov
   - pip install pytest-cov
-  - docker build -t bonsai ./tests/testenv
+  - docker build -t bonsai ./.travis/docker
   - docker run --cap-add=NET_ADMIN -d -h bonsai.test --name server bonsai
   # Set container IP in the hosts file.
   - DOCKER_IP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' server`
@@ -112,7 +112,7 @@ before_script:
   # Change localhost IP in test.ini to the container's.
   - sed -i.bak "s/127.0.0.1/$DOCKER_IP/g" ./tests/test.ini
   # Set used Kerberos config file to my own.
-  - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/tests/testenv/krb5/krb5.conf"
+  - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/.travis/krb5/krb5.conf"
   # Set install path for coverage.py.
   - INSTALL_PATH=`python -c "import bonsai; print(bonsai.__file__[:-12])"`
   - echo $INSTALL_PATH
