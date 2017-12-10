@@ -87,7 +87,7 @@ before_install:
   - pip install tornado
   - pip install codecov
   - pip install pytest-cov
-  - docker build -t bonsai ./.travis/docker
+  - docker build -t bonsai -f ./.travis/docker/Dockerfile .
   - docker run --cap-add=NET_ADMIN -d -h bonsai.test --name server bonsai
   # Set container IP in the hosts file.
   - DOCKER_IP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' server`
