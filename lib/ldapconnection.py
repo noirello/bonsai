@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from enum import IntEnum
 from typing import Union, Any, List, Iterator, Tuple, Optional
 
-from ._bonsai import ldapconnection
+from ._bonsai import ldapconnection, ldapsearchiter
 from .ldapdn import LDAPDN
 from .ldapentry import LDAPEntry
 from .errors import UnwillingToPerform, NotAllowedOnNonleaf
@@ -11,7 +11,6 @@ MYPY = False
 
 if MYPY:
     from .ldapclient import LDAPClient
-    from ._bonsai import ldapsearchiter
 
 class LDAPSearchScope(IntEnum):
     """ Enumeration for LDAP search scopes. """
@@ -151,10 +150,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
 
 class LDAPConnection(BaseLDAPConnection):
     """
-    Handles the connection to an LDAP server.
-    If `is_async` is set to True, then all LDAP operations that belong \
-    to this connection will return a message ID. This ID can be used to \
-    poll the status of the operation.
+    Handles synchronous connection to an LDAP server.
 
     :param LDAPClient client: a client object.
     """
@@ -163,7 +159,7 @@ class LDAPConnection(BaseLDAPConnection):
 
     def _evaluate(self, msg_id: int, timeout: Optional[float] = None) -> Any:
         """
-        It returns a message ID or the result of the LDAP operation.
+        It returns the result of the LDAP operation.
 
         :param int msg_id: the ID of the LDAP operation.
         :param float timeout: time limit in seconds for the operation.
@@ -236,7 +232,7 @@ class LDAPConnection(BaseLDAPConnection):
                      attrlist: Optional[List[str]] = None,
                      timeout: Optional[float] = None, sizelimit: int = 0,
                      attrsonly: bool = False, sort_order: Optional[List[str]] = None,
-                     page_size: int = 1) -> 'ldapsearchiter':
+                     page_size: int = 1) -> ldapsearchiter:
         return super().paged_search(base, scope, filterexp, attrlist,
                                     timeout, sizelimit, attrsonly, sort_order,
                                     page_size)

@@ -171,5 +171,8 @@ PyInit__bonsai(void) {
     Py_INCREF(&LDAPConnectionType);
     PyModule_AddObject(module, "ldapconnection", (PyObject *)&LDAPConnectionType);
 
+    Py_INCREF(&LDAPSearchIterType);
+    PyModule_AddObject(module, "ldapsearchiter", (PyObject *)&LDAPSearchIterType);
+
     return module;
 }

@@ -5,13 +5,15 @@
 
 """
 import socket
-from typing import Any, Union, List, Tuple, Optional, NoReturn, Dict
+from typing import Any, Union, List, Tuple, Optional, NoReturn, Dict, TypeVar
 
 from .ldapurl import LDAPURL
 from .ldapconnection import BaseLDAPConnection, LDAPConnection
 from .asyncio import AIOLDAPConnection
 from .ldapconnection import LDAPSearchScope
 from .ldapentry import LDAPEntry
+
+CT = TypeVar('CT', bound=BaseLDAPConnection)
 
 class LDAPClient:
     """
@@ -52,8 +54,8 @@ class LDAPClient:
             return socket.socketpair()
         # Backward compatibility on Windows from Python 3.5.
         # Origin: https://gist.github.com/4325783, by Geert Jansen.  Public domain.
-        def socketpair(family=socket.AF_INET,
-                       type=socket.SOCK_STREAM,
+        def socketpair(family: Any = socket.AF_INET,
+                       type: Any = socket.SOCK_STREAM,
                        proto: int = 0) -> Tuple[socket.socket, socket.socket]:
             import errno
             # We create a connected TCP socket. Note the trick with setblocking(0)
@@ -540,7 +542,7 @@ class LDAPClient:
 
     def connect(self, is_async: bool = False,
                 timeout: Optional[float] = None,
-                **kwargs: Dict[str, Any]) -> BaseLDAPConnection:
+                **kwargs: Dict[str, Any]) -> CT:
         """
         Open a connection to the LDAP server.
 

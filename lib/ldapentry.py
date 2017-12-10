@@ -1,10 +1,17 @@
 from enum import IntEnum
-from typing import Union
+from typing import Union, TypeVar, Any, Tuple, Dict, Optional, NoReturn
 
 from ._bonsai import ldapentry
 from .errors import InvalidDN
 from .ldapdn import LDAPDN
 from .ldapvaluelist import LDAPValueList
+
+MYPY = False
+
+if MYPY:
+    from .ldapconnection import BaseLDAPConnection
+
+CT = TypeVar('CT', bound='BaseLDAPConnection')
 
 class LDAPModOp(IntEnum):
     """ Enumeration for LDAP modification operations. """
@@ -13,18 +20,17 @@ class LDAPModOp(IntEnum):
     REPLACE = 2  #: For replacing the existing attribute values.
 
 class LDAPEntry(ldapentry):
-    def __init__(self, dn: Union[LDAPDN, str], conn=None) -> None:
+    def __init__(self, dn: Union[LDAPDN, str], conn: Optional[CT] = None) -> None:
         try:
             super().__init__(str(dn), conn)
-            self.__extended_dn = None
+            self.__extended_dn = None # type: Optional[str]
         except InvalidDN:
             # InvalidDN error caused by extended DN control.
             splitted_dn = str(dn).split(';')
             super().__init__(splitted_dn[-1], conn)
-            self.__extended_dn = dn
+            self.__extended_dn = str(dn)
 
-    def delete(self, timeout: float = None,
-               recursive: bool=False) -> Union[bool, int]:
+    def delete(self, timeout: Optional[float] = None, recursive: bool = False) -> Any:
         """
         Remove LDAP entry from the dictionary server.
 
@@ -39,7 +45,7 @@ class LDAPEntry(ldapentry):
             value.status = 2
         return res
 
-    def modify(self, timeout: float = None) -> Union[bool, int]:
+    def modify(self, timeout: Optional[float] = None) -> Any:
         """
         Send entry's modifications to the dictionary server.
 
@@ -49,8 +55,8 @@ class LDAPEntry(ldapentry):
         """
         return self.connection._evaluate(super().modify(), timeout)
 
-    def rename(self, newdn: Union[str, LDAPDN],
-               timeout: float = None) -> Union[bool, int]:
+    def rename(self, newdn: Union[str, LDAPDN], timeout:
+        Optional[float] = None) -> Any:
         """
         Change the entry's distinguished name.
 
@@ -63,7 +69,7 @@ class LDAPEntry(ldapentry):
             newdn = str(newdn)
         return self.connection._evaluate(super().rename(newdn), timeout)
 
-    def update(self, *args, **kwds) -> None:
+    def update(self, *args: Tuple, **kwds: Dict[str, Any]) -> None:
         """
         Update the LDAPEntry with the key/value pairs from other, overwriting existing keys.
         (Same as dict's update method.)
@@ -90,7 +96,7 @@ class LDAPEntry(ldapentry):
         for key in keys:
             del self[key]
 
-    def get(self, key, default=None):
+    def get(self, key: str, default: Any = None) -> Any:
         """
         Return the value for `key` if `key` is in the LDAPEntry,
         else `default`. (Same as dict's get method.)
@@ -100,7 +106,7 @@ class LDAPEntry(ldapentry):
         except KeyError:
             return default
 
-    def pop(self, *args):
+    def pop(self, *args: Tuple) -> Any:
         """
         LDAPEntry.pop(k[,d]) -> v, remove specified key and return the
         corresponding value. If key is not found, d is returned if given,
@@ -126,7 +132,7 @@ class LDAPEntry(ldapentry):
             except IndexError:
                 raise err
 
-    def popitem(self):
+    def popitem(self) -> Tuple[str, Any]:
         """
         LDAPEntry.popitem() -> (k, v), remove and return some (key, value)
         pair as a 2-tuple; but raise KeyError if LDAPEntry is empty.
@@ -139,7 +145,7 @@ class LDAPEntry(ldapentry):
         except IndexError:
             raise KeyError("popitem(): LDAPEntry is empty")
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         """
         Two LDAPEntry objects are considered equals, if their DN is the same.
 
@@ -152,7 +158,7 @@ class LDAPEntry(ldapentry):
         else:
             return super().__eq__(other)
 
-    def _status(self):
+    def _status(self) -> Dict:
         status = {}
         for key, value in self.items():
             status[key] = value._status_dict
@@ -160,7 +166,7 @@ class LDAPEntry(ldapentry):
         return status
 
     @property
-    def extended_dn(self):
+    def extended_dn(self) -> Optional[str]:
         """
         The extended DN of the entry. It is None, if the extended DN control
         is not set or not supported. The attribute is read-only.
@@ -168,10 +174,10 @@ class LDAPEntry(ldapentry):
         return self.__extended_dn
 
     @extended_dn.setter
-    def extended_dn(self, value):
+    def extended_dn(self, value: Any) -> NoReturn:
         raise ValueError("Extended_dn attribute cannot be set.")
 
-    def change_attribute(self, name: str, optype: int, *values) -> None:
+    def change_attribute(self, name: str, optype: int, *values: Tuple) -> None:
         """
         Change an attribute of the entry with explicit LDAP modification type
         by listing the values as parameters.
