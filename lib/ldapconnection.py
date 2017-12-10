@@ -7,6 +7,12 @@ from .ldapdn import LDAPDN
 from .ldapentry import LDAPEntry
 from .errors import UnwillingToPerform, NotAllowedOnNonleaf
 
+MYPY = False
+
+if MYPY:
+    from .ldapclient import LDAPClient
+    from ._bonsai import ldapsearchiter
+
 class LDAPSearchScope(IntEnum):
     """ Enumeration for LDAP search scopes. """
     BASE = 0  #: For searching only the base DN.
@@ -17,15 +23,15 @@ class LDAPSearchScope(IntEnum):
 
 class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
 
-    def __init__(self, client, is_async: bool = False) -> None:
+    def __init__(self, client: 'LDAPClient', is_async: bool = False) -> None:
         self.__client = client
         super().__init__(client, is_async)
 
-    def __enter__(self):
+    def __enter__(self) -> 'BaseLDAPConnection':
         """ Context manager entry point. """
         return self
 
-    def __exit__(self, *exc: Tuple):
+    def __exit__(self, *exc: Tuple) -> None:
         """ Context manager exit point. """
         self.close()
 
@@ -50,32 +56,24 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         return self._evaluate(super().modify_password(user, new_password,
                                                       old_password), timeout)
 
-    def search(self, base: Optional[Union[str, LDAPDN]] = None,
-               scope: Optional[Union[LDAPSearchScope, int]] = None,
-               filter: Optional[str] = None, attrlist: Optional[List[str]] = None,
-               timeout: Optional[float] = None, sizelimit: int = 0,
-               attrsonly: bool = False, sort_order: Optional[List[str]] = None,
-               page_size: int = 0, offset: int = 0, before_count: int = 0,
-               after_count: int = 0, est_list_count: int = 0, 
-               attrvalue: Optional[str] = None) -> Any:
-        # Documentation in the docs/api.rst with detailed examples.
-        # Load values from the LDAPURL, if it is not presented on the
-        # parameter list.
+    def __base_search(self, base: Optional[Union[str, LDAPDN]] = None,
+                      scope: Optional[Union[LDAPSearchScope, int]] = None,
+                      filterexp: Optional[str] = None, attrlist: Optional[List[str]] = None,
+                      timeout: Optional[float] = None, sizelimit: int = 0,
+                      attrsonly: bool = False, sort_order: Optional[List[str]] = None,
+                      page_size: int = 0, offset: int = 0, before_count: int = 0,
+                      after_count: int = 0, est_list_count: int = 0, 
+                      attrvalue: Optional[str] = None) -> Any:
+
         _base = str(base) if base is not None else str(self.__client.url.basedn)
         _scope = scope if scope is not None else self.__client.url.scope_num
-        _filter = filter if filter is not None else self.__client.url.filter
+        _filter = filterexp if filterexp is not None else self.__client.url.filter
         _attrlist = attrlist if attrlist is not None else self.__client.url.attributes
         _timeout = timeout if timeout is not None else 0.0
         if sort_order is not None:
             _sort_order = self.__create_sort_list(sort_order)
         else:
             _sort_order = []
-        if _sort_order == [] and (offset != 0 or attrvalue is not None):
-            raise UnwillingToPerform("Sort control is required with"
-                                     " virtual list view.")
-        if page_size != 0 and (offset != 0 or attrvalue is not None):
-            raise UnwillingToPerform("Virtual list view incompatible"
-                                     " with paged search.")
         msg_id = super().search(_base, _scope, _filter, _attrlist,
                                 _timeout, sizelimit, attrsonly, _sort_order,
                                 page_size, offset, before_count, after_count,
@@ -83,7 +81,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         return self._evaluate(msg_id, timeout)
 
     @staticmethod
-    def __create_sort_list(sort_list: List[str]):
+    def __create_sort_list(sort_list: List[str]) -> List[Tuple[str, bool]]:
         """
         Set a list of attribute names to sort entries in a search result. For
         reverse order set '-' before to the attribute name.
@@ -108,6 +106,42 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
                              " from each other.")
         return sort_attrs
 
+    def search(self, base: Optional[Union[str, LDAPDN]] = None,
+               scope: Optional[Union[LDAPSearchScope, int]] = None,
+               filterexp: Optional[str] = None, attrlist: Optional[List[str]] = None,
+               timeout: Optional[float] = None, sizelimit: int = 0,
+               attrsonly: bool = False, sort_order: Optional[List[str]] = None) -> Any:
+        return self.__base_search(base, scope, filterexp, attrlist,
+                                  timeout, sizelimit, attrsonly, sort_order)
+
+
+    def paged_search(self, base: Optional[Union[str, LDAPDN]] = None,
+                     scope: Optional[Union[LDAPSearchScope, int]] = None,
+                     filterexp: Optional[str] = None, attrlist: Optional[List[str]] = None,
+                     timeout: Optional[float] = None, sizelimit: int = 0,
+                     attrsonly: bool = False, sort_order: Optional[List[str]] = None,
+                     page_size: int = 1) -> Any:
+        return self.__base_search(base, scope, filterexp, attrlist,
+                                  timeout, sizelimit, attrsonly, sort_order,
+                                  page_size)
+
+    def virtual_list_search(self, base: Optional[Union[str, LDAPDN]] = None,
+                            scope: Optional[Union[LDAPSearchScope, int]] = None,
+                            filterexp: Optional[str] = None,
+                            attrlist: Optional[List[str]] = None,
+                            timeout: Optional[float] = None,
+                            sizelimit: int = 0, attrsonly: bool = False,
+                            sort_order: Optional[List[str]] = None, offset: int = 1,
+                            before_count: int = 0, after_count: int = 0,
+                            est_list_count: int = 0, attrvalue: Optional[str] = None) -> Any:
+        if sort_order is None and (offset != 0 or attrvalue is not None):
+            raise UnwillingToPerform("Sort control is required with"
+                                     " virtual list view.")
+        return self.__base_search(base, scope, filterexp, attrlist,
+                                  timeout, sizelimit, attrsonly, sort_order,
+                                  0, offset, before_count, after_count,
+                                  est_list_count, attrvalue)
+
     def whoami(self, timeout: Optional[float] = None) -> Any:
         return self._evaluate(super().whoami(), timeout)
 
@@ -124,7 +158,7 @@ class LDAPConnection(BaseLDAPConnection):
 
     :param LDAPClient client: a client object.
     """
-    def __init__(self, client) -> None:
+    def __init__(self, client: 'LDAPClient') -> None:
         super().__init__(client, False)
 
     def _evaluate(self, msg_id: int, timeout: Optional[float] = None) -> Any:
@@ -185,18 +219,40 @@ class LDAPConnection(BaseLDAPConnection):
 
     def search(self, base: Optional[Union[str, LDAPDN]] = None,
                scope: Optional[Union[LDAPSearchScope, int]] = None,
-               filter: Optional[str] = None, attrlist: Optional[List[str]] = None,
-               timeout: Optional[float] = None, sizelimit: int = 0,
-               attrsonly: bool = False, sort_order: Optional[List[str]] = None,
-               page_size: int = 0, offset: int = 0, before_count: int = 0,
-               after_count: int = 0, est_list_count: int = 0, 
-               attrvalue: Optional[str] = None) -> Union[List[LDAPEntry], Iterator,
-                                                         Tuple[List[LDAPEntry], dict]]:
-        return super().search(base, scope, filter, attrlist,
-                              timeout, sizelimit, attrsonly, sort_order,
-                              page_size, offset, before_count, after_count,
-                              est_list_count, attrvalue)
+               filterexp: Optional[str] = None,
+               attrlist: Optional[List[str]] = None,
+               timeout: Optional[float] = None,
+               sizelimit: int = 0, attrsonly: bool = False,
+               sort_order: Optional[List[str]] = None) -> List[LDAPEntry]:
+        # Documentation in the docs/api.rst with detailed examples.
+        # Load values from the LDAPURL, if it is not presented on the
+        # parameter list.
+        return super().search(base, scope, filterexp, attrlist,
+                              timeout, sizelimit, attrsonly, sort_order)
 
+    def paged_search(self, base: Optional[Union[str, LDAPDN]] = None,
+                     scope: Optional[Union[LDAPSearchScope, int]] = None,
+                     filterexp: Optional[str] = None,
+                     attrlist: Optional[List[str]] = None,
+                     timeout: Optional[float] = None, sizelimit: int = 0,
+                     attrsonly: bool = False, sort_order: Optional[List[str]] = None,
+                     page_size: int = 1) -> 'ldapsearchiter':
+        return super().paged_search(base, scope, filterexp, attrlist,
+                                    timeout, sizelimit, attrsonly, sort_order,
+                                    page_size)
+
+    def virtual_list_search(self, base: Optional[Union[str, LDAPDN]] = None,
+                            scope: Optional[Union[LDAPSearchScope, int]] = None,
+                            filterexp: Optional[str] = None, attrlist: Optional[List[str]] = None,
+                            timeout: Optional[float] = None, sizelimit: int = 0,
+                            attrsonly: bool = False, sort_order: Optional[List[str]] = None,
+                            offset: int = 1, before_count: int = 0,
+                            after_count: int = 0, est_list_count: int = 0,
+                            attrvalue: Optional[str] = None) -> Tuple[List[LDAPEntry], dict]:
+        return super().virtual_list_search(base, scope, filterexp, attrlist,
+                                           timeout, sizelimit, attrsonly, sort_order,
+                                           offset, before_count, after_count,
+                                           est_list_count, attrvalue)
 
     def modify_password(self, user: Optional[Union[str, LDAPDN]] = None,
                         new_password: Optional[str] = None,

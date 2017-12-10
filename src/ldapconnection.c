@@ -373,7 +373,7 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
     }
 
     if (server_ctrls != NULL) {
-        if (search_iter != NULL && search_iter->page_size > 1) {
+        if (search_iter != NULL && search_iter->page_size > 0) {
             /* Create page control and add to the server controls. */
             rc = ldap_create_page_control(self->ld, search_iter->page_size,
                     search_iter->cookie, 0, &page_ctrl);

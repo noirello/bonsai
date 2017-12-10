@@ -203,7 +203,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             # To keep compatibility with 3.4 it does not uses async for,
             # but its while loop equivalent.
-            res_iter = yield conn.search(search_dn, 1, page_size=3)
+            res_iter = yield conn.paged_search(search_dn, 1, page_size=3)
             res_iter = type(res_iter).__aiter__(res_iter)
             cnt = 0
             while True:

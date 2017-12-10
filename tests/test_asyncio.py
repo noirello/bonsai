@@ -187,7 +187,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
         with (yield from self.client.connect(True)) as conn:
             # To keep compatibility with 3.4 it does not uses async for,
             # but its while loop equvivalent.
-            res_iter = yield from conn.search(search_dn, 1, page_size=3)
+            res_iter = yield from conn.paged_search(search_dn, 1, page_size=3)
             res_iter = type(res_iter).__aiter__(res_iter)
             cnt = 0
             while True:

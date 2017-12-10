@@ -370,7 +370,7 @@ class LDAPConnectionTest(unittest.TestCase):
     def test_vlv_offset(self):
         """ Test VLV control with offset. """
         search_dn = "ou=nerdherd,%s" % self.basedn
-        res, ctrl = self.conn.search(search_dn, 1, attrlist=['uidNumber'],
+        res, ctrl = self.conn.virtual_list_search(search_dn, 1, attrlist=['uidNumber'],
                                      offset=2, sort_order=["-uidNumber"],
                                      before_count=1, after_count=1,
                                      est_list_count=6)
@@ -382,7 +382,7 @@ class LDAPConnectionTest(unittest.TestCase):
     def test_vlv_attrvalue(self):
         """ Test VLV control with attribute value. """
         search_dn = "ou=nerdherd,%s" % self.basedn
-        res, ctrl = self.conn.search(search_dn, 1, attrlist=['uidNumber'],
+        res, ctrl = self.conn.virtual_list_search(search_dn, 1, attrlist=['uidNumber'],
                                      attrvalue=2, sort_order=["uidNumber"],
                                      before_count=1, after_count=2,
                                      est_list_count=6)
@@ -394,26 +394,16 @@ class LDAPConnectionTest(unittest.TestCase):
         """ Test VLV control without sort control. """
         search_dn = "ou=nerdherd,%s" % self.basedn
         self.assertRaises(bonsai.UnwillingToPerform,
-                          lambda: self.conn.search(search_dn, 1,
+                          lambda: self.conn.virtual_list_search(search_dn, 1,
                                                    attrlist=['uidNumber'],
                                                    offset=1, before_count=1,
-                                                   after_count=2,
-                                                   est_list_count=6))
-
-    def test_vlv_with_page_size(self):
-        """ Test VLV control with page size. """
-        search_dn = "ou=nerdherd,%s" % self.basedn
-        self.assertRaises(bonsai.UnwillingToPerform,
-                          lambda: self.conn.search(search_dn, 1, page_size=3,
-                                                   sort_order=["-uidNumber"],
-                                                   attrvalue=1, before_count=1,
                                                    after_count=2,
                                                    est_list_count=6))
 
     def test_paged_search(self):
         """ Test paged results control. """
         search_dn = "ou=nerdherd,%s" % self.basedn
-        res = self.conn.search(search_dn, 1, page_size=2)
+        res = self.conn.paged_search(search_dn, 1, page_size=2)
         for ent in res:
             self.assertIsInstance(ent, bonsai.LDAPEntry)
         page = 1  # First page already is acquired.
@@ -432,7 +422,7 @@ class LDAPConnectionTest(unittest.TestCase):
         client = LDAPClient(self.url)
         conn = client.connect()
         search_dn = "ou=nerdherd,%s" % self.basedn
-        res = conn.search(search_dn, 1, page_size=3)
+        res = conn.paged_search(search_dn, 1, page_size=3)
         if len(res) != 3:
             self.fail("The size of the page is not what is expected.")
         entry = 0
