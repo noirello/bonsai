@@ -20,7 +20,7 @@ class SimpleAsyncConn(BaseLDAPConnection):
     def __init__(self, client):
         super().__init__(client, True)
 
-    def _evaluate(self, msg_id, timeout):
+    def _evaluate(self, msg_id, timeout=None):
         return msg_id
 
 def invoke_kinit(user, password):
@@ -122,6 +122,11 @@ class LDAPConnectionTest(unittest.TestCase):
         conn = self._binding("NTLMAUTH", "NTLM", None)
         conn.close()
 
+    def test_bind_invalid(self):
+        """ Test invalid authentication mechanism. """
+        connect = lambda: self._binding("DIGESTAUTH", "SCRAM", None)
+        self.assertRaises(bonsai.AuthMethodNotSupported, connect)
+
     def _bind_gssapi_kinit(self, authzid):
         if sys.platform == "win32" or sys.platform == "darwin":
             self.skipTest("Kerberos kinit is available only on Linux.")
@@ -179,6 +184,18 @@ class LDAPConnectionTest(unittest.TestCase):
                                           self.cfg["GSSAPIAUTH"]["realm"],
                                           None))
         self.assertRaises(bonsai.AuthenticationError, client.connect)
+
+    def test_bind_spnego(self):
+        """ Test GSS-SPNEGO connection with automatic TGT requesting. """
+        if ("realm" not in self.cfg["GSSAPIAUTH"]
+                or self.cfg["GSSAPIAUTH"]["realm"] == "None"):
+            self.skipTest("Realm is not set.")
+        if sys.platform == "linux":
+            # Make sure keytab is empty.
+            subprocess.check_call("kdestroy")
+        conn = self._binding("GSSAPIAUTH", "GSS-SPNEGO", None,
+                             self.cfg["GSSAPIAUTH"]["realm"].upper())
+        conn.close()
 
     def _bind_external(self, authzid):
         if 'EXTERNALAUTH' not in self.cfg:
