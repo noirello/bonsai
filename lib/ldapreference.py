@@ -1,4 +1,4 @@
-from typing import List, Any, Union, NoReturn
+from typing import List, Any, Union
 
 from .ldapclient import LDAPClient
 from .ldapurl import LDAPURL
@@ -42,5 +42,5 @@ class LDAPReference:
         return self.__refs
 
     @references.setter
-    def references(self, value: Any) -> NoReturn:
+    def references(self, value: Any) -> None:
         raise ValueError("The references attribute cannot be set.")

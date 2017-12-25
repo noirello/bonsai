@@ -1,5 +1,5 @@
 from ipaddress import IPv6Address
-from typing import Any, List, Union, Tuple, Optional, NoReturn
+from typing import Any, List, Union, Tuple, Optional
 
 import re
 import urllib.parse
@@ -29,7 +29,7 @@ class LDAPURL:
         if strurl:
             self.__str2url(strurl)
 
-    def __delattr__(self, attr: str) -> NoReturn:
+    def __delattr__(self, attr: str) -> None:
         """ None of the attributions can be deleted. """
         raise AttributeError("%s cannot be deleted." % attr)
 

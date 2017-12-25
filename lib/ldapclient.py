@@ -5,7 +5,7 @@
 
 """
 import socket
-from typing import Any, Union, List, Tuple, Optional, NoReturn, Dict, TypeVar
+from typing import Any, Union, List, Tuple, Optional, Dict, TypeVar
 
 from .ldapurl import LDAPURL
 from .ldapconnection import BaseLDAPConnection, LDAPConnection
@@ -386,7 +386,7 @@ class LDAPClient:
         return self.__mechanism
 
     @mechanism.setter
-    def mechanism(self, value: Any = None) -> NoReturn:
+    def mechanism(self, value: Any = None) -> None:
         raise ValueError("Mechanism attribute cannot be set.")
 
     @property
@@ -395,7 +395,7 @@ class LDAPClient:
         return self.__credentials
 
     @credentials.setter
-    def credentials(self, value: Any = None) -> NoReturn:
+    def credentials(self, value: Any = None) -> None:
         raise ValueError("Credentials attribute cannot be set.")
 
     @property
@@ -404,7 +404,7 @@ class LDAPClient:
         return self.__tls
 
     @tls.setter
-    def tls(self, value: Any = None) -> NoReturn:
+    def tls(self, value: Any = None) -> None:
         raise ValueError("TlS attribute cannot be set.")
 
     @property

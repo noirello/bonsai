@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import Union, TypeVar, Any, Tuple, Dict, Optional, NoReturn
+from typing import Union, TypeVar, Any, Tuple, Dict, Optional
 
 from ._bonsai import ldapentry
 from .errors import InvalidDN
@@ -174,7 +174,7 @@ class LDAPEntry(ldapentry):
         return self.__extended_dn
 
     @extended_dn.setter
-    def extended_dn(self, value: Any) -> NoReturn:
+    def extended_dn(self, value: Any) -> None:
         raise ValueError("Extended_dn attribute cannot be set.")
 
     def change_attribute(self, name: str, optype: int, *values: Tuple) -> None:
