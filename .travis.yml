@@ -34,17 +34,13 @@ matrix:
       os: osx
       before_install:
         - brew update
-        - brew install python3
-        - virtualenv env -p python3
-        - source env/bin/activate
+        - brew upgrade python3
         - brew install openldap --with-sssvlv
-        - pip3 install tornado
-        - pip3 install gevent
-        - pip3 install codecov
-        - pip3 install pytest-cov
-        - pip3 install delocate
+        - pip3 install pipenv
+        - pipenv install --dev
+        - pipenv graph
         # Install Cyrus SASL.
-        - curl https://pastebin.com/raw/dHtWv7k0 -o cyrussasl.rb
+        - curl https://pastebin.com/raw/whf8egYA -o cyrussasl.rb
         - cat ./cyrussasl.rb
         - brew install --build-from-formula ./cyrussasl.rb --with-ntlm
         # Set alias for localhost.
@@ -63,7 +59,7 @@ matrix:
         - printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
       before_script:
         - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/.travis/krb5/krb5.conf"
-        - INSTALL_PATH=`python3 -c "import bonsai; print(bonsai.__file__[:-12])"`
+        - INSTALL_PATH=`pipenv run python -c "import bonsai; print(bonsai.__file__[:-12])"`
         - echo $INSTALL_PATH
       after_success:
         - sed -i.bak 's|'$INSTALL_PATH'|'$TRAVIS_BUILD_DIR/lib'|g' .coverage
@@ -72,7 +68,7 @@ matrix:
         - python setup.py clean
         - python setup.py build -f
         - python setup.py bdist_wheel
-        - delocate-wheel -v ./dist/bonsai-*.whl
+        - pipenv run delocate-wheel -v ./dist/bonsai-*.whl
         - pip3 install clint pycryptodome requests requests_toolbelt
         - curl https://raw.githubusercontent.com/nneonneo/ffsend/master/ffsend.py -o ffsend.py
         - python ./ffsend.py ./dist/bonsai-*.whl
@@ -84,9 +80,9 @@ before_install:
   # For GSSAPI authentication.
   - sudo apt-get install -y krb5-user libsasl2-modules-gssapi-mit libkrb5-dev
   - if [[ $TRAVIS_PYTHON_VERSION != 'nightly' ]]; then pip install gevent; fi
-  - pip install tornado
-  - pip install codecov
-  - pip install pytest-cov
+  - pip install pipenv
+  - pipenv install --dev
+  - pipenv graph
   - docker build -t bonsai -f ./.travis/docker/Dockerfile .
   - docker run --cap-add=NET_ADMIN -d -h bonsai.test --name server bonsai
   # Set container IP in the hosts file.
@@ -106,7 +102,7 @@ before_install:
 
 install:
   - export CFLAGS="-coverage"
-  - python setup.py install
+  - pipenv run python setup.py install
 
 before_script:
   # Change localhost IP in test.ini to the container's.
@@ -114,11 +110,11 @@ before_script:
   # Set used Kerberos config file to my own.
   - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/.travis/krb5/krb5.conf"
   # Set install path for coverage.py.
-  - INSTALL_PATH=`python -c "import bonsai; print(bonsai.__file__[:-12])"`
+  - INSTALL_PATH=`pipenv run python -c "import bonsai; print(bonsai.__file__[:-12])"`
   - echo $INSTALL_PATH
 
 script:
-  - py.test -v --cov-config .coveragerc --cov-report= --cov=$INSTALL_PATH
+  - pipenv run py.test -v --cov-config .coveragerc --cov-report= --cov=$INSTALL_PATH
 
 after_success:
   # Change path of the Python source files in .coverage.
