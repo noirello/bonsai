@@ -826,9 +826,15 @@ LDAPEntry_SetDN(LDAPEntry *self, PyObject *value) {
 /* Set char* `value` as a DN for an LDAP entry. */
 int
 LDAPEntry_SetStringDN(LDAPEntry *self, char *value) {
+    int rc = 0;
+
     PyObject *dn = PyUnicode_FromString(value);
     if (dn == NULL) return -1;
-    return LDAPEntry_SetDN(self, dn);
+
+    rc = LDAPEntry_SetDN(self, dn);
+    Py_DECREF(dn);
+
+    return rc;
 }
 
 static PyGetSetDef ldapentry_getsetters[] = {
