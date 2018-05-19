@@ -28,3 +28,4 @@ vc140.pdb
 .vscode/
 .mypy_cache/
 .pytest_cache/
+Pipfile.lock

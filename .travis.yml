@@ -37,7 +37,7 @@ matrix:
         - brew upgrade python3
         - brew install openldap --with-sssvlv
         - pip3 install pipenv
-        - pipenv install --dev
+        - pipenv install --dev --skip-lock
         - pipenv graph
         # Install Cyrus SASL.
         - curl https://pastebin.com/raw/whf8egYA -o cyrussasl.rb
@@ -81,7 +81,7 @@ before_install:
   - sudo apt-get install -y krb5-user libsasl2-modules-gssapi-mit libkrb5-dev
   - if [[ $TRAVIS_PYTHON_VERSION != 'nightly' ]]; then pip install gevent; fi
   - pip install pipenv
-  - pipenv install --dev
+  - pipenv install --dev --skip-lock
   - pipenv graph
   - docker build -t bonsai -f ./.travis/docker/Dockerfile .
   - docker run --cap-add=NET_ADMIN -d -h bonsai.test --name server bonsai
