@@ -22,7 +22,7 @@ class LDAPModOp(IntEnum):
 class LDAPEntry(ldapentry):
     def __init__(self, dn: Union[LDAPDN, str], conn: Optional[CT] = None) -> None:
         try:
-            super().__init__(str(dn), conn)
+            super().__init__(dn, conn)
             self.__extended_dn = None # type: Optional[str]
         except InvalidDN:
             # InvalidDN error caused by extended DN control.

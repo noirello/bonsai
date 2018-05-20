@@ -9,7 +9,7 @@ ldapconnection_dealloc(LDAPConnection* self) {
     DEBUG("ldapconnection_dealloc (self:%p)", self);
     Py_XDECREF(self->client);
     Py_XDECREF(self->pending_ops);
-    Py_XDECREF(self->socketpair); // Cause invalid freeing random occasion.
+    Py_XDECREF(self->socketpair);
 
     Py_TYPE(self)->tp_free((PyObject*)self);
 }

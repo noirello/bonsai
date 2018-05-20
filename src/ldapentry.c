@@ -65,17 +65,17 @@ ldapentry_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 /*  Initialising LDAPEntry. */
 static int
 ldapentry_init(LDAPEntry *self, PyObject *args, PyObject *kwds) {
+    PyObject *dnobj = NULL;
     PyObject *conn = NULL;
     PyObject *tmp;
     static char *kwlist[] = {"dn", "conn", NULL};
-    char *dnstr;
 
     DEBUG("ldapentry_init (self:%p)", self);
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|O", kwlist, &dnstr, &conn)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", kwlist, &dnobj, &conn)) {
         return -1;
     }
 
-    if (LDAPEntry_SetStringDN(self, dnstr) != 0) return -1;
+    if (LDAPEntry_SetDN(self, dnobj) != 0) return -1;
 
     if (conn != NULL && conn != Py_None && PyObject_IsInstance(conn, (PyObject *)&LDAPConnectionType) != 1) {
         PyErr_SetString(PyExc_TypeError, "Connection must be an LDAPConnection type.");
