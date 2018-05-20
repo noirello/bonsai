@@ -55,6 +55,12 @@ matrix:
         # Start services.
         - sudo nohup python3 ./.travis/delay.py &
         - sudo /usr/local/opt/openldap/libexec/slapd -h "ldap:// ldaps://"
+        # Waiting for slapd to start.
+        - sleep 4
+        # Check that slapd is working.
+        - ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U admin -w p@ssword
+        - ldapsearch -Y DIGEST-MD5 -U admin -w p@ssword -h bonsai.test -b "" -s base 'objectclass=*' -LLL +
+        - ldapsearch -VV
         # Set library and include path.
         - printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
       before_script:
@@ -79,7 +85,6 @@ before_install:
   - sudo apt-get install -y libldap2-dev libsasl2-dev ldap-utils
   # For GSSAPI authentication.
   - sudo apt-get install -y krb5-user libsasl2-modules-gssapi-mit libkrb5-dev
-  - if [[ $TRAVIS_PYTHON_VERSION != 'nightly' ]]; then pip install gevent; fi
   - pip install pipenv
   - pipenv install --dev --skip-lock
   - pipenv graph
