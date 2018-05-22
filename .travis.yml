@@ -82,9 +82,10 @@ matrix:
 
 before_install:
   - sudo apt-get update
-  - sudo apt-get install -y libldap2-dev libsasl2-dev ldap-utils
+  - sudo apt-get install -y libldap2-dev libsasl2-dev ldap-utils sasl2-bin
   # For GSSAPI authentication.
   - sudo apt-get install -y krb5-user libsasl2-modules-gssapi-mit libkrb5-dev
+  - sudo apt list --installed
   - pip install pipenv
   - pipenv install --dev --skip-lock
   - pipenv graph
@@ -104,6 +105,7 @@ before_install:
   - ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U admin -w p@ssword
   - ldapsearch -h bonsai.test -b "" -s base 'objectclass=*' -x -LLL +
   - ldapsearch -VV
+  - saslpluginviewer
 
 install:
   - export CFLAGS="-coverage"
