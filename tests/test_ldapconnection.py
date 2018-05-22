@@ -134,7 +134,7 @@ class LDAPConnectionTest(unittest.TestCase):
             invoke_kinit(self.cfg["GSSAPIAUTH"]["user"],
                          self.cfg["GSSAPIAUTH"]["password"])
             conn = self._binding("GSSAPIAUTH", "GSSAPI", authzid)
-            subprocess.check_call("kdestroy")
+            subprocess.call("kdestroy")
             return conn
         except subprocess.CalledProcessError:
             self.fail("Receiving TGT is failed.")
@@ -162,7 +162,7 @@ class LDAPConnectionTest(unittest.TestCase):
             self.skipTest("Realm is not set.")
         if sys.platform == "linux":
             # Make sure keytab is empty.
-            subprocess.check_call("kdestroy")
+            subprocess.call("kdestroy")
         conn = self._binding("GSSAPIAUTH", "GSSAPI", None,
                              self.cfg["GSSAPIAUTH"]["realm"].upper())
         conn.close()
@@ -185,6 +185,7 @@ class LDAPConnectionTest(unittest.TestCase):
                                           None))
         self.assertRaises(bonsai.AuthenticationError, client.connect)
 
+    @unittest.skipIf('TRAVIS' in os.environ, "No GSS-SPNEGO mech on Trusty")
     def test_bind_spnego(self):
         """ Test GSS-SPNEGO connection with automatic TGT requesting. """
         if ("realm" not in self.cfg["GSSAPIAUTH"]
@@ -192,7 +193,7 @@ class LDAPConnectionTest(unittest.TestCase):
             self.skipTest("Realm is not set.")
         if sys.platform == "linux":
             # Make sure keytab is empty.
-            subprocess.check_call("kdestroy")
+            subprocess.call("kdestroy")
         conn = self._binding("GSSAPIAUTH", "GSS-SPNEGO", None,
                              self.cfg["GSSAPIAUTH"]["realm"].upper())
         conn.close()
