@@ -122,9 +122,9 @@ class LDAPConnectionTest(unittest.TestCase):
         conn = self._binding("NTLMAUTH", "NTLM", None)
         conn.close()
 
-    def test_bind_invalid(self):
-        """ Test invalid authentication mechanism. """
-        connect = lambda: self._binding("DIGESTAUTH", "SCRAM", None)
+    def test_bind_not_supported_auth(self):
+        """ Test not supported authentication mechanism by the server. """
+        connect = lambda: self._binding("DIGESTAUTH", "SCRAM-SHA-1", None)
         self.assertRaises(bonsai.AuthMethodNotSupported, connect)
 
     def _bind_gssapi_kinit(self, authzid):
