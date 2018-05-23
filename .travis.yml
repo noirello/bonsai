@@ -108,6 +108,7 @@ before_install:
   - saslpluginviewer
 
 install:
+  - printf "\n\n[options]\nzip_safe = False" >> setup.cfg # Avoid zipped egg file, messes with coverage and pipenv.
   - export CFLAGS="-coverage"
   - pipenv run python setup.py install
 
