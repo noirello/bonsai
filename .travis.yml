@@ -65,6 +65,7 @@ matrix:
         - printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
       before_script:
         - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/.travis/krb5/krb5.conf"
+        - export SASL_PATH=/usr/local/opt/cyrussasl/lib/sasl2/
         - INSTALL_PATH=`pipenv run python -c "import bonsai; print(bonsai.__file__[:-12])"`
         - echo $INSTALL_PATH
       after_success:
