@@ -530,15 +530,18 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     int rc;
     int msgid = -1;
     char *newparent_str, *newrdn_str, *olddn_str;
-    PyObject *newdn, *newparent, *newrdn;
+    PyObject *newdn, *newparent, *newrdn, *deleteold;
     PyObject *tmp, *new_ldapdn = NULL;
-    char *kwlist[] = {"newdn", NULL};
+    char *kwlist[] = {"newdn", "delete_old_rdn", NULL};
 
     /* Connection must be open. */
     if (LDAPConnection_IsClosed(self->conn) != 0) return NULL;
 
     DEBUG("ldapentry_rename (self:%p)", self);
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &newdn)) return NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO!", kwlist, &newdn,
+        &PyBool_Type, &deleteold)) {
+            return NULL;
+    }
 
     /* Save old dn string. */
     tmp = PyObject_Str(self->dn);
@@ -566,7 +569,8 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     Py_DECREF(newrdn);
     Py_DECREF(newparent);
 
-    rc = ldap_rename(self->conn->ld, olddn_str, newrdn_str, newparent_str, 1, NULL, NULL, &msgid);
+    rc = ldap_rename(self->conn->ld, olddn_str, newrdn_str, newparent_str,
+        PyObject_IsTrue(deleteold), NULL, NULL, &msgid);
     /* Clean up strings. */
     free(olddn_str);
     free(newrdn_str);

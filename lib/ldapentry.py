@@ -56,18 +56,19 @@ class LDAPEntry(ldapentry):
         return self.connection._evaluate(super().modify(), timeout)
 
     def rename(self, newdn: Union[str, LDAPDN], timeout:
-        Optional[float] = None) -> Any:
+        Optional[float] = None, delete_old_rdn: bool = True) -> Any:
         """
         Change the entry's distinguished name.
 
         :param str|LDAPDN newdn: the new DN of the entry.
         :param float timeout: time limit in seconds for the operation.
+        :param bool delete_old_rdn: remove old rdn with renaming.
         :return: True, if the operation is finished.
         :rtype: bool
         """
         if type(newdn) == LDAPDN:
             newdn = str(newdn)
-        return self.connection._evaluate(super().rename(newdn), timeout)
+        return self.connection._evaluate(super().rename(newdn, delete_old_rdn), timeout)
 
     def update(self, *args: Tuple, **kwds: Dict[str, Any]) -> None:
         """

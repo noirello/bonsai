@@ -193,6 +193,22 @@ class LDAPEntryTest(unittest.TestCase):
             self.assertEqual(entry.dn, obj.dn)
             entry.delete()
 
+    def test_rename_with_old_rdn(self):
+        """ Test LDAPEntry's rename LDAP operation. """
+        entry = LDAPEntry("cn=test,%s" % self.basedn)
+        self.client.set_credentials(*self.creds)
+        with self.client.connect() as conn:
+            self._add_for_renaming(conn, entry)
+            entry.rename("uid=test2,%s" % self.basedn, delete_old_rdn=False)
+            self.assertEqual(str(entry.dn), "uid=test2,%s" % self.basedn)
+            obj = conn.search("cn=test,%s" % self.basedn, 0)
+            self.assertEqual(obj, [])
+            obj = conn.search("uid=test2,%s" % self.basedn, 0)[0]
+            self.assertEqual(entry.dn, obj.dn)
+            self.assertIn("test2", obj["uid"])
+            self.assertIn("test", obj["cn"])
+            entry.delete()
+
     def test_rename_error(self):
         """ Test LDAPEntry's rename error handling. """
         dname = bonsai.LDAPDN("cn=test,%s" % self.basedn)
@@ -202,6 +218,7 @@ class LDAPEntryTest(unittest.TestCase):
         with self.client.connect() as conn:
             self._add_for_renaming(conn, entry)
             self.assertRaises(TypeError, lambda: entry.rename(0))
+            self.assertRaises(TypeError, lambda: entry.rename(0, delete_old_rdn=0))
             try:
                 newdn = bonsai.LDAPDN("cn=test2,ou=invalid,%s" % self.basedn)
                 entry.rename(newdn)
