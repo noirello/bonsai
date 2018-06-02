@@ -193,6 +193,8 @@ class LDAPEntryTest(unittest.TestCase):
             self.assertEqual(entry.dn, obj.dn)
             entry.delete()
 
+    @unittest.skipIf(sys.platform.startswith("win"),
+                     "Cannot rename entry with old RDN on Windows")
     def test_rename_with_old_rdn(self):
         """ Test LDAPEntry's rename LDAP operation. """
         entry = LDAPEntry("cn=test,%s" % self.basedn)
