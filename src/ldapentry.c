@@ -246,9 +246,9 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
         lvl = PyObject_CallFunctionObjArgs(LDAPValueListObj, NULL);
         if (lvl == NULL) goto error;
         if (values != NULL) {
+            /* Check attribute is in the raw_list. */
+            contain = PySequence_Contains(rawval_list, attrobj);
             for (i = 0; values[i] != NULL; i++) {
-                /* Check attribute is in the raw_list. */
-                contain = PySequence_Contains(rawval_list, attrobj);
                 /* Convert berval to PyObject*, if it's failed skip it. */
                 val = berval2PyObject(values[i], contain);
                 if (val == NULL) continue;
@@ -260,10 +260,14 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
                 Py_DECREF(val);
             }
         }
-        PyDict_SetItem((PyObject *)self, attrobj, lvl);
-        Py_DECREF(lvl);
         ldap_value_free_len(values);
+        PyUnicode_InternInPlace(&attrobj); /* Solves leaking attrobj key. */
+        if (PyDict_SetItem((PyObject *)self, attrobj, lvl) != 0) {
+            Py_DECREF(lvl);
+            goto error;
+        }
         Py_DECREF(attrobj);
+        Py_DECREF(lvl);
     }
     /* Cleaning the mess. */
     Py_DECREF(rawval_list);

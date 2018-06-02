@@ -53,7 +53,7 @@ ldapconnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     PyObject *async = NULL;
     PyObject *ldapclient_type = NULL;
     PyObject *tmp = NULL;
-    static char *kwlist[] = {"client", "async", NULL};
+    static char *kwlist[] = {"client", "is_async", NULL};
 
     DEBUG("ldapconnection_init (self:%p)", self);
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO!", kwlist, &client,
