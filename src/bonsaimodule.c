@@ -8,6 +8,7 @@
 #include "utils.h"
 
 PyObject *LDAPDNObj = NULL;
+PyObject *LDAPEntryObj = NULL;
 PyObject *LDAPValueListObj = NULL;
 char debugmod = 0;
 
@@ -113,6 +114,7 @@ static void
 bonsai_free(PyObject *self) {
     Py_DECREF(LDAPDNObj);
     Py_DECREF(LDAPValueListObj);
+    Py_XDECREF(LDAPEntryObj);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 

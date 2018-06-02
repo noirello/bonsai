@@ -16,6 +16,7 @@ typedef struct {
 } ldapsearchparams;
 
 extern PyObject *LDAPDNObj;
+extern PyObject *LDAPEntryObj;
 extern PyObject *LDAPValueListObj;
 extern char debugmod;
 

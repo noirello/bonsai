@@ -195,8 +195,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
     struct berval **values;
     BerElement *ber;
     PyObject *rawval_list = NULL;
-    PyObject *val = NULL, *attrobj = NULL, *tmp;
-    PyObject *ldapentry_type = NULL;
+    PyObject *val = NULL, *attrobj = NULL;
     PyObject *args = NULL;
     PyObject *lvl = NULL;
     LDAPEntry *self;
@@ -213,27 +212,23 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
     ldap_memfree(dn);
     if (args == NULL) return NULL;
 
-    /* Create a new LDAPEntry, raise PyErr_NoMemory if it's failed. */
-    ldapentry_type = load_python_object("bonsai.ldapentry", "LDAPEntry");
-    if (ldapentry_type == NULL) {
-        Py_DECREF(args);
-        return NULL;
+    if (LDAPEntryObj == NULL) {
+        /* Load Python-based LDAPEntry, if it's not already loaded. */
+        LDAPEntryObj = load_python_object("bonsai.ldapentry", "LDAPEntry");
+        if (LDAPEntryObj == NULL) return NULL;
     }
-    self = (LDAPEntry *)PyObject_CallObject(ldapentry_type, args);
+    /* Create a new LDAPEntry. */
+    self = (LDAPEntry *)PyObject_CallObject(LDAPEntryObj, args);
     Py_DECREF(args);
-    Py_DECREF(ldapentry_type);
     if (self == NULL) return NULL;
 
     /* Get list of attribute's names, whose values have to keep in bytearray.*/
-    rawval_list = PyList_New(0);
-    tmp = PyObject_GetAttrString(conn->client, "raw_attributes");
-    if (rawval_list == NULL || tmp == NULL ||
-            _PyList_Extend((PyListObject *)rawval_list, tmp) != Py_None) {
+    rawval_list = PyObject_GetAttrString(conn->client, "raw_attributes");
+    if (rawval_list == NULL) {
         Py_DECREF(self);
-        Py_XDECREF(tmp);
         return NULL;
     }
-    Py_DECREF(tmp);
+
     /* Iterate over the LDAP attributes. */
     for (attr = ldap_first_attribute(conn->ld, entrymsg, &ber);
         attr != NULL; attr = ldap_next_attribute(conn->ld, entrymsg, ber)) {
