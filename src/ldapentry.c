@@ -708,8 +708,8 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
     } else {
         free(newkey);
         /* This means, the item has to be removed. */
-        if (PyDict_DelItem((PyObject *)self, key) != 0) return -1;
         if (PyList_Append(self->deleted, key) != 0) return -1;
+        if (PyDict_DelItem((PyObject *)self, key) != 0) return -1;
     }
     return 0;
 }
