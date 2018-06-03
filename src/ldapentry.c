@@ -222,7 +222,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
     Py_DECREF(args);
     if (self == NULL) return NULL;
 
-    /* Get list of attribute's names, whose values have to keep in bytearray.*/
+    /* Get list of attribute's names, whose values have to be kept in bytearray.*/
     rawval_list = PyObject_GetAttrString(conn->client, "raw_attributes");
     if (rawval_list == NULL) {
         Py_DECREF(self);
@@ -483,7 +483,7 @@ ldapentry_getdn(LDAPEntry *self, void *closure) {
     return self->dn;
 }
 
-/* Disabled modifying deleted keys. */
+/* Disables modifying deleted keys. */
 static int
 ldapentry_setdeletedkeys(LDAPEntry *self, PyObject *value, void *closure) {
     PyErr_SetString(PyExc_ValueError, "Cannot change deleted_keys.");
@@ -500,7 +500,7 @@ ldapentry_getdeletedkeys(LDAPEntry *self, void *closure) {
 }
 
 
-/* Convert a Python string or LDAPDN object into an LDAPDN object. */
+/* Converts a Python string or LDAPDN object into an LDAPDN object. */
 static int
 convert_to_ldapdn(PyObject *obj, PyObject **ldapdn) {
     PyObject *dn = NULL;
@@ -600,25 +600,24 @@ static PyMethodDef ldapentry_methods[] = {
 };
 
 /*  Searches among lower-cased keystrings to find a match with the key.
-    if `del` set to 1, then also search among the deleted keys.
-    Sets the `found` parameter's value to 1 if key found in the list, 0 otherwise. */
+    if `del` set to 1, then also searches among the deleted keys.
+    Returns a new reference of the case-insensitive key if it's presented,
+    otherwise returns NULL. */
 static PyObject *
-searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int del, int* found) {
+searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int del) {
     PyObject *keys = PyDict_Keys((PyObject *)self);
     PyObject *iter = PyObject_GetIter(keys);
-    PyObject *item;
+    PyObject *item = NULL, *cikey = NULL;
 
     if (iter == NULL) {
         Py_DECREF(keys);
         return NULL;
     }
-    *found = 0;
+
     /* Searching for same lowercase key among the other keys. */
     for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
         if (lower_case_match(item, key) == 1) {
-            key = item;
-            *found = 1;
-            Py_DECREF(item);
+            cikey = item;
             break;
         }
         Py_DECREF(item);
@@ -626,39 +625,45 @@ searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int del, int* found) {
     Py_DECREF(iter);
     Py_DECREF(keys);
     /* Searching among the deleted keys. */
-    if (*found == 0 && del == 1) {
+    if (cikey == NULL && del == 1) {
         iter = PyObject_GetIter((PyObject *)self->deleted);
         if (iter ==  NULL) return NULL;
         for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
             if (lower_case_match(item, key) == 1) {
-                key = item;
-                *found = 1;
-                Py_DECREF(item);
+                cikey = item;
                 break;
             }
             Py_DECREF(item);
         }
     }
-    return key;
+    return cikey;
 }
 
 /*  Returns the object (with borrowed reference) from the LDAPEntry,
     which has a case-insensitive match. */
 PyObject *
 LDAPEntry_GetItem(LDAPEntry *self, PyObject *key) {
-    int found;
-    PyObject *match = searchLowerCaseKeyMatch(self, key, 0, &found);
-    return PyDict_GetItem((PyObject *)self, match);
+    PyObject *res = NULL;
+
+    PyObject *match = searchLowerCaseKeyMatch(self, key, 0);
+    if (match == NULL) {
+        match = key;
+        Py_INCREF(match);
+    }
+
+    res = PyDict_GetItem((PyObject *)self, match);
+    Py_DECREF(match);
+    return res;
 }
 
 /*  Set item to LDAPEntry with a case-insensitive key. */
 int
 LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
-    int found = 0;
     int rc = 0;
     int status = 1;
     char *newkey = lowercase(PyObject2char(key));
-    PyObject *list;
+    PyObject *list = NULL;
+    PyObject *cikey = NULL; /* The actual (case-insenstive) key in the entry */
 
     if (newkey == NULL) {
         PyErr_BadInternalCall();
@@ -666,8 +671,11 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
     }
     DEBUG("LDAPEntry_SetItem (self:%p)[key:%s]", self, newkey);
     /* Search for a match. */
-    key = searchLowerCaseKeyMatch(self, key, 1, &found);
-    if (found == 1) {
+    cikey = searchLowerCaseKeyMatch(self, key, 1);
+    if (cikey == NULL) {
+        cikey = key;
+        status = 1;
+    } else {
         status = 2;
     }
     if (value != NULL) {
@@ -692,39 +700,40 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
                         return -1;
                     }
                 }
-                rc = PyDict_SetItem((PyObject *)self, key, (PyObject *)list);
+                rc = PyDict_SetItem((PyObject *)self, cikey, (PyObject *)list);
                 if (set_ldapvaluelist_status(list, status) != 0) return -1;
                 Py_DECREF(list);
             } else {
-                rc = PyDict_SetItem((PyObject *)self, key, value);
+                rc = PyDict_SetItem((PyObject *)self, cikey, value);
                 if (set_ldapvaluelist_status(value, status) != 0) return -1;
             }
             /* Avoid inconsistency. (same key in the added and the deleted list) */
-            if (PySequence_Contains(self->deleted, key)) {
-                if (uniqueness_remove(self->deleted, key) != 1) return -1;
+            if (PySequence_Contains(self->deleted, cikey)) {
+                if (uniqueness_remove(self->deleted, cikey) != 1) return -1;
             }
             if (rc != 0) return rc;
         }
     } else {
         free(newkey);
         /* This means, the item has to be removed. */
-        if (PyList_Append(self->deleted, key) != 0) return -1;
-        if (PyDict_DelItem((PyObject *)self, key) != 0) return -1;
+        if (PyList_Append(self->deleted, cikey) != 0) return -1;
+        if (PyDict_DelItem((PyObject *)self, cikey) != 0) return -1;
     }
+
     return 0;
 }
 
 /* Checks that `key` is in the LDAPEntry. */
 static int
 ldapentry_contains(PyObject *op, PyObject *key) {
-    int found = -1;
     PyObject *obj = NULL;
     LDAPEntry *self = (LDAPEntry *)op;
 
-    obj = searchLowerCaseKeyMatch(self, key, 0, &found);
-    if (obj == NULL) return -1;
+    obj = searchLowerCaseKeyMatch(self, key, 0);
+    if (obj == NULL) return 0;
 
-    return found;
+    Py_DECREF(obj);
+    return 1;
 }
 
 static PySequenceMethods ldapentry_as_sequence = {
