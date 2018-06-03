@@ -1260,7 +1260,6 @@ ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     PyObject *msgid_obj = NULL;
     PyObject *res = NULL;
     PyObject *timeout_obj = NULL;
-    PyObject *keys = PyDict_Keys(self->pending_ops);
     PyObject *tmp = NULL;
 
     static char *kwlist[] = {"msgid", "timeout", NULL};
@@ -1268,7 +1267,7 @@ ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "i|O", kwlist, &msgid,
             &timeout_obj)) {
         PyErr_SetString(PyExc_TypeError, "Wrong parameter.");
-        goto end;
+        return NULL;
     }
 
     DEBUG("ldapconnection_result (self:%p, args:%p, kwds:%p)[msgid:%d]",
@@ -1277,25 +1276,25 @@ ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
         timeout = -1;
     } else if (PyNumber_Check(timeout_obj) && !PyBool_Check(timeout_obj)) {
         tmp = PyNumber_Float(timeout_obj);
-        if (tmp == NULL) goto end;
+        if (tmp == NULL) return NULL;
 
         timeout = (int)(PyFloat_AsDouble(tmp) * 1000);
         if (timeout < 0) {
             PyErr_SetString(PyExc_ValueError, "Wrong timeout parameter. "
                     "Timeout must be non-negative.");
-            goto end;
+            return NULL;
         }
         Py_DECREF(tmp);
     } else {
         PyErr_SetString(PyExc_TypeError, "Wrong timeout parameter.");
-        goto end;
+        return NULL;
     }
 
     sprintf(msgidstr, "%d", msgid);
     msgid_obj = PyUnicode_FromString(msgidstr);
-    if (keys == NULL || msgid_obj == NULL) return NULL;
+    if (msgid_obj == NULL) return NULL;
 
-    if (PySequence_Contains(keys, msgid_obj) < 1)  {
+    if (PyDict_Contains(self->pending_ops, msgid_obj) < 1) {
         PyObject *ldaperror = get_error_by_code(-100);
         PyErr_SetString(ldaperror, "Given message ID is invalid or the"
                 " associated operation is already finished.");
@@ -1304,9 +1303,7 @@ ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     } else {
         res = LDAPConnection_Result(self, msgid, timeout);
     }
-end:
-    Py_XDECREF(keys);
-    Py_XDECREF(msgid_obj);
+
     return res;
 }
 

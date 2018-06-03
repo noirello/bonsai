@@ -407,10 +407,13 @@ end:
 /* Add a pending LDAP operations to a dictionary. The key is the
  * corresponding message id, the value depends on the type of operation. */
 int
-add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item)  {
+add_to_pending_ops(PyObject *pending_ops, int msgid, PyObject *item) {
     char msgidstr[8];
 
-    sprintf(msgidstr, "%d", msgid);
+    if (sprintf(msgidstr, "%d", msgid) < 0) {
+        PyErr_BadInternalCall();
+        return -1;
+    }
     if (PyDict_SetItemString(pending_ops, msgidstr, item) != 0) {
         PyErr_BadInternalCall();
         return -1;

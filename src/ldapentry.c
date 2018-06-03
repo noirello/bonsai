@@ -256,7 +256,6 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
             }
         }
         ldap_value_free_len(values);
-        PyUnicode_InternInPlace(&attrobj); /* Solves leaking attrobj key. */
         if (PyDict_SetItem((PyObject *)self, attrobj, lvl) != 0) {
             Py_DECREF(lvl);
             goto error;
@@ -619,6 +618,7 @@ searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int del, int* found) {
         if (lower_case_match(item, key) == 1) {
             key = item;
             *found = 1;
+            Py_DECREF(item);
             break;
         }
         Py_DECREF(item);
@@ -631,6 +631,7 @@ searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int del, int* found) {
         if (iter ==  NULL) return NULL;
         for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
             if (lower_case_match(item, key) == 1) {
+                key = item;
                 *found = 1;
                 Py_DECREF(item);
                 break;
@@ -741,13 +742,13 @@ static PySequenceMethods ldapentry_as_sequence = {
 
 static PyObject *
 ldapentry_subscript(LDAPEntry *self, PyObject *key) {
-    PyObject *v = LDAPEntry_GetItem(self, key);
-    if (v == NULL) {
+    PyObject *val = LDAPEntry_GetItem(self, key);
+    if (val == NULL) {
         PyErr_Format(PyExc_KeyError, "Key %R is not in the LDAPEntry.", key);
         return NULL;
     }
-    Py_INCREF(v);
-    return v;
+    Py_INCREF(val);
+    return val;
 }
 
 static int
