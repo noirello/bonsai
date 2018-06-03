@@ -647,6 +647,7 @@ LDAPEntry_GetItem(LDAPEntry *self, PyObject *key) {
 
     PyObject *match = searchLowerCaseKeyMatch(self, key, 0);
     if (match == NULL) {
+        if (PyErr_Occurred()) return NULL;
         match = key;
         Py_INCREF(match);
     }
@@ -673,6 +674,7 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
     /* Search for a match. */
     cikey = searchLowerCaseKeyMatch(self, key, 1);
     if (cikey == NULL) {
+        if (PyErr_Occurred()) return NULL;
         cikey = key;
         status = 1;
     } else {
@@ -730,7 +732,10 @@ ldapentry_contains(PyObject *op, PyObject *key) {
     LDAPEntry *self = (LDAPEntry *)op;
 
     obj = searchLowerCaseKeyMatch(self, key, 0);
-    if (obj == NULL) return 0;
+    if (obj == NULL) {
+        if (PyErr_Occurred()) return -1;
+        else return 0;
+    }
 
     Py_DECREF(obj);
     return 1;
