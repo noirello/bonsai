@@ -165,6 +165,7 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
         Py_DECREF(key);
     }
     Py_DECREF(iter);
+
     /* LDAPMod for deleted attributes. */
     for (i = 0; i < Py_SIZE(self->deleted); i++) {
         if (LDAPModList_Add(mods, LDAP_MOD_DELETE | LDAP_MOD_BVALUES,
@@ -172,11 +173,12 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
             Py_DECREF(mods);
             return NULL;
         }
-        Py_DECREF(((PyListObject *)self->deleted)->ob_item[i]);
     }
+
     /* Delete the list. */
     Py_DECREF(self->deleted);
     self->deleted = PyList_New(0);
+
     return mods;
 error:
     Py_DECREF(iter);
@@ -635,6 +637,7 @@ searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int del) {
             }
             Py_DECREF(item);
         }
+        Py_DECREF(iter);
     }
     return cikey;
 }
@@ -645,6 +648,7 @@ PyObject *
 LDAPEntry_GetItem(LDAPEntry *self, PyObject *key) {
     PyObject *res = NULL;
 
+    DEBUG("LDAPEntry_GetItem (self:%p, key:%p)", self, key);
     PyObject *match = searchLowerCaseKeyMatch(self, key, 0);
     if (match == NULL) {
         if (PyErr_Occurred()) return NULL;
@@ -671,15 +675,18 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
         return -1;
     }
     DEBUG("LDAPEntry_SetItem (self:%p)[key:%s]", self, newkey);
+
     /* Search for a match. */
     cikey = searchLowerCaseKeyMatch(self, key, 1);
     if (cikey == NULL) {
-        if (PyErr_Occurred()) return NULL;
+        if (PyErr_Occurred()) return -1;
         cikey = key;
         status = 1;
+        Py_INCREF(cikey);
     } else {
         status = 2;
     }
+
     if (value != NULL) {
         /* If theres an item with a `dn` key, and with a string value set to the dn attribute. */
         if (strcmp(newkey, "dn") == 0) {
@@ -721,7 +728,7 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
         if (PyList_Append(self->deleted, cikey) != 0) return -1;
         if (PyDict_DelItem((PyObject *)self, cikey) != 0) return -1;
     }
-
+    Py_DECREF(cikey);
     return 0;
 }
 
@@ -731,6 +738,7 @@ ldapentry_contains(PyObject *op, PyObject *key) {
     PyObject *obj = NULL;
     LDAPEntry *self = (LDAPEntry *)op;
 
+    DEBUG("ldapentry_contains (self:%p, key:%p)", self, key);
     obj = searchLowerCaseKeyMatch(self, key, 0);
     if (obj == NULL) {
         if (PyErr_Occurred()) return -1;
