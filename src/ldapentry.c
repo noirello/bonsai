@@ -692,7 +692,10 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
         /* If theres an item with a `dn` key, and with a string value set to the dn attribute. */
         if (strcmp(newkey, "dn") == 0) {
             free(newkey);
-            if (LDAPEntry_SetDN(self, value) != 0) return -1;
+            if (LDAPEntry_SetDN(self, value) != 0) {
+                Py_DECREF(cikey);
+                return -1;
+            }
         } else {
             free(newkey);
             /* Set the new value to the item. */
@@ -702,32 +705,52 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
                 if (PyList_Check(value) || PyTuple_Check(value)) {
                     if (PyObject_CallMethod(list, "extend", "(O)", value) == NULL) {
                         Py_DECREF(list);
+                        Py_DECREF(cikey);
                         return -1;
                     }
                 } else {
                     if (PyObject_CallMethod(list, "append", "(O)", value) == NULL) {
                         Py_DECREF(list);
+                        Py_DECREF(cikey);
                         return -1;
                     }
                 }
                 rc = PyDict_SetItem((PyObject *)self, cikey, (PyObject *)list);
-                if (set_ldapvaluelist_status(list, status) != 0) return -1;
+                if (set_ldapvaluelist_status(list, status) != 0) {
+                    Py_DECREF(cikey);
+                    return -1;
+                }
                 Py_DECREF(list);
             } else {
                 rc = PyDict_SetItem((PyObject *)self, cikey, value);
-                if (set_ldapvaluelist_status(value, status) != 0) return -1;
+                if (set_ldapvaluelist_status(value, status) != 0) {
+                    Py_DECREF(cikey);
+                    return -1;
+                }
             }
             /* Avoid inconsistency. (same key in the added and the deleted list) */
             if (PySequence_Contains(self->deleted, cikey)) {
-                if (uniqueness_remove(self->deleted, cikey) != 1) return -1;
+                if (uniqueness_remove(self->deleted, cikey) != 1) {
+                    Py_DECREF(cikey);
+                    return -1;
+                }
             }
-            if (rc != 0) return rc;
+            if (rc != 0) {
+                Py_DECREF(cikey);
+                return rc;
+            }
         }
     } else {
         free(newkey);
         /* This means, the item has to be removed. */
-        if (PyList_Append(self->deleted, cikey) != 0) return -1;
-        if (PyDict_DelItem((PyObject *)self, cikey) != 0) return -1;
+        if (PyList_Append(self->deleted, cikey) != 0) {
+            Py_DECREF(cikey);
+            return -1;
+        }
+        if (PyDict_DelItem((PyObject *)self, cikey) != 0) {
+            Py_DECREF(cikey);
+            return -1;
+        }
     }
     Py_DECREF(cikey);
     return 0;
