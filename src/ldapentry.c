@@ -646,10 +646,11 @@ searchLowerCaseKeyMatch(LDAPEntry *self, PyObject *key, int del) {
     which has a case-insensitive match. */
 PyObject *
 LDAPEntry_GetItem(LDAPEntry *self, PyObject *key) {
-    PyObject *res = NULL;
+    PyObject *match = NULL, *res = NULL;
 
     DEBUG("LDAPEntry_GetItem (self:%p, key:%p)", self, key);
-    PyObject *match = searchLowerCaseKeyMatch(self, key, 0);
+
+    match = searchLowerCaseKeyMatch(self, key, 0);
     if (match == NULL) {
         if (PyErr_Occurred()) return NULL;
         match = key;
