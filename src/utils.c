@@ -408,17 +408,55 @@ end:
  * corresponding message id, the value depends on the type of operation. */
 int
 add_to_pending_ops(PyObject *pending_ops, int msgid, PyObject *item) {
-    char msgidstr[8];
+    PyObject *key = NULL;
 
-    if (sprintf(msgidstr, "%d", msgid) < 0) {
-        PyErr_BadInternalCall();
-        return -1;
-    }
-    if (PyDict_SetItemString(pending_ops, msgidstr, item) != 0) {
+    key = PyLong_FromLong((long int)msgid);
+    if (key == NULL) return -1;
+
+    if (PyDict_SetItem(pending_ops, key, item) != 0) {
+        Py_DECREF(key);
         PyErr_BadInternalCall();
         return -1;
     }
     Py_DECREF(item);
+    Py_DECREF(key);
+
+    return 0;
+}
+
+/* Get a pending LDAP operations from a dictionary. The key is the
+ * corresponding message id, the return value depends on the type
+ * of operation. */
+PyObject *
+get_from_pending_ops(PyObject *pending_ops, int msgid) {
+    PyObject *key = NULL;
+    PyObject *item = NULL;
+
+    key = PyLong_FromLong((long int)msgid);
+    if (key == NULL) return NULL;
+
+    item = PyDict_GetItem(pending_ops, key);
+    Py_DECREF(key);
+
+    Py_XINCREF(item);
+    return item;
+}
+
+/* Delete a pending LDAP operations from a dictionary. The key is the
+ * corresponding message id, on error returns non-zero value. */
+int
+del_from_pending_ops(PyObject *pending_ops, int msgid) {
+    PyObject *key = NULL;
+
+    key = PyLong_FromLong((long int)msgid);
+    if (key == NULL) return -1;
+
+    if (PyDict_DelItem(pending_ops, key) != 0) {
+        Py_DECREF(key);
+        PyErr_BadInternalCall();
+        return -1;
+    }
+    Py_DECREF(key);
 
     return 0;
 }
