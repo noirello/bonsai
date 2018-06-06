@@ -418,7 +418,7 @@ add_to_pending_ops(PyObject *pending_ops, int msgid, PyObject *item) {
         PyErr_BadInternalCall();
         return -1;
     }
-    Py_DECREF(item);
+    if (item != Py_None) Py_DECREF(item);
     Py_DECREF(key);
 
     return 0;

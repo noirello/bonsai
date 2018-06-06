@@ -595,6 +595,7 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int timeout) {
         val = binding(self);
         if (val == NULL) return NULL; /* It is an error. */
         if (val != Py_None) return val;
+        Py_DECREF(val);
     }
 
     if (self->conn->async == 0) {

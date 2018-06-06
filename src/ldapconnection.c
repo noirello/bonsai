@@ -942,6 +942,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
         }
 
     } else {
+        Py_DECREF(value);
         /* Return simple list for normal search. */
         value = buffer;
     }
@@ -1090,12 +1091,16 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         }
         ret = LDAPConnectIter_Next((LDAPConnectIter *)conniter, millisec);
         Py_DECREF(conniter);
-        if (ret == Py_None) Py_RETURN_NONE;
-        else {
+        if (ret == Py_None) {
+            Py_DECREF(ret);
+            Py_RETURN_NONE;
+        } else {
             /* The init and bind are finished either success or error. */
             /* Remove operations from pending_ops. */
-            if (del_from_pending_ops(self->pending_ops, msgid) != 0) return NULL;
-            else return ret; /* Return with the result of the connectiter. */
+            if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
+                Py_XDECREF(ret);
+                return NULL;
+            } else return ret; /* Return with the result of the connectiter. */
         }
     }
 
