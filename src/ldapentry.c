@@ -503,24 +503,23 @@ ldapentry_getdeletedkeys(LDAPEntry *self, void *closure) {
 
 
 /* Converts a Python string or LDAPDN object into an LDAPDN object. */
-static int
-convert_to_ldapdn(PyObject *obj, PyObject **ldapdn) {
+static PyObject *
+convert_to_ldapdn(PyObject *obj) {
     PyObject *dn = NULL;
 
     if (PyObject_IsInstance(obj, LDAPDNObj)) {
         Py_INCREF(obj);
-        dn = obj;
+        return obj;
     } else if (PyUnicode_Check(obj)) {
         /* Call LDAPDN __init__ with the dn string. */
         dn = PyObject_CallFunctionObjArgs(LDAPDNObj, obj, NULL);
-        if (dn == NULL) return -1;
+        if (dn == NULL) return NULL;
+        return dn;
     } else {
         PyErr_SetString(PyExc_TypeError, "The DN attribute value must"
                 " be an LDAPDN or a string.");
-        return -1;
+        return NULL;
     }
-    *ldapdn = dn;
-    return 0;
 }
 
 /* Renames the entry object on the directory server, which means changing
@@ -550,7 +549,8 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     if (olddn_str == NULL) return NULL;
 
     /* Convert the newdn object to an LDAPDN object. */
-    if (convert_to_ldapdn(newdn, &new_ldapdn) != 0) {
+    new_ldapdn = convert_to_ldapdn(newdn);
+    if (new_ldapdn == NULL) {
         free(olddn_str);
         return NULL;
     }
@@ -866,25 +866,13 @@ LDAPEntry_SetDN(LDAPEntry *self, PyObject *value) {
         return -1;
     }
 
-    if (convert_to_ldapdn(value, &dn) != 0) return -1;
+    dn = convert_to_ldapdn(value);
+    if (dn == NULL) return -1;
+
     Py_DECREF(self->dn);
     self->dn = dn;
 
     return 0;
-}
-
-/* Set char* `value` as a DN for an LDAP entry. */
-int
-LDAPEntry_SetStringDN(LDAPEntry *self, char *value) {
-    int rc = 0;
-
-    PyObject *dn = PyUnicode_FromString(value);
-    if (dn == NULL) return -1;
-
-    rc = LDAPEntry_SetDN(self, dn);
-    Py_DECREF(dn);
-
-    return rc;
 }
 
 static PyGetSetDef ldapentry_getsetters[] = {
