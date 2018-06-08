@@ -647,6 +647,37 @@ uniqueness_remove(PyObject *list, PyObject *value) {
     return 0;
 }
 
+/* Check that the `value` is in the `list` by converting both the
+   value and the list elements lower case C char* strings. The
+   return value is a tuple of two items: the True/False that the
+   `value` is in the list and the list element that is matched. */
+PyObject *
+unique_contains(PyObject *list, PyObject *value) {
+    int rc = 0;
+    PyObject *retval = NULL;
+    PyObject *iter = NULL, *item = NULL;
+
+    iter = PyObject_GetIter(list);
+    if (iter == NULL) return NULL;
+
+    for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
+        rc = lower_case_match(item, value);
+        if (rc == -1) goto end;
+        if (rc == 1) {
+            /* Item found, build the return value of (True, item). */
+            retval = Py_BuildValue("(OO)", Py_True, item);
+            goto end;
+        }
+        Py_DECREF(item);
+    }
+    /* No item found, return (False, None). */
+    retval = Py_BuildValue("(OO)", Py_False, Py_None);
+end:
+    Py_DECREF(iter);
+    Py_XDECREF(item);
+    return retval;
+}
+
 int
 get_ldapvaluelist_status(PyObject *lvl) {
     int status = -1;

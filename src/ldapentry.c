@@ -199,7 +199,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
     PyObject *rawval_list = NULL;
     PyObject *val = NULL, *attrobj = NULL;
     PyObject *args = NULL;
-    PyObject *lvl = NULL;
+    PyObject *lvl = NULL, *tmp = NULL;
     LDAPEntry *self;
 
     /* Create an attribute list for LDAPEntry (which is implemented in Python). */
@@ -244,7 +244,10 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
         if (lvl == NULL) goto error;
         if (values != NULL) {
             /* Check attribute is in the raw_list. */
-            contain = PySequence_Contains(rawval_list, attrobj);
+            tmp = unique_contains(rawval_list, attrobj);
+            if (tmp == NULL) goto error;
+            contain = PyObject_IsTrue(PyTuple_GET_ITEM(tmp, 0));
+            Py_DECREF(tmp);
             for (i = 0; values[i] != NULL; i++) {
                 /* Convert berval to PyObject*, if it's failed skip it. */
                 val = berval2PyObject(values[i], contain);

@@ -52,6 +52,7 @@ int create_ppolicy_control(LDAP *ld, LDAPControl **returned_ctrls,
 void set_ppolicy_err(unsigned int pperr, PyObject *ctrl_obj);
 int uniqueness_check(PyObject *list, PyObject *value);
 int uniqueness_remove(PyObject *list, PyObject *value);
+PyObject *unique_contains(PyObject *list, PyObject *value);
 int get_ldapvaluelist_status(PyObject *lvl);
 int set_ldapvaluelist_status(PyObject *lvl, int status);
 
