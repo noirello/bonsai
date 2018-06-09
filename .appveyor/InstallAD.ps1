@@ -33,6 +33,3 @@ Install-ADDSForest `
 Write-Output 'Rebooting...'
 
 Restart-Computer -Force
-Start-Sleep -s 5
-
-Write-Output 'Finished installing Active Directory.'

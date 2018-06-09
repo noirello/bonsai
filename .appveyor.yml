@@ -38,6 +38,8 @@ install:
           throw "There are newer queued builds for this pull request, failing early." }
   # Install Active Directory and reboot the machine.
   - ps: .\\.appveyor\\InstallAD.ps1
+  - ps: Start-Sleep -s 5
+  - ps: Write-Output 'Finished installing Active Directory.'
   - ps: .\\.appveyor\\ConfigAD.ps1
   - "ldifde -i -v -f .\\tests\\testenv\\ldifs\\users.ldif"
 
