@@ -770,7 +770,7 @@ error:
 
 /* Process the server result after a search request. */
 static PyObject *
-parse_search_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
+parse_search_result(LDAPConnection *self, LDAPMessage *res, PyObject *obj) {
     int rc = -1;
     int err = 0;
     int ref_opt = 0;
@@ -784,25 +784,15 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
     LDAPSearchIter *search_iter = NULL;
     PyObject *ldaperror = NULL, *errmsg = NULL;
     PyObject *buffer = NULL;
-    PyObject *value = NULL;
     PyObject *ctrl_obj = NULL;
     PyObject *refobj = NULL;
+    PyObject *retval = NULL;
 
-    DEBUG("parse_search_result (self:%p, res:%p, msgid:%d)",
-        self, res, msgid);
-    /* Get SearchIter from pending operations. */
-    value = get_from_pending_ops(self->pending_ops, msgid);
+    DEBUG("parse_search_result (self:%p, res:%p, obj:%p)", self, res, obj);
 
-    if (value == NULL || del_from_pending_ops(self->pending_ops, msgid) != 0) {
-        return NULL;
-    }
-
-    if (value != Py_None) search_iter = (LDAPSearchIter *)value;
+    if (obj != Py_None) search_iter = (LDAPSearchIter *)obj;
     buffer = PyList_New(0);
-    if (buffer == NULL) {
-        Py_DECREF(value);
-        return PyErr_NoMemory();
-    }
+    if (buffer == NULL) return PyErr_NoMemory();
 
     /* Iterate over the received LDAP messages. */
     for (entry = ldap_first_entry(self->ld, res); entry != NULL;
@@ -810,13 +800,11 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
         entryobj = LDAPEntry_FromLDAPMessage(entry, self);
         if (entryobj == NULL) {
             Py_DECREF(buffer);
-            Py_DECREF(value);
             return NULL;
         }
         if (PyList_Append(buffer, (PyObject *)entryobj) != 0) {
             Py_DECREF(entryobj);
             Py_DECREF(buffer);
-            Py_DECREF(value);
             return PyErr_NoMemory();
         }
         Py_DECREF(entryobj);
@@ -855,7 +843,6 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
 
     if (err == LDAP_NO_SUCH_OBJECT && search_iter == NULL) {
         /* Shortcut for normal search to return empty list. */
-        Py_DECREF(value);
         return buffer;
     } else {
         /* Ignore LDAP_NO_SUCH_OBJECT otherwise. */
@@ -926,41 +913,39 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
             if (ctrl_obj == NULL) goto error;
 
             /* Create (result, ctrl) tuple as return value. */
-            value = Py_BuildValue("(O,O)", buffer, ctrl_obj);
+            retval = Py_BuildValue("(O,O)", buffer, ctrl_obj);
             Py_DECREF(ctrl_obj);
-            if (value == NULL) {
+            if (retval == NULL) {
                 goto error;
             }
             Py_DECREF(buffer);
-            Py_DECREF(search_iter);
         } else {
             /* Return LDAPSearchIter for paged search. */
             Py_XDECREF(search_iter->buffer);
             search_iter->buffer = buffer;
-            value = (PyObject *)search_iter;
-            Py_INCREF(value);
+            retval = (PyObject *)search_iter;
+            /* Keep LDAPSearchIter alive, has the same reference as obj param. */
+            Py_REFCNT(retval) += 2;
         }
 
     } else {
-        Py_DECREF(value);
         /* Return simple list for normal search. */
-        value = buffer;
+        retval = buffer;
     }
 
     /* Cleanup. */
     if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
 
-    return value;
+    return retval;
 error:
     if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
     Py_DECREF(buffer);
-    Py_DECREF(value);
     return NULL;
 }
 
 /* Process the server response after an extended operation. */
 static PyObject *
-parse_extended_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
+parse_extended_result(LDAPConnection *self, LDAPMessage *res, PyObject *oid) {
     int rc = -1;
     int err = 0;
     int ppres = 0;
@@ -968,31 +953,21 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
     struct berval *data = NULL;
     struct berval *newpasswd = NULL;
     char *errstr = NULL, *retoid = NULL;
-    PyObject *oid = NULL;
     PyObject *retval = NULL, *ldaperror = NULL, *errmsg = NULL;
     PyObject *ctrl_obj = NULL;
     LDAPControl **ctrls = NULL;
     BerElement *ber = NULL;
     ber_tag_t tag;
 
-    DEBUG("parse_extended_result (self:%p, res:%p, msgid:%d)",
-        self, res, msgid);
-
-    /* Get oid and remove operations from pending_ops. */
-    oid = get_from_pending_ops(self->pending_ops, msgid);
-    if (oid == NULL) return NULL;
-    if (del_from_pending_ops(self->pending_ops, msgid) != 0) return NULL;
+    DEBUG("parse_extended_result (self:%p, res:%p, oid:%p)",
+        self, res, oid);
 
     rc = ldap_parse_result(self->ld, res, &err, NULL, &errstr, NULL, &ctrls, 0);
 
     ppres = create_ppolicy_control(self->ld, ctrls, &ctrl_obj, &pperr);
-    if (ppres == -1) {
-        Py_DECREF(oid);
-        return NULL;
-    }
+    if (ppres == -1) return NULL;
 
     if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
-        Py_DECREF(oid);
         if (ppres == 1 && pperr != 65535) {
             set_ppolicy_err(pperr, ctrl_obj);
         } else {
@@ -1013,14 +988,12 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
     ldap_memfree(retoid);
 
     if (rc != LDAP_SUCCESS) {
-        Py_DECREF(oid);
         set_exception(self->ld, rc);
         return NULL;
     }
     /* LDAP Who Am I operation. */
     if (PyUnicode_CompareWithASCIIString(oid,
             "1.3.6.1.4.1.4203.1.11.3") == 0) {
-        Py_DECREF(oid);
         if (data == NULL) return PyUnicode_FromString("anonymous");
 
         if(data->bv_len == 0) {
@@ -1032,7 +1005,6 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
     /* LDAP Password Modify operation. */
     } else if (PyUnicode_CompareWithASCIIString(oid,
             "1.3.6.1.4.1.4203.1.11.1") == 0) {
-        Py_DECREF(oid);
         if (data == NULL) Py_RETURN_NONE;
 
         ber = ber_init(data);
@@ -1051,8 +1023,6 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, int msgid) {
         }
         retval = PyUnicode_FromStringAndSize(newpasswd->bv_val, newpasswd->bv_len);
         ber_bvfree(newpasswd);
-    } else {
-        Py_DECREF(oid);
     }
     ber_bvfree(data);
     return retval;
@@ -1072,35 +1042,41 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
     struct timeval timeout;
     PyObject *obj = NULL;
     PyObject *newdn = NULL;
-    PyObject *conniter = NULL;
-    PyObject *ret = NULL;
+    PyObject *retval = NULL;
     PyObject *ctrl_obj = NULL;
 
     DEBUG("LDAPConnection_Result (self:%p, msgid:%d, millisec:%d)",
         self, msgid, millisec);
 
+    obj = get_from_pending_ops(self->pending_ops, msgid);
+    if (obj == NULL) {
+        PyObject *ldaperror = get_error_by_code(-100);
+        PyErr_SetString(ldaperror, "Given message ID is invalid or the"
+            " associated operation is already finished.");
+        Py_DECREF(ldaperror);
+        return NULL;
+    }
+
     if (self->closed) {
         /* The function is called on a initialising and binding procedure. */
-        conniter = get_from_pending_ops(self->pending_ops, msgid);
-        if (conniter == NULL) return NULL;
         /* Check, that we get the right object. */
-        if (!PyObject_IsInstance(conniter, (PyObject *)&LDAPConnectIterType)) {
-            Py_DECREF(conniter);
+        if (!PyObject_IsInstance(obj, (PyObject *)&LDAPConnectIterType)) {
+            Py_DECREF(obj);
             PyErr_BadInternalCall();
             return NULL;
         }
-        ret = LDAPConnectIter_Next((LDAPConnectIter *)conniter, millisec);
-        Py_DECREF(conniter);
-        if (ret == Py_None) {
-            Py_DECREF(ret);
+        retval = LDAPConnectIter_Next((LDAPConnectIter *)obj, millisec);
+        Py_DECREF(obj);
+        if (retval == Py_None) {
+            Py_DECREF(retval);
             Py_RETURN_NONE;
         } else {
             /* The init and bind are finished either success or error. */
             /* Remove operations from pending_ops. */
             if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
-                Py_XDECREF(ret);
+                Py_XDECREF(retval);
                 return NULL;
-            } else return ret; /* Return with the result of the connectiter. */
+            } else return retval; /* Return with the result of the connectiter. */
         }
     }
 
@@ -1142,15 +1118,16 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             if (rc != LDAP_SUCCESS) {
                 set_exception(self->ld, rc);
             }
-            mods = (LDAPModList *)get_from_pending_ops(self->pending_ops, msgid);
-            if (mods != NULL && (PyObject *)mods != Py_None && !PyUnicode_Check(mods)) {
+            
+            if (obj != Py_None && !PyUnicode_Check(obj)) {
+                mods = (LDAPModList *)obj;
                 /* LDAP add or modify operation is failed,
                    then rollback the changes. */
                 if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0) {
-                    Py_DECREF(mods);
+                    Py_DECREF(obj);
                     return NULL;
                 }
-                Py_DECREF(mods);
+                Py_DECREF(obj);
             }
             /* Remove operations from pending_ops. */
             del_from_pending_ops(self->pending_ops, msgid);
@@ -1163,20 +1140,27 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         /* Only matters when ldap_result is set with LDAP_MSG_ONE. */
         break;
     case LDAP_RES_SEARCH_RESULT:
-        return parse_search_result(self, res, msgid);
+        retval = parse_search_result(self, res, obj);
+        Py_DECREF(obj);
+        if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
+            Py_XDECREF(retval);
+            return NULL;
+        }
+        return retval;
     case LDAP_RES_EXTENDED:
-        obj = parse_extended_result(self, res, msgid);
-        if (obj == NULL && PyErr_Occurred()) return NULL;
-        if (obj != NULL) return obj;
+        retval = parse_extended_result(self, res, obj);
+        Py_DECREF(obj);
+        if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
+            Py_XDECREF(retval);
+            return NULL;
+        }
+        if (retval == NULL && PyErr_Occurred()) return NULL;
+        if (retval != NULL) return retval;
         break;
     case LDAP_RES_MODRDN:
         /* Rename an LDAP entry. */
         rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
                         &returned_ctrls, 1);
-        /* Get the modification list from the pending_ops. */
-        obj = get_from_pending_ops(self->pending_ops, msgid);
-        if (obj == NULL) return NULL;
-
         /* Remove operations from pending_ops. */
         if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
             Py_DECREF(obj);
@@ -1187,7 +1171,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
            set_exception(self->ld, err);
            Py_DECREF(obj);
            return NULL;
-       }
+        }
 
         if (PyArg_ParseTuple(obj, "OO", &entry, &newdn)) {
             /* Validate and set new LDAP DN. */
@@ -1200,14 +1184,12 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             Py_DECREF(obj);
             return NULL;
         }
+        Py_DECREF(obj);
+
         Py_RETURN_TRUE;
     default:
         rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
                 &returned_ctrls, 1);
-
-        /* Get the modification list from the pending_ops. */
-        mods = (LDAPModList *)get_from_pending_ops(self->pending_ops, msgid);
-        if (mods == NULL) return NULL;
 
         /* Remove operations from pending_ops. */
         if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
@@ -1219,10 +1201,11 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         if (ppres == -1) return NULL;
 
         if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
+            mods = (LDAPModList *)obj;
             /* LDAP add or modify operation is failed,
                then rollback the changes. */
             if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0) {
-                Py_DECREF(mods);
+                Py_DECREF(obj);
                 return NULL;
             }
             /* Set Python error. */
@@ -1232,7 +1215,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             return NULL;
         }
 
-        Py_DECREF(mods);
+        Py_DECREF(obj);
         Py_RETURN_TRUE;
     }
     Py_RETURN_NONE;
@@ -1243,8 +1226,6 @@ static PyObject *
 ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     int msgid = 0;
     int timeout = -1;
-    PyObject *msgid_obj = NULL;
-    PyObject *res = NULL;
     PyObject *timeout_obj = NULL;
     PyObject *tmp = NULL;
 
@@ -1276,21 +1257,7 @@ ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
         return NULL;
     }
 
-    msgid_obj = PyLong_FromLong((long int)msgid);
-    if (msgid_obj == NULL) return NULL;
-
-    if (PyDict_Contains(self->pending_ops, msgid_obj) < 1) {
-        PyObject *ldaperror = get_error_by_code(-100);
-        PyErr_SetString(ldaperror, "Given message ID is invalid or the"
-                " associated operation is already finished.");
-        Py_DECREF(ldaperror);
-        res = NULL;
-    } else {
-        res = LDAPConnection_Result(self, msgid, timeout);
-    }
-
-    Py_DECREF(msgid_obj);
-    return res;
+    return LDAPConnection_Result(self, msgid, timeout);
 }
 
 /* Abandon an ongoing LDAP operation. */
