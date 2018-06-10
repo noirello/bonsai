@@ -885,18 +885,43 @@ static PyGetSetDef ldapentry_getsetters[] = {
 
 PyTypeObject LDAPEntryType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "_bonsai.ldapentry",
-    .tp_doc = "ldapentry object implemented in C",
-    .tp_basicsize = sizeof(LDAPEntry),
-    .tp_itemsize = 0,
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC,
-    .tp_new = ldapentry_new,
-    .tp_init = (initproc)ldapentry_init,
-    .tp_dealloc = (destructor)ldapentry_dealloc,
-    .tp_traverse = (traverseproc)ldapentry_traverse,
-    .tp_clear = (inquiry)ldapentry_clear,
-    .tp_methods = ldapentry_methods,
-    .tp_getset = ldapentry_getsetters,
-    .tp_as_sequence = &ldapentry_as_sequence,
-    .tp_as_mapping = &ldapentry_mapping_meths,
+    "_bonsai.ldapentry",      /* tp_name */
+    sizeof(LDAPEntry),       /* tp_basicsize */
+    0,                       /* tp_itemsize */
+    (destructor)ldapentry_dealloc,       /* tp_dealloc */
+    0,                       /* tp_print */
+    0,                       /* tp_getattr */
+    0,                       /* tp_setattr */
+    0,                       /* tp_reserved */
+    0,                       /* tp_repr */
+    0,                       /* tp_as_number */
+    &ldapentry_as_sequence,  /* tp_as_sequence */
+    &ldapentry_mapping_meths,/* tp_as_mapping */
+    0,                       /* tp_hash */
+    0,                       /* tp_call */
+    0,                       /* tp_str */
+    0,                       /* tp_getattro */
+    0,                       /* tp_setattro */
+    0,                       /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT |
+        Py_TPFLAGS_BASETYPE |
+        Py_TPFLAGS_HAVE_GC, /* tp_flags */
+    0,                       /* tp_doc */
+    (traverseproc)ldapentry_traverse,/* tp_traverse */
+    (inquiry)ldapentry_clear, /* tp_clear */
+    0,                       /* tp_richcompare */
+    0,                       /* tp_weaklistoffset */
+    0,                       /* tp_iter */
+    0,                       /* tp_iternext */
+    ldapentry_methods,       /* tp_methods */
+    0,                       /* tp_members */
+    ldapentry_getsetters,    /* tp_getset */
+    0,                       /* tp_base */
+    0,                       /* tp_dict */
+    0,                       /* tp_descr_get */
+    0,                       /* tp_descr_set */
+    0,                       /* tp_dictoffset */
+    (initproc)ldapentry_init,/* tp_init */
+    0,                       /* tp_alloc */
+    ldapentry_new,           /* tp_new */
 };
