@@ -424,7 +424,7 @@ class LDAPConnectionTest(unittest.TestCase):
         res = self.conn.paged_search(search_dn, 1, page_size=2)
         for ent in res:
             self.assertIsInstance(ent, bonsai.LDAPEntry)
-        page = 1  # First page already is acquired.
+        page = 1  # First page is already acquired.
         while True:
             if len(res) > 2:
                 self.fail("The size of the page is greater than expected.")

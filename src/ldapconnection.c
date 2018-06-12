@@ -924,8 +924,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, PyObject *obj) {
             Py_XDECREF(search_iter->buffer);
             search_iter->buffer = buffer;
             retval = (PyObject *)search_iter;
-            /* Keep LDAPSearchIter alive, has the same reference as obj param. */
-            Py_REFCNT(retval) += 2;
+            Py_INCREF(retval);
         }
 
     } else {

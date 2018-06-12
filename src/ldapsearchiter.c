@@ -26,17 +26,8 @@ ldapsearchiter_dealloc(LDAPSearchIter* self) {
 static PyObject *
 ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     LDAPSearchIter *self = NULL;
-    PyObject *ts_empty_tuple = PyTuple_New(0);
-    PyObject *ts_empty_dict = PyDict_New();
 
-    if (ts_empty_tuple == NULL || ts_empty_dict == NULL) {
-        Py_XDECREF(ts_empty_tuple);
-        Py_XDECREF(ts_empty_dict);
-        return NULL;
-    }
-
-    self = (LDAPSearchIter *)PyBaseObject_Type.tp_new(type, ts_empty_tuple,
-                                                      ts_empty_dict);
+    self = (LDAPSearchIter *)type->tp_alloc(type, 0);
 
     if (self != NULL) {
         self->buffer = NULL;
@@ -47,8 +38,6 @@ ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->auto_acquire = 0;
     }
 
-    Py_DECREF(ts_empty_tuple);
-    Py_DECREF(ts_empty_dict);
     DEBUG("ldapsearchiter_new [self:%p]", self);
     return (PyObject *)self;
 }
@@ -86,13 +75,12 @@ ldapsearchiter_acquirenextpage(LDAPSearchIter *self) {
     /* If paged LDAP search is in progress. */
     if ((self->cookie != NULL) && (self->cookie->bv_val != NULL) &&
             (strlen(self->cookie->bv_val) > 0)) {
+        Py_INCREF(self);
         msgid = LDAPConnection_Searching(self->conn, NULL, (PyObject *)self);
         if (msgid < 0) return NULL;
-
         return PyLong_FromLong((long int)msgid);
     } else {
         ber_bvfree(self->cookie);
-        if (self->cookie != NULL) Py_DECREF(self);
         self->cookie = NULL;
         Py_RETURN_NONE;
     }
@@ -113,7 +101,6 @@ ldapsearchiter_iternext(LDAPSearchIter *self) {
 
     DEBUG("ldapsearchiter_iternext (self:%p)", self);
     if (self->buffer == NULL) return NULL;
-
     if (Py_SIZE(self->buffer) != 0) {
         /* Get first element from the buffer list. (Borrowed ref.)*/
         item = PyList_GetItem(self->buffer, 0);
@@ -136,10 +123,12 @@ ldapsearchiter_iternext(LDAPSearchIter *self) {
                and the connection is synchronous. */
             msg = ldapsearchiter_acquirenextpage(self);
             if (msg == NULL) return NULL;
-            if (msg == Py_None) return NULL;
-
+            if (msg == Py_None) {
+                Py_DECREF(msg);
+                return NULL;
+            }
             self = (LDAPSearchIter *)PyObject_CallMethod((PyObject *)self->conn,
-                        "_evaluate", "(O)", msg);
+                "_evaluate", "(O)", msg);
             Py_DECREF(msg);
             if (self == NULL) return NULL;
             Py_DECREF(self);
