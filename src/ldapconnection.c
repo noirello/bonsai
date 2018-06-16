@@ -741,31 +741,33 @@ create_reference_object(LDAPConnection *self, char **referrals) {
     DEBUG("create_reference_object (self:%p)", self);
     /* Load LDAPReference Python type. */
     ldapreference_type = load_python_object("bonsai.ldapreference", "LDAPReference");
-    if (ldapreference_type == NULL) goto error;
+    if (ldapreference_type == NULL) {
+        Py_DECREF(list);
+        return NULL;
+    }
 
     for (i = 0; referrals[i] != NULL; i++) {
         tmp = PyUnicode_FromString(referrals[i]);
         free(referrals[i]);
-        if (tmp == NULL) goto error;
+        if (tmp == NULL) goto end;
         if (PyList_Append(list, tmp) != 0) {
             Py_DECREF(tmp);
-            goto error;
+            tmp = NULL;
+            goto end;
         }
         Py_DECREF(tmp);
-        args = Py_BuildValue("OO", self->client, list);
-        if (args == NULL) goto error;
-
-        /* Create a new LDAPReference. */
-        tmp = PyObject_CallObject(ldapreference_type, args);
-        Py_DECREF(args);
-        Py_DECREF(ldapreference_type);
-        if (tmp == NULL) goto error;
     }
+
+    tmp = NULL;
+    args = Py_BuildValue("OO", self->client, list);
+    if (args == NULL) goto end;
+
+    /* Create a new LDAPReference. */
+    tmp = PyObject_CallObject(ldapreference_type, args);
+end:
+    Py_DECREF(ldapreference_type);
     Py_DECREF(list);
     return tmp;
-error:
-    Py_DECREF(list);
-    return NULL;
 }
 
 /* Process the server result after a search request. */
@@ -828,6 +830,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, PyObject *obj) {
                     Py_DECREF(refobj);
                     goto error;
                 }
+                Py_DECREF(refobj);
             }
         }
     }
