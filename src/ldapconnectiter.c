@@ -207,6 +207,7 @@ binding(LDAPConnectIter *self) {
 
             ppres = create_ppolicy_control(self->conn->ld, returned_ctrls,
                     &ctrl_obj, &pperr);
+            if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
             if (ppres == -1) return NULL;
 
             if (err != LDAP_SASL_BIND_IN_PROGRESS && err != LDAP_SUCCESS) {

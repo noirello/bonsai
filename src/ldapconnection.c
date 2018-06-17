@@ -967,6 +967,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, PyObject *oid) {
     rc = ldap_parse_result(self->ld, res, &err, NULL, &errstr, NULL, &ctrls, 0);
 
     ppres = create_ppolicy_control(self->ld, ctrls, &ctrl_obj, &pperr);
+    if (ctrls != NULL) ldap_controls_free(ctrls);
     if (ppres == -1) return NULL;
 
     if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
@@ -1161,8 +1162,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         break;
     case LDAP_RES_MODRDN:
         /* Rename an LDAP entry. */
-        rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
-                        &returned_ctrls, 1);
+        rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL, NULL, 1);
         /* Remove operations from pending_ops. */
         if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
             Py_DECREF(obj);
@@ -1200,7 +1200,11 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         }
 
         ppres = create_ppolicy_control(self->ld, returned_ctrls, &ctrl_obj, &pperr);
-        if (ppres == -1) return NULL;
+        if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
+        if (ppres == -1) {
+            Py_DECREF(obj);
+            return NULL;
+        }
 
         if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
             mods = (LDAPModList *)obj;
@@ -1210,6 +1214,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
                 Py_DECREF(obj);
                 return NULL;
             }
+            Py_DECREF(obj);
             /* Set Python error. */
             if (ppres == 1 && pperr != 65535) set_ppolicy_err(pperr, ctrl_obj);
             else set_exception(self->ld, err);

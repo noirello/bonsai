@@ -94,21 +94,24 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
     int status = -1;
     Py_ssize_t i;
     PyObject *keys = PyMapping_Keys((PyObject *)self);
-    PyObject *iter, *key;
+    PyObject *iter = NULL, *key = NULL;
     LDAPModList *mods = NULL;
     PyObject *value = NULL;
     PyObject *added = NULL, *deleted = NULL;
+    PyObject *tmp = NULL;
 
+    if (keys == NULL) return NULL;
     /* Create an LDAPModList for the LDAPEntry values and deleted attributes. */
     mods = LDAPModList_New((PyObject *)self, Py_SIZE(self) * 2
                             + Py_SIZE(self->deleted));
-    if (mods == NULL) return NULL;
-
-    if (keys == NULL) return NULL;
+    if (mods == NULL) {
+        Py_DECREF(keys);
+        return NULL;
+    }
 
     iter = PyObject_GetIter(keys);
     Py_DECREF(keys);
-    if (iter == NULL) return NULL;
+    if (iter == NULL) goto error;
 
     DEBUG("LDAPEntry_CreateLDAPMods (self:%p)", self);
     for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
@@ -152,8 +155,17 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
         }
         /* Change attributes' status to "not changed" (0), and clear lists. */
         if (set_ldapvaluelist_status(value, 0) != 0) goto error;
-        if (PyObject_CallMethod(added, "clear", NULL) == NULL) goto error;
-        if (PyObject_CallMethod(deleted, "clear", NULL) == NULL) goto error;
+
+        tmp = PyObject_CallMethod(added, "clear", NULL);
+        if (tmp == NULL) goto error;
+        Py_DECREF(tmp);
+
+        tmp = PyObject_CallMethod(deleted, "clear", NULL);
+        if (tmp == NULL) goto error;
+        Py_DECREF(tmp);
+
+        Py_DECREF(added);
+        Py_DECREF(deleted);
         Py_DECREF(key);
     }
     Py_DECREF(iter);
@@ -173,8 +185,10 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
 
     return mods;
 error:
-    Py_DECREF(iter);
-    Py_DECREF(key);
+    Py_XDECREF(added);
+    Py_XDECREF(deleted);
+    Py_XDECREF(iter);
+    Py_XDECREF(key);
     Py_DECREF(mods);
     return NULL;
 }
@@ -313,7 +327,11 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
     if (num_of_ctrls > 0) {
         server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *) *
                                               (num_of_ctrls + 1));
-        if (server_ctrls == NULL) return PyErr_NoMemory();
+        if (server_ctrls == NULL) {
+            Py_DECREF(mods);
+            free(dnstr);
+            return PyErr_NoMemory();
+        }
         num_of_ctrls = 0;
     }
 
@@ -322,6 +340,8 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
         rc = ldap_create_passwordpolicy_control(self->conn->ld, &ppolicy_ctrl);
         if (rc != LDAP_SUCCESS) {
             PyErr_BadInternalCall();
+            Py_DECREF(mods);
+            free(dnstr);
             return NULL;
         }
         server_ctrls[num_of_ctrls++] = ppolicy_ctrl;
@@ -334,6 +354,8 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
                                  1, &mdi_ctrl);
         if (rc != LDAP_SUCCESS) {
             PyErr_BadInternalCall();
+            Py_DECREF(mods);
+            free(dnstr);
             return NULL;
         }
         server_ctrls[num_of_ctrls++] = mdi_ctrl;
@@ -497,10 +519,7 @@ ldapentry_setdeletedkeys(LDAPEntry *self, PyObject *value, void *closure) {
 /* Returns the copy of the deleted keys in the LDAPEntry. */
 static PyObject *
 ldapentry_getdeletedkeys(LDAPEntry *self, void *closure) {
-    PyObject *copy = NULL;
-
-    copy = PyObject_CallMethod(self->deleted, "copy", NULL);
-    return copy;
+    return PyObject_CallMethod(self->deleted, "copy", NULL);
 }
 
 
