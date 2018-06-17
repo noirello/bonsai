@@ -812,7 +812,7 @@ support. */
 int
 ldap_get_optionU(LDAP *ld, int option, void *outvalue) {
     if (option == LDAP_OPT_X_TLS_PACKAGE) {
-        *(char **)outvalue = "SChannel";
+        *(char **)outvalue = strdup("SChannel");
         return LDAP_SUCCESS;
     }
     if (option == LDAP_OPT_API_INFO) {

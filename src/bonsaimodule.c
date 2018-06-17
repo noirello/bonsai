@@ -54,6 +54,7 @@ static PyObject *
 bonsai_get_tls_impl_name(PyObject *self) {
     int rc = 0;
     char *package = NULL;
+    PyObject *str = NULL;
 
     rc = ldap_get_option(NULL, LDAP_OPT_X_TLS_PACKAGE, &package);
     if (rc != LDAP_SUCCESS || package == NULL) {
@@ -62,7 +63,9 @@ bonsai_get_tls_impl_name(PyObject *self) {
         return NULL;
     }
 
-    return PyUnicode_FromString(package);
+    str = PyUnicode_FromString(package);
+    ldap_memfree(package);
+    return str;
 }
 
 /* Check that the module is build with additional KRB5 support. */
