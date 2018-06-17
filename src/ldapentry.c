@@ -378,7 +378,7 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
     PyObject *key = NULL;
     PyObject *res_tuple = NULL;
     PyObject *values = NULL;
-    PyObject *iter, *item;
+    PyObject *iter = NULL, *item = NULL;
     PyObject *attr = NULL;
     PyObject *added = NULL, *deleted = NULL;
 
@@ -391,7 +391,7 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
         if (!PyArg_ParseTuple(res_tuple, "OiO:rollback",
                 &key, &mod_op, &values)) return -1;
 
-        attr = LDAPEntry_GetItem(self, key);
+        attr = LDAPEntry_GetItem(self, key); /* Borrowed ref. */
 
         if (attr == NULL) {
             /* If the attribute is remove from the LDAPEntry and deleted
@@ -406,16 +406,16 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
 
             /* Get LDAPValueList's __added list. */
             added = PyObject_GetAttrString(attr, "added");
-            if (added == NULL) return -1;
+            if (added == NULL) goto error;
 
             /* Get LDAPValueList's __deleted list. */
             deleted = PyObject_GetAttrString(attr, "deleted");
-            if (deleted == NULL) return -1;
+            if (deleted == NULL) goto error;
 
             /* When status is `replaced`, then drop the previous changes. */
             if (status != 2) {
                 iter = PyObject_GetIter(values);
-                if (iter == NULL) return -1;
+                if (iter == NULL) goto error;
                 /* Check every item in the LDAPMod value list,
                     and append to the corresponding list for the attribute. */
                 for (item = PyIter_Next(iter); item != NULL;
@@ -427,34 +427,41 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
                             if (uniqueness_check(attr, item) == 1 &&
                                     uniqueness_check(added, item) == 0) {
                                 if (PyList_Append(added, item) != 0) {
-                                    return -1;
+                                    goto error;
                                 }
                             }
-                            if (set_ldapvaluelist_status(attr, 1) != 0) return -1;
+                            if (set_ldapvaluelist_status(attr, 1) != 0) goto error;
                             break;
                         case LDAP_MOD_DELETE:
                             if (uniqueness_check(attr, item) == 0 &&
                                     uniqueness_check(deleted, item) == 0) {
-                                if (PyList_Append(deleted, item) != 0) {
-                                    return -1;
-                                }
+                                if (PyList_Append(deleted, item) != 0) goto error;
                             }
-                            if (set_ldapvaluelist_status(attr, 1) != 0) return -1;
+                            if (set_ldapvaluelist_status(attr, 1) != 0) goto error;
                             break;
                         case LDAP_MOD_REPLACE:
                             /* Nothing to do when the attribute's status is replaced. */
-                            if (set_ldapvaluelist_status(attr, 2) != 0) return -1;
+                            if (set_ldapvaluelist_status(attr, 2) != 0) goto error;
                             break;
                     }
                     Py_DECREF(item);
                 }
                 Py_DECREF(iter);
             }
+            Py_DECREF(added);
+            Py_DECREF(deleted);
         }
         Py_DECREF(res_tuple);
     }
-    Py_DECREF(mods);
     return 0;
+
+error:
+    Py_XDECREF(item);
+    Py_XDECREF(iter);
+    Py_XDECREF(added);
+    Py_XDECREF(deleted);
+    Py_DECREF(res_tuple);
+    return -1;
 }
 
 /* Sends the modifications of the entry to the directory server. */
@@ -664,6 +671,7 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
     int status = 1;
     char *newkey = lowercase(PyObject2char(key));
     PyObject *list = NULL;
+    PyObject *tmp = NULL;
     PyObject *cikey = NULL; /* The actual (case-insenstive) key in the entry */
 
     if (newkey == NULL) {
@@ -698,18 +706,21 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
                 /* Convert value to LDAPValueList object. */
                 list = PyObject_CallFunctionObjArgs(LDAPValueListObj, NULL);
                 if (PyList_Check(value) || PyTuple_Check(value)) {
-                    if (PyObject_CallMethod(list, "extend", "(O)", value) == NULL) {
+                    tmp = PyObject_CallMethod(list, "extend", "(O)", value);
+                    if (tmp == NULL) {
                         Py_DECREF(list);
                         Py_DECREF(cikey);
                         return -1;
                     }
                 } else {
-                    if (PyObject_CallMethod(list, "append", "(O)", value) == NULL) {
+                    tmp = PyObject_CallMethod(list, "append", "(O)", value);
+                    if (tmp == NULL) {
                         Py_DECREF(list);
                         Py_DECREF(cikey);
                         return -1;
                     }
                 }
+                Py_DECREF(tmp);
                 rc = PyDict_SetItem((PyObject *)self, cikey, (PyObject *)list);
                 if (set_ldapvaluelist_status(list, status) != 0) {
                     Py_DECREF(cikey);

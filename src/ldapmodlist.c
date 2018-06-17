@@ -112,9 +112,15 @@ LDAPModList_Pop(LDAPModList *self) {
             for (i = 0; mod_bvals[i] != NULL; i++) {
                 /* Convert bervals to PyObject. */
                 berval = berval2PyObject(mod_bvals[i], 0);
-                if (berval == NULL) return NULL;
+                if (berval == NULL) {
+                    Py_DECREF(list);
+                    return NULL;
+                }
                 /* Append to the list. */
-                if (PyList_Append(list, berval) != 0) return NULL;
+                if (PyList_Append(list, berval) != 0) {
+                    Py_DECREF(list);
+                    return NULL;
+                }
                 Py_DECREF(berval);
                 /* Free bervals. */
                 free(mod_bvals[i]->bv_val);
@@ -124,6 +130,7 @@ LDAPModList_Pop(LDAPModList *self) {
             /* Create tuple with return values. */
             ret = Py_BuildValue("(ziO)", mod->mod_type,
                     mod->mod_op ^ LDAP_MOD_BVALUES, list);
+            Py_DECREF(list);
         } else {
             ret = Py_BuildValue("(ziO)", mod->mod_type,
                     mod->mod_op ^ LDAP_MOD_BVALUES, Py_None);
