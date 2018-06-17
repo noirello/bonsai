@@ -344,10 +344,11 @@ load_python_object(char *module_name, char *object_name) {
 PyObject *
 get_error_by_code(int code) {
     PyObject *error;
-    PyObject *get_error = load_python_object("bonsai.errors", "_get_error");
-    if (get_error == NULL) return NULL;
+    PyObject *get_error_func = load_python_object("bonsai.errors", "_get_error");
+    if (get_error_func == NULL) return NULL;
 
-    error = PyObject_CallFunction(get_error, "(i)", code);
+    error = PyObject_CallFunction(get_error_func, "(i)", code);
+    Py_DECREF(get_error_func);
 
     return error;
 }
