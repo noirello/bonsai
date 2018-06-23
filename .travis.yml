@@ -60,7 +60,7 @@ matrix:
         # Check that slapd is working.
         - ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U admin -w p@ssword
         - ldapsearch -Y DIGEST-MD5 -U admin -w p@ssword -h bonsai.test -b "" -s base 'objectclass=*' -LLL +
-        - ldapsearch -VV
+        - /usr/local/opt/openldap/bin/ldapsearch -VV
         # Set library and include path.
         - printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
       before_script:
