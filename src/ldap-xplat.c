@@ -167,12 +167,13 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
         krb5_ccache *ccache, gss_cred_id_t *gsscred, char **errmsg) {
     int rc = 0, len = 0;
     unsigned int minor_stat = 0, major_stat = 0;
-    const char *cname = NULL;
     const char *errmsg_tmp = NULL;
+    const char *cctype = NULL;
+    krb5_ccache defcc = NULL;
     krb5_creds creds;
     krb5_principal princ = NULL;
 
-    if (realm == NULL || user == NULL || password == NULL) return 1;
+    if (realm == NULL || user == NULL) return 1;
     len = strlen(realm);
 
     if (len == 0 || strlen(user) == 0) return 0;
@@ -180,7 +181,12 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
     DEBUG("create_krb5_cred (ctx:%p, realm:%s, user:%s, password:%s, ccache:%p,"
         " gsscred:%p)", ctx, realm, user, "****", ccache, gsscred);
 
-    rc = krb5_cc_new_unique(ctx, "FILE", NULL, ccache);
+    rc = krb5_cc_default(ctx, &defcc);
+    if (rc != 0) goto end;
+
+    cctype = krb5_cc_get_type(ctx, defcc);
+
+    rc = krb5_cc_new_unique(ctx, cctype, NULL, ccache);
     if (rc != 0) goto end;
 
     rc = krb5_build_principal(ctx, &princ, len, realm, user, NULL);
@@ -189,24 +195,21 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
     rc = krb5_cc_initialize(ctx, *ccache, princ);
     if (rc != 0) goto end;
 
-    rc = krb5_get_init_creds_password(ctx, &creds, princ, password, 0, NULL, 0,
-            NULL, NULL);
-    if (rc != 0) goto end;
+    if (password != NULL) {
+        rc = krb5_get_init_creds_password(ctx, &creds, princ, password, 0, NULL, 0,
+                NULL, NULL);
+        if (rc != 0) goto end;
 
-    rc= krb5_cc_store_cred(ctx, *ccache, &creds);
-    if (rc != 0) goto end;
+        rc= krb5_cc_store_cred(ctx, *ccache, &creds);
+        if (rc != 0) goto end;
+    }
 
-    cname = krb5_cc_get_name(ctx, *ccache);
-    if (cname == NULL) goto end;
-
-    major_stat = gss_krb5_ccache_name(&minor_stat, cname, NULL);
-    if (major_stat != 0) goto end;
-
-    major_stat = gss_acquire_cred(&minor_stat, GSS_C_NO_NAME, 0,
-            GSS_C_NULL_OID_SET, GSS_C_INITIATE, gsscred, NULL, NULL);
+    major_stat = gss_krb5_import_cred(&minor_stat, *ccache, princ, NULL, gsscred);
 
 end:
     if (princ != NULL) krb5_free_principal(ctx, princ);
+    if (defcc != NULL) krb5_cc_close(ctx, defcc);
+
     if (rc != 0) {
         /* Create error message with the error code. */
         errmsg_tmp = krb5_get_error_message(ctx, rc);
@@ -434,7 +437,6 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, i
 
     /* Mechanism is set, use SASL interactive bind. */
     if (strcmp(info->mech, "SIMPLE") != 0) {
-        if (info->passwd == NULL) info->passwd = "";
         rc = ldap_sasl_interactive_bind(ld, info->binddn, info->mech, server_ctrls, NULL,
                 LDAP_SASL_QUIET, sasl_interact, info, result, &(info->rmech), msgid);
     } else {
@@ -558,7 +560,7 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
             authzid = PyObject2char(tmp);
         }
         tmp = PyTuple_GetItem(creds, 1);
-        passwd = PyObject2char(tmp);
+        passwd = (tmp != Py_None ? PyObject2char(tmp) : NULL);
     }
 
     defaults = malloc(sizeof(ldap_conndata_t));
