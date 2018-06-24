@@ -1,10 +1,10 @@
-from typing import Any, List
+from typing import Any, List, Union, Iterable, Optional
 
 import bonsai
 
 class LDAPValueList(list):
     """
-    Modified list that tracks added and deleted values. It also conatains
+    Modified list that tracks added and deleted values. It also contains
     only unique elements. The elements are compared to their lower-cased
     string representations.
 
@@ -16,7 +16,7 @@ class LDAPValueList(list):
     """
     __slots__ = ("__deleted", "__added", "__status")
 
-    def __init__(self, items=None) -> None:
+    def __init__(self, items: Optional[Iterable[Any]] = None) -> None:
         super().__init__()
         self.__added = [] # type: List[str]
         self.__deleted = [] # type: List[str]
@@ -26,7 +26,7 @@ class LDAPValueList(list):
                 self.append(item)
 
     @staticmethod
-    def __balance(lst1, lst2, value) -> None:
+    def __balance(lst1: List[str], lst2: List[str], value: Any) -> None:
         """
         Balancing between the two list (__added, __deleted),
         make sure the same element is not in both lists.
@@ -36,7 +36,7 @@ class LDAPValueList(list):
         except ValueError:
             lst2.append(value)
 
-    def _append_unchecked(self, value) -> None:
+    def _append_unchecked(self, value: Any) -> None:
         super().append(value)
 
     @property
@@ -46,13 +46,13 @@ class LDAPValueList(list):
                 "@deleted": self.__deleted.copy()}
 
     @_status_dict.setter
-    def _status_dict(self, value) -> None:
+    def _status_dict(self, value: Any) -> None:
         raise TypeError("Can not change _status_dict")
 
-    def __contains__(self, item) -> bool:
+    def __contains__(self, item: Any) -> bool:
         return bonsai._unique_contains(self, item)[0]
 
-    def __delitem__(self, idx: int):
+    def __delitem__(self, idx: Union[int, slice]) -> None:
         old_value = super().__getitem__(idx)
         if type(idx) == slice:
             for item in old_value:
@@ -61,23 +61,23 @@ class LDAPValueList(list):
             self.__balance(self.__added, self.__deleted, old_value)
         super().__delitem__(idx)
 
-    def __mul__(self, value):
+    def __mul__(self, value: Any) -> 'LDAPValueList':
         raise TypeError("Cannot multiple LDAPValueList.")
 
-    def __add__(self, other):
+    def __add__(self, other: Iterable) -> 'LDAPValueList':
         if type(other) != list and type(other) != LDAPValueList:
             raise TypeError("Can only concatenate list and LDAPValueList.")
         new_list = self.copy()
         new_list.extend(other)
         return new_list
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: Iterable) -> 'LDAPValueList':
         if type(other) != list and type(other) != LDAPValueList:
             raise TypeError("Can only concatenate list and LDAPValueList.")
         self.extend(other)
         return self
 
-    def __setitem__(self, idx: int, value: Any) -> None:
+    def __setitem__(self, idx: Union[int, slice], value: Any) -> None:
         old_value = self[idx]
         if type(idx) == slice:
             for item in value:
@@ -94,7 +94,7 @@ class LDAPValueList(list):
             self.__balance(self.__deleted, self.__added, value)
         super().__setitem__(idx, value)
 
-    def append(self, item) -> None:
+    def append(self, item: Any) -> None:
         """
         Add a unique item to the end of the LDAPValueList.
 
@@ -108,10 +108,10 @@ class LDAPValueList(list):
         self.__status = 1
         super().append(item)
 
-    def extend(self, items) -> None:
+    def extend(self, items: Iterable[Any]) -> None:
         """
         Extend the LDAPValueList by appending all the items in the given
-        list. All element in `items` must be unqiue and also not
+        list. All element in `items` must be unique and also not
         represented in the LDAPValueList.
 
         :param items: List of new items.
@@ -125,7 +125,7 @@ class LDAPValueList(list):
         self.__status = 1
         super().extend(items)
 
-    def insert(self, idx: int, value) -> None:
+    def insert(self, idx: int, value: Any) -> None:
         """
         Insert a unique item at a given position.
 
@@ -139,7 +139,7 @@ class LDAPValueList(list):
         self.__status = 1
         super().insert(idx, value)
 
-    def remove(self, value) -> None:
+    def remove(self, value: Any) -> None:
         """
         Remove the first item from the LDAPValueList whose value is `value`.
 
@@ -153,7 +153,7 @@ class LDAPValueList(list):
         self.__status = 1
         self.__balance(self.__added, self.__deleted, obj)
 
-    def pop(self, idx: int=-1) -> Any:
+    def pop(self, idx: int = -1) -> Any:
         """
         Remove the item at the given position in the LDAPValueList, and
         return it. If no index is specified, pop() removes and returns the
@@ -170,7 +170,7 @@ class LDAPValueList(list):
         """ Remove all items from the LDAPValueList. """
         del self[:]
 
-    def copy(self):
+    def copy(self) -> 'LDAPValueList':
         """
         Return a shallow copy of the LDAPValueList. This includes
         the status and the previously added and deleted items.
@@ -192,7 +192,7 @@ class LDAPValueList(list):
         return self.__added
 
     @added.setter
-    def added(self, value) -> None:
+    def added(self, value: Any) -> None:
         raise ValueError("Added attribute cannot be changed.")
 
     @property
@@ -201,7 +201,7 @@ class LDAPValueList(list):
         return self.__deleted
 
     @deleted.setter
-    def deleted(self, value) -> None:
+    def deleted(self, value: Any) -> None:
         raise ValueError("Deleted attribute cannot be changed.")
 
     @property
@@ -215,7 +215,7 @@ class LDAPValueList(list):
         return self.__status
 
     @status.setter
-    def status(self, value) -> None:
+    def status(self, value: int) -> None:
         if type(value) != int:
             raise TypeError("Status must be int.")
         if value > -1 and value < 3:

@@ -5,13 +5,15 @@
 
 """
 import socket
-from typing import Union, List, Tuple, Optional
+from typing import Any, Union, List, Tuple, Optional, Dict, TypeVar
 
 from .ldapurl import LDAPURL
-from .ldapconnection import LDAPConnection
+from .ldapconnection import BaseLDAPConnection, LDAPConnection
 from .asyncio import AIOLDAPConnection
 from .ldapconnection import LDAPSearchScope
 from .ldapentry import LDAPEntry
+
+CT = TypeVar('CT', bound=BaseLDAPConnection)
 
 class LDAPClient:
     """
@@ -22,8 +24,8 @@ class LDAPClient:
     :raises TypeError: if the `url` parameter is not string \
     or not a valid LDAP URL.
     """
-    def __init__(self, url: Union[LDAPURL, str]="ldap://",
-                 tls: bool=False) -> None:
+    def __init__(self, url: Union[LDAPURL, str] = "ldap://",
+                 tls: bool = False) -> None:
         """ init method. """
         self.__tls = tls
         self.set_url(url)
@@ -31,10 +33,10 @@ class LDAPClient:
         self.__raw_list = [] # type: List[str]
         self.__mechanism = "SIMPLE"
         self.__cert_policy = -1
-        self.__ca_cert = ""
-        self.__ca_cert_dir = ""
-        self.__client_cert = ""
-        self.__client_key = ""
+        self.__ca_cert = "" # type: Optional[str]
+        self.__ca_cert_dir = "" # type: Optional[str]
+        self.__client_cert = "" # type: Optional[str]
+        self.__client_key = "" # type: Optional[str]
         self.__async_conn = AIOLDAPConnection
         self.__ppolicy_ctrl = False
         self.__ext_dn = None # type: Optional[int]
@@ -43,7 +45,7 @@ class LDAPClient:
         self.__managedsait_ctrl = False
 
     @staticmethod
-    def _create_socketpair():
+    def _create_socketpair() -> Tuple[socket.socket, socket.socket]:
         """
         Create a socketpair that will be used for signaling to select() during
         the initialisation procedure (and binding on MS Windows).
@@ -52,7 +54,9 @@ class LDAPClient:
             return socket.socketpair()
         # Backward compatibility on Windows from Python 3.5.
         # Origin: https://gist.github.com/4325783, by Geert Jansen.  Public domain.
-        def socketpair(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0):
+        def socketpair(family: Any = socket.AF_INET,
+                       type: Any = socket.SOCK_STREAM,
+                       proto: int = 0) -> Tuple[socket.socket, socket.socket]:
             import errno
             # We create a connected TCP socket. Note the trick with setblocking(0)
             # that prevents us from having to create a thread.
@@ -79,7 +83,7 @@ class LDAPClient:
         values of the listed LDAP attribute's names in `raw_list` will be
         kept in bytearray format.
 
-        :param list raw_list: a list of LDAP attributum's names. \
+        :param list raw_list: a list of LDAP attribute's names. \
         The elements must be string and unique.
 
         :raises TypeError: if any of the list's element is not a \
@@ -88,7 +92,7 @@ class LDAPClient:
         element.
         """
         for elem in raw_list:
-            if type(elem) != str:
+            if not isinstance(elem, str):
                 raise TypeError("All element of raw_list must be string.")
         if len(raw_list) > len(set(map(str.lower, raw_list))):
             raise ValueError("Attribute names must be different from each other.")
@@ -155,14 +159,14 @@ class LDAPClient:
            there is a chance of man-in-the-middle attack.
         """
         tls_options = {'never' : 0, 'demand' : 2, 'allow': 3, 'try' : 4}
-        if type(policy) != str:
+        if not isinstance(policy, str):
             raise TypeError("Policy parameter must be string.")
         policy = policy.lower()
         if policy not in tls_options.keys():
             raise ValueError("'%s' is an invalid policy.", policy)
         self.__cert_policy = tls_options[policy]
 
-    def set_ca_cert(self, name: str) -> None:
+    def set_ca_cert(self, name: Optional[str]) -> None:
         """
         Set the name of CA certificate. If the underlying libldap library \
         uses the Mozilla NSS as TLS library the `name` should be the same \
@@ -179,11 +183,11 @@ class LDAPClient:
         :param str name: the name of the CA cert.
         :raises TypeError: if `name` parameter is not a string or not None.
         """
-        if name is not None and type(name) != str:
+        if name is not None and not isinstance(name, str):
             raise TypeError("Name parameter must be string or None.")
         self.__ca_cert = name
 
-    def set_ca_cert_dir(self, path: str) -> None:
+    def set_ca_cert_dir(self, path: Optional[str]) -> None:
         """
         Set the directory of the CA cert. If the underlying libldap library \
         uses the Mozilla NSS as TLS library the `path` should be the path to \
@@ -199,11 +203,11 @@ class LDAPClient:
         :param str path: the path to the CA directory.
         :raises TypeError: if `path` parameter is not a string or not None.
         """
-        if path is not None and type(path) != str:
+        if path is not None and not isinstance(path, str):
             raise TypeError("Path parameter must be string or None.")
         self.__ca_cert_dir = path
 
-    def set_client_cert(self, name: str) -> None:
+    def set_client_cert(self, name: Optional[str]) -> None:
         """
         Set the name of client certificate. If the underlying libldap library \
         uses the Mozilla NSS as TLS library the `name` should be the same one \
@@ -221,11 +225,11 @@ class LDAPClient:
         :param str name: the name of the client cert.
         :raises TypeError: if `name` parameter is not a string or not None.
         """
-        if name is not None and type(name) != str:
+        if name is not None and not isinstance(name, str):
             raise TypeError("Name parameter must be string or None.")
         self.__client_cert = name
 
-    def set_client_key(self, name: str) -> None:
+    def set_client_key(self, name: Optional[str]) -> None:
         """
         Set the file that contains the private key that matches the \
         certificate of the client that specified with \
@@ -241,11 +245,11 @@ class LDAPClient:
         :param str name: the name of the CA cert.
         :raises TypeError: if `name` parameter is not a string or not None.
         """
-        if name is not None and type(name) != str:
+        if name is not None and not isinstance(name, str):
             raise TypeError("Name parameter must be string or None.")
         self.__client_key = name
 
-    def set_async_connection_class(self, conn: LDAPConnection) -> None:
+    def set_async_connection_class(self, conn: BaseLDAPConnection) -> None:
         """
         Set the LDAP connection class for asynchronous connection. The \
         default connection class is `AIOLDAPConnection` that uses the
@@ -256,8 +260,8 @@ class LDAPClient:
         :raises TypeError: if `conn` parameter is not a subclass \
         of :class:`LDAPConnection`.
         """
-        if not issubclass(conn, LDAPConnection):
-            raise TypeError("Class must be a subclass of LDAPConnection. ")
+        if not issubclass(conn, BaseLDAPConnection):
+            raise TypeError("Class must be a subclass of BaseLDAPConnection. ")
         self.__async_conn = conn
 
     def set_password_policy(self, ppolicy: bool) -> None:
@@ -280,11 +284,11 @@ class LDAPClient:
         :param bool ppolicy: enabling/disabling password policy control.
         :raises TypeError: If the parameter is not a bool type.
         """
-        if type(ppolicy) != bool:
+        if not isinstance(ppolicy, bool):
             raise TypeError("Parameter must be bool.")
         self.__ppolicy_ctrl = ppolicy
 
-    def set_extended_dn(self, extdn_format: int) -> None:
+    def set_extended_dn(self, extdn_format: Optional[int]) -> None:
         """
         Set the format of extended distinguished name for \
         LDAP_SERVER_EXTENDED_DN_OID control which extends the entries'
@@ -303,7 +307,7 @@ class LDAPClient:
         :raises TypeError: if the parameter is not int or None.
         :raises ValueError: if the parameter is not 0, 1 or None.
         """
-        if extdn_format is not None and type(extdn_format) != int:
+        if extdn_format is not None and not isinstance(extdn_format, int):
             raise TypeError("Parameter's type must be int or None.")
         if extdn_format not in (0, 1, None):
             raise ValueError("Parameter must be 0, 1 or None.")
@@ -317,9 +321,9 @@ class LDAPClient:
         It will be implicitly called during iteration.
 
         :param bool val: enabling/disabling auto page acquiring.
-        :raises TypeError: If the paramter is not a bool type.
+        :raises TypeError: If the parameter is not a bool type.
         """
-        if type(val) != bool:
+        if not isinstance(val, bool):
             raise TypeError("Parameter's type must be bool.")
         self.__auto_acquire = val
 
@@ -331,9 +335,9 @@ class LDAPClient:
         objects.
 
         :param bool val: enabling/disabling LDAP referrals chasing.
-        :raises TypeError: If the paramter is not a bool type.
+        :raises TypeError: If the parameter is not a bool type.
         """
-        if type(val) != bool:
+        if not isinstance(val, bool):
             raise TypeError("Parameter's type must be bool.")
         self.__chase_referrals = val
 
@@ -344,9 +348,9 @@ class LDAPClient:
         LDAP entry.
 
         :param bool val: enabling/disabling ManageDsaIT control.
-        :raises TypeError: If the paramter is not a bool type.
+        :raises TypeError: If the parameter is not a bool type.
         """
-        if type(val) != bool:
+        if not isinstance(val, bool):
             raise TypeError("Parameter's type must be bool.")
         self.__managedsait_ctrl = val
 
@@ -356,9 +360,9 @@ class LDAPClient:
 
         :param LDAPURL|str url: the LDAP url.
         """
-        if type(url) == str:
+        if isinstance(url, str):
             self.__url = LDAPURL(url)
-        elif type(url) == LDAPURL:
+        elif isinstance(url, LDAPURL):
             self.__url = url
         else:
             raise TypeError("The url parameter must be string or an LDAPURL.")
@@ -368,106 +372,106 @@ class LDAPClient:
             self.__tls = False
 
     @property
-    def url(self):
+    def url(self) -> LDAPURL:
         """ The URL of the directory server. """
         return self.__url
 
     @url.setter
-    def url(self, value=None):
+    def url(self, value: Union[LDAPURL, str]) -> None:
         self.set_url(value)
 
     @property
-    def mechanism(self):
+    def mechanism(self) -> str:
         """ The chosen mechanism for authentication. It cannot be set. """
         return self.__mechanism
 
     @mechanism.setter
-    def mechanism(self, value=None):
+    def mechanism(self, value: Any = None) -> None:
         raise ValueError("Mechanism attribute cannot be set.")
 
     @property
-    def credentials(self):
+    def credentials(self) -> Optional[Tuple]:
         """ A tuple with the credential information. It cannot be set. """
         return self.__credentials
 
     @credentials.setter
-    def credentials(self, value=None):
+    def credentials(self, value: Any = None) -> None:
         raise ValueError("Credentials attribute cannot be set.")
 
     @property
-    def tls(self):
+    def tls(self) -> bool:
         """ A bool about TLS connection is required. It cannot be set."""
         return self.__tls
 
     @tls.setter
-    def tls(self, value=None):
-        raise ValueError("Tls attribute cannot be set.")
+    def tls(self, value: Any = None) -> None:
+        raise ValueError("TlS attribute cannot be set.")
 
     @property
-    def cert_policy(self):
+    def cert_policy(self) -> int:
         """ The certification policy. """
         return self.__cert_policy
 
     @cert_policy.setter
-    def cert_policy(self, value=None):
+    def cert_policy(self, value: str) -> None:
         self.set_cert_policy(value)
 
     @property
-    def ca_cert(self):
+    def ca_cert(self) -> Optional[str]:
         """ The name of the CA certificate. """
         return self.__ca_cert
 
     @ca_cert.setter
-    def ca_cert(self, value):
+    def ca_cert(self, value: Optional[str] = None) -> None:
         self.set_ca_cert(value)
 
     @property
-    def ca_cert_dir(self):
+    def ca_cert_dir(self) -> Optional[str]:
         """ The path to the CA certificate. """
         return self.__ca_cert_dir
 
     @ca_cert_dir.setter
-    def ca_cert_dir(self, value):
+    def ca_cert_dir(self, value: Optional[str]) -> None:
         self.set_ca_cert_dir(value)
 
     @property
-    def client_cert(self):
+    def client_cert(self) -> Optional[str]:
         """ The name of the client certificate. """
         return self.__client_cert
 
     @client_cert.setter
-    def client_cert(self, value):
+    def client_cert(self, value: Optional[str]) -> None:
         self.set_client_cert(value)
 
     @property
-    def client_key(self):
+    def client_key(self) -> Optional[str]:
         """ The key file to the client's certificate. """
         return self.__client_key
 
     @client_key.setter
-    def client_key(self, value):
+    def client_key(self, value: Optional[str]) -> None:
         self.set_client_key(value)
 
     @property
-    def raw_attributes(self):
+    def raw_attributes(self) -> List[str]:
         """ A list of attributes that should be kept in byte format. """
         return self.__raw_list
 
     @raw_attributes.setter
-    def raw_attributes(self, value=None):
+    def raw_attributes(self, value: List[str]) -> None:
         self.set_raw_attributes(value)
 
     @property
-    def password_policy(self):
+    def password_policy(self) -> bool:
         """ The status of using password policy. """
         return self.__ppolicy_ctrl
 
     @password_policy.setter
-    def password_policy(self, value):
+    def password_policy(self, value: bool) -> None:
         self.set_password_policy(value)
 
     @property
-    def extended_dn_format(self):
+    def extended_dn_format(self) -> Optional[int]:
         """
         Format of the extended distinguished name. 0 means hexadecimal string
         format, 1 standard string format. If it is `None`, then it's not set.
@@ -475,37 +479,37 @@ class LDAPClient:
         return self.__ext_dn
 
     @extended_dn_format.setter
-    def extended_dn_format(self, value):
+    def extended_dn_format(self, value: Optional[int]) -> None:
         self.set_extended_dn(value)
 
     @property
-    def auto_page_acquire(self):
+    def auto_page_acquire(self) -> bool:
         """ The status of automatic page acquiring. """
         return self.__auto_acquire
 
     @auto_page_acquire.setter
-    def auto_page_acquire(self, value):
+    def auto_page_acquire(self, value: bool) -> None:
         self.set_auto_page_acquire(value)
 
     @property
-    def server_chase_referrals(self):
+    def server_chase_referrals(self) -> bool:
         """ The status of chasing referrals by the server. """
         return self.__chase_referrals
 
     @server_chase_referrals.setter
-    def server_chase_referrals(self, value):
+    def server_chase_referrals(self, value: bool) -> None:
         self.set_server_chase_referrals(value)
 
     @property
-    def managedsait(self):
+    def managedsait(self) -> bool:
         """ The status of using ManageDsaIT control. """
         return self.__managedsait_ctrl
 
     @managedsait.setter
-    def managedsait(self, value):
+    def managedsait(self, value: bool) -> None:
         self.set_managedsait(value)
 
-    def get_rootDSE(self) -> Union[LDAPEntry, None]:
+    def get_rootDSE(self) -> Optional[LDAPEntry]:
         """
         Returns the server's root DSE entry. The root DSE may contain
         information about the vendor, the naming contexts, the request
@@ -518,8 +522,16 @@ class LDAPClient:
         attrs = ["namingContexts", "altServer", "supportedExtension",
                  "supportedControl", "supportedSASLMechanisms",
                  "supportedLDAPVersion"]
-        with LDAPConnection(self.__class__(self.url, self.tls), False).open() \
-        as conn:
+        tls_options = {0: 'never', 2: 'demand', 3: 'allow', 4: 'try', -1: None}
+        this = self.__class__(self.url, self.tls)
+        cert_policy = tls_options[self.cert_policy]
+        if cert_policy is not None:
+            this.cert_policy = cert_policy
+        this.ca_cert = self.ca_cert
+        this.ca_cert_dir = self.ca_cert_dir
+        this.client_cert = self.client_cert
+        this.client_key = self.client_key
+        with LDAPConnection(this).open() as conn:
             try:
                 root_dse = conn.search("", LDAPSearchScope.BASE,
                                        "(objectclass=*)",
@@ -528,8 +540,9 @@ class LDAPClient:
             except IndexError:
                 return None
 
-    def connect(self, is_async: bool=False,
-                timeout: float=None, **kwargs) -> LDAPConnection:
+    def connect(self, is_async: bool = False,
+                timeout: Optional[float] = None,
+                **kwargs: Dict[str, Any]) -> CT:
         """
         Open a connection to the LDAP server.
 
@@ -544,4 +557,4 @@ class LDAPClient:
         if is_async:
             return self.__async_conn(self, **kwargs).open(timeout)
         else:
-            return LDAPConnection(self, is_async).open(timeout)
+            return LDAPConnection(self).open(timeout)

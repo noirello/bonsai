@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[dev-packages]
+pytest = "*"
+codecov = "*"
+pytest-cov = "*"
+tornado = "*"
+gevent = "*"
+sphinx = "*"
+pylint = "*"
+mypy = "*"
+wheel = "*"
+pydivert = {version = "*", sys_platform = "== 'win32'"}
+delocate = {version = "*", sys_platform = "== 'darwin'"}
+
+[requires]
+python_version = "3.6"

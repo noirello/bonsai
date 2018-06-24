@@ -1,23 +1,31 @@
+from typing import Any, Optional, Union
 from gevent.socket import wait_readwrite
 
-from ..ldapconnection import LDAPConnection, LDAPSearchScope
+from ..ldapconnection import BaseLDAPConnection, LDAPSearchScope
+from ..ldapdn import LDAPDN
 from ..errors import NotAllowedOnNonleaf
 
-class GeventLDAPConnection(LDAPConnection):
-    def __init__(self, client):
+MYPY = False
+
+if MYPY:
+    from ..ldapclient import LDAPClient
+
+class GeventLDAPConnection(BaseLDAPConnection):
+    def __init__(self, client: 'LDAPClient') -> None:
         super().__init__(client, is_async=True)
 
-    def _poll(self, msg_id, timeout=None):
+    def _poll(self, msg_id: int, timeout: Optional[float] = None) -> Any:
         while True:
             res = self.get_result(msg_id)
             if res is not None:
                 return res
             wait_readwrite(self.fileno(), timeout=timeout)
 
-    def _evaluate(self, msg_id, timeout=None):
+    def _evaluate(self, msg_id: int, timeout: Optional[float] = None) -> Any:
         return self._poll(msg_id, timeout)
 
-    def delete(self, dname, timeout=None, recursive=False):
+    def delete(self, dname: Union[str, LDAPDN], timeout: Optional[float] = None,
+               recursive: bool = False) -> bool:
         try:
             return super().delete(dname, timeout, recursive)
         except NotAllowedOnNonleaf as exc:

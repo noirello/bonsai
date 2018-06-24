@@ -193,6 +193,24 @@ class LDAPEntryTest(unittest.TestCase):
             self.assertEqual(entry.dn, obj.dn)
             entry.delete()
 
+    @unittest.skipIf(sys.platform.startswith("win"),
+                     "Cannot rename entry with old RDN on Windows")
+    def test_rename_with_old_rdn(self):
+        """ Test LDAPEntry's rename LDAP operation. """
+        entry = LDAPEntry("cn=test,%s" % self.basedn)
+        self.client.set_credentials(*self.creds)
+        with self.client.connect() as conn:
+            self._add_for_renaming(conn, entry)
+            entry.rename("uid=test2,%s" % self.basedn, delete_old_rdn=False)
+            self.assertEqual(str(entry.dn), "uid=test2,%s" % self.basedn)
+            obj = conn.search("cn=test,%s" % self.basedn, 0)
+            self.assertEqual(obj, [])
+            obj = conn.search("uid=test2,%s" % self.basedn, 0)[0]
+            self.assertEqual(entry.dn, obj.dn)
+            self.assertIn("test2", obj["uid"])
+            self.assertIn("test", obj["cn"])
+            entry.delete()
+
     def test_rename_error(self):
         """ Test LDAPEntry's rename error handling. """
         dname = bonsai.LDAPDN("cn=test,%s" % self.basedn)
@@ -202,6 +220,7 @@ class LDAPEntryTest(unittest.TestCase):
         with self.client.connect() as conn:
             self._add_for_renaming(conn, entry)
             self.assertRaises(TypeError, lambda: entry.rename(0))
+            self.assertRaises(TypeError, lambda: entry.rename(0, delete_old_rdn=0))
             try:
                 newdn = bonsai.LDAPDN("cn=test2,ou=invalid,%s" % self.basedn)
                 entry.rename(newdn)
@@ -266,7 +285,7 @@ class LDAPEntryTest(unittest.TestCase):
                      "Cannot use password policy on Windows")
     def test_password_modify(self):
         """
-        Test modifing password with simple modify operation and
+        Test modifying password with simple modify operation and
         password policy.
         """
         cli = LDAPClient(self.client.url)
@@ -368,7 +387,7 @@ class LDAPEntryTest(unittest.TestCase):
     @unittest.skipIf(sys.platform.startswith("win"),
                      "Cannot use ManageDsaIT on Windows")
     def test_modify_referrals(self):
-        """ Test modifying an LDAP refrerral with ManageDdsIT control. """
+        """ Test modifying an LDAP referral with ManageDdsIT control. """
         refdn = bonsai.LDAPDN("o=invalid-ref,ou=nerdherd,dc=bonsai,dc=test")
         newref = "ldap://invalid.host/cn=nobody"
         cli = LDAPClient(self.client.url)

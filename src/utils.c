@@ -340,14 +340,15 @@ load_python_object(char *module_name, char *object_name) {
 }
 
 /* Get an error by code calling the get_error function from
-   the pyldap.errors Python module. */
+   the bonsai.errors Python module. */
 PyObject *
 get_error_by_code(int code) {
     PyObject *error;
-    PyObject *get_error = load_python_object("bonsai.errors", "_get_error");
-    if (get_error == NULL) return NULL;
+    PyObject *get_error_func = load_python_object("bonsai.errors", "_get_error");
+    if (get_error_func == NULL) return NULL;
 
-    error = PyObject_CallFunction(get_error, "(i)", code);
+    error = PyObject_CallFunction(get_error_func, "(i)", code);
+    Py_DECREF(get_error_func);
 
     return error;
 }
@@ -407,20 +408,61 @@ end:
 /* Add a pending LDAP operations to a dictionary. The key is the
  * corresponding message id, the value depends on the type of operation. */
 int
-add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item)  {
-    char msgidstr[8];
+add_to_pending_ops(PyObject *pending_ops, int msgid, PyObject *item) {
+    PyObject *key = NULL;
 
-    sprintf(msgidstr, "%d", msgid);
-    if (PyDict_SetItemString(pending_ops, msgidstr, item) != 0) {
+    key = PyLong_FromLong((long int)msgid);
+    if (key == NULL) return -1;
+
+    if (PyDict_SetItem(pending_ops, key, item) != 0) {
+        Py_DECREF(key);
         PyErr_BadInternalCall();
         return -1;
     }
-    Py_DECREF(item);
+    if (item != Py_None) Py_DECREF(item);
+    Py_DECREF(key);
 
     return 0;
 }
 
-/* Get a soketpair in `tup` by calling LDAPClient's _create_socketpair
+/* Get a pending LDAP operations from a dictionary. The key is the
+ * corresponding message id, the return value depends on the type
+ * of operation. */
+PyObject *
+get_from_pending_ops(PyObject *pending_ops, int msgid) {
+    PyObject *key = NULL;
+    PyObject *item = NULL;
+
+    key = PyLong_FromLong((long int)msgid);
+    if (key == NULL) return NULL;
+
+    item = PyDict_GetItem(pending_ops, key);
+    Py_DECREF(key);
+
+    Py_XINCREF(item);
+    return item;
+}
+
+/* Delete a pending LDAP operations from a dictionary. The key is the
+ * corresponding message id, on error returns non-zero value. */
+int
+del_from_pending_ops(PyObject *pending_ops, int msgid) {
+    PyObject *key = NULL;
+
+    key = PyLong_FromLong((long int)msgid);
+    if (key == NULL) return -1;
+
+    if (PyDict_DelItem(pending_ops, key) != 0) {
+        Py_DECREF(key);
+        PyErr_BadInternalCall();
+        return -1;
+    }
+    Py_DECREF(key);
+
+    return 0;
+}
+
+/* Get a socketpair in `tup` by calling LDAPClient's _create_socketpair
    method. The socket descriptors are set to `csock` and `ssock` parameters
    respectively. If the function call is failed, it returns with -1. */
 int
@@ -604,6 +646,37 @@ uniqueness_remove(PyObject *list, PyObject *value) {
         } else if (cmp < 0) return -1;
     }
     return 0;
+}
+
+/* Check that the `value` is in the `list` by converting both the
+   value and the list elements lower case C char* strings. The
+   return value is a tuple of two items: the True/False that the
+   `value` is in the list and the list element that is matched. */
+PyObject *
+unique_contains(PyObject *list, PyObject *value) {
+    int rc = 0;
+    PyObject *retval = NULL;
+    PyObject *iter = NULL, *item = NULL;
+
+    iter = PyObject_GetIter(list);
+    if (iter == NULL) return NULL;
+
+    for (item = PyIter_Next(iter); item != NULL; item = PyIter_Next(iter)) {
+        rc = lower_case_match(item, value);
+        if (rc == -1) goto end;
+        if (rc == 1) {
+            /* Item found, build the return value of (True, item). */
+            retval = Py_BuildValue("(OO)", Py_True, item);
+            goto end;
+        }
+        Py_DECREF(item);
+    }
+    /* No item found, return (False, None). */
+    retval = Py_BuildValue("(OO)", Py_False, Py_None);
+end:
+    Py_DECREF(iter);
+    Py_XDECREF(item);
+    return retval;
 }
 
 int

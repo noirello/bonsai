@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# pyldap documentation build configuration file, created by
+# bonsai documentation build configuration file, created by
 # sphinx-quickstart on Sat Jan 18 21:30:25 2014.
 #
 # This file is execfile()d with the current directory set to its
@@ -19,10 +19,7 @@ import os
 sys.path[0:0] = [os.path.abspath('..')]
 
 # For read-the-docs: mocking the _bonsai module.
-
 from unittest.mock import MagicMock
-
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 class Mock(MagicMock):
     @classmethod
@@ -34,8 +31,6 @@ class Mock(MagicMock):
             return object
         if name == 'ldapsearchiter':
             return object
-        if on_rtd:
-            return Mock()
 
 MOCK_MODULES = ['lib._bonsai', 'bonsai']
 try:

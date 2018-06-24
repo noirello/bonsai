@@ -5,14 +5,14 @@ from tornado import gen
 from tornado.ioloop import IOLoop
 from tornado.concurrent import Future
 
-from ..ldapconnection import LDAPConnection, LDAPSearchScope
+from ..ldapconnection import BaseLDAPConnection, LDAPSearchScope
 from ..errors import LDAPError, NotAllowedOnNonleaf
 
 # Backwards compatibility from 3.5.
 if sys.version_info.minor < 5:
     StopAsyncIteration = StopIteration
 
-class TornadoLDAPConnection(LDAPConnection):
+class TornadoLDAPConnection(BaseLDAPConnection):
     def __init__(self, client, ioloop=None):
         super().__init__(client, is_async=True)
         self._ioloop = ioloop or IOLoop.instance()
@@ -55,7 +55,7 @@ class TornadoLDAPConnection(LDAPConnection):
                                                         self._timeout_callback,
                                                         fut)
         except FileExistsError as exc:
-            # Avoid concurrency problems by registring with
+            # Avoid concurrency problems by registering with
             # the same fileno more than once.
             if exc.errno != 17:
                 raise exc

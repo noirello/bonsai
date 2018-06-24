@@ -14,6 +14,14 @@ from bonsai import LDAPConnection
 from bonsai import LDAPSearchScope
 import bonsai.errors
 from bonsai.errors import ClosedConnection
+from bonsai.ldapconnection import BaseLDAPConnection
+
+class SimpleAsyncConn(BaseLDAPConnection):
+    def __init__(self, client):
+        super().__init__(client, True)
+
+    def _evaluate(self, msg_id, timeout=None):
+        return msg_id
 
 def invoke_kinit(user, password):
     """ Invoke kinit command with credential parameters. """
@@ -44,7 +52,7 @@ def receive_whoami_timeout(client, ipaddr):
     """ Set network delay and wait for a TimeoutError during whoami. """
     conn = client.connect()
     proxy = rpc.ServerProxy("http://%s:%d/" % (ipaddr, 8000))
-    proxy.set_delay(4.1)
+    proxy.set_delay(6.1)
     time.sleep(3.0)
     return conn.whoami(timeout=3.2)
 
@@ -67,15 +75,12 @@ class LDAPConnectionTest(unittest.TestCase):
                                           self.cfg["SIMPLEAUTH"]["password"]))
         client.auto_page_acquire = False
         self.conn = client.connect()
-        self.async_conn = LDAPConnection(client, True)
+        self.async_conn = SimpleAsyncConn(client)
 
     def tearDown(self):
         """ Close connection. """
         self.conn.close()
-        if not self.async_conn.closed:
-            self.async_conn.close()
         del self.conn
-        del self.async_conn
 
     def _binding(self, auth, mech, authzid, realm=None):
         if auth not in self.cfg:
@@ -117,15 +122,19 @@ class LDAPConnectionTest(unittest.TestCase):
         conn = self._binding("NTLMAUTH", "NTLM", None)
         conn.close()
 
+    def test_bind_not_supported_auth(self):
+        """ Test not supported authentication mechanism by the server. """
+        connect = lambda: self._binding("DIGESTAUTH", "SCRAM-SHA-1", None)
+        self.assertRaises(bonsai.AuthMethodNotSupported, connect)
+
     def _bind_gssapi_kinit(self, authzid):
-        if sys.platform == "win32":
-            self.skipTest("Cannot use Kerberos kinit auth on Windows "
-                          "against OpenLDAP")
+        if sys.platform == "win32" or sys.platform == "darwin":
+            self.skipTest("Kerberos kinit is available only on Linux.")
         try:
             invoke_kinit(self.cfg["GSSAPIAUTH"]["user"],
                          self.cfg["GSSAPIAUTH"]["password"])
             conn = self._binding("GSSAPIAUTH", "GSSAPI", authzid)
-            subprocess.check_call("kdestroy")
+            subprocess.call("kdestroy")
             return conn
         except subprocess.CalledProcessError:
             self.fail("Receiving TGT is failed.")
@@ -144,7 +153,7 @@ class LDAPConnectionTest(unittest.TestCase):
                          "GSSAPI authorization was failed. ")
         conn.close()
 
-    @unittest.skipIf(not bonsai.has_krb5_support(),
+    @unittest.skipIf(not bonsai.has_krb5_support() or sys.platform == "darwin",
                      "Module doesn't have KRB5 support.")
     def test_bind_gssapi(self):
         """ Test GSSAPI connection with automatic TGT requesting. """
@@ -153,7 +162,7 @@ class LDAPConnectionTest(unittest.TestCase):
             self.skipTest("Realm is not set.")
         if sys.platform == "linux":
             # Make sure keytab is empty.
-            subprocess.check_call("kdestroy")
+            subprocess.call("kdestroy")
         conn = self._binding("GSSAPIAUTH", "GSSAPI", None,
                              self.cfg["GSSAPIAUTH"]["realm"].upper())
         conn.close()
@@ -164,6 +173,8 @@ class LDAPConnectionTest(unittest.TestCase):
             self.skipTest("GSSAPI authentication is not set.")
         if not bonsai.has_krb5_support():
             self.skipTest("Module doesn't have KRB5 support.")
+        if sys.platform == "darwin":
+            self.skipTest("Kerberos is not available on Mac.")
         if ("realm" not in self.cfg["GSSAPIAUTH"]
                 or self.cfg["GSSAPIAUTH"]["realm"] == "None"):
             self.skipTest("Realm is not set.")
@@ -173,6 +184,19 @@ class LDAPConnectionTest(unittest.TestCase):
                                           self.cfg["GSSAPIAUTH"]["realm"],
                                           None))
         self.assertRaises(bonsai.AuthenticationError, client.connect)
+
+    @unittest.skipIf('TRAVIS' in os.environ, "No GSS-SPNEGO mech on Trusty")
+    def test_bind_spnego(self):
+        """ Test GSS-SPNEGO connection with automatic TGT requesting. """
+        if ("realm" not in self.cfg["GSSAPIAUTH"]
+                or self.cfg["GSSAPIAUTH"]["realm"] == "None"):
+            self.skipTest("Realm is not set.")
+        if sys.platform == "linux":
+            # Make sure keytab is empty.
+            subprocess.call("kdestroy")
+        conn = self._binding("GSSAPIAUTH", "GSS-SPNEGO", None,
+                             self.cfg["GSSAPIAUTH"]["realm"].upper())
+        conn.close()
 
     def _bind_external(self, authzid):
         if 'EXTERNALAUTH' not in self.cfg:
@@ -287,20 +311,6 @@ class LDAPConnectionTest(unittest.TestCase):
                         self.cfg["SIMPLEAUTH"]["adusername"]]
         self.assertIn(obj, expected_res)
 
-    def test_tls(self):
-        """ Test TLS connection. """
-        if self.cfg['SERVER']['has_tls'] == 'False':
-            self.skipTest("TLS is not set.")
-        client = LDAPClient(self.url, True)
-        client.set_cert_policy("ALLOW")
-        client.set_ca_cert(None)
-        client.set_ca_cert_dir(None)
-        try:
-            conn = client.connect()
-            conn.close()
-        except Exception as exc:
-            self.fail("TLS connection is failed with: %s" % str(exc))
-
     def test_connection_error(self):
         """ Test connection error. """
         client = LDAPClient("ldap://invalid")
@@ -378,7 +388,7 @@ class LDAPConnectionTest(unittest.TestCase):
     def test_vlv_offset(self):
         """ Test VLV control with offset. """
         search_dn = "ou=nerdherd,%s" % self.basedn
-        res, ctrl = self.conn.search(search_dn, 1, attrlist=['uidNumber'],
+        res, ctrl = self.conn.virtual_list_search(search_dn, 1, attrlist=['uidNumber'],
                                      offset=2, sort_order=["-uidNumber"],
                                      before_count=1, after_count=1,
                                      est_list_count=6)
@@ -390,7 +400,7 @@ class LDAPConnectionTest(unittest.TestCase):
     def test_vlv_attrvalue(self):
         """ Test VLV control with attribute value. """
         search_dn = "ou=nerdherd,%s" % self.basedn
-        res, ctrl = self.conn.search(search_dn, 1, attrlist=['uidNumber'],
+        res, ctrl = self.conn.virtual_list_search(search_dn, 1, attrlist=['uidNumber'],
                                      attrvalue=2, sort_order=["uidNumber"],
                                      before_count=1, after_count=2,
                                      est_list_count=6)
@@ -399,32 +409,22 @@ class LDAPConnectionTest(unittest.TestCase):
         self.assertEqual(res[0]['uidNumber'][0], 1)
 
     def test_vlv_without_sort_order(self):
-        """ Test VLV control wihtout sort control. """
+        """ Test VLV control without sort control. """
         search_dn = "ou=nerdherd,%s" % self.basedn
         self.assertRaises(bonsai.UnwillingToPerform,
-                          lambda: self.conn.search(search_dn, 1,
+                          lambda: self.conn.virtual_list_search(search_dn, 1,
                                                    attrlist=['uidNumber'],
                                                    offset=1, before_count=1,
-                                                   after_count=2,
-                                                   est_list_count=6))
-
-    def test_vlv_with_page_size(self):
-        """ Test VLV control wiht page size. """
-        search_dn = "ou=nerdherd,%s" % self.basedn
-        self.assertRaises(bonsai.UnwillingToPerform,
-                          lambda: self.conn.search(search_dn, 1, page_size=3,
-                                                   sort_order=["-uidNumber"],
-                                                   attrvalue=1, before_count=1,
                                                    after_count=2,
                                                    est_list_count=6))
 
     def test_paged_search(self):
         """ Test paged results control. """
         search_dn = "ou=nerdherd,%s" % self.basedn
-        res = self.conn.search(search_dn, 1, page_size=2)
+        res = self.conn.paged_search(search_dn, 1, page_size=2)
         for ent in res:
             self.assertIsInstance(ent, bonsai.LDAPEntry)
-        page = 1  # First page already is acquired.
+        page = 1  # First page is already acquired.
         while True:
             if len(res) > 2:
                 self.fail("The size of the page is greater than expected.")
@@ -440,7 +440,7 @@ class LDAPConnectionTest(unittest.TestCase):
         client = LDAPClient(self.url)
         conn = client.connect()
         search_dn = "ou=nerdherd,%s" % self.basedn
-        res = conn.search(search_dn, 1, page_size=3)
+        res = conn.paged_search(search_dn, 1, page_size=3)
         if len(res) != 3:
             self.fail("The size of the page is not what is expected.")
         entry = 0
@@ -500,7 +500,7 @@ class LDAPConnectionTest(unittest.TestCase):
     def test_wrong_conn_param(self):
         """ Test passing wrong parameters for LDAPConnection. """
         self.assertRaises(TypeError, lambda: LDAPConnection("wrong"))
-        self.assertRaises(TypeError, lambda: LDAPConnection(LDAPClient(), 1))
+        self.assertRaises(TypeError, lambda: LDAPConnection(1))
 
     def test_wrong_search_param(self):
         """ Test passing wrong parameters for search method. """
@@ -600,7 +600,7 @@ class LDAPConnectionTest(unittest.TestCase):
                 entry.modify()
 
     @unittest.skipIf(sys.platform.startswith("win"),
-                     "Cannot use password modify extended opertion on Windows")
+                     "Cannot use password modify extended operation on Windows")
     def test_password_modify_extop(self):
         """ Test Password Modify extended operation. """
         user_dn = LDAPDN("cn=skip,ou=nerdherd,dc=bonsai,dc=test")

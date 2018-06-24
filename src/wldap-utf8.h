@@ -1,5 +1,5 @@
-#ifndef PYLDAP_WLDAP_UTF8_H_
-#define PYLDAP_WLDAP_UTF8_H_
+#ifndef WLDAP_UTF8_H_
+#define WLDAP_UTF8_H_
 
 /*****************************************************************************
 * These functions and structs are (mostly) redefinitions of the used WinLDAP
@@ -10,7 +10,7 @@
 * called. The returned values are decoded back to UTF-8. Some of the functions
 * are renamed or their signatures are changed to match with the ones defined
 * in the OpenLDAP's API. The disadvantage of this approach is that the
-* convertations generate extra overhead for every LDAP operations on Windows,
+* conversations generate extra overhead for every LDAP operations on Windows,
 * but better platform independent unicode support can be achieved without
 * breaking the rest of the codebase's integrity with platfrom dependent code.
 ******************************************************************************/
@@ -102,6 +102,7 @@
 /* Simple free is sufficed, because no WinLDAP dependent allocation
    should be kept outside of the scope of the new functions. */
 #define ldap_memfree free
+#define ldap_start_tls ldap_start_tlsU
 #define ldap_start_tls_s ldap_start_tls_sU
 #define ldap_simple_bind_s ldap_simple_bind_sU
 #define ldap_controls_free ldap_controls_freeU
@@ -129,6 +130,12 @@ typedef struct sasl_defaults_s {
     char *authzid;
 } sasl_defaults_t;
 
+typedef struct ldap_tls_data_s {
+    LDAP *ld;
+    LDAPControlA **serverctrls;
+    LDAPControlA **clientctrls;
+} ldap_tls_data_t;
+
 int ldap_unbind_ext(LDAP *ld, LDAPControlA **sctrls, LDAPControlA **cctrls);
 int ldap_abandon_ext(LDAP *ld, int msgid, LDAPControlA **sctrls, LDAPControlA **cctrls);
 char *ldap_get_dnU(LDAP *ld, LDAPMessage *entry);
@@ -154,6 +161,7 @@ int ldap_parse_passwordpolicy_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t
 int ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp, char **errmsgp, char ***referralsp, LDAPControlA ***sctrls, int freeit);
 char *ldap_err2stringU(int err);
 int ldap_initializeU(LDAP **ldp, char *url);
+int ldap_start_tlsU(LDAP *ld, LDAPControlA **serverctrls, LDAPControlA **clientctrls, HANDLE *msgidp);
 int ldap_start_tls_sU(LDAP *ld, LDAPControlA **sctrls, LDAPControlA **cctrls);
 int ldap_simple_bind_sU(LDAP *ld, char *who, char *passwd);
 void ldap_controls_freeU(LDAPControlA **ctrls);
@@ -163,4 +171,4 @@ char *_ldap_get_opt_errormsgU(LDAP *ld);
 
 #endif
 
-#endif /* PYLDAP_WLDAP_UTF8_H_ */
+#endif /* WLDAP_UTF8_H_ */

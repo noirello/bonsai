@@ -1,15 +1,10 @@
-/*
- * ldapsearchiter.c
- *
- *  Created on: Mar 3, 2014
- *      Author: noirello
- */
 #include "ldapsearchiter.h"
 #include "ldapconnection.h"
 
 /* Dealloc the LDAPSearchIter object. */
 static void
 ldapsearchiter_dealloc(LDAPSearchIter* self) {
+    DEBUG("ldapsearchiter_dealloc (self:%p)", self);
     Py_XDECREF(self->buffer);
     Py_XDECREF(self->conn);
 
@@ -32,7 +27,6 @@ static PyObject *
 ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     LDAPSearchIter *self = NULL;
 
-    //self = (LDAPSearchIter *)PyType_GenericAlloc(type, 0);
     self = (LDAPSearchIter *)type->tp_alloc(type, 0);
 
     if (self != NULL) {
@@ -44,6 +38,7 @@ ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->auto_acquire = 0;
     }
 
+    DEBUG("ldapsearchiter_new [self:%p]", self);
     return (PyObject *)self;
 }
 
@@ -54,6 +49,7 @@ LDAPSearchIter_New(LDAPConnection *conn) {
     LDAPSearchIter *self =
             (LDAPSearchIter *)LDAPSearchIterType.tp_new(&LDAPSearchIterType,
                     NULL, NULL);
+    DEBUG("LDAPSearchIter_New (conn:%p)[self:%p]", conn, self);
     if (conn != NULL && self != NULL) {
         self->params = (ldapsearchparams *)malloc(sizeof(ldapsearchparams));
         if (self->params == NULL) return NULL;
@@ -74,16 +70,17 @@ LDAPSearchIter_New(LDAPConnection *conn) {
 static PyObject *
 ldapsearchiter_acquirenextpage(LDAPSearchIter *self) {
     int msgid = -1;
+
+    DEBUG("ldapsearchiter_acquirenextpage (self:%p)", self);
     /* If paged LDAP search is in progress. */
     if ((self->cookie != NULL) && (self->cookie->bv_val != NULL) &&
             (strlen(self->cookie->bv_val) > 0)) {
+        Py_INCREF(self);
         msgid = LDAPConnection_Searching(self->conn, NULL, (PyObject *)self);
         if (msgid < 0) return NULL;
-
         return PyLong_FromLong((long int)msgid);
     } else {
         ber_bvfree(self->cookie);
-        if (self->cookie != NULL) Py_DECREF(self);
         self->cookie = NULL;
         Py_RETURN_NONE;
     }
@@ -102,8 +99,8 @@ ldapsearchiter_iternext(LDAPSearchIter *self) {
     PyObject *item = NULL;
     PyObject *tmp = NULL, *msg = tmp;
 
+    DEBUG("ldapsearchiter_iternext (self:%p)", self);
     if (self->buffer == NULL) return NULL;
-
     if (Py_SIZE(self->buffer) != 0) {
         /* Get first element from the buffer list. (Borrowed ref.)*/
         item = PyList_GetItem(self->buffer, 0);
@@ -126,10 +123,12 @@ ldapsearchiter_iternext(LDAPSearchIter *self) {
                and the connection is synchronous. */
             msg = ldapsearchiter_acquirenextpage(self);
             if (msg == NULL) return NULL;
-            if (msg == Py_None) return NULL;
-
+            if (msg == Py_None) {
+                Py_DECREF(msg);
+                return NULL;
+            }
             self = (LDAPSearchIter *)PyObject_CallMethod((PyObject *)self->conn,
-                        "_evaluate", "(O)", msg);
+                "_evaluate", "(O)", msg);
             Py_DECREF(msg);
             if (self == NULL) return NULL;
             Py_DECREF(self);
@@ -151,6 +150,7 @@ static PyObject *
 ldapsearchiter_anext(LDAPSearchIter *self) {
     PyObject *res = NULL;
 
+    DEBUG("ldapsearchiter_anext (self:%p)", self);
     res = PyObject_CallMethod((PyObject *)self->conn, "_search_iter_anext",
                         "(O)", (PyObject *)self);
 

@@ -76,7 +76,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
                 yield conn.delete(entry.dn)
                 yield conn.add(entry)
             except:
-                self.fail("Unexcepected error.")
+                self.fail("Unexpected error.")
             res = yield conn.search()
             self.assertIn(entry, res)
             yield entry.delete()
@@ -126,7 +126,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
                 yield conn.delete(entry.dn)
                 yield conn.add(entry)
             except:
-                self.fail("Unexcepected error.")
+                self.fail("Unexpected error.")
             entry['sn'] = "async_test2"
             yield entry.modify()
             yield entry.rename(newname)
@@ -164,7 +164,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         """ Test connection timeout. """
         import xmlrpc.client as rpc
         proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
-        proxy.set_delay(6.0)
+        proxy.set_delay(7.0)
         time.sleep(3.0)
         try:
             yield self.client.connect(True,
@@ -183,7 +183,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         import xmlrpc.client as rpc
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
-            proxy.set_delay(5.1)
+            proxy.set_delay(7.0)
             time.sleep(3.0)
             try:
                 yield conn.search(timeout=4.0)
@@ -202,8 +202,8 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         search_dn = "ou=nerdherd,%s" % self.basedn
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             # To keep compatibility with 3.4 it does not uses async for,
-            # but its while loop equvivalent.
-            res_iter = yield conn.search(search_dn, 1, page_size=3)
+            # but its while loop equivalent.
+            res_iter = yield conn.paged_search(search_dn, 1, page_size=3)
             res_iter = type(res_iter).__aiter__(res_iter)
             cnt = 0
             while True:

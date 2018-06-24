@@ -66,7 +66,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
                 yield from conn.delete(entry.dn)
                 yield from conn.add(entry)
             except:
-                self.fail("Unexcepected error.")
+                self.fail("Unexpected error.")
             res = yield from conn.search()
             self.assertIn(entry, res)
             yield from entry.delete()
@@ -116,7 +116,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
                 yield from conn.delete(entry.dn)
                 yield from conn.add(entry)
             except:
-                self.fail("Unexcepected error.")
+                self.fail("Unexpected error.")
             entry['sn'] = "async_test2"
             yield from entry.modify()
             yield from entry.rename(newname)
@@ -187,7 +187,7 @@ class AIOLDAPConnectionTest(unittest.TestCase):
         with (yield from self.client.connect(True)) as conn:
             # To keep compatibility with 3.4 it does not uses async for,
             # but its while loop equvivalent.
-            res_iter = yield from conn.search(search_dn, 1, page_size=3)
+            res_iter = yield from conn.paged_search(search_dn, 1, page_size=3)
             res_iter = type(res_iter).__aiter__(res_iter)
             cnt = 0
             while True:
@@ -198,6 +198,27 @@ class AIOLDAPConnectionTest(unittest.TestCase):
                 except StopAsyncIteration:
                     break
             self.assertEqual(cnt, 6)
+
+    @asyncio_test
+    def test_async_with(self):
+        """
+        Test async with context manager
+        (with backward compatibility)
+        """
+        mgr = self.client.connect(True)
+        aexit = type(mgr).__aexit__
+        aenter = type(mgr).__aenter__(mgr)
+
+        conn = yield from aenter
+        try:
+            self.assertFalse(conn.closed)
+            _ = yield from conn.whoami()
+        except:
+            if not (yield from aexit(mgr, *sys.exc_info())):
+                raise
+        else:
+            yield from aexit(mgr, None, None, None)
+        self.assertTrue(conn.closed)
 
 if __name__ == '__main__':
     unittest.main()

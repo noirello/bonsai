@@ -27,7 +27,7 @@ copy_list(void **list, void **newlist, int(*copyfunc)(void *, void**)) {
     for (i = 0; list[i] != NULL; i++) {
         rc = (copyfunc)(list[i], &newlist[i]);
         if (rc != LDAP_SUCCESS) {
-            /* Copy is failed, break the cicle and set the failed
+            /* Copy is failed, break the cycle and set the failed
             item to NULL thus the successfully converted items
             can be freed without overrunning the list. */
             break;
@@ -277,7 +277,7 @@ convert_mod_list(LDAPModA **mods, LDAPModW ***wmods) {
 /******************************************************************************
 * All of the following functions behave just like they documented in the WinLDAP
 * or OpenLDAP documentations (except where the comment says otherwise), but they
-* can return with encoding or decoding error code, if the convertation is failed.
+* can return with encoding or decoding error code, if the conversation is failed.
 ******************************************************************************/
 
 int
@@ -812,7 +812,7 @@ support. */
 int
 ldap_get_optionU(LDAP *ld, int option, void *outvalue) {
     if (option == LDAP_OPT_X_TLS_PACKAGE) {
-        *(char **)outvalue = "SChannel";
+        *(char **)outvalue = strdup("SChannel");
         return LDAP_SUCCESS;
     }
     if (option == LDAP_OPT_API_INFO) {
@@ -1316,6 +1316,34 @@ end:
     DeleteSecurityContext(&ctxhandle);
     FreeCredentialHandle(&credhandle);
     return rc;
+}
+
+static int WINAPI
+ldap_thread_tls(void *thread_data) {
+    int rc = 0;
+    ldap_tls_data_t *data = (ldap_tls_data_t *)thread_data;
+
+    rc = ldap_start_tls_sU(data->ld, data->serverctrls, data->clientctrls);
+    free(data);
+
+    return rc;
+}
+
+int
+ldap_start_tlsU(LDAP *ld, LDAPControlA **serverctrls, LDAPControlA **clientctrls, HANDLE *msgidp) {
+    ldap_tls_data_t *data = NULL;
+
+    data = (ldap_tls_data_t *)malloc(sizeof(ldap_tls_data_t));
+    if (data == NULL) return LDAP_NO_MEMORY;
+
+    data->ld = ld;
+    data->clientctrls = clientctrls;
+    data->serverctrls = serverctrls;
+
+    *msgidp = CreateThread(NULL, 0, ldap_thread_tls, (void *)data, 0, NULL);
+    if (*msgidp == NULL) return LDAP_LOCAL_ERROR;
+
+    return LDAP_SUCCESS;
 }
 
 /* Get the optional error message. */

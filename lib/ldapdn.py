@@ -1,4 +1,5 @@
 import re
+from typing import Union, Tuple, Any
 
 from .errors import InvalidDN
 
@@ -23,7 +24,7 @@ class LDAPDN:
             raise InvalidDN(strdn)
         self.__strdn = strdn
 
-    def __str_rdn_to_tuple(self, str_rdn):
+    def __str_rdn_to_tuple(self, str_rdn: str) -> Tuple[Tuple[str, str], ...]:
         """
         Generate attribute type and value tuple from relative
         distinguished name.
@@ -38,7 +39,7 @@ class LDAPDN:
         return tuple(rdn)
 
     @staticmethod
-    def __escape_special_char(strdn):
+    def __escape_special_char(strdn: str) -> str:
         """ Escaping special characters."""
         char_list = [(r'\\\\', '\\5C'),
                      (r'\,', '\\2C'),
@@ -53,38 +54,38 @@ class LDAPDN:
                 strdn = strdn.replace(pair[0], pair[1])
         return strdn
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: Union[int, slice]) -> str:
         """
         Return the string format of the relative distinguished names
         in the LDAPDN.
 
-        :param int idx: the indeces of the RDNs.
+        :param int idx: the indices of the RDNs.
         :return: the string format of the RDNs.
         :rtype: str
         """
         rdns = re.split(r'(?<!\\),', self.__strdn)
-        if type(idx) == int:
+        if isinstance(idx, int):
             if idx >= len(rdns):
                 raise IndexError("Index is out of range.")
             # Create a slice to avoid join string characters.
             idx = slice(idx, idx+1)
-        elif type(idx) != slice:
+        elif not isinstance(idx, slice):
             raise TypeError("Indices must be integers or slices.")
         return ','.join(rdns[idx])
 
-    def __setitem__(self, idx: int, value: str):
+    def __setitem__(self, idx: Union[int, slice], value: str) -> None:
         """
         Set the string format of the relative distinguished names
         in the LDAPDN.
 
-        :param int idx: the indeces of the RDNs.
+        :param int idx: the indices of the RDNs.
         :param str value: the new RDNs.
         """
-        if type(value) != str:
+        if not isinstance(value, str):
             raise ValueError("New value must be string.")
-        if type(idx) == int:
+        if isinstance(idx, int):
             idx = slice(idx, idx+1)
-        elif type(idx) != slice:
+        elif not isinstance(idx, slice):
             raise TypeError("Indices must be integers or slices.")
         if not self._dnregex.match(value):
             raise InvalidDN(value)
@@ -92,7 +93,7 @@ class LDAPDN:
         rdns[idx] = re.split(r'(?<!\\),', value)
         self.__strdn = ",".join(rdns)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         """
         Check equality of two LDAPDN by their string format or
         their escaped string format.
@@ -101,25 +102,25 @@ class LDAPDN:
                 self.__escape_special_char(str(self)).lower() ==
                 self.__escape_special_char(str(other)).lower())
 
-    def __str__(self):
+    def __str__(self) -> str:
         """ Return the full string format of the distinguished name. """
         return self.__strdn
 
-    def __len__(self):
+    def __len__(self) -> int:
         """ Return the number of RDNs of the distinguished name. """
         return len(re.split(r'(?<!\\),', self.__strdn))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """ The representation of LDAPDN class. """
         return "<LDAPDN %s>" % str(self)
 
     @property
-    def rdns(self):
+    def rdns(self) -> Tuple[Tuple[Tuple[str, str], ...], ...]:
         """ The tuple of relative distinguished name."""
         return tuple(self.__str_rdn_to_tuple(rdn)
                      for rdn in re.split(r'(?<!\\),', self.__strdn))
 
     @rdns.setter
-    def rdns(self, value=None):
+    def rdns(self, value: Any = None) -> None:
         """ The tuple of relative distinguished names."""
         raise ValueError("RDNs attribute cannot be set.")

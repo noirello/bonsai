@@ -138,10 +138,6 @@ if sys.version_info.minor < 5:
     # Typing dependecy for Python 3.4 and earlier.
     PYTHON_DEPS.append("typing")
 
-if sys.version_info.minor < 4:
-    # Enum dependecy for Python 3.3.
-    PYTHON_DEPS.append("enum34")
-
 # Get long description from the README.rst file.
 with open('README.rst') as file:
     LONG_DESC = file.read()

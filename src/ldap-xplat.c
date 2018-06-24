@@ -14,6 +14,7 @@ static void
 set_cert_policy(LDAP *ld, int cert_policy) {
     const int tls_settings = SCH_CRED_MANUAL_CRED_VALIDATION | SCH_CRED_NO_SERVERNAME_CHECK;
 
+    DEBUG("set_cert_policy (ld:%p, cert_policy:%d)", ld, cert_policy);
     switch (cert_policy) {
     case -1:
         /* Cert policy is not set, nothing to do.*/
@@ -29,11 +30,6 @@ set_cert_policy(LDAP *ld, int cert_policy) {
         ldap_set_option(ld, LDAP_OPT_SERVER_CERTIFICATE, &noverify);
         break;
     }
-}
-
-static void
-set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert, char *clientkey) {
-
 }
 
 /* Finish the initialisation by checking the result of the separate thread for TLS.
@@ -57,6 +53,8 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
     /* Sanity check. */
     if (val == NULL || thread == NULL) return -1;
 
+    DEBUG("_ldap_finish_init_thread (async:%d, thread:%p, timeout:%d, misc:%p)",
+        async, thread, *timeout, misc);
     if (async) {
         rc = WaitForSingleObject(thread, 10);
     } else {
@@ -103,10 +101,6 @@ end:
     /* Clean up the mess. */
     CloseHandle(thread);
     free(val->url);
-    free(val->ca_cert);
-    free(val->ca_cert_dir);
-    free(val->client_cert);
-    free(val->client_key);
     free(val);
     return retval;
 }
@@ -118,6 +112,7 @@ ldap_thread_bind(void *params) {
     ldap_conndata_t *data = (ldap_conndata_t *)params;
     sasl_defaults_t defaults;
 
+    DEBUG("ldap_thread_bind (params:%p)", params);
     defaults.authcid = data->authcid;
     defaults.passwd = data->passwd;
     defaults.realm = data->realm;
@@ -143,6 +138,8 @@ SASL function call cannot be parsed (because of some kind of bug in WinLDAP). */
 int
 _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, int *msgid) {
 
+    DEBUG("_ldap_bind (ld:%p, info:%p, ppolicy:%d, result:%p, msgid:%d)",
+            ld, info, ppolicy, result, *msgid);
     info->ld = ld;
     info->thread = (void *)CreateThread(NULL, 0, ldap_thread_bind, (void *)info, 0, NULL);
 
@@ -180,6 +177,9 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
     len = strlen(realm);
 
     if (len == 0 || strlen(user) == 0) return 0;
+
+    DEBUG("create_krb5_cred (ctx:%p, realm:%s, user:%s, password:%s, ccache:%p,"
+        " gsscred:%p)", ctx, realm, user, "****", ccache, gsscred);
 
     rc = krb5_cc_default(ctx, &defcc);
     if (rc != 0) goto end;
@@ -233,6 +233,8 @@ remove_krb5_cred(krb5_context ctx, krb5_ccache ccache, gss_cred_id_t *gsscred) {
     int rc = 0;
     unsigned int minor_stat = 0;
 
+    DEBUG("remove_krb5_cred (ctx:%p, cchache:%p, gsscred:%p)",
+        ctx, ccache, gsscred);
     rc = gss_release_cred(&minor_stat, gsscred);
     if (rc != 0) return minor_stat;
 
@@ -246,29 +248,10 @@ remove_krb5_cred(krb5_context ctx, krb5_ccache ccache, gss_cred_id_t *gsscred) {
 
 static void
 set_cert_policy(LDAP *ld, int cert_policy) {
+    DEBUG("set_cert_policy (ld:%p, cert_policy:%d)", ld, cert_policy);
     ldap_set_option(ld, LDAP_OPT_X_TLS_REQUIRE_CERT, &cert_policy);
     /* Set TLS option globally. */
     ldap_set_option(NULL, LDAP_OPT_X_TLS_REQUIRE_CERT, &cert_policy);
-}
-
-static void
-set_certificates(LDAP *ld, char *cacertdir, char *cacert, char *clientcert, char *clientkey) {
-    const int true = 1;
-
-    if (cacertdir == NULL || strcmp(cacertdir, "") != 0) {
-        ldap_set_option(ld, LDAP_OPT_X_TLS_CACERTDIR, cacertdir);
-    }
-    if (cacert == NULL || strcmp(cacert, "") != 0) {
-        ldap_set_option(ld, LDAP_OPT_X_TLS_CACERTFILE, cacert);
-    }
-    if (clientcert == NULL || strcmp(clientcert, "") != 0) {
-        ldap_set_option(ld, LDAP_OPT_X_TLS_CERTFILE, clientcert);
-    }
-    if (clientkey == NULL || strcmp(clientkey, "") != 0) {
-        ldap_set_option(ld, LDAP_OPT_X_TLS_KEYFILE, clientkey);
-    }
-    /* Force libldap to create new context for the connection. */
-    ldap_set_option(ld, LDAP_OPT_X_TLS_NEWCTX, &true);
 }
 
 #ifdef MACOSX
@@ -284,13 +267,15 @@ _pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
     rest.tv_sec = 0;
     rest.tv_nsec = 10000000;
 
+    DEBUG("%s", "_pthread_mutex_timedlock");
     do {
         rc = pthread_mutex_trylock(mutex);
 
         gettimeofday(&timenow, NULL);
 
-        if (timenow.tv_sec >= abs_timeout->tv_sec &&
-                (timenow.tv_usec * 1000) >= abs_timeout->tv_nsec) {
+        if (timenow.tv_sec > abs_timeout->tv_sec || 
+            (timenow.tv_sec == abs_timeout->tv_sec &&
+            (timenow.tv_usec * 1000) >= abs_timeout->tv_nsec)) {
             return ETIMEDOUT;
         }
         /* Little sleep to avoid hammering on the lock. */
@@ -302,12 +287,13 @@ _pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
 #else
 static int
 _pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
+    DEBUG("%s", "_pthread_mutex_timedlock");
     return pthread_mutex_timedlock(mutex, abs_timeout);
 }
 #endif
 
 /* Check on the initialisation thread and set cert policy. The `misc`
-   parameter is never used (on Linux plaform). The pointer of initialised
+   parameter is never used (on Linux platform). The pointer of initialised
    LDAP struct is passed to the `ld` parameter. Return 1 if the initialisation
    thread is finished, 0 if it is still in progress, and -1 for error. */
 int
@@ -325,6 +311,8 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
     /* Sanity check. */
     if (val == NULL) return -1;
 
+    DEBUG("_ldap_finish_init_thread (async:%d, thread:%lu, timeout:%d, misc:%p)",
+            async, thread, *timeout, misc);
     if (async || *timeout == -1) {
         wait_msec = 100;
     } else {
@@ -421,10 +409,6 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 end:
     /* Clean-up. */
     free(val->url);
-    free(val->ca_cert);
-    free(val->ca_cert_dir);
-    free(val->client_cert);
-    free(val->client_key);
     pthread_mutex_destroy(val->mux);
     free(val->mux);
     free(val);
@@ -438,6 +422,8 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, i
     LDAPControl *ppolicy_ctrl = NULL;
     struct berval passwd;
 
+    DEBUG("_ldap_bind (ld:%p, info:%p, ppolicy:%d, result:%p, msgid:%d)",
+            ld, info, ppolicy, result, *msgid);
     if (ppolicy == 1) {
         rc = ldap_create_passwordpolicy_control(ld, &ppolicy_ctrl);
         if (rc != LDAP_SUCCESS) return rc;
@@ -457,9 +443,9 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, i
         if (info->passwd  == NULL) {
             passwd.bv_len = 0;
         } else {
-            passwd.bv_len = strlen(info->passwd );
+            passwd.bv_len = strlen(info->passwd);
         }
-        passwd.bv_val = info->passwd ;
+        passwd.bv_val = info->passwd;
         rc = ldap_sasl_bind(ld, info->binddn, LDAP_SASL_SIMPLE, &passwd, server_ctrls,
                 NULL, msgid);
     }
@@ -482,6 +468,7 @@ sasl_interact(LDAP *ld, unsigned flags, void *defs, void *in) {
     const char *dflt = interact->defresult;
     ldap_conndata_t *defaults = (ldap_conndata_t *)defs;
 
+    DEBUG("sasl_interact (ld:%p, flags:%u, defs:%p, in:%p)", ld, flags, defs, in);
 #ifdef HAVE_KRB5
     int rc = 0;
     if (defaults->request_tgt == 1) {
@@ -558,6 +545,7 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
     char *passwd = NULL;
     char *realm = NULL;
 
+    DEBUG("create_conn_info (mech:%s, sock:%d, creds:%p)", mech, (int)sock, creds);
     /* Get credential information, if it's given. */
     if (PyTuple_Check(creds) && PyTuple_Size(creds) > 1) {
         if (strcmp(mech, "SIMPLE") == 0) {
@@ -615,6 +603,7 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
 /* Dealloc an ldapConnectionInfo struct. */
 void
 dealloc_conn_info(ldap_conndata_t* info) {
+    DEBUG("dealloc_conn_info (info:%p)", info);
     free(info->authcid);
     free(info->authzid);
     free(info->binddn);
@@ -622,7 +611,9 @@ dealloc_conn_info(ldap_conndata_t* info) {
     free(info->passwd);
     free(info->realm);
 #ifdef HAVE_KRB5
-    remove_krb5_cred(info->ctx, info->ccache, &(info->gsscred));
+    if (info->gsscred != GSS_C_NO_CREDENTIAL || info->ctx != NULL) {
+        remove_krb5_cred(info->ctx, info->ccache, &(info->gsscred));
+    }
     free(info->errmsg);
 #endif
     free(info);
@@ -645,6 +636,7 @@ ldap_init_thread_func(void *params) {
     ldapInitThreadData *data = (ldapInitThreadData *)params;
     void *ref_opt = NULL;
 
+    DEBUG("ldap_init_thread_func (params:%p)", params);
     if (data == NULL) {
 #ifdef WIN32
         return 0;
@@ -652,9 +644,7 @@ ldap_init_thread_func(void *params) {
         return NULL;
 #endif
     }
-    ref_opt = data->referrals ? LDAP_OPT_ON : LDAP_OPT_OFF;
-#ifdef WIN32
-#else
+#ifndef WIN32
     pthread_mutex_lock(data->mux);
     /* Lock already acquired by this thread, flag can be set now. */
     data->flag = 1;
@@ -666,19 +656,21 @@ ldap_init_thread_func(void *params) {
     }
     /* Set version to LDAPv3. */
     ldap_set_option(data->ld, LDAP_OPT_PROTOCOL_VERSION, &version);
+    ref_opt = data->referrals ? LDAP_OPT_ON : LDAP_OPT_OFF;
     ldap_set_option(data->ld, LDAP_OPT_REFERRALS, ref_opt);
     if (data->cert_policy != -1) {
         set_cert_policy(data->ld, data->cert_policy);
     }
-    /* Set CA cert dir, CA cert and client cert. */
-    set_certificates(data->ld, data->ca_cert_dir,
-            data->ca_cert, data->client_cert,
-            data->client_key);
-    if (data->tls == 1) {
-        /* Start TLS if it's required. */
-        rc = ldap_start_tls_s(data->ld, NULL, NULL);
-    }
-    data->retval = rc;
+
+#if !defined(WIN32) && !defined(MACOSX) && LDAP_VENDOR_VERSION > 20443
+    /* The asynchronous connection build does not function properly on
+       macOS and only works on other unix systems from version 2.4.44 */
+    struct timeval tv;
+    tv.tv_sec = 0;
+    /* Set asynchronous connect for OpenLDAP. */
+    ldap_set_option(data->ld, LDAP_OPT_CONNECT_ASYNC, LDAP_OPT_ON);
+    ldap_set_option(data->ld, LDAP_OPT_NETWORK_TIMEOUT, &tv);
+#endif
 
 #ifdef HAVE_KRB5
     if (data->info->request_tgt == 1) {
@@ -691,7 +683,7 @@ ldap_init_thread_func(void *params) {
         }
     }
 #endif
-
+end:
     if (data->sock != -1) {
         /* Send a signal through an internal socketpair. */
         if (send(data->sock, "s", 1, 0) == -1) {
@@ -699,7 +691,7 @@ ldap_init_thread_func(void *params) {
             data->retval = -1;
         }
     }
-end:
+    DEBUG("ldap_init_thread_func [retval:%d]", data->retval);
 #ifdef WIN32
     return 0;
 #else
@@ -716,7 +708,8 @@ int
 create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread) {
     int rc = 0;
     ldapInitThreadData *data = (ldapInitThreadData *)param;
-
+    
+    DEBUG("create_init_thread (ld:%p, info:%p, thread:%lu)", param, info, *thread);
 #ifdef WIN32
     *thread = CreateThread(NULL, 0, ldap_init_thread_func, (void *)data, 0, NULL);
     if (*thread == NULL) rc = -1;

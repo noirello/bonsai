@@ -16,7 +16,15 @@ typedef struct {
 } ldapsearchparams;
 
 extern PyObject *LDAPDNObj;
+extern PyObject *LDAPEntryObj;
 extern PyObject *LDAPValueListObj;
+extern char debugmod;
+
+#define DEBUG(fmt, ...) \
+    do { if (debugmod) { \
+        fprintf(stdout, "DBG: "); \
+        fprintf(stdout, fmt, __VA_ARGS__); \
+        fprintf(stdout, "\n");} } while (0)
 
 char *lowercase(char *str);
 struct berval *create_berval(char *value, long int len);
@@ -30,7 +38,9 @@ int lower_case_match(PyObject *o1, PyObject *o2);
 PyObject *load_python_object(char *module_name, char *object_name);
 PyObject *get_error_by_code(int code);
 void set_exception(LDAP *ld, int code);
-int add_to_pending_ops(PyObject *pending_ops, int msgid,  PyObject *item);
+int add_to_pending_ops(PyObject *pending_ops, int msgid, PyObject *item);
+PyObject *get_from_pending_ops(PyObject *pending_ops, int msgid);
+int del_from_pending_ops(PyObject *pending_ops, int msgid);
 int get_socketpair(PyObject *client, PyObject **tup, SOCKET *csock, SOCKET *ssock);
 void close_socketpair(PyObject *tup);
 int set_search_params(ldapsearchparams *params, char **attrs, int attrsonly,
@@ -42,6 +52,7 @@ int create_ppolicy_control(LDAP *ld, LDAPControl **returned_ctrls,
 void set_ppolicy_err(unsigned int pperr, PyObject *ctrl_obj);
 int uniqueness_check(PyObject *list, PyObject *value);
 int uniqueness_remove(PyObject *list, PyObject *value);
+PyObject *unique_contains(PyObject *list, PyObject *value);
 int get_ldapvaluelist_status(PyObject *lvl);
 int set_ldapvaluelist_status(PyObject *lvl, int status);
 
