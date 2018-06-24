@@ -169,6 +169,7 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
     unsigned int minor_stat = 0, major_stat = 0;
     const char *errmsg_tmp = NULL;
     const char *cctype = NULL;
+    const char *cname = NULL;
     krb5_ccache defcc = NULL;
     krb5_creds creds;
     krb5_principal princ = NULL;
@@ -204,7 +205,16 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
         if (rc != 0) goto end;
     }
 
-    major_stat = gss_krb5_import_cred(&minor_stat, *ccache, princ, NULL, gsscred);
+    cname = krb5_cc_get_name(ctx, *ccache);
+    if (cname == NULL) goto end;
+
+    major_stat = gss_krb5_ccache_name(&minor_stat, cname, NULL);
+    if (major_stat != 0) goto end;
+
+    // Does not work with GSS-SPENGO.
+    //major_stat = gss_krb5_import_cred(&minor_stat, *ccache, princ, NULL, gsscred);
+    major_stat = gss_acquire_cred(&minor_stat, GSS_C_NO_NAME, 0,
+        GSS_C_NULL_OID_SET, GSS_C_INITIATE, gsscred, NULL, NULL);
 
 end:
     if (princ != NULL) krb5_free_principal(ctx, princ);
