@@ -174,7 +174,10 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
     krb5_creds creds;
     krb5_principal princ = NULL;
 
-    if (realm == NULL || user == NULL) return 1;
+    if (realm == NULL || user == NULL ||
+        password == NULL || strlen(password) == 0) {
+            return 1;
+    }
     len = strlen(realm);
 
     if (len == 0 || strlen(user) == 0) return 0;
@@ -447,10 +450,11 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, i
 
     /* Mechanism is set, use SASL interactive bind. */
     if (strcmp(info->mech, "SIMPLE") != 0) {
+        if (info->passwd == NULL) info->passwd = "";
         rc = ldap_sasl_interactive_bind(ld, info->binddn, info->mech, server_ctrls, NULL,
                 LDAP_SASL_QUIET, sasl_interact, info, result, &(info->rmech), msgid);
     } else {
-        if (info->passwd  == NULL) {
+        if (info->passwd == NULL) {
             passwd.bv_len = 0;
         } else {
             passwd.bv_len = strlen(info->passwd);
@@ -570,7 +574,7 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
             authzid = PyObject2char(tmp);
         }
         tmp = PyTuple_GetItem(creds, 1);
-        passwd = (tmp != Py_None ? PyObject2char(tmp) : NULL);
+        passwd = PyObject2char(tmp);
     }
 
     defaults = malloc(sizeof(ldap_conndata_t));
@@ -742,7 +746,7 @@ create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread) {
     if (data->info->mech != NULL && (strcmp("GSSAPI", data->info->mech) == 0 ||
             strcmp("GSS-SPNEGO", data->info->mech) == 0)
             && data->info->realm != NULL && strlen(data->info->realm) != 0
-            && data->info->authcid!= NULL && strlen(data->info->authcid) != 0) {
+            && data->info->authcid != NULL && strlen(data->info->authcid) != 0) {
         data->info->request_tgt = 1;
         rc = krb5_init_context(&(data->info->ctx));
         if (rc != 0) return -1;
