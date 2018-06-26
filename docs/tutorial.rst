@@ -33,7 +33,7 @@ identity about the authenticated user - will return with the following:
 To connect with a certain user to the server we have to set credentials before connection:
 
     >>> client = LDAPClient("ldaps://example.org")
-    >>> client.set_credentials("SIMPLE", ("cn=test,dc=bonsai,dc=test", "secret"))
+    >>> client.set_credentials("SIMPLE", user="cn=test,dc=bonsai,dc=test", password="secret")
     >>> conn = client.connect()
     >>> conn.whoami()
     'cn=test,dc=bonsai,dc=test'

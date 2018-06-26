@@ -19,7 +19,7 @@ bind DN and a password::
 
     >>> import bonsai
     >>> client = bonsai.LDAPClient()
-    >>> client.set_credentials("SIMPLE", ("cn=user,dc=bonsai,dc=test", "secret"))
+    >>> client.set_credentials("SIMPLE", user="cn=user,dc=bonsai,dc=test", password="secret")
     >>> client.connect()
     <bonsai.ldapconnection.LDAPConnection object at 0x7fed62b19828>
 
@@ -52,15 +52,16 @@ DIGEST-MD5 and NTLM
 The DIGEST-MD5 and the NTLM mechanisms are challenge-response based authentications. Nowadays they
 are considered as weak security protocols, but still popular ones. An example of using NTLM::
 
-    >>> client.set_credentials("NTLM", ("user", "secret", None, None))
+    >>> client.set_credentials("NTLM", "user", "secret")
     >>> client.connect().whoami()
     "dn:cn=user,dc=bonsai,dc=test"
 
-The credentials consist of a username, a password, an optional realm name and an optional
-authorization ID. Using an authorization ID during the bind only useful for DIGEST-MD5, NTLM does
-not support it.
+The credentials consist of a username and a password, just like for the simple authenticaton.
+When using DIGEST-MD5 you can also use an authorization ID during the bind to perform operation
+under the authority of a different identity afterwards, if the necessary rights are granted for you.
+NTLM does not support this functionality.
 
-    >>> client.set_credentials("DIGEST-MD5", ("user", "secret", None, "u:root"))
+    >>> client.set_credentials("DIGEST-MD5", "user", "secret", authz_id="u:root")
     >>> client.connect().whoami()
     "dn:cn=admin,dc=bonsai,dc=test"
 
@@ -93,15 +94,15 @@ After successfully acquire a TGT, the module can used it for authenticating:
 
     >>> import bonsai
     >>> client = bonsai.LDAPClient()
-    >>> client.set_credentials("GSSAPI", (None, None, None, None))
+    >>> client.set_credentials("GSSAPI")
     >>> client.connect().whoami()
     'dn:cn=admin,dc=bonsai,dc=test'
 
-In normal case as you can see the passed credentials with the exception of the authorization ID are
-irrelevant -- at least on a Unix system, the underlying SASL library figures it out on its own. The
+In normal case the passed credentials with the exception of the authorization ID are irrelevant 
+-- at least on a Unix system, the underlying SASL library figures it out on its own. The
 module's client can only interfere with the authorization ID:
 
-    >>> client.set_credentials("GSSAPI", (None, None, None, "u:chuck"))
+    >>> client.set_credentials("GSSAPI", autz_id="u:chuck")
     >>> client.connect().whoami()
     'dn:cn=chuck,ou=nerdherd,dc=bonsai,dc=test'
 
@@ -110,7 +111,7 @@ it is possible to requesting a TGT with the module's client if username, passwor
 are all provided:
 
     >>> client = bonsai.LDAPClient()
-    >>> client.set_credentials("GSSAPI", ("admin", "secret", "BONSAI.TEST", None))
+    >>> client.set_credentials("GSSAPI", "admin", "secret", "BONSAI.TEST")
     >>> client.connect().whoami()
     'dn:cn=admin,dc=bonsai,dc=test'
 
@@ -135,14 +136,13 @@ client cert.
     >>> client.set_client_key("./key.txt")
     >>> client.get_rootDSE()['supportedSASLMechanisms']
     ['GSS-SPNEGO', 'GSSAPI', 'DIGEST-MD5', 'EXTERNAL', 'NTLM']   
-    >>> client.set_credentials("EXTERNAL", (None,))
+    >>> client.set_credentials("EXTERNAL")
     >>> client.connect()
     <bonsai.ldapconnection.LDAPConnection object at 0x7f006ad3d888>
 
-For EXTERNAL mechanism only one element -- the authorization ID -- is passed in a tuple as
-credential.
-    
-    >>> client.set_credentials("EXTERNAL", ("u:chuck",))
+For EXTERNAL mechanism only the authorization ID is used in as credential information.
+
+    >>> client.set_credentials("EXTERNAL", authz_id=u:chuck")
     >>> client.connect()
     >>> client.connect().whoami()
     'dn:cn=chuck,ou=nerdherd,dc=bonsai,dc=test'
@@ -282,7 +282,7 @@ can also receive new exceptions related to password modifications.
 
     >>> import bonsai
     >>> client = bonsai.LDAPClient()
-    >>> client.set_credentials("SIMPLE", ("cn=user,dc=bonsai,dc=test", "secret"))
+    >>> client.set_credentials("SIMPLE", "cn=user,dc=bonsai,dc=test", "secret")
     >>> client.set_password_policy(True)
     >>> conn, ctrl = client.connect()
     >>> conn

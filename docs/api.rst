@@ -38,16 +38,13 @@ API documentation
 .. automethod:: LDAPClient.set_client_cert(name)
 .. automethod:: LDAPClient.set_client_key(name)
 
-.. automethod:: LDAPClient.set_credentials(mechanism, creds)
+.. automethod:: LDAPClient.set_credentials(mechanism, user=None, password=None, realm=None, authz_id=None, keytab=None)
     
     >>> from bonsai import LDAPClient
     >>> client = LDAPClient()
-    >>> client.set_credentials("SIMPLE", ("cn=user,dc=bonsai,dc=test", "secret"))
+    >>> client.set_credentials("SIMPLE", user="cn=user,dc=bonsai,dc=test", password="secret")
     >>> client.connect()
     <bonsai.LDAPConnection object at 0x7fadf8976440>
-    >>> client.set_credentials("DIGEST-MD5", ("user", "secret", None, None))
-    >>> client.connect()
-    <bonsai.LDAPConnection object at 0x7fadf892d3a0>
 
 .. automethod:: LDAPClient.set_extended_dn(extdn_format)
 
@@ -72,7 +69,7 @@ API documentation
 
     >>> import bonsai
     >>> client = bonsai.LDAPClient()
-    >>> client.set_credentials("SIMPLE", ("cn=user,dc=bonsai,dc=test", "secret"))
+    >>> client.set_credentials("SIMPLE", "cn=user,dc=bonsai,dc=test", "secret")
     >>> client.set_password_policy(True)
     >>> conn, ctrl = client.connect()
     >>> conn

@@ -64,7 +64,7 @@ Simple search and modify:
         import bonsai
 
         client = bonsai.LDAPClient("ldap://localhost")
-        client.set_credentials("SIMPLE", ("cn=admin,dc=bonsai,dc=test", "secret"))
+        client.set_credentials("SIMPLE", user="cn=admin,dc=bonsai,dc=test", password="secret")
         with client.connect() as conn:
             res = conn.search("ou=nerdherd,dc=bonsai,dc=test", 2, "(cn=chuck)")
             res[0]['givenname'] = "Charles"
@@ -80,7 +80,7 @@ Using with asyncio (on Python 3.5 or newer):
 
         async def do():
             client = bonsai.LDAPClient("ldap://localhost")
-            client.set_credentials("DIGEST-MD5", ("admin", "secret", None, None))
+            client.set_credentials("DIGEST-MD5", user="admin", password="secret")
             async with client.connect(is_async=True) as conn:
                 res = await conn.search("ou=nerdherd,dc=bonsai,dc=test", 2)
                 print(res)
