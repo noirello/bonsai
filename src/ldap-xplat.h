@@ -60,6 +60,7 @@ typedef struct ldap_conndata_s {
     gss_cred_id_t gsscred;
     char *errmsg;
     char request_tgt;
+    char *ktname;
 #endif
     char **resps;
     int nresps;

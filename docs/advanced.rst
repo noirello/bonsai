@@ -5,6 +5,8 @@ Advanced Usage
 
 This document covers some of the more advanced features of Bonsai.
 
+.. _auth-mechs:
+
 Authentication mechanisms
 =========================
 

@@ -112,6 +112,9 @@ class LDAPClient:
             * *SIMPLE* uses the `user` (as bind DN) and `password`.
             * *EXTERNAL* only uses the `authz_id` as authorization ID.
 
+        For other use-cases see this section about \
+        :ref:`authentication mechanisms <auth-mechs>`.
+
         :param str mechanism: the name of the binding mechanism.
         :param str user: the identification of the binding user.
         :param str password: the password of the user.

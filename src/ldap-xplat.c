@@ -164,26 +164,35 @@ _ldap_control_free(LDAPControl *ctrl) {
 
 static int
 create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
-        krb5_ccache *ccache, gss_cred_id_t *gsscred, char **errmsg) {
+                 char *ktname, krb5_ccache *ccache, gss_cred_id_t *gsscred,
+                 char **errmsg) {
     int rc = 0, len = 0;
     unsigned int minor_stat = 0, major_stat = 0;
     const char *errmsg_tmp = NULL;
     const char *cctype = NULL;
-    const char *cname = NULL;
+    char *cname = NULL;
     krb5_ccache defcc = NULL;
     krb5_creds creds;
     krb5_principal princ = NULL;
+    krb5_keytab keytab = NULL;
+    gss_key_value_element_desc elems[2];
+    gss_key_value_set_desc store;
+    gss_name_t sname = NULL;
+    gss_buffer_desc pr_name;
 
-    if (realm == NULL || user == NULL ||
-        password == NULL || strlen(password) == 0) {
-            return 1;
-    }
+    pr_name.value = NULL;
+    pr_name.length = 0;
+
+    store.count = 0;
+    store.elements = elems;
+
+    if (user == NULL || realm == NULL) return 1;
     len = strlen(realm);
 
     if (len == 0 || strlen(user) == 0) return 0;
 
-    DEBUG("create_krb5_cred (ctx:%p, realm:%s, user:%s, password:%s, ccache:%p,"
-        " gsscred:%p)", ctx, realm, user, "****", ccache, gsscred);
+    DEBUG("create_krb5_cred (ctx:%p, realm:%s, user:%s, password:%s, ktname: %s,"
+        " ccache:%p, gsscred:%p)", ctx, realm, user, "****", ktname, ccache, gsscred);
 
     rc = krb5_cc_default(ctx, &defcc);
     if (rc != 0) goto end;
@@ -199,29 +208,67 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
     rc = krb5_cc_initialize(ctx, *ccache, princ);
     if (rc != 0) goto end;
 
-    if (password != NULL) {
-        rc = krb5_get_init_creds_password(ctx, &creds, princ, password, 0, NULL, 0,
-                NULL, NULL);
+    if (password != NULL && strlen(password) > 0) {
+        rc = krb5_get_init_creds_password(ctx, &creds, princ, password,
+                                          0, NULL, 0, NULL, NULL);
         if (rc != 0) goto end;
 
-        rc= krb5_cc_store_cred(ctx, *ccache, &creds);
+        rc = krb5_cc_store_cred(ctx, *ccache, &creds);
         if (rc != 0) goto end;
+
+        rc = krb5_cc_get_full_name(ctx, *ccache, &cname);
+        if (rc != 0) goto end;
+        
+        store.elements[store.count].key = "ccache";
+        store.elements[store.count].value = cname;
+        store.count++;
     }
 
-    cname = krb5_cc_get_name(ctx, *ccache);
-    if (cname == NULL) goto end;
+    if (ktname != NULL && strlen(ktname) > 0) {
+        rc = krb5_kt_resolve(ctx, ktname, &keytab);
+        if (rc != 0) goto end;
 
-    major_stat = gss_krb5_ccache_name(&minor_stat, cname, NULL);
-    if (major_stat != 0) goto end;
+        rc = krb5_get_init_creds_keytab(ctx, &creds, princ, keytab, 0, NULL, NULL);
+        if (rc != 0) goto end;
+        
+        rc = krb5_cc_store_cred(ctx, *ccache, &creds);
+        if (rc != 0) goto end;
+
+        rc = krb5_cc_get_full_name(ctx, *ccache, &cname);
+        if (rc != 0) goto end;
+
+        store.elements[store.count].key = "client_keytab";
+        store.elements[store.count].value = ktname;
+        store.count++;
+
+        store.elements[store.count].key = "ccache";
+        store.elements[store.count].value = cname;
+        store.count++;
+
+        rc = krb5_unparse_name(ctx, princ, (char**)&pr_name.value);
+        if (rc != 0) goto end;
+        pr_name.length = strlen(pr_name.value);
+
+        major_stat = gss_import_name(&minor_stat, &pr_name,
+                                     GSS_KRB5_NT_PRINCIPAL_NAME, &sname);
+        if (major_stat != 0) goto end;
+    }
 
     // Does not work with GSS-SPENGO.
     //major_stat = gss_krb5_import_cred(&minor_stat, *ccache, princ, NULL, gsscred);
-    major_stat = gss_acquire_cred(&minor_stat, GSS_C_NO_NAME, 0,
-        GSS_C_NULL_OID_SET, GSS_C_INITIATE, gsscred, NULL, NULL);
+    major_stat = gss_acquire_cred_from(&minor_stat, sname, 0, GSS_C_NO_OID_SET,
+                                       GSS_C_INITIATE, &store, gsscred,
+                                       NULL, NULL);
 
 end:
+    if (keytab != NULL) krb5_kt_close(ctx, keytab);
     if (princ != NULL) krb5_free_principal(ctx, princ);
     if (defcc != NULL) krb5_cc_close(ctx, defcc);
+    if (cname != NULL) free(cname);
+    if (pr_name.value != NULL) krb5_free_unparsed_name(ctx, pr_name.value);
+    if (sname != NULL) {
+        major_stat = gss_release_name(&minor_stat, &sname);
+    }
 
     if (rc != 0) {
         /* Create error message with the error code. */
@@ -552,29 +599,25 @@ the given parameters or client's options. */
 void *
 create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
     ldap_conndata_t *defaults = NULL;
-    PyObject *tmp = NULL;
     char *authcid = NULL;
     char *authzid = NULL;
     char *binddn = NULL;
     char *passwd = NULL;
     char *realm = NULL;
+    char *ktname = NULL;
 
     DEBUG("create_conn_info (mech:%s, sock:%d, creds:%p)", mech, (int)sock, creds);
     /* Get credential information, if it's given. */
-    if (PyTuple_Check(creds) && PyTuple_Size(creds) > 1) {
+    if (PyDict_Check(creds)) {
         if (strcmp(mech, "SIMPLE") == 0) {
-            tmp = PyTuple_GetItem(creds, 0);
-            binddn = PyObject2char(tmp);
+            binddn = PyObject2char(PyDict_GetItemString(creds, "user"));
         } else {
-            tmp = PyTuple_GetItem(creds, 0);
-            authcid = PyObject2char(tmp);
-            tmp = PyTuple_GetItem(creds, 2);
-            realm = PyObject2char(tmp);
-            tmp = PyTuple_GetItem(creds, 3);
-            authzid = PyObject2char(tmp);
+            authcid = PyObject2char(PyDict_GetItemString(creds, "user"));
+            realm = PyObject2char(PyDict_GetItemString(creds, "realm"));
+            authzid = PyObject2char(PyDict_GetItemString(creds, "authz_id"));
+            ktname = PyObject2char(PyDict_GetItemString(creds, "keytab"));
         }
-        tmp = PyTuple_GetItem(creds, 1);
-        passwd = PyObject2char(tmp);
+        passwd = PyObject2char(PyDict_GetItemString(creds, "password"));
     }
 
     defaults = malloc(sizeof(ldap_conndata_t));
@@ -584,6 +627,7 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
         free(realm);
         free(authcid);
         free(authzid);
+        free(ktname);
         return (void *)PyErr_NoMemory();
     }
 
@@ -608,6 +652,7 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
     defaults->gsscred = GSS_C_NO_CREDENTIAL;
     defaults->errmsg = NULL;
     defaults->request_tgt = 0;
+    defaults->ktname = ktname;
 #endif
 #endif
 
@@ -629,6 +674,7 @@ dealloc_conn_info(ldap_conndata_t* info) {
         remove_krb5_cred(info->ctx, info->ccache, &(info->gsscred));
     }
     free(info->errmsg);
+    free(info->ktname);
 #endif
     free(info);
 }
@@ -689,7 +735,7 @@ ldap_init_thread_func(void *params) {
 #ifdef HAVE_KRB5
     if (data->info->request_tgt == 1) {
         rc = create_krb5_cred(data->info->ctx, data->info->realm,
-                data->info->authcid, data->info->passwd,
+                data->info->authcid, data->info->passwd, data->info->ktname,
                 &(data->info->ccache), &(data->info->gsscred),
                 &(data->info->errmsg));
         if (rc != 0) {
