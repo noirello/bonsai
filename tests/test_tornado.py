@@ -42,8 +42,8 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         self.ipaddr = self.cfg["SERVER"]["hostip"]
         self.client = LDAPClient(self.url)
         self.client.set_credentials("SIMPLE",
-                                    (self.cfg["SIMPLEAUTH"]["user"],
-                                     self.cfg["SIMPLEAUTH"]["password"]))
+                                    user=self.cfg["SIMPLEAUTH"]["user"],
+                                    password=self.cfg["SIMPLEAUTH"]["password"])
         self.client.set_async_connection_class(TornadoLDAPConnection)
         self.io_loop = self.get_new_ioloop()
 

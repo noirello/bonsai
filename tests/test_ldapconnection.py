@@ -71,8 +71,8 @@ class LDAPConnectionTest(unittest.TestCase):
         self.host = "ldap://%s" % self.cfg['SERVER']['hostname']
         self.basedn = self.cfg["SERVER"]["basedn"]
         client = LDAPClient(self.url)
-        client.set_credentials("SIMPLE", (self.cfg["SIMPLEAUTH"]["user"],
-                                          self.cfg["SIMPLEAUTH"]["password"]))
+        client.set_credentials("SIMPLE", user=self.cfg["SIMPLEAUTH"]["user"],
+                               password=self.cfg["SIMPLEAUTH"]["password"])
         client.auto_page_acquire = False
         self.conn = client.connect()
         self.async_conn = SimpleAsyncConn(client)
@@ -86,9 +86,9 @@ class LDAPConnectionTest(unittest.TestCase):
         if auth not in self.cfg:
             self.skipTest("%s authentication is not set." % mech)
         client = LDAPClient(self.host)
-        client.set_credentials(mech, (self.cfg[auth]["user"],
-                                      self.cfg[auth]["password"],
-                                      realm, authzid))
+        client.set_credentials(mech, self.cfg[auth]["user"],
+                                     self.cfg[auth]["password"],
+                                     realm, authzid)
         try:
             conn = client.connect()
         except (bonsai.errors.ConnectionError, \
@@ -179,10 +179,10 @@ class LDAPConnectionTest(unittest.TestCase):
                 or self.cfg["GSSAPIAUTH"]["realm"] == "None"):
             self.skipTest("Realm is not set.")
         client = LDAPClient(self.url)
-        client.set_credentials("GSSAPI", (self.cfg["GSSAPIAUTH"]["user"],
-                                          self.cfg["GSSAPIAUTH"]["password"],
-                                          self.cfg["GSSAPIAUTH"]["realm"],
-                                          None))
+        client.set_credentials("GSSAPI", self.cfg["GSSAPIAUTH"]["user"],
+                                         self.cfg["GSSAPIAUTH"]["password"],
+                                         self.cfg["GSSAPIAUTH"]["realm"],
+                                         None)
         self.assertRaises(bonsai.AuthenticationError, client.connect)
 
     @unittest.skipIf('TRAVIS' in os.environ, "No GSS-SPNEGO mech on Trusty")
@@ -211,7 +211,7 @@ class LDAPConnectionTest(unittest.TestCase):
             cli.set_ca_cert(cert_path + '/cacert.pem')
             cli.set_client_cert(cert_path + '/client.pem')
             cli.set_client_key(cert_path + '/client.key')
-            cli.set_credentials('EXTERNAL', (authzid,))
+            cli.set_credentials('EXTERNAL', authz_id=authzid)
             try:
                 conn = cli.connect()
             except (bonsai.errors.ConnectionError,
@@ -319,7 +319,7 @@ class LDAPConnectionTest(unittest.TestCase):
     def test_simple_auth_error(self):
         """ Test simple authentication error. """
         client = LDAPClient(self.url)
-        client.set_credentials("SIMPLE", ("cn=wrong", "wronger"))
+        client.set_credentials("SIMPLE", "cn=wrong", "wronger")
         self.assertRaises(bonsai.AuthenticationError, client.connect)
 
     def test_digest_auth_error(self):
@@ -331,9 +331,9 @@ class LDAPConnectionTest(unittest.TestCase):
             realm = None
         else:
             realm = self.cfg["DIGESTAUTH"]["realm"]
-        client.set_credentials("DIGEST-MD5", (self.cfg["DIGESTAUTH"]["user"],
-                                              "wrongpassword",
-                                              realm, None))
+        client.set_credentials("DIGEST-MD5", self.cfg["DIGESTAUTH"]["user"],
+                                             "wrongpassword",
+                                             realm, None)
         self.assertRaises(bonsai.AuthenticationError, client.connect)
 
     def test_sort_order(self):
@@ -541,11 +541,11 @@ class LDAPConnectionTest(unittest.TestCase):
         cli = LDAPClient("ldap://%s" % self.ipaddr)
         cli.set_password_policy(True)
         try:
-            cli.set_credentials("SIMPLE", (user_dn, "wrong_pass"))
+            cli.set_credentials("SIMPLE", user_dn, "wrong_pass")
             conn, ctrl = cli.connect()
         except bonsai.errors.AuthenticationError:
             try:
-                cli.set_credentials("SIMPLE", (user_dn, "p@ssword"))
+                cli.set_credentials("SIMPLE", user_dn, "p@ssword")
                 conn, ctrl = cli.connect()
             except Exception as exc:
                 self.assertIsInstance(exc, bonsai.errors.AccountLocked)
@@ -565,13 +565,13 @@ class LDAPConnectionTest(unittest.TestCase):
         user_dn = "cn=skip,ou=nerdherd,dc=bonsai,dc=test"
         cli = LDAPClient("ldap://%s" % self.ipaddr)
         cli.set_password_policy(True)
-        cli.set_credentials("SIMPLE", (user_dn, "p@ssword"))
+        cli.set_credentials("SIMPLE", user_dn, "p@ssword")
         conn, ctrl = cli.connect()
         entry = conn.search(user_dn, 0)[0]
         entry['userPassword'] = "newvalidpassword"
         entry.modify()
         conn.close()
-        cli.set_credentials("SIMPLE", (user_dn, "newvalidpassword"))
+        cli.set_credentials("SIMPLE", user_dn, "newvalidpassword")
         time.sleep(2.0)
         conn, ctrl = cli.connect()
         if not (ctrl['expire'] <= 10 and ctrl['expire'] > 0):
@@ -605,7 +605,7 @@ class LDAPConnectionTest(unittest.TestCase):
         """ Test Password Modify extended operation. """
         user_dn = LDAPDN("cn=skip,ou=nerdherd,dc=bonsai,dc=test")
         cli = LDAPClient("ldap://%s" % self.ipaddr)
-        cli.set_credentials("SIMPLE", (str(user_dn), "p@ssword"))
+        cli.set_credentials("SIMPLE", str(user_dn), "p@ssword")
         conn = cli.connect()
         self.assertRaises(TypeError,
                           lambda: conn.modify_password(new_password=0))
@@ -613,13 +613,13 @@ class LDAPConnectionTest(unittest.TestCase):
         conn.close()
         self.assertRaises(ClosedConnection, conn.modify_password)
         try:
-            cli.set_credentials("SIMPLE", (str(user_dn), "newpassword"))
+            cli.set_credentials("SIMPLE", str(user_dn), "newpassword")
             cli.set_password_policy(True)
             conn, ctrl = cli.connect()
             newpass = conn.modify_password()
             conn.close()
             self.assertIsInstance(newpass, str)
-            cli.set_credentials("SIMPLE", (str(user_dn), newpass))
+            cli.set_credentials("SIMPLE", str(user_dn), newpass)
             conn, ctrl = cli.connect()
             conn.close()
         except bonsai.AuthenticationError:

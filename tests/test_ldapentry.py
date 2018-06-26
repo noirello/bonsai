@@ -19,8 +19,9 @@ class LDAPEntryTest(unittest.TestCase):
         url = "ldap://%s:%s" % (cls.cfg["SERVER"]["hostip"],
                                 cls.cfg["SERVER"]["port"])
         cls.client = LDAPClient(url)
-        cls.creds = ("SIMPLE", (cls.cfg["SIMPLEAUTH"]["user"],
-                                cls.cfg["SIMPLEAUTH"]["password"]))
+        cls.creds = {'mechanism': "SIMPLE",
+                     'user': cls.cfg["SIMPLEAUTH"]["user"],
+                     'password': cls.cfg["SIMPLEAUTH"]["password"]}
         cls.basedn = cls.cfg["SERVER"]["basedn"]
 
     def test_set_get(self):
@@ -109,7 +110,7 @@ class LDAPEntryTest(unittest.TestCase):
 
     def test_special_char(self):
         """ Test adding entry with special character in its DN. """
-        self.client.set_credentials(*self.creds)
+        self.client.set_credentials(**self.creds)
         conn = self.client.connect()
         entry = LDAPEntry(r"cn=test\, *\+withspec,%s" % self.basedn)
         entry['objectclass'] = ['top', 'inetOrgPerson']
@@ -122,7 +123,7 @@ class LDAPEntryTest(unittest.TestCase):
 
     def test_unicode(self):
         """ Test adding entry with special character in its DN. """
-        self.client.set_credentials(*self.creds)
+        self.client.set_credentials(**self.creds)
         conn = self.client.connect()
         dname = "cn=test_µčབྷñ,%s" % self.basedn
         entry = LDAPEntry(dname)
@@ -137,7 +138,7 @@ class LDAPEntryTest(unittest.TestCase):
     def test_binary(self):
         """ Test adding binary data. """
         curdir = os.path.abspath(os.path.dirname(__file__))
-        self.client.set_credentials(*self.creds)
+        self.client.set_credentials(**self.creds)
         conn = self.client.connect()
         dname = "cn=binary,%s" % self.basedn
         entry = LDAPEntry(dname)
@@ -182,7 +183,7 @@ class LDAPEntryTest(unittest.TestCase):
     def test_rename(self):
         """ Test LDAPEntry's rename LDAP operation. """
         entry = LDAPEntry("cn=test,%s" % self.basedn)
-        self.client.set_credentials(*self.creds)
+        self.client.set_credentials(**self.creds)
         with self.client.connect() as conn:
             self._add_for_renaming(conn, entry)
             entry.rename("cn=test2,%s" % self.basedn)
@@ -198,7 +199,7 @@ class LDAPEntryTest(unittest.TestCase):
     def test_rename_with_old_rdn(self):
         """ Test LDAPEntry's rename LDAP operation. """
         entry = LDAPEntry("cn=test,%s" % self.basedn)
-        self.client.set_credentials(*self.creds)
+        self.client.set_credentials(**self.creds)
         with self.client.connect() as conn:
             self._add_for_renaming(conn, entry)
             entry.rename("uid=test2,%s" % self.basedn, delete_old_rdn=False)
@@ -216,7 +217,7 @@ class LDAPEntryTest(unittest.TestCase):
         dname = bonsai.LDAPDN("cn=test,%s" % self.basedn)
         entry = LDAPEntry(dname)
         self.assertRaises(ValueError, lambda: entry.rename("cn=test2"))
-        self.client.set_credentials(*self.creds)
+        self.client.set_credentials(**self.creds)
         with self.client.connect() as conn:
             self._add_for_renaming(conn, entry)
             self.assertRaises(TypeError, lambda: entry.rename(0))
@@ -237,7 +238,7 @@ class LDAPEntryTest(unittest.TestCase):
         """
         entry = LDAPEntry("cn=test,%s" % self.basedn)
         self.assertRaises(ValueError, entry.modify)
-        self.client.set_credentials(*self.creds)
+        self.client.set_credentials(**self.creds)
         with self.client.connect() as conn:
             entry['sn'] = 'test'
             self.assertRaises(bonsai.ObjectClassViolation,
@@ -291,7 +292,7 @@ class LDAPEntryTest(unittest.TestCase):
         cli = LDAPClient(self.client.url)
         user_dn = "cn=jeff,ou=nerdherd,dc=bonsai,dc=test"
         cli.set_password_policy(True)
-        cli.set_credentials("SIMPLE", (user_dn, "p@ssword"))
+        cli.set_credentials("SIMPLE", user_dn, "p@ssword")
         conn, ctrl = cli.connect()
         entry = conn.search(user_dn, 0)[0]
         try:
@@ -300,7 +301,7 @@ class LDAPEntryTest(unittest.TestCase):
         except Exception as exc:
             self.assertIsInstance(exc, bonsai.errors.PasswordModNotAllowed)
         user_dn = "cn=skip,ou=nerdherd,dc=bonsai,dc=test"
-        cli.set_credentials("SIMPLE", (user_dn, "p@ssword"))
+        cli.set_credentials("SIMPLE", user_dn, "p@ssword")
         conn, ctrl = cli.connect()
         entry = conn.search(user_dn, 0)[0]
         try:
@@ -324,7 +325,7 @@ class LDAPEntryTest(unittest.TestCase):
     def test_change_attribute(self):
         """ Test change_attribute method. """
         user_dn = "cn=sam,ou=nerdherd,dc=bonsai,dc=test"
-        self.client.set_credentials(*self.creds)
+        self.client.set_credentials(**self.creds)
         if sys.platform == "win32":
             multiattr = 'otherTelephone'
         else:
@@ -361,7 +362,7 @@ class LDAPEntryTest(unittest.TestCase):
     def test_change_attribute_error(self):
         """ Test change_attribute method's error handling. """
         user_dn = "cn=sam,ou=nerdherd,dc=bonsai,dc=test"
-        self.client.set_credentials(*self.creds)
+        self.client.set_credentials(**self.creds)
         with self.client.connect() as conn:
             entry = LDAPEntry(user_dn, conn)
             self.assertRaises(ValueError,
@@ -391,7 +392,7 @@ class LDAPEntryTest(unittest.TestCase):
         refdn = bonsai.LDAPDN("o=invalid-ref,ou=nerdherd,dc=bonsai,dc=test")
         newref = "ldap://invalid.host/cn=nobody"
         cli = LDAPClient(self.client.url)
-        cli.set_credentials(*self.creds)
+        cli.set_credentials(**self.creds)
         cli.managedsait = True
         with cli.connect() as conn:
             entry = LDAPEntry(refdn, conn)

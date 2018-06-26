@@ -35,8 +35,8 @@ class AIOLDAPConnectionTest(unittest.TestCase):
         cls.basedn = cls.cfg["SERVER"]["basedn"]
         cls.ipaddr = cls.cfg["SERVER"]["hostip"]
         cls.client = LDAPClient(cls.url)
-        cls.client.set_credentials("SIMPLE", (cls.cfg["SIMPLEAUTH"]["user"],
-                                              cls.cfg["SIMPLEAUTH"]["password"]))
+        cls.client.set_credentials("SIMPLE", user=cls.cfg["SIMPLEAUTH"]["user"],
+                                   password=cls.cfg["SIMPLEAUTH"]["password"])
 
     @asyncio_test
     def test_connection(self):

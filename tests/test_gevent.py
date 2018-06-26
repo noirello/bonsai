@@ -30,8 +30,8 @@ class GeventLDAPConnectionTest(unittest.TestCase):
         cls.ipaddr = cls.cfg["SERVER"]["hostip"]
         cls.client = LDAPClient(cls.url)
         cls.client.set_credentials("SIMPLE",
-                                   (cls.cfg["SIMPLEAUTH"]["user"],
-                                    cls.cfg["SIMPLEAUTH"]["password"]))
+                                   user=cls.cfg["SIMPLEAUTH"]["user"],
+                                   password=cls.cfg["SIMPLEAUTH"]["password"])
         cls.client.set_async_connection_class(GeventLDAPConnection)
 
     def test_connection(self):

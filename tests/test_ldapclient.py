@@ -63,26 +63,21 @@ class LDAPClientTest(unittest.TestCase):
 
     def test_set_credentials(self):
         """
-        Test setcredentials method, mechanism and credentials properties.
+        Test set_credentials method, mechanism and credentials properties.
         """
         self.assertRaises(TypeError,
-                          lambda: self.client.set_credentials(2323, (None,)))
-        self.assertRaises(TypeError,
-                          lambda: self.client.set_credentials("Simple",
-                                                              "pass"))
+                          lambda: self.client.set_credentials(2323, user=None))
         self.assertRaises(TypeError, lambda: self.client
-                          .set_credentials("Simple", ("Name", 2, None, None)))
-        self.assertRaises(ValueError, lambda: self.client
-                          .set_credentials("EXTERNAL", (None, None)))
-        self.assertRaises(ValueError, lambda: self.client
-                          .set_credentials("SIMPLE", (None, None, None)))
-        self.assertRaises(ValueError, lambda: self.client
-                          .set_credentials("DIGEST-MD5", (None, None)))
-        self.client.set_credentials("SIMPLE", ("cn=admin", "password"))
+                          .set_credentials("Simple", "Name", 2, None, None))
+        self.client.set_credentials("SIMPLE", "cn=admin", "password")
         self.assertEqual(self.client.mechanism, "SIMPLE")
-        self.assertEqual(self.client.credentials, ("cn=admin", "password"))
-        self.client.set_credentials("EXTERNAL", ("authzid",))
-        self.assertEqual(self.client.credentials, (None, None, None, "authzid"))
+        self.assertEqual(self.client.credentials, {"user": "cn=admin",
+                                                   "password": "password",
+                                                   "realm": None,
+                                                   "authz_id": None,
+                                                   "keytab": None})
+        self.client.set_credentials("EXTERNAL", authz_id="authzid")
+        self.assertEqual(self.client.credentials["authz_id"], "authzid")
 
     def test_vendor_info(self):
         """ Test vendor information. """
@@ -137,8 +132,8 @@ class LDAPClientTest(unittest.TestCase):
         client = LDAPClient(self.url)
         self.assertRaises(TypeError, lambda: client.set_password_policy("F"))
         client.password_policy = True
-        client.set_credentials("SIMPLE", ("cn=chuck,ou=nerdherd,dc=bonsai,dc=test",
-                                          "p@ssword"))
+        client.set_credentials("SIMPLE", "cn=chuck,ou=nerdherd,dc=bonsai,dc=test",
+                               "p@ssword")
         ret_val = client.connect()
         self.assertIsInstance(ret_val, tuple)
         self.assertIsInstance(ret_val[0], LDAPConnection)
@@ -175,7 +170,7 @@ class LDAPClientTest(unittest.TestCase):
             self.client.mechanism = "SIMPLE"
         self.assertRaises(ValueError, set_mechanism)
         def set_credentials():
-            self.client.credentials = ("test", "test", None, None)
+            self.client.credentials = {"user": "test", "password": "test"}
         self.assertRaises(ValueError, set_credentials)
         def set_tls():
             self.client.tls = False
