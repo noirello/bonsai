@@ -29,7 +29,7 @@ class LDAPClient:
         """ init method. """
         self.__tls = tls
         self.set_url(url)
-        self.__credentials = None # type: Optional[Tuple]
+        self.__credentials = None # type: Optional[Dict[str, Optional[str]]]
         self.__raw_list = [] # type: List[str]
         self.__mechanism = "SIMPLE"
         self.__cert_policy = -1
@@ -53,7 +53,7 @@ class LDAPClient:
         if hasattr(socket, "socketpair"):
             return socket.socketpair()
         # Backward compatibility on Windows from Python 3.5.
-        # Origin: https://gist.github.com/4325783, by Geert Jansen.  Public domain.
+        # Origin: https://gist.github.com/4325783, by Geert Jansen. Public domain.
         def socketpair(family: Any = socket.AF_INET,
                        type: Any = socket.SOCK_STREAM,
                        proto: int = 0) -> Tuple[socket.socket, socket.socket]:
@@ -99,44 +99,41 @@ class LDAPClient:
         self.__raw_list = raw_list
 
     def set_credentials(self, mechanism: str,
-                        creds: Union[Tuple[Optional[str], Optional[str],
-                                           Optional[str], Optional[str]],
-                                     Tuple[str, str], Tuple[str]]) -> None:
+                        user: Optional[str] = None,
+                        password: Optional[str] = None,
+                        realm: Optional[str] = None,
+                        authz_id: Optional[str] = None,
+                        keytab: Optional[str] = None) -> None:
         """
-        Set binding mechanism and credential information. The credential
-        information must be in a tuple. If the binding mechanism is ``SIMPLE``,
-        then the tuple must have two elements: (binddn, password), if \
-        ``EXTERNAL`` then only one element is needed: (authzid,). Every other
-        case: (username, password, realm, authzid). If there is no need to \
-        specify realm or authorization ID then use None for these elements.
+        Set binding mechanism and credential information. All parameters \
+        are optional except the `mechanism`. Different mechanism applies \
+        different credential information and ignores the rest. For example:
+
+            * *SIMPLE* uses the `user` (as bind DN) and `password`.
+            * *EXTERNAL* only uses the `authz_id` as authorization ID.
 
         :param str mechanism: the name of the binding mechanism.
-        :param tuple creds: the credential information.
-        :raises TypeError: if the `mechanism` parameter is not a string, or \
-        the `creds` is not a tuple.
-        :raises ValueError: the tuple has wrong length.
+        :param str user: the identification of the binding user.
+        :param str password: the password of the user.
+        :param str realm: the (Kerberos) realm of the user.
+        :param str authz_id: the authorization ID for the user.
+        :param str keytab: path to a Kerberos keytab for authentication.
+        :raises TypeError: if mechanism is not string, or any of the other \
+        parameters are not string or None.
         """
-        if type(mechanism) != str:
+        if not isinstance(mechanism, str):
             raise TypeError("The mechanism must be a string.")
+        mechanism = mechanism.upper()
+        creds = {
+            'user': user,
+            'password': password,
+            'realm': realm,
+            'authz_id': authz_id,
+            'keytab': keytab
+        }
+        if list(filter(lambda x: not isinstance(x, (str, type(None))), creds.values())) != []:
+            raise TypeError("Every parameter must be a string or None.")
         self.__mechanism = mechanism.upper()
-        if type(creds) != tuple:
-            raise TypeError("The credential information must be in a tuple.")
-        if list(filter(lambda x: type(x) != str and x != None, creds)) != []:
-            raise TypeError("All element must be a string or None in the"
-                            " tuple.")
-        if self.__mechanism == "EXTERNAL":
-            if len(creds) != 1:
-                raise ValueError("External mechanism needs only one credential"
-                                 " information in a tuple: (authzid,)")
-            # Supplement the tuple with Nones.
-            creds = (None, None, None, creds[0])
-        if self.__mechanism == "SIMPLE" and len(creds) != 2:
-            raise ValueError("Simple mechanism needs 2 "
-                             "credential information: (binddn, password).")
-        if self.__mechanism != "SIMPLE" and len(creds) != 4:
-            raise ValueError("%s mechanism needs 4 "
-                             "credential information: (username, password, "
-                             "realm, authzid)." % self.__mechanism)
         self.__credentials = creds
 
     def set_cert_policy(self, policy: str) -> None:
@@ -390,7 +387,7 @@ class LDAPClient:
         raise ValueError("Mechanism attribute cannot be set.")
 
     @property
-    def credentials(self) -> Optional[Tuple]:
+    def credentials(self) -> Optional[Dict[str, Optional[str]]]:
         """ A tuple with the credential information. It cannot be set. """
         return self.__credentials
 
