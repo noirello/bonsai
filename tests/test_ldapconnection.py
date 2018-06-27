@@ -185,6 +185,43 @@ class LDAPConnectionTest(unittest.TestCase):
                                          None)
         self.assertRaises(bonsai.AuthenticationError, client.connect)
 
+    @unittest.skipIf(not bonsai.has_krb5_support() or sys.platform != "linux",
+                     "Keytab-based auth only available on linux.")
+    def test_bind_gssapi_keytab_error(self):
+        client = LDAPClient(self.url)
+        client.set_credentials("GSSAPI", user=self.cfg["GSSAPIAUTH"]["user"],
+                               realm=self.cfg["GSSAPIAUTH"]["realm"].upper(),
+                               keytab="invalid")
+        self.assertRaises(bonsai.AuthenticationError, client.connect)
+        proj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                os.pardir))
+        ktpath = os.path.abspath(os.path.join(proj_dir,
+                                              self.cfg["GSSAPIAUTH"]["keytab"]))
+        client.set_credentials("GSSAPI", user="invalid",
+                        realm=self.cfg["GSSAPIAUTH"]["realm"].upper(),
+                        keytab=ktpath)
+        self.assertRaises(bonsai.AuthenticationError, client.connect)
+
+
+    @unittest.skipIf(not bonsai.has_krb5_support() or sys.platform != "linux",
+                     "Keytab-based auth only available on linux.")
+    def test_bind_gssapi_keytab(self):
+        proj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                os.pardir))
+        ktpath = os.path.abspath(os.path.join(proj_dir,
+                                              self.cfg["GSSAPIAUTH"]["keytab"]))
+        client = LDAPClient(self.url)
+        client.set_credentials("GSSAPI", user=self.cfg["GSSAPIAUTH"]["user"],
+                               realm=self.cfg["GSSAPIAUTH"]["realm"].upper(),
+                               keytab=ktpath)
+        conn = client.connect()
+        self.assertEqual(conn.whoami(), "dn:cn=chuck,ou=nerdherd,dc=bonsai,dc=test")
+        client.set_credentials("GSSAPI", user="admin",
+                               realm=self.cfg["GSSAPIAUTH"]["realm"].upper(),
+                               keytab=ktpath)
+        conn = client.connect()
+        self.assertEqual(conn.whoami(), "dn:cn=admin,dc=bonsai,dc=test")
+
     @unittest.skipIf('TRAVIS' in os.environ, "No GSS-SPNEGO mech on Trusty")
     def test_bind_spnego(self):
         """ Test GSS-SPNEGO connection with automatic TGT requesting. """
