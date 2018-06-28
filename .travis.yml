@@ -71,10 +71,11 @@ matrix:
       after_success:
         - sed -i.bak 's|'$INSTALL_PATH'|'$TRAVIS_BUILD_DIR/lib'|g' .coverage
         - codecov
-        - export CFLAGS=
-        - python3 setup.py clean
-        - python3 setup.py build -f
-        - python3 setup.py bdist_wheel
+        - unset CFLAGS
+        - rm -rf ./dist/*
+        - pipenv run python setup.py clean
+        - pipenv run python setup.py build -f
+        - pipenv run python setup.py bdist_wheel
         - pipenv run delocate-wheel -v ./dist/bonsai-*.whl
         - pip3 install clint pycryptodome requests requests_toolbelt
         - curl https://raw.githubusercontent.com/nneonneo/ffsend/master/ffsend.py -o ffsend.py
