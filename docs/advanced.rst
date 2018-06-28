@@ -378,7 +378,7 @@ An example for asynchronous search and modify with `asyncio`:
     @asyncio.coroutine
     def do():
         cli = bonsai.LDAPClient("ldap://localhost")
-        with (yield from cli.connect(async=True)) as conn:
+        with (yield from cli.connect(is_async=True)) as conn:
             results = yield from conn.search("ou=nerdherd,dc=bonsai,dc=test", 1)
             for res in results:
                 print(res['givenName'][0])
