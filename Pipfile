@@ -16,5 +16,3 @@ wheel = "*"
 pydivert = {version = "*", sys_platform = "== 'win32'"}
 delocate = {version = "*", sys_platform = "== 'darwin'"}
 
-[requires]
-python_version = "3.6"
