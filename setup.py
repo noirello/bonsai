@@ -35,7 +35,9 @@ def have_krb5(libs, libdirs=None):
         unsigned int ms = 0;
         krb5_context ctx;
         const char *cname = NULL;
+        gss_key_value_set_desc store;
 
+        store.count = 0;.
         krb5_init_context(&ctx);
         gss_krb5_ccache_name(&ms, cname, NULL);
         return 0;
