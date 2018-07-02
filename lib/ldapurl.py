@@ -38,9 +38,9 @@ class LDAPURL:
         # RegExp for [ldap|ldaps]://[host]:[port]/[basedn]?[attrs]?[scope]
         # ?[filter]?[exts]
         valid = re.compile(r"^(ldap|ldaps)://(([^:/?]*)?([:]([1-9][0-9]{0,4}))?"
-                           r"|[[]?([^/?\]]*)([]][:]([1-9][0-9]{0,4}))?)[/]?"
-                           r"([^]/:?]*)?[\?]?([^]:?]*)?[\?]?([^]:?]*)?[\?]?"
-                           r"([^]:?]*)?[\?]?([^]:?]*)?$",
+                           r"|[\[]?([^/?\]]*)([\]][:]([1-9][0-9]{0,4}))?)[/]?"
+                           r"([^\]/:?]*)?[\?]?([^\]:?]*)?[\?]?([^\]:?]*)?[\?]?"
+                           r"([^\]:?]*)?[\?]?([^\]:?]*)?$",
                            re.IGNORECASE)
         scheme, host, port = self.__hostinfo
         binddn, attrlist, scope, filterexp = self.__searchinfo
