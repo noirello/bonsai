@@ -24,10 +24,13 @@ class LDAPEntry(ldapentry):
         try:
             super().__init__(dn, conn)
             self.__extended_dn = None # type: Optional[str]
-        except InvalidDN:
+        except InvalidDN as exc:
             # InvalidDN error caused by extended DN control.
             splitted_dn = str(dn).split(';')
-            super().__init__(splitted_dn[-1], conn)
+            try:
+                super().__init__(splitted_dn[-1], conn)
+            except InvalidDN:
+                raise exc from None
             self.__extended_dn = str(dn)
 
     def delete(self, timeout: Optional[float] = None, recursive: bool = False) -> Any:
