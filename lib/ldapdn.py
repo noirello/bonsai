@@ -17,7 +17,7 @@ class LDAPDN:
     _namecomp = r"({typ})=({val})(?:\+({typ})=({val}))*".format(typ=_attrtype,
                                                                 val=_attrvalue)
     _dnregex = re.compile(r"({comp})(?:,({comp}))*\Z".format(comp=_namecomp),
-                          re.IGNORECASE)
+                      re.IGNORECASE)
 
     def __init__(self, strdn: str) -> None:
         if strdn != '' and not self._dnregex.match(strdn):
@@ -55,7 +55,7 @@ class LDAPDN:
                 if reverse:
                     strdn = strdn.replace(pair[1], pair[0])
                 else:
-                strdn = strdn.replace(pair[0], pair[1])
+                    strdn = strdn.replace(pair[0], pair[1])
         return strdn
 
     def __getitem__(self, idx: Union[int, slice]) -> str:
@@ -129,3 +129,23 @@ class LDAPDN:
     def rdns(self, value: Any = None) -> None:
         """ The tuple of relative distinguished names."""
         raise ValueError("RDNs attribute cannot be set.")
+
+def escape_attribute_value(attrval: str):
+    """
+    Escapes the special character in an attribute value
+    based on RFC 4514.
+
+    :param str attrval: the attribute value.
+    :return: The escaped attribute value.
+    :rtype: str
+    """
+    # Order matters.
+    chars_to_escape = ('\\', '"', '+', ',', ';', '<', '=', '>')
+    for char in chars_to_escape:
+        attrval = attrval.replace(char, '\\{0}'.format(char))
+    if attrval[0] == '#' or attrval[0] == ' ':
+        attrval = "".join(('\\', attrval))
+    if attrval[-1] == ' ':
+        attrval = "".join((attrval[:-1], '\\ '))
+    attrval = attrval.replace('\0', '\\0')
+    return attrval

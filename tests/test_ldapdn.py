@@ -3,6 +3,8 @@ import unittest
 from bonsai import LDAPDN
 from bonsai import errors
 
+from bonsai.ldapdn import escape_attribute_value
+
 class LDAPDNTest(unittest.TestCase):
     """ Testing LDAP DN object. """
     def setUp(self):
@@ -71,6 +73,14 @@ class LDAPDNTest(unittest.TestCase):
     def test_repr(self):
         """ Test representation. """
         self.assertIn("<LDAPDN", repr(self.dnobj))
+
+    def test_escape_attribute_value(self):
+        """ Test escaping special characters in attribute values. """
+        self.assertEqual(escape_attribute_value("dummy=test,something+somethingelse"),
+                         "dummy\=test\,something\+somethingelse")
+        self.assertEqual(escape_attribute_value("#dummy=test "),
+                         "\#dummy\=test\ ")
+        self.assertEqual(escape_attribute_value("term\0"), "term\\0")
 
 if __name__ == '__main__':
     unittest.main()
