@@ -22,7 +22,7 @@ class LDAPDN:
     def __init__(self, strdn: str) -> None:
         if strdn != '' and not self._dnregex.match(strdn):
             raise InvalidDN(strdn)
-        self.__strdn = strdn
+        self.__strdn = self.__sanitize(strdn, True)
 
     def __str_rdn_to_tuple(self, str_rdn: str) -> Tuple[Tuple[str, str], ...]:
         """
@@ -35,22 +35,26 @@ class LDAPDN:
         for attr in type_value_list:
             # Get attribute type and value.
             atype, avalue = re.split(r'(?<!\\)=', attr)
-            rdn.append((atype, avalue))
+            rdn.append((atype, self.__sanitize(avalue, True)))
         return tuple(rdn)
 
     @staticmethod
-    def __escape_special_char(strdn: str) -> str:
-        """ Escaping special characters."""
-        char_list = [(r'\\\\', '\\5C'),
+    def __sanitize(strdn: str, reverse: bool = False) -> str:
+        """ Sanitizing special characters."""
+        char_list = [(r'\\', '\\5C'),
                      (r'\,', '\\2C'),
                      (r'\+', '\\2B'),
                      (r'\"', '\\22'),
                      (r'\<', '\\3C'),
                      (r'\>', '\\3E'),
                      (r'\;', '\\3B'),
-                     (r'\=', '\\3D')]
+                     (r'\=', '\\3D'),
+                     (r'\ ', '\\20')]
         if strdn:
             for pair in char_list:
+                if reverse:
+                    strdn = strdn.replace(pair[1], pair[0])
+                else:
                 strdn = strdn.replace(pair[0], pair[1])
         return strdn
 
@@ -96,11 +100,11 @@ class LDAPDN:
     def __eq__(self, other: Any) -> bool:
         """
         Check equality of two LDAPDN by their string format or
-        their escaped string format.
+        their sanitized string format.
         """
         return (str(self).lower() == str(other).lower() or
-                self.__escape_special_char(str(self)).lower() ==
-                self.__escape_special_char(str(other)).lower())
+                self.__sanitize(str(self)).lower() ==
+                self.__sanitize(str(other)).lower())
 
     def __str__(self) -> str:
         """ Return the full string format of the distinguished name. """
@@ -118,7 +122,8 @@ class LDAPDN:
     def rdns(self) -> Tuple[Tuple[Tuple[str, str], ...], ...]:
         """ The tuple of relative distinguished name."""
         return tuple(self.__str_rdn_to_tuple(rdn)
-                     for rdn in re.split(r'(?<!\\),', self.__strdn))
+                     for rdn in re.split(r'(?<!\\),',
+                                         self.__sanitize(self.__strdn)))
 
     @rdns.setter
     def rdns(self, value: Any = None) -> None:
