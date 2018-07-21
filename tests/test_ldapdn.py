@@ -76,8 +76,8 @@ class LDAPDNTest(unittest.TestCase):
 
     def test_escape_attribute_value(self):
         """ Test escaping special characters in attribute values. """
-        self.assertEqual(escape_attribute_value("dummy=test,something+somethingelse"),
-                         "dummy\=test\,something\+somethingelse")
+        self.assertEqual(escape_attribute_value(" dummy=test,something+somethingelse"),
+                         "\ dummy\=test\,something\+somethingelse")
         self.assertEqual(escape_attribute_value("#dummy=test "),
                          "\#dummy\=test\ ")
         self.assertEqual(escape_attribute_value("term\0"), "term\\0")

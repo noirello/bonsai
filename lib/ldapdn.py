@@ -12,7 +12,7 @@ class LDAPDN:
     __slots__ = ("__strdn",)
 
     _attrtype = r'[A-Za-z][\w-]*|\d+(?:\.\d+)*'
-    _attrvalue = r'#(?:[\dA-Fa-f]{2})+|(?:[^,=\+<>#;\\"]|\\[,=\+<>#;\\"]' \
+    _attrvalue = r'#(?:[\dA-Fa-f]{2})+|(?:[^,=\+<>#;\\"]|\\[,=\+<>#;\\" ]' \
     r'|\\[\dA-Fa-f]{2})*|"(?:[^\\"]|\\[,=\+<>#;\\"]|\\[\dA-Fa-f]{2})*"'
     _namecomp = r"({typ})=({val})(?:\+({typ})=({val}))*".format(typ=_attrtype,
                                                                 val=_attrvalue)
