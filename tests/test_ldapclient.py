@@ -5,7 +5,7 @@ import time
 import xmlrpc.client as rpc
 
 import bonsai
-from bonsai import LDAPClient
+from bonsai import LDAPClient, escape_filter
 from bonsai.ldapconnection import LDAPConnection
 
 def receive_timeout_error(client):
@@ -239,6 +239,12 @@ class LDAPClientTest(unittest.TestCase):
         finally:
             pool.terminate()
             proxy.remove_delay()
+
+    def test_escape_filter(self):
+        self.assertEqual(escape_filter("(parenthesis)"), "\\28parenthesis\\29")
+        self.assertEqual(escape_filter("cn=*"), "cn=\\2A")
+        self.assertEqual(escape_filter("\\backslash"), "\\5Cbackslash")
+        self.assertEqual(escape_filter("term\0"), "term\\0")
 
 
 if __name__ == '__main__':

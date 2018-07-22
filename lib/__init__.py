@@ -1,10 +1,10 @@
-from .ldapdn import LDAPDN
+from .ldapdn import LDAPDN, escape_attribute_value
 from .ldapurl import LDAPURL
 from .ldapconnection import LDAPConnection
 from .ldapconnection import LDAPSearchScope
 from .ldapentry import LDAPEntry
 from .ldapentry import LDAPModOp
-from .ldapclient import LDAPClient
+from .ldapclient import LDAPClient, escape_filter
 from .ldapreference import LDAPReference
 from .ldapvaluelist import LDAPValueList
 from .errors import *

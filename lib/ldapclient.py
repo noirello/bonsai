@@ -558,3 +558,20 @@ class LDAPClient:
             return self.__async_conn(self, **kwargs).open(timeout)
         else:
             return LDAPConnection(self).open(timeout)
+
+def escape_filter(fltstr: str):
+    """
+    Escapes the special characters in an LDAP filter based on RFC 4515.
+
+    :param str fltstr: the unescaped filter string.
+    :return: the escaped fiter string.
+    :rtype: str
+    """
+    chars_to_escape = (('\\', '\\5C'),
+                       ('*', '\\2A'),
+                       ('(', '\\28'),
+                       (')', '\\29'),
+                       ('\0', '\\0'))
+    for char, repl in chars_to_escape:
+        fltstr = fltstr.replace(char, repl)
+    return fltstr

@@ -15,4 +15,3 @@ mypy = "*"
 wheel = "*"
 pydivert = {version = "*", sys_platform = "== 'win32'"}
 delocate = {version = "*", sys_platform = "== 'darwin'"}
-
