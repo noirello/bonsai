@@ -37,6 +37,7 @@ matrix:
         - brew upgrade python3
         - brew install openldap --with-sssvlv
         - pip3 install pipenv
+        - export PIP_NO_BINARY=gevent  # Fix issues with gevent 1.3.5/greenlet 0.4.13 on Python 3.7
         - pipenv install --dev --skip-lock
         - pipenv graph
         # Install Cyrus SASL.
@@ -89,6 +90,7 @@ before_install:
   - sudo apt-get install -y krb5-user libsasl2-modules-gssapi-mit libkrb5-dev
   - sudo apt list --installed
   - pip install pipenv
+  - export PIP_NO_BINARY=gevent  # Fix issues with gevent 1.3.5/greenlet 0.4.13 on Python 3.7
   - pipenv install --dev --skip-lock
   - pipenv graph
   - docker build -t bonsai -f ./.travis/docker/Dockerfile .
