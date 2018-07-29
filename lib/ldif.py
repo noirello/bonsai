@@ -41,8 +41,10 @@ class LDIFWriter:
                 val = val.encode("UTF-8")
             if has_not_safe_char or has_not_safe_init_char:
                 val = base64.b64encode(val)
-                attrname = "{0}:".format(attrname)  # Add extra colon.
-            line = "{attr}: {value}".format(attr=attrname, value=val.decode("UTF-8"))
+                name = "{0}:".format(attrname)  # Add extra colon.
+            else:
+                name = attrname
+            line = "{attr}: {value}".format(attr=name, value=val.decode("UTF-8"))
             for i in range(0, len(line), self.max_length):
                 # Split the line into self.max_length.
                 if i != 0:
