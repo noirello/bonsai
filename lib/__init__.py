@@ -7,6 +7,7 @@ from .ldapentry import LDAPModOp
 from .ldapclient import LDAPClient, escape_filter
 from .ldapreference import LDAPReference
 from .ldapvaluelist import LDAPValueList
+from .ldif import LDIFWriter
 from .errors import *
 
 from ._bonsai import get_tls_impl_name, get_vendor_info, \
