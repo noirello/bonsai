@@ -690,5 +690,33 @@ class LDAPConnectionTest(unittest.TestCase):
             self.assertEqual('ldap://bonsai.test/cn=admin,dc=bonsai,dc=test',
                              res['ref'][0])
 
+    @unittest.skipIf(sys.platform.startswith("win"),
+                     "Cannot use ManageDsaIT on Windows")
+    def test_add_and_delete_referrals(self):
+        """ Test add and delete an LDAP referral with ManageDdsIT control. """
+        refdn = bonsai.LDAPDN("o=test-ref,ou=nerdherd,dc=bonsai,dc=test")
+        ref = "ldap://test.host/cn=nobody"
+        cli = LDAPClient("ldap://%s" % self.ipaddr)
+        cli.set_credentials("SIMPLE", user=self.cfg["SIMPLEAUTH"]["user"],
+                            password=self.cfg["SIMPLEAUTH"]["password"])
+        cli.managedsait = True
+        with cli.connect() as conn:
+            entry = bonsai.LDAPEntry(refdn, conn)
+            entry['objectClass'] = ['referral', 'extensibleObject']
+            entry['o'] = 'test-ref'
+            entry['ref'] = ref
+            conn.add(entry)
+            res = conn.search(refdn, 0, attrlist=['ref'])[0]
+            self.assertEqual(entry.dn, res.dn)
+            self.assertListEqual(entry['ref'], res['ref'])
+        cli.managedsait = False
+        with cli.connect() as conn:
+            self.assertRaises(bonsai.LDAPError, lambda: conn.delete(entry.dn))
+        cli.managedsait = True
+        with cli.connect() as conn:
+            conn.delete(entry.dn)
+            res = conn.search(refdn, 0, attrlist=['ref'])
+            self.assertListEqual(res, [])
+
 if __name__ == '__main__':
     unittest.main()

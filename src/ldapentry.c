@@ -373,6 +373,7 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
     /* Clear the mess. */
     free(dnstr);
     if (ppolicy_ctrl != NULL) ldap_control_free(ppolicy_ctrl);
+    if (mdi_ctrl != NULL) _ldap_control_free(mdi_ctrl);
     free(server_ctrls);
 
     if (rc != LDAP_SUCCESS) {

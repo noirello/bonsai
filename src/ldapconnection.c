@@ -261,9 +261,12 @@ ldapconnection_delentry(LDAPConnection *self, PyObject *args) {
     int rc = 0;
     char *dnstr = NULL;
     int msgid = -1;
+    int num_of_ctrls = 0;
     PyObject *recursive = NULL;
     LDAPControl *tree_ctrl = NULL;
+    LDAPControl *mdi_ctrl = NULL;
     LDAPControl **server_ctrls = NULL;
+    struct berval ctrl_null_value = {0, NULL};
 
     DEBUG("ldapconnection_delentry (self:%p, args:%p)", self, args);
     if (LDAPConnection_IsClosed(self) != 0) return NULL;
@@ -273,10 +276,18 @@ ldapconnection_delentry(LDAPConnection *self, PyObject *args) {
     }
     if (dnstr == NULL) return NULL;
 
+    if (recursive != NULL && PyObject_IsTrue(recursive)) num_of_ctrls++;
+    if (self->managedsait == 1) num_of_ctrls++;
+
+    if (num_of_ctrls > 0) {
+        server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *) *
+                                              (num_of_ctrls + 1));
+        if (server_ctrls == NULL) return PyErr_NoMemory();
+        num_of_ctrls = 0;
+    }
+
     if (recursive != NULL && PyObject_IsTrue(recursive)) {
         /* Create an LDAP_SERVER_TREE_DELETE control . */
-        server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *) * 2);
-        if (server_ctrls == NULL) return PyErr_NoMemory();
 
         rc = ldap_control_create(LDAP_SERVER_TREE_DELETE_OID, 0, NULL, 1, &tree_ctrl);
         if (rc != LDAP_SUCCESS) {
@@ -285,14 +296,29 @@ ldapconnection_delentry(LDAPConnection *self, PyObject *args) {
             return NULL;
         }
 
-        server_ctrls[0] = tree_ctrl;
-        server_ctrls[1] = NULL;
+        server_ctrls[num_of_ctrls++] = tree_ctrl;
+        server_ctrls[num_of_ctrls] = NULL;
+    }
+
+    if (self->managedsait == 1) {
+        /* Create ManageDsaIT control. */
+        rc = ldap_control_create(LDAP_CONTROL_MANAGEDSAIT, 0, &ctrl_null_value,
+                                 1, &mdi_ctrl);
+        if (rc != LDAP_SUCCESS) {
+            if (tree_ctrl != NULL) _ldap_control_free(tree_ctrl);
+            free(server_ctrls);
+            PyErr_BadInternalCall();
+            return NULL;
+        }
+        server_ctrls[num_of_ctrls++] = mdi_ctrl;
+        server_ctrls[num_of_ctrls] = NULL;
     }
 
     rc = ldap_delete_ext(self->ld, dnstr, server_ctrls, NULL, &msgid);
 
-    /* Clear the control. */
+    /* Clear the controls. */
     if (tree_ctrl != NULL) _ldap_control_free(tree_ctrl);
+    if (mdi_ctrl != NULL) _ldap_control_free(mdi_ctrl);
     free(server_ctrls);
 
     /* Check the return value of the delete function. */
@@ -359,8 +385,8 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
     if (search_iter != NULL && search_iter->page_size > 0) num_of_ctrls++;
     if (search_iter != NULL && search_iter->vlv_info != NULL) num_of_ctrls++;
     if (num_of_ctrls > 0) {
-        server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *)
-                * (num_of_ctrls + 1));
+        server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *) *
+                                              (num_of_ctrls + 1));
         if (server_ctrls == NULL) {
             PyErr_NoMemory();
             return -1;
@@ -420,7 +446,7 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
         }
 
         if (self->managedsait == 1) {
-            /* Create ManageDsaIT dcontrol. */
+            /* Create ManageDsaIT control. */
             rc = ldap_control_create(LDAP_CONTROL_MANAGEDSAIT, 0,
                                      &ctrl_null_value, 1, &mdi_ctrl);
             if (rc != LDAP_SUCCESS) {
@@ -475,6 +501,7 @@ end:
     if (sort_ctrl != NULL) ldap_control_free(sort_ctrl);
     if (vlv_ctrl != NULL) ldap_control_free(vlv_ctrl);
     if (edn_ctrl != NULL) _ldap_control_free(edn_ctrl);
+    if (mdi_ctrl != NULL) _ldap_control_free(mdi_ctrl);
     free(server_ctrls);
 
     return msgid;
