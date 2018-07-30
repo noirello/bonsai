@@ -293,7 +293,7 @@ class LDAPEntryTest(unittest.TestCase):
         user_dn = "cn=jeff,ou=nerdherd,dc=bonsai,dc=test"
         cli.set_password_policy(True)
         cli.set_credentials("SIMPLE", user_dn, "p@ssword")
-        conn, ctrl = cli.connect()
+        conn, _ = cli.connect()
         entry = conn.search(user_dn, 0)[0]
         try:
             entry['userPassword'] = "newpassword"
@@ -302,7 +302,7 @@ class LDAPEntryTest(unittest.TestCase):
             self.assertIsInstance(exc, bonsai.errors.PasswordModNotAllowed)
         user_dn = "cn=skip,ou=nerdherd,dc=bonsai,dc=test"
         cli.set_credentials("SIMPLE", user_dn, "p@ssword")
-        conn, ctrl = cli.connect()
+        conn, _ = cli.connect()
         entry = conn.search(user_dn, 0)[0]
         try:
             entry['userPassword'] = "short"

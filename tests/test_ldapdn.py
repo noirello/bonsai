@@ -47,8 +47,8 @@ class LDAPDNTest(unittest.TestCase):
 
     def test_special_char(self):
         """ Test parsing special characters in DN string. """
-        spec = LDAPDN("cn=special\, name,dc=test,dc=local")
-        self.assertEqual(str(spec), "cn=special\, name,dc=test,dc=local")
+        spec = LDAPDN(r"cn=special\, name,dc=test,dc=local")
+        self.assertEqual(str(spec), r"cn=special\, name,dc=test,dc=local")
 
     def test_setitem(self):
         """ Test setting RDNs for DN object. """
@@ -77,10 +77,10 @@ class LDAPDNTest(unittest.TestCase):
     def test_escape_attribute_value(self):
         """ Test escaping special characters in attribute values. """
         self.assertEqual(escape_attribute_value(" dummy=test,something+somethingelse"),
-                         "\ dummy\=test\,something\+somethingelse")
+                         r"\ dummy\=test\,something\+somethingelse")
         self.assertEqual(escape_attribute_value("#dummy=test "),
-                         "\#dummy\=test\ ")
-        self.assertEqual(escape_attribute_value("term\0"), "term\\0")
+                         r"\#dummy\=test\ ")
+        self.assertEqual(escape_attribute_value(r"term\0"), r"term\\0")
 
 if __name__ == '__main__':
     unittest.main()
