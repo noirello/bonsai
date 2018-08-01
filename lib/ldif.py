@@ -7,13 +7,13 @@ from .ldapentry import LDAPEntry
 
 class LDIFWriter:
     """
-    Create an object for serilizing LDAP entries in LDIF format as 
+    Create an object for serialising LDAP entries in LDIF format as 
     described in RFC 2849.
 
     :param TextIO outfile: a file-like object in text mode.
     :param int max_length: the maximal line length of the LDIF file.
     :raises TypeError: if the outfile is not a file-like object \
-    or max_legth is not an int.
+    or max_length is not an int.
     """
     def __init__(self, outfile: TextIO, max_length: int = 76) -> None:
         """ Init method. """
@@ -56,7 +56,7 @@ class LDIFWriter:
         """
         Write an LDAP entry to the file in LDIF format.
 
-        :param LDAPEntry entry: the LDAP entry to serialize.
+        :param LDAPEntry entry: the LDAP entry to serialise.
         """
         self.__write_attribute("dn", (entry.dn,))
         for attrname, attrvalue in entry.items():
@@ -67,7 +67,7 @@ class LDIFWriter:
     ) -> None:
         """
         Write multiple LDAP entry to file in LDIF format, separated
-        with newline and with otpional version header.
+        with newline and with optional version header.
 
         :param list entries: list of LDAP entries.
         :param bool write_version: if it's True, write version header.
@@ -81,9 +81,9 @@ class LDIFWriter:
     def write_changes(self, entry: LDAPEntry) -> None:
         """
         Write an LDAP entry's changes to file in an LDIF-CHANGE format.
-        Only attribute modifications are serilalized.
+        Only attribute modifications are serialised.
 
-        :param LDAPEntry entry: the LDAP entry to serialize.
+        :param LDAPEntry entry: the LDAP entry to serialise.
         """
         self.__write_attribute("dn", (entry.dn,))
         self.__write_attribute("changetype", ("modify",))

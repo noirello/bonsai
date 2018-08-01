@@ -21,7 +21,7 @@ def test_init_params():
 
 
 def test_write_entry():
-    """ Test serializing an LDAP entry. """
+    """ Test serialising an LDAP entry. """
     ent = LDAPEntry("cn=test")
     ent["cn"] = "test"
     ent["jpegPhoto"] = b"1223122130008283938282931232"
@@ -55,7 +55,7 @@ def test_write_entry():
 
 
 def test_write_entries():
-    """ Test writing muliple entries into the same output. """
+    """ Test writing multiple entries into the same output. """
     ent0 = LDAPEntry("cn=test0")
     ent0["cn"] = "test0"
     ent1 = LDAPEntry("cn=test1")
@@ -96,28 +96,21 @@ def test_write_changes():
         ldif = LDIFWriter(out)
         ldif.write_changes(ent)
         content = out.getvalue()
-    blocks = content.split("-\n")[:-1]
-    headlines = blocks.pop(0).split("\n")
-    add_lines = [blk for blk in blocks if "add: " in blk][0].split("\n")
-    replace_lines = [blk for blk in blocks if "replace: " in blk][0].split("\n")
-    delete_blocks = [blk.split("\n") for blk in blocks if "delete: " in blk]
-    del_attr = [
-        blk for blk in delete_blocks for lin in blk if lin == "delete: uidNumber"
-    ][0]
-    del_key = [
-        blk for blk in delete_blocks for lin in blk if lin == "delete: gidNumber"
-    ][0]
+    lines = content.split("\n")
 
-    assert "dn: {0}".format(ent.dn) == headlines[0]
-    assert "changetype: modify" == headlines[1]
-    assert "add: cn" == headlines[2]
-    assert "cn: {0}".format(ent["cn"][0]) == headlines[3]
-    assert "add: sn" == add_lines[0]
-    assert set(ent["sn"]) == {lin.split("sn: ")[1] for lin in add_lines[1:-1]}
-    assert "replace: givenName" == replace_lines[0]
-    assert "givenName: {0}".format(ent["givenName"][0]) == replace_lines[1]
-    assert "delete: uidNumber" == del_attr[0]
-    assert "uidNumber: 0" == del_attr[1]
-    assert len(del_key) == 2
-    assert "delete: gidNumber" == del_key[0]
-    assert "" == del_key[1]
+    assert "dn: {0}".format(ent.dn) == lines.pop(0)  # First line.
+    assert "changetype: modify" == lines.pop(0)  # Second line.
+    assert "add: cn" in lines
+    assert "cn: {0}".format(ent["cn"][0]) == lines[lines.index("add: cn") + 1]
+    assert "add: sn" in lines
+    assert set(ent["sn"]) == {lin.split("sn: ")[1] for lin in lines if "sn: " in lin}
+    assert "replace: givenName" in lines
+    assert (
+        "givenName: {0}".format(ent["givenName"][0])
+        == lines[lines.index("replace: givenName") + 1]
+    )
+    assert "delete: uidNumber" in lines
+    assert "uidNumber: 0" == lines[lines.index("delete: uidNumber") + 1]
+    assert "delete: gidNumber" in lines
+    # Remove the key entirely.
+    assert "-" == lines[lines.index("delete: gidNumber") + 1]
