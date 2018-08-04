@@ -11,22 +11,25 @@ MYPY = False
 if MYPY:
     from .ldapconnection import BaseLDAPConnection
 
-CT = TypeVar('CT', bound='BaseLDAPConnection')
+CT = TypeVar("CT", bound="BaseLDAPConnection")
+
 
 class LDAPModOp(IntEnum):
     """ Enumeration for LDAP modification operations. """
+
     ADD = 0  #: For adding new values to the attribute.
     DELETE = 1  #: For deleting existing values from the attribute list.
     REPLACE = 2  #: For replacing the existing attribute values.
+
 
 class LDAPEntry(ldapentry):
     def __init__(self, dn: Union[LDAPDN, str], conn: Optional[CT] = None) -> None:
         try:
             super().__init__(dn, conn)
-            self.__extended_dn = None # type: Optional[str]
+            self.__extended_dn = None  # type: Optional[str]
         except InvalidDN as exc:
             # InvalidDN error caused by extended DN control.
-            splitted_dn = str(dn).split(';')
+            splitted_dn = str(dn).split(";")
             try:
                 super().__init__(splitted_dn[-1], conn)
             except InvalidDN:
@@ -58,8 +61,12 @@ class LDAPEntry(ldapentry):
         """
         return self.connection._evaluate(super().modify(), timeout)
 
-    def rename(self, newdn: Union[str, LDAPDN], timeout:
-        Optional[float] = None, delete_old_rdn: bool = True) -> Any:
+    def rename(
+        self,
+        newdn: Union[str, LDAPDN],
+        timeout: Optional[float] = None,
+        delete_old_rdn: bool = True,
+    ) -> Any:
         """
         Change the entry's distinguished name.
 
@@ -166,7 +173,7 @@ class LDAPEntry(ldapentry):
         status = {}
         for key, value in self.items():
             status[key] = value._status_dict
-        status['@deleted_keys'] = self.deleted_keys
+        status["@deleted_keys"] = self.deleted_keys
         return status
 
     @property
@@ -198,6 +205,8 @@ class LDAPEntry(ldapentry):
         lvl = self.get(name, LDAPValueList())
         if optype == LDAPModOp.ADD:
             lvl.added.extend(values)
+            for val in values:
+                lvl._append_unchecked(val)
         elif optype == LDAPModOp.DELETE:
             if len(values) == 0:
                 self.__setitem__(name, None)
@@ -205,8 +214,10 @@ class LDAPEntry(ldapentry):
                 return
             else:
                 lvl.deleted.extend(values)
+                for val in values:
+                    lvl._remove_unchecked(val)
         elif optype == LDAPModOp.REPLACE:
-            lvl.extend(values)
+            lvl = LDAPValueList(values)
         else:
             raise ValueError("Wrong operation type.")
         self[name] = lvl

@@ -2,6 +2,7 @@ from typing import Any, List, Union, Iterable, Optional
 
 import bonsai
 
+
 class LDAPValueList(list):
     """
     Modified list that tracks added and deleted values. It also contains
@@ -14,12 +15,13 @@ class LDAPValueList(list):
     :param items: a sequence object.
     :raises ValueError: if `items` has a non-unique element.
     """
+
     __slots__ = ("__deleted", "__added", "__status")
 
     def __init__(self, items: Optional[Iterable[Any]] = None) -> None:
         super().__init__()
-        self.__added = [] # type: List[str]
-        self.__deleted = [] # type: List[str]
+        self.__added = []  # type: List[str]
+        self.__deleted = []  # type: List[str]
         self.__status = 0
         if items:
             for item in items:
@@ -39,11 +41,19 @@ class LDAPValueList(list):
     def _append_unchecked(self, value: Any) -> None:
         super().append(value)
 
+    def _remove_unchecked(self, value: Any) -> None:
+        try:
+            super().remove(value)
+        except ValueError:
+            pass
+
     @property
     def _status_dict(self) -> dict:
-        return {"@status": self.__status,
-                "@added": self.__added.copy(),
-                "@deleted": self.__deleted.copy()}
+        return {
+            "@status": self.__status,
+            "@added": self.__added.copy(),
+            "@deleted": self.__deleted.copy(),
+        }
 
     @_status_dict.setter
     def _status_dict(self, value: Any) -> None:
@@ -61,17 +71,17 @@ class LDAPValueList(list):
             self.__balance(self.__added, self.__deleted, old_value)
         super().__delitem__(idx)
 
-    def __mul__(self, value: Any) -> 'LDAPValueList':
+    def __mul__(self, value: Any) -> "LDAPValueList":
         raise TypeError("Cannot multiple LDAPValueList.")
 
-    def __add__(self, other: Iterable) -> 'LDAPValueList':
+    def __add__(self, other: Iterable) -> "LDAPValueList":
         if type(other) != list and type(other) != LDAPValueList:
             raise TypeError("Can only concatenate list and LDAPValueList.")
         new_list = self.copy()
         new_list.extend(other)
         return new_list
 
-    def __iadd__(self, other: Iterable) -> 'LDAPValueList':
+    def __iadd__(self, other: Iterable) -> "LDAPValueList":
         if type(other) != list and type(other) != LDAPValueList:
             raise TypeError("Can only concatenate list and LDAPValueList.")
         self.extend(other)
@@ -170,7 +180,7 @@ class LDAPValueList(list):
         """ Remove all items from the LDAPValueList. """
         del self[:]
 
-    def copy(self) -> 'LDAPValueList':
+    def copy(self) -> "LDAPValueList":
         """
         Return a shallow copy of the LDAPValueList. This includes
         the status and the previously added and deleted items.
@@ -221,4 +231,4 @@ class LDAPValueList(list):
         if value > -1 and value < 3:
             self.__status = value
         else:
-            raise ValueError("Status must be between 0 and 2")
+            raise ValueError("Status must be between 0 and 2.")
