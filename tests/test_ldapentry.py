@@ -9,61 +9,62 @@ from bonsai import LDAPModOp
 import bonsai.errors
 from bonsai.errors import InvalidDN
 
+
 class LDAPEntryTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """ Set LDAP client, get config parameters. """
         curdir = os.path.abspath(os.path.dirname(__file__))
         cls.cfg = configparser.ConfigParser()
-        cls.cfg.read(os.path.join(curdir, 'test.ini'))
-        url = "ldap://%s:%s" % (cls.cfg["SERVER"]["hostip"],
-                                cls.cfg["SERVER"]["port"])
+        cls.cfg.read(os.path.join(curdir, "test.ini"))
+        url = "ldap://%s:%s" % (cls.cfg["SERVER"]["hostip"], cls.cfg["SERVER"]["port"])
         cls.client = LDAPClient(url)
-        cls.creds = {'mechanism': "SIMPLE",
-                     'user': cls.cfg["SIMPLEAUTH"]["user"],
-                     'password': cls.cfg["SIMPLEAUTH"]["password"]}
+        cls.creds = {
+            "mechanism": "SIMPLE",
+            "user": cls.cfg["SIMPLEAUTH"]["user"],
+            "password": cls.cfg["SIMPLEAUTH"]["password"],
+        }
         cls.basedn = cls.cfg["SERVER"]["basedn"]
 
     def test_set_get(self):
         """ Test LDAPEntry's SetItem, GetItem and get methods. """
         entry = LDAPEntry("cn=test")
-        entry['sn'] = 'Test'
-        self.assertDictEqual(entry, {'sn' : ['Test']},
-                             "LDAPEntry set is failed.")
-        entry['givenname'] = 'Test'
-        self.assertEqual(entry.get("None"), None,
-                         "LDAPEntry get is failed.")
-        self.assertListEqual(entry.get("GivenName"), entry['givenNAME'],
-                             "LDAPEntry get is failed.")
-        del entry['sn']
-        self.assertRaises(KeyError, lambda: entry['sn'])
+        entry["sn"] = "Test"
+        self.assertDictEqual(entry, {"sn": ["Test"]}, "LDAPEntry set is failed.")
+        entry["givenname"] = "Test"
+        self.assertEqual(entry.get("None"), None, "LDAPEntry get is failed.")
+        self.assertListEqual(
+            entry.get("GivenName"), entry["givenNAME"], "LDAPEntry get is failed."
+        )
+        del entry["sn"]
+        self.assertRaises(KeyError, lambda: entry["sn"])
 
     def test_append_extend(self):
         """ Test append and extend methods of LDAPEntry's attribute. """
         entry = LDAPEntry("cn=test")
-        entry['givenName'] = "test"
-        entry['givenname'].append("test2")
-        self.assertListEqual(entry['givenname'], ["test", "test2"])
-        self.assertEqual(entry['givenname'][0], "test")
-        self.assertRaises(ValueError,
-                          lambda: entry['GivenName']
-                          .extend(['teSt', "test3"]))
+        entry["givenName"] = "test"
+        entry["givenname"].append("test2")
+        self.assertListEqual(entry["givenname"], ["test", "test2"])
+        self.assertEqual(entry["givenname"][0], "test")
+        self.assertRaises(
+            ValueError, lambda: entry["GivenName"].extend(["teSt", "test3"])
+        )
 
     def test_pop(self):
         """ Test LDAPEntry's pop method. """
         entry = LDAPEntry("cn=test")
-        entry['test'] = "test"
+        entry["test"] = "test"
         self.assertRaises(TypeError, entry.pop)
-        self.assertRaises(TypeError, lambda: entry.pop('t', 2, 3))
-        self.assertRaises(KeyError, lambda: entry.pop('t'))
+        self.assertRaises(TypeError, lambda: entry.pop("t", 2, 3))
+        self.assertRaises(KeyError, lambda: entry.pop("t"))
         self.assertEqual(entry.pop("test"), ["test"])
         self.assertEqual(entry.pop("test", None), None)
 
     def test_popitem(self):
         """ Test LDAPEntry's popitem method. """
         entry = LDAPEntry("cn=test")
-        entry['test'] = "test"
-        entry['test2'] = 'test'
+        entry["test"] = "test"
+        entry["test2"] = "test"
         item = entry.popitem()
         self.assertEqual(len(item), 2)
         self.assertNotIn(item[0], entry)
@@ -78,8 +79,8 @@ class LDAPEntryTest(unittest.TestCase):
     def test_clear(self):
         """ Test LDAPEntry's clear method. """
         entry = LDAPEntry("cn=test")
-        entry['sn'] = ['test1', 'test2']
-        entry['gn'] = ['test3']
+        entry["sn"] = ["test1", "test2"]
+        entry["gn"] = ["test3"]
         entry.clear()
         self.assertDictEqual(entry, {})
         self.assertEqual(entry.dn, "cn=test")
@@ -87,16 +88,15 @@ class LDAPEntryTest(unittest.TestCase):
     def test_update(self):
         """ Test updating LDAPEntry object. """
         entry = LDAPEntry("cn=test")
-        entry.update({"GivenName": "test2", "mail" : "test@mail"})
+        entry.update({"GivenName": "test2", "mail": "test@mail"})
         entry.update([("sn", "test")])
-        self.assertRaises(ValueError,
-                          lambda: entry.update([("sn", "test", 1)]))
+        self.assertRaises(ValueError, lambda: entry.update([("sn", "test", 1)]))
         entry.update(uidnumber=1, gidnumber=1)
-        self.assertEqual(entry['mail'], ['test@mail'])
-        self.assertEqual(entry['givenname'], ['test2'])
-        self.assertEqual(entry['sn'][0], 'test')
-        self.assertEqual(entry['uidnumber'], [1])
-        self.assertEqual(entry['gidnumber'], [1])
+        self.assertEqual(entry["mail"], ["test@mail"])
+        self.assertEqual(entry["givenname"], ["test2"])
+        self.assertEqual(entry["sn"][0], "test")
+        self.assertEqual(entry["uidnumber"], [1])
+        self.assertEqual(entry["gidnumber"], [1])
 
     def test_equal(self):
         """ Test equality check. """
@@ -113,8 +113,8 @@ class LDAPEntryTest(unittest.TestCase):
         self.client.set_credentials(**self.creds)
         conn = self.client.connect()
         entry = LDAPEntry(r"cn=test\, *\+withspec,%s" % self.basedn)
-        entry['objectclass'] = ['top', 'inetOrgPerson']
-        entry['sn'] = "Test,*special"
+        entry["objectclass"] = ["top", "inetOrgPerson"]
+        entry["sn"] = "Test,*special"
         conn.add(entry)
         result = conn.search(self.basedn, 1)
         entry.delete()
@@ -127,8 +127,8 @@ class LDAPEntryTest(unittest.TestCase):
         conn = self.client.connect()
         dname = "cn=test_µčབྷñ,%s" % self.basedn
         entry = LDAPEntry(dname)
-        entry['objectclass'] = ['top', 'inetOrgPerson']
-        entry['sn'] = "unicode_µčབྷñ"
+        entry["objectclass"] = ["top", "inetOrgPerson"]
+        entry["sn"] = "unicode_µčབྷñ"
         conn.add(entry)
         result = conn.search(dname, 0)
         entry.delete()
@@ -142,16 +142,16 @@ class LDAPEntryTest(unittest.TestCase):
         conn = self.client.connect()
         dname = "cn=binary,%s" % self.basedn
         entry = LDAPEntry(dname)
-        entry['objectclass'] = ['top', 'inetOrgPerson']
-        entry['sn'] = "binary_test"
-        with open('%s/testenv/test.jpeg' % curdir, 'rb') as image:
-            entry['jpegPhoto'] = image.read()
+        entry["objectclass"] = ["top", "inetOrgPerson"]
+        entry["sn"] = "binary_test"
+        with open("%s/testenv/test.jpeg" % curdir, "rb") as image:
+            entry["jpegPhoto"] = image.read()
         conn.add(entry)
         result = conn.search(dname, 0)
         entry.delete()
         conn.close()
         self.assertIn("jpegPhoto", result[0].keys())
-        self.assertEqual(result[0]['jpegphoto'][0], entry['jpegphoto'][0])
+        self.assertEqual(result[0]["jpegphoto"][0], entry["jpegphoto"][0])
 
     def test_connection(self):
         """ Test set and get connection object form LDAPEntry. """
@@ -160,18 +160,25 @@ class LDAPEntryTest(unittest.TestCase):
         conn = self.client.connect()
         entry.connection = conn
         self.assertEqual(entry.connection, conn)
+
         def invalid_assign():
             entry.connection = "string"
+
         self.assertRaises(TypeError, invalid_assign)
+
         def invalid_del():
             del entry.connection
+
         self.assertRaises(TypeError, invalid_del)
 
-
     def _add_for_renaming(self, conn, entry):
-        entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
-                                'organizationalPerson']
-        entry['sn'] = 'test'
+        entry["objectclass"] = [
+            "top",
+            "inetOrgPerson",
+            "person",
+            "organizationalPerson",
+        ]
+        entry["sn"] = "test"
         try:
             conn.add(entry)
         except bonsai.AlreadyExists:
@@ -194,8 +201,9 @@ class LDAPEntryTest(unittest.TestCase):
             self.assertEqual(entry.dn, obj.dn)
             entry.delete()
 
-    @unittest.skipIf(sys.platform.startswith("win"),
-                     "Cannot rename entry with old RDN on Windows")
+    @unittest.skipIf(
+        sys.platform.startswith("win"), "Cannot rename entry with old RDN on Windows"
+    )
     def test_rename_with_old_rdn(self):
         """ Test LDAPEntry's rename LDAP operation. """
         entry = LDAPEntry("cn=test,%s" % self.basedn)
@@ -229,8 +237,9 @@ class LDAPEntryTest(unittest.TestCase):
                 self.assertEqual(entry.dn, dname)
             finally:
                 conn.delete(dname)
-        self.assertRaises(bonsai.errors.ClosedConnection,
-                          lambda: entry.rename("cn=test2"))
+        self.assertRaises(
+            bonsai.errors.ClosedConnection, lambda: entry.rename("cn=test2")
+        )
 
     def test_sync_operations(self):
         """
@@ -240,11 +249,14 @@ class LDAPEntryTest(unittest.TestCase):
         self.assertRaises(ValueError, entry.modify)
         self.client.set_credentials(**self.creds)
         with self.client.connect() as conn:
-            entry['sn'] = 'test'
-            self.assertRaises(bonsai.ObjectClassViolation,
-                              lambda: conn.add(entry))
-            entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
-                                    'organizationalPerson']
+            entry["sn"] = "test"
+            self.assertRaises(bonsai.ObjectClassViolation, lambda: conn.add(entry))
+            entry["objectclass"] = [
+                "top",
+                "inetOrgPerson",
+                "person",
+                "organizationalPerson",
+            ]
             try:
                 conn.add(entry)
             except bonsai.AlreadyExists:
@@ -252,13 +264,13 @@ class LDAPEntryTest(unittest.TestCase):
                 conn.add(entry)
             except:
                 self.fail("Adding LDAPEntry to the server is failed.")
-            entry['sn'] = "Test_modify"
+            entry["sn"] = "Test_modify"
             try:
                 entry.modify()
             except:
                 self.fail("Modify failed.")
             obj = conn.search("cn=test,%s" % self.basedn, 0)[0]
-            self.assertEqual(entry['sn'], obj['sn'])
+            self.assertEqual(entry["sn"], obj["sn"])
             try:
                 entry.delete()
             except:
@@ -268,10 +280,13 @@ class LDAPEntryTest(unittest.TestCase):
     def test_dn_attr(self):
         """ Test LDAPEntry's DN attribute. """
         entry = LDAPEntry("cn=test,%s" % self.basedn)
+
         def remove_dn():
             del entry.dn
+
         def set_dn():
-            entry['dn'] = 5
+            entry["dn"] = 5
+
         entry.dn = "cn=test"
         self.assertEqual(str(entry.dn), "cn=test")
         self.assertRaises(TypeError, remove_dn)
@@ -279,11 +294,12 @@ class LDAPEntryTest(unittest.TestCase):
 
     def test_wrong_params(self):
         """ Test passing wrong params to LDAPEntry. """
-        self.assertRaises(TypeError, lambda: LDAPEntry('', 1))
-        self.assertRaises(InvalidDN, lambda: LDAPEntry('5', 1))
+        self.assertRaises(TypeError, lambda: LDAPEntry("", 1))
+        self.assertRaises(InvalidDN, lambda: LDAPEntry("5", 1))
 
-    @unittest.skipIf(sys.platform.startswith("win"),
-                     "Cannot use password policy on Windows")
+    @unittest.skipIf(
+        sys.platform.startswith("win"), "Cannot use password policy on Windows"
+    )
     def test_password_modify(self):
         """
         Test modifying password with simple modify operation and
@@ -296,7 +312,7 @@ class LDAPEntryTest(unittest.TestCase):
         conn, _ = cli.connect()
         entry = conn.search(user_dn, 0)[0]
         try:
-            entry['userPassword'] = "newpassword"
+            entry["userPassword"] = "newpassword"
             entry.modify()
         except Exception as exc:
             self.assertIsInstance(exc, bonsai.errors.PasswordModNotAllowed)
@@ -305,12 +321,12 @@ class LDAPEntryTest(unittest.TestCase):
         conn, _ = cli.connect()
         entry = conn.search(user_dn, 0)[0]
         try:
-            entry['userPassword'] = "short"
+            entry["userPassword"] = "short"
             entry.modify()
         except Exception as exc:
             self.assertIsInstance(exc, bonsai.errors.PasswordTooShort)
         try:
-            entry['userPassword'] = "p@ssword"
+            entry["userPassword"] = "p@ssword"
             entry.modify()
         except Exception as exc:
             self.assertIsInstance(exc, bonsai.errors.PasswordInHistory)
@@ -318,8 +334,10 @@ class LDAPEntryTest(unittest.TestCase):
     def test_extended_dn_attr(self):
         """ Test that extended dn attribute is read only. """
         entry = LDAPEntry("cn=test")
+
         def readonly_attr():
             entry.extended_dn = "cn=test2"
+
         self.assertRaises(ValueError, readonly_attr)
 
     def test_change_attribute(self):
@@ -327,23 +345,22 @@ class LDAPEntryTest(unittest.TestCase):
         user_dn = "cn=sam,ou=nerdherd,dc=bonsai,dc=test"
         self.client.set_credentials(**self.creds)
         if sys.platform == "win32":
-            multiattr = 'otherTelephone'
+            multiattr = "otherTelephone"
         else:
-            multiattr = 'mail'
+            multiattr = "mail"
         with self.client.connect() as conn:
             entry = LDAPEntry(user_dn, conn)
             entry.change_attribute("mail", LDAPModOp.ADD, "sam@bonsai.test")
-            self.assertEqual(entry['mail'].status, 1)
+            self.assertEqual(entry["mail"].status, 1)
             entry.modify()
-            self.assertEqual(conn.search(user_dn, 0)[0]['mail'][0],
-                             "sam@bonsai.test")
+            self.assertEqual(conn.search(user_dn, 0)[0]["mail"][0], "sam@bonsai.test")
             entry.change_attribute("mail", 1, "sam@bonsai.test")
-            self.assertEqual(entry['mail'].status, 1)
+            self.assertEqual(entry["mail"].status, 1)
             entry.modify()
-            self.assertRaises(KeyError,
-                              lambda: conn.search(user_dn, 0)[0]['mail'])
-            entry.change_attribute(multiattr, LDAPModOp.REPLACE, "sam@bonsai.test",
-                                   "x@bonsai.test")
+            self.assertRaises(KeyError, lambda: conn.search(user_dn, 0)[0]["mail"])
+            entry.change_attribute(
+                multiattr, LDAPModOp.REPLACE, "sam@bonsai.test", "x@bonsai.test"
+            )
             self.assertEqual(entry[multiattr].status, 2)
             entry.modify()
             res = conn.search(user_dn, 0)[0][multiattr]
@@ -365,10 +382,12 @@ class LDAPEntryTest(unittest.TestCase):
         self.client.set_credentials(**self.creds)
         with self.client.connect() as conn:
             entry = LDAPEntry(user_dn, conn)
-            self.assertRaises(ValueError,
-                              lambda: entry.change_attribute("mail", 4, "t"))
+            self.assertRaises(
+                ValueError, lambda: entry.change_attribute("mail", 4, "t")
+            )
             entry.change_attribute("sn", 0, "Lembeck")
             self.assertRaises(bonsai.TypeOrValueExists, entry.modify)
+            entry.clear_attribute_changes("sn")
             entry.change_attribute("description", LDAPModOp.DELETE, "sam")
             self.assertRaises(bonsai.NoSuchAttribute, entry.modify)
 
@@ -377,16 +396,17 @@ class LDAPEntryTest(unittest.TestCase):
         user_dn = "cn=sam,ou=nerdherd,dc=bonsai,dc=test"
         entry = LDAPEntry(user_dn)
         entry.change_attribute("uidNumber", 0, 4)
-        self.assertEqual(entry['uidNumber'].added, [4])
+        self.assertEqual(entry["uidNumber"].added, [4])
         entry.change_attribute("uidNumber", 1, 4)
-        self.assertEqual(entry['uidNumber'].deleted, [4])
-        entry.clear_attribute_changes('uidNumber')
-        self.assertEqual(entry['uidNumber'].status, 0)
-        self.assertEqual(entry['uidNumber'].added, [])
-        self.assertEqual(entry['uidNumber'].deleted, [])
+        self.assertEqual(entry["uidNumber"].deleted, [4])
+        entry.clear_attribute_changes("uidNumber")
+        self.assertEqual(entry["uidNumber"].status, 0)
+        self.assertEqual(entry["uidNumber"].added, [])
+        self.assertEqual(entry["uidNumber"].deleted, [])
 
-    @unittest.skipIf(sys.platform.startswith("win"),
-                     "Cannot use ManageDsaIT on Windows")
+    @unittest.skipIf(
+        sys.platform.startswith("win"), "Cannot use ManageDsaIT on Windows"
+    )
     def test_modify_referrals(self):
         """ Test modifying an LDAP referral with ManageDdsIT control. """
         refdn = bonsai.LDAPDN("o=invalid-ref,ou=nerdherd,dc=bonsai,dc=test")
@@ -398,11 +418,12 @@ class LDAPEntryTest(unittest.TestCase):
             entry = LDAPEntry(refdn, conn)
             entry.change_attribute("ref", LDAPModOp.ADD, newref)
             entry.modify()
-            res = conn.search(refdn, 0, attrlist=['ref'])[0]
-            self.assertEqual(len(res['ref']), 3)
-            self.assertIn(newref, res['ref'])
+            res = conn.search(refdn, 0, attrlist=["ref"])[0]
+            self.assertEqual(len(res["ref"]), 3)
+            self.assertIn(newref, res["ref"])
             entry.change_attribute("ref", LDAPModOp.DELETE, newref)
             entry.modify()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
