@@ -15,4 +15,4 @@ mypy = "*"
 wheel = "*"
 pydivert = {version = "*", sys_platform = "== 'win32'"}
 delocate = {version = "*", sys_platform = "== 'darwin'"}
-black = "*"
+black = {version = "==18.6b4", markers = "python_version > '3.5'"}
