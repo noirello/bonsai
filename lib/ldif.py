@@ -1,8 +1,220 @@
 import base64
 import io
-from typing import TextIO, Iterable, Any
+import os
+from collections import defaultdict
+from itertools import groupby
+from typing import TextIO, Iterable, Iterator, Any, Optional, List, Union
 
-from .ldapentry import LDAPEntry
+from .ldapentry import LDAPEntry, LDAPModOp
+from .ldapvaluelist import LDAPValueList
+
+from .errors import LDAPError
+
+
+class LDIFError(LDAPError):
+    code = -300
+
+
+class LDIFReader:
+    """
+    Create an object for reading LDAP entries from an LDIF format file \
+    as described in RFC 2849.
+
+    :param TextIO input_file: a file-like input object in text mode.
+    :param bool autoload: allow to automatically load external \
+    sources from URL.
+    :param int max_length: the maximal line length of the LDIF file.
+    :raises TypeError: if the input_file is not a file-like object \
+    or max_length is not an int.
+    """
+
+    def __init__(
+        self, input_file: TextIO, autoload: bool = True, max_length: int = 76
+    ) -> None:
+        """ Init method. """
+        if not isinstance(max_length, int):
+            raise TypeError("The max_length must be int.")
+        self.input_file = input_file
+        self.autoload = autoload
+        self.max_length = max_length
+        self.version = None  # type: Optional[int]
+        self.__entries = self.__read_attributes()
+        self.__num_of_entries = 0
+        self.__resource_handlers = {"file": self.__load_file}
+
+    def __read_attributes(self) -> Iterator[List[str]]:
+        buffer = []  # type: List[str]
+        comment = False
+        for num, line in enumerate(self.__file):
+            try:
+                if len(line) > self.max_length:
+                    raise LDIFError("Line {0} is too long.".format(num + 1))
+                if len(line.strip()) == 0:
+                    yield buffer
+                    buffer.clear()
+                    continue
+                if line[0] == " ":
+                    if not comment:
+                        # Concat line with the previous one.
+                        buffer[-1] = "".join((buffer[-1], line[1:].rstrip()))
+                    continue
+                elif line[0] == "#":
+                    comment = True
+                else:
+                    comment = False
+                if comment:
+                    # Drop comment lines.
+                    continue
+                else:
+                    buffer.append(line.rstrip())
+            except IndexError:
+                raise LDIFError("Parser error at line: {0}.".format(num + 1))
+        if buffer:
+            yield buffer
+
+    @staticmethod
+    def __convert(val: Union[str, bytes]) -> Union[str, bytes, int]:
+        try:
+            val = int(val)
+        except ValueError:
+            try:
+                val = val.decode("UTF-8")
+            except (ValueError, AttributeError):
+                pass
+        return val
+
+    @staticmethod
+    def __find_key(searched_key: str, keylist: List[str]) -> Optional[str]:
+        for key in keylist:
+            if key.lower() == searched_key.lower():
+                return key
+        return None
+
+    def __load_file(self, url: str) -> bytes:
+        _, path = url.split("file://")
+        abs_filepath = os.path.normpath(
+            os.path.join(os.path.dirname(os.path.abspath(self.__file.name)), path)
+        )
+        with open(abs_filepath, "rb") as resource:
+            return resource.read()
+
+    def load_resource(self, url: str) -> Union[str, bytes]:
+        scheme, _ = url.split(":")
+        try:
+            return self.__resource_handlers[scheme](url)
+        except KeyError:
+            raise LDIFError("Unsupported URL format: {0}.".format(url)) from None
+
+    def __iter__(self) -> "LDIFReader":
+        return self
+
+    def __next__(self) -> LDAPEntry:
+        entry = LDAPEntry("")
+        change_type = "add"
+        attr_blocks = [
+            list(group)
+            for key, group in groupby(next(self.__entries), lambda line: line == "-")
+            if not key
+        ]
+        self.__num_of_entries += 1
+        for block in attr_blocks:
+            attr_dict = defaultdict(LDAPValueList)
+            for attrval in block:
+                try:
+                    if ":: " in attrval:
+                        attr, val = attrval.split(":: ")
+                        val = base64.b64decode(val)
+                    elif ": " in attrval:
+                        attr, val = attrval.split(": ")
+                    elif ":< " in attrval:
+                        attr, val = attrval.split(":< ")
+                        if self.__autoload:
+                            val = self.load_resource(val)
+                    else:
+                        raise ValueError()
+                except ValueError:
+                    raise LDIFError(
+                        "Invalid attribute value pair: '{0}' for entry #{1}.".format(
+                            attrval, self.__num_of_entries
+                        )
+                    ) from None
+                if attr.lower() == "changetype":
+                    change_type = val.lower()
+                elif attr.lower() == "dn":
+                    entry.dn = self.__convert(val)
+                elif attr.lower() == "version":
+                    self.version = self.__convert(val)
+                else:
+                    attr_dict[attr].append(self.__convert(val))
+            if change_type == "modify":
+                try:
+                    if "add" in attr_dict.keys():
+                        for key in attr_dict.pop("add"):
+                            key = self.__find_key(key, attr_dict.keys())
+                            entry.change_attribute(key, LDAPModOp.ADD, *attr_dict[key])
+                    if "replace" in attr_dict.keys():
+                        for key in attr_dict.pop("replace"):
+                            key = self.__find_key(key, attr_dict.keys())
+                            entry.change_attribute(
+                                key, LDAPModOp.REPLACE, *attr_dict[key]
+                            )
+                    if "delete" in attr_dict.keys():
+                        for key in attr_dict.pop("delete"):
+                            key = self.__find_key(key, attr_dict.keys())
+                            entry.change_attribute(
+                                key, LDAPModOp.DELETE, *attr_dict[key]
+                            )
+                except KeyError as err:
+                    raise LDIFError(
+                        "Missing attribute: '{0}' for entry #{1}.".format(
+                            err.args[0], self.__num_of_entries
+                        )
+                    )
+            elif change_type == "add":
+                for key, vals in attr_dict.items():
+                    entry[key] = vals
+        if entry.dn == "":
+            raise LDIFError(
+                "Missing distinguished name for entry #{0}.".format(
+                    self.__num_of_entries
+                )
+            )
+        return entry
+
+    @property
+    def input_file(self):
+        """ The file-like object of an LDIF file. """
+        return self.__file
+
+    @input_file.setter
+    def input_file(self, value: io.TextIOBase):
+        if not isinstance(value, io.TextIOBase):
+            raise TypeError("The input_file must be file-like object in text mode.")
+        self.__file = value
+
+    @property
+    def autoload(self):
+        """ Enable/disable autoloading resources in LDIF files. """
+        return self.__autoload
+
+    @autoload.setter
+    def autoload(self, value: bool):
+        if not isinstance(value, bool):
+            raise TypeError("The autoload property must be bool.")
+        self.__autoload = value
+
+    @property
+    def resource_handlers(self):
+        """
+        A dictionary of supported resource types. The keys are the schemes,
+        while the values are functions that expect the full URL parameters
+        and return the loaded content in preferably bytes format.
+        """
+        return self.__resource_handlers
+
+    @resource_handlers.setter
+    def resource_handlers(self, value: Any):
+        raise ValueError("The resource_handlers attribute cannot be set.")
 
 
 class LDIFWriter:

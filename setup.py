@@ -146,7 +146,7 @@ with open('README.rst') as file:
 
 # Get version number from the module's __init__.py file.
 with open('./lib/__init__.py') as src:
-    VER = [line.split("'")[1] for line in src.readlines()
+    VER = [line.split("\"")[1] for line in src.readlines()
            if line.startswith('__version__')][0]
 
 setup(name="bonsai",
