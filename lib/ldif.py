@@ -10,18 +10,17 @@ class LDIFWriter:
     Create an object for serialising LDAP entries in LDIF format as 
     described in RFC 2849.
 
-    :param TextIO outfile: a file-like object in text mode.
+    :param TextIO output_file: a file-like output object in text mode.
     :param int max_length: the maximal line length of the LDIF file.
-    :raises TypeError: if the outfile is not a file-like object \
+    :raises TypeError: if the output_file is not a file-like object \
     or max_length is not an int.
     """
-    def __init__(self, outfile: TextIO, max_length: int = 76) -> None:
+
+    def __init__(self, output_file: TextIO, max_length: int = 76) -> None:
         """ Init method. """
-        if not isinstance(outfile, io.TextIOBase):
-            raise TypeError("The outfile must be file-like object in text mode.")
         if not isinstance(max_length, int):
             raise TypeError("The max_length must be int.")
-        self.outfile = outfile
+        self.output_file = output_file
         self.max_length = max_length
 
     def __write_attribute(self, attrname: str, attrvalue: Iterable[Any]) -> None:
@@ -48,9 +47,9 @@ class LDIFWriter:
             for i in range(0, len(line), self.max_length):
                 # Split the line into self.max_length.
                 if i != 0:
-                    self.outfile.write(" {0}\n".format(line[i : i + self.max_length]))
+                    self.__file.write(" {0}\n".format(line[i : i + self.max_length]))
                 else:
-                    self.outfile.write("{0}\n".format(line[i : i + self.max_length]))
+                    self.__file.write("{0}\n".format(line[i : i + self.max_length]))
 
     def write_entry(self, entry: LDAPEntry) -> None:
         """
@@ -76,7 +75,7 @@ class LDIFWriter:
             self.__write_attribute("version", (1,))
         for ent in entries:
             self.write_entry(ent)
-            self.outfile.write("\n")
+            self.__file.write("\n")
 
     def write_changes(self, entry: LDAPEntry) -> None:
         """
@@ -93,16 +92,27 @@ class LDIFWriter:
             if stat["@status"] == 1 and stat["@added"]:
                 self.__write_attribute("add", (attrname,))
                 self.__write_attribute(attrname, stat["@added"])
-                self.outfile.write("-\n")
+                self.__file.write("-\n")
             elif stat["@status"] == 1 and stat["@deleted"]:
                 self.__write_attribute("delete", (attrname,))
                 self.__write_attribute(attrname, stat["@deleted"])
-                self.outfile.write("-\n")
+                self.__file.write("-\n")
             elif stat["@status"] == 2:
                 self.__write_attribute("replace", (attrname,))
                 self.__write_attribute(attrname, stat["@added"])
-                self.outfile.write("-\n")
+                self.__file.write("-\n")
         for key in deleted_keys:
             self.__write_attribute("delete", (key,))
-            self.outfile.write("-\n")
-        self.outfile.write("\n")
+            self.__file.write("-\n")
+        self.__file.write("\n")
+
+    @property
+    def output_file(self):
+        """ The file-like object for an LDIF file. """
+        return self.__file
+
+    @output_file.setter
+    def output_file(self, value: io.TextIOBase):
+        if not isinstance(value, io.TextIOBase):
+            raise TypeError("The output_file must be file-like object in text mode.")
+        self.__file = value

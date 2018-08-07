@@ -16,7 +16,7 @@ def test_init_params():
         _ = LDIFWriter(BytesIO())
     out = StringIO()
     ldif = LDIFWriter(out, 100)
-    assert ldif.outfile == out
+    assert ldif.output_file == out
     assert ldif.max_length == 100
 
 
@@ -114,3 +114,15 @@ def test_write_changes():
     assert "delete: gidNumber" in lines
     # Remove the key entirely.
     assert "-" == lines[lines.index("delete: gidNumber") + 1]
+
+
+def test_output_file():
+    """ Test output_file property. """
+    out = StringIO()
+    ldif = LDIFWriter(out)
+    assert ldif.output_file == out
+    with pytest.raises(TypeError):
+        ldif.output_file = None
+    out2 = StringIO()
+    ldif.output_file = out2
+    assert ldif.output_file == out2
