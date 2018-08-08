@@ -88,7 +88,8 @@ class LDIFReader:
         for key in keylist:
             if key.lower() == searched_key.lower():
                 return key
-        return None
+        else:
+            raise KeyError(searched_key)
 
     def __load_file(self, url: str) -> bytes:
         _, path = url.split("file://")
@@ -99,10 +100,10 @@ class LDIFReader:
             return resource.read()
 
     def load_resource(self, url: str) -> Union[str, bytes]:
-        scheme, _ = url.split(":")
         try:
+            scheme, _ = url.split(":")
             return self.__resource_handlers[scheme](url)
-        except KeyError:
+        except (KeyError, ValueError):
             raise LDIFError("Unsupported URL format: {0}.".format(url)) from None
 
     def __iter__(self) -> "LDIFReader":
@@ -148,22 +149,18 @@ class LDIFReader:
                     attr_dict[attr].append(self.__convert(val))
             if change_type == "modify":
                 try:
-                    if "add" in attr_dict.keys():
-                        for key in attr_dict.pop("add"):
+                    for key in attr_dict.pop("add", []):
+                        key = self.__find_key(key, attr_dict.keys())
+                        entry.change_attribute(key, LDAPModOp.ADD, *attr_dict[key])
+                    for key in attr_dict.pop("replace", []):
+                        key = self.__find_key(key, attr_dict.keys())
+                        entry.change_attribute(key, LDAPModOp.REPLACE, *attr_dict[key])
+                    for key in attr_dict.pop("delete", []):
+                        try:
                             key = self.__find_key(key, attr_dict.keys())
-                            entry.change_attribute(key, LDAPModOp.ADD, *attr_dict[key])
-                    if "replace" in attr_dict.keys():
-                        for key in attr_dict.pop("replace"):
-                            key = self.__find_key(key, attr_dict.keys())
-                            entry.change_attribute(
-                                key, LDAPModOp.REPLACE, *attr_dict[key]
-                            )
-                    if "delete" in attr_dict.keys():
-                        for key in attr_dict.pop("delete"):
-                            key = self.__find_key(key, attr_dict.keys())
-                            entry.change_attribute(
-                                key, LDAPModOp.DELETE, *attr_dict[key]
-                            )
+                        except KeyError:
+                            pass
+                        entry.change_attribute(key, LDAPModOp.DELETE, *attr_dict[key])
                 except KeyError as err:
                     raise LDIFError(
                         "Missing attribute: '{0}' for entry #{1}.".format(

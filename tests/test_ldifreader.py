@@ -1,4 +1,6 @@
 import pytest
+import base64
+import os
 
 from io import StringIO, BytesIO
 from bonsai import LDIFReader, LDIFError
@@ -122,13 +124,14 @@ def test_resource_handlers():
 
 def test_multiline_attribute():
     """ Test parsing multiline attributes in LDIF. """
-    text = "dn: cn=unimaginably+sn=very,ou=very,dc=very,dc=long,\n dc=line\ncn: unimaginably\nsn: very\n"
+    text = "dn: cn=unimaginably+sn=very,ou=very,dc=very,dc=long,\n dc=line\ncn: unimaginably\nsn: very\nsn: long\n"
     with StringIO(text) as test:
         reader = LDIFReader(test)
         ent = next(reader)
     assert ent.dn == "cn=unimaginably+sn=very,ou=very,dc=very,dc=long,dc=line"
     assert ent["cn"][0] == "unimaginably"
     assert ent["sn"][0] == "very"
+    assert ent["sn"][1] == "long"
 
 
 def test_multiple_entries():
@@ -142,6 +145,37 @@ def test_multiple_entries():
     assert entries[1]["cn"][0] == "test2"
 
 
+def test_encoded_attributes():
+    """ Test parsing base64 encoded attributes. """
+    attr = "test"
+    text = "version: 1\ndn: cn=test\ncn:: {0}\n".format(
+        base64.b64encode(attr.encode("UTF-8")).decode("UTF-8")
+    )
+    with StringIO(text) as test:
+        reader = LDIFReader(test)
+        ent = next(reader)
+    assert ent.dn == "cn=test"
+    assert ent["cn"][0] == attr
+
+
+def test_load_resource():
+    """ Test load_resource method. """
+    curdir = os.path.abspath(os.path.dirname(__file__))
+    with StringIO() as test:
+        test.name = "dummy"
+        reader = LDIFReader(test)
+        with pytest.raises(LDIFError) as err:
+            reader.load_resource("ftp://dummy.com")
+            assert "Unsupported URL format" in str(err)
+        with pytest.raises(LDIFError) as err:
+            reader.load_resource("ftp//dummy.com")
+            assert "Unsupported URL format" in str(err)
+        url = "file://{0}".format(os.path.join(curdir, "testenv/test.jpeg"))
+        content = reader.load_resource(url)
+        assert len(content) != 0
+        assert isinstance(content, bytes)
+
+
 def test_changetype():
     """ Test changetype attribute in LDIF file. """
     text = "dn: cn=test\nchangetype: add\ncn: test\n"
@@ -151,3 +185,45 @@ def test_changetype():
     assert ent.dn == "cn=test"
     assert "cn" in ent
     assert "changetype" not in ent
+
+
+def test_missing_attribute():
+    """ Test missing attribute in LDIF-CHANGE. """
+    text = "dn: cn=test\nchangetype: modify\nadd: sn\ncn: test\n"
+    with StringIO(text) as test:
+        reader = LDIFReader(test)
+        with pytest.raises(LDIFError):
+            _ = next(reader)
+
+
+def test_modify_change():
+    """ Test loading modified attributes from LDIF-CHANGE. """
+    text = """dn: cn=test
+changetype: modify
+add: sn
+sn: testing1
+sn: testing2
+-
+replace: uid
+uid: tester
+-
+delete: gidNumber
+-
+delete: objectclass
+objectClass: posixUser
+
+"""
+    with StringIO(text) as test:
+        reader = LDIFReader(test)
+        ent = next(reader)
+        status = ent._status()
+        assert status["sn"]["@status"] == 1
+        assert status["sn"]["@added"] == ["testing1", "testing2"]
+        assert status["sn"]["@deleted"] == []
+        assert status["uid"]["@status"] == 2
+        assert status["uid"]["@added"] == ["tester"]
+        assert status["uid"]["@deleted"] == []
+        assert status["objectClass"]["@status"] == 1
+        assert status["objectClass"]["@added"] == []
+        assert status["objectClass"]["@deleted"] == ["posixUser"]
+        assert status["@deleted_keys"] == ["gidNumber"]
