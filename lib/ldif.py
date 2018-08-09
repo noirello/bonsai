@@ -101,7 +101,7 @@ class LDIFReader:
 
     def load_resource(self, url: str) -> Union[str, bytes]:
         try:
-            scheme, _ = url.split(":")
+            scheme, _ = url.split(":", maxsplit=1)
             return self.__resource_handlers[scheme](url)
         except (KeyError, ValueError):
             raise LDIFError("Unsupported URL format: {0}.".format(url)) from None

@@ -170,10 +170,24 @@ def test_load_resource():
         with pytest.raises(LDIFError) as err:
             reader.load_resource("ftp//dummy.com")
             assert "Unsupported URL format" in str(err)
-        url = "file://{0}".format(os.path.join(curdir, "testenv/test.jpeg"))
+        url = "file://{0}".format(
+            os.path.join(curdir, os.path.join("testenv", "test.jpeg"))
+        )
         content = reader.load_resource(url)
         assert len(content) != 0
         assert isinstance(content, bytes)
+
+
+def test_url_attribute():
+    """ Test URL attribute in LDIF file. """
+    text = "dn: cn=test\ncn: test1\njpegPhoto:< file://./testenv/test.jpeg\n"
+    with StringIO(text) as test:
+        test.name = __file__
+        reader = LDIFReader(test)
+        ent = next(reader)
+    assert ent.dn == "cn=test"
+    assert len(ent["jpegPhoto"][0]) == 1959
+    assert isinstance(ent["jpegPhoto"][0], bytes)
 
 
 def test_changetype():
