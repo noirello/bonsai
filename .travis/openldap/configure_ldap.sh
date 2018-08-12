@@ -21,7 +21,7 @@ setLDAP () {
     echo "Slapd is started..."
     ps aux | grep slapd
     # Change jpeg file path.
-    sed -i.bak "s|/root/test.jpeg|$TRAVIS_BUILD_DIR/tests/testenv/test.jpeg|g" ./tests/testenv/ldifs/base.ldif
+    sed -i.bak "s|/home/ldap/test.jpeg|$TRAVIS_BUILD_DIR/tests/testenv/test.jpeg|g" ./tests/testenv/ldifs/base.ldif
     # Create base entry and populate the dictionary.
     ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldap:/// -f ./tests/testenv/ldifs/base.ldif
     ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldap:/// -f ./tests/testenv/ldifs/users.ldif
