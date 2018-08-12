@@ -34,7 +34,7 @@ uidNumber: 0
 givenName: Chuck
 authzTo: u:admin
 userPassword:: cEBzc3dvcmQ=
-jpegPhoto:< file:///root/test.jpeg
+jpegPhoto:< file:///home/ldap/test.jpeg
 
 dn: cn=jeff,ou=nerdherd,dc=bonsai,dc=test
 changeType: add

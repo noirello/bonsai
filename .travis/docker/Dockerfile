@@ -1,6 +1,9 @@
 FROM fedora:latest
 LABEL maintainer="noirello@gmail.com"
 
+# Create group and user
+RUN groupadd -g 2000 ldap && useradd -m -u 2001 -g ldap ldap
+
 RUN dnf update -y
 
 # For service tests and setting etwork delay
@@ -10,6 +13,14 @@ RUN dnf install -y openldap openldap-servers openldap-clients cyrus-sasl-md5 cyr
 # Kerberos server and utils.
 RUN dnf install -y krb5-server krb5-libs krb5-workstation
 RUN dnf install -y supervisor
+
+
+RUN chown -Rf ldap:ldap /etc/openldap/
+RUN chown -Rf ldap:ldap /var/lib/ldap
+RUN chown -Rf ldap:ldap /var/kerberos/
+RUN chmod o+w /var/log/
+
+USER ldap
 
 # Setting Kerberos
 COPY ./.travis/krb5/kdc.conf /var/kerberos/krb5kdc/kdc.conf
@@ -24,37 +35,40 @@ RUN echo "qweadhfkjwol4vb11yxadsa2389223qwqweeqwe" >> /etc/openldap/certs/noise.
 RUN modutil -create -dbdir /etc/openldap/certs -force
 
 # Copy the root CA cert and key.
-COPY ./tests/testenv/certs/cacert.pem /root/cacert.pem
-COPY ./tests/testenv/certs/cacert.key /root/cacert.key
+COPY ./tests/testenv/certs/cacert.pem /home/ldap/cacert.pem
+COPY ./tests/testenv/certs/cacert.key /home/ldap/cacert.key
 # Copy client cert and key.
-COPY ./tests/testenv/certs/client.pem /root/client.pem
-COPY ./tests/testenv/certs/client.key /root/client.key
+COPY ./tests/testenv/certs/client.pem /home/ldap/client.pem
+COPY ./tests/testenv/certs/client.key /home/ldap/client.key
 
 # Generate pkcs12 format from the root CA cert and key.
-RUN openssl pkcs12 -export -in /root/cacert.pem -inkey /root/cacert.key -out /root/cacert.p12 -name OwnCARootCert  -passin pass:p@ssword -passout pass:p@ssword
+RUN openssl pkcs12 -export -in /home/ldap/cacert.pem -inkey /home/ldap/cacert.key -out /home/ldap/cacert.p12 -name OwnCARootCert  -passin pass:p@ssword -passout pass:p@ssword
 # Import into the NSS database and set trust attributest. 
-RUN pk12util -i /root/cacert.p12 -d /etc/openldap/certs -k /etc/openldap/certs/password -w /etc/openldap/certs/password
+RUN pk12util -i /home/ldap/cacert.p12 -d /etc/openldap/certs -k /etc/openldap/certs/password -w /etc/openldap/certs/password
 RUN certutil -M -n OwnCARootCert -t TCu,Cu,Tuw -d /etc/openldap/certs/
 
 # Import client cert into the database.
-RUN openssl pkcs12 -export -in /root/client.pem -inkey /root/client.key -out /root/client.p12 -name BonsaiTestUser -passin pass:p@ssword -passout pass:p@ssword
-RUN pk12util -i /root/client.p12 -d /etc/openldap/certs -k /etc/openldap/certs/password -w /etc/openldap/certs/password
+RUN openssl pkcs12 -export -in /home/ldap/client.pem -inkey /home/ldap/client.key -out /home/ldap/client.p12 -name BonsaiTestUser -passin pass:p@ssword -passout pass:p@ssword
+RUN pk12util -i /home/ldap/client.p12 -d /etc/openldap/certs -k /etc/openldap/certs/password -w /etc/openldap/certs/password
 
 # Create a new cert for the server.
 RUN certutil -S -n "slapd" -s "cn=bonsai.test" -c "OwnCARootCert" -t "u,u,u" -m 1001 -v 120 -d /etc/openldap/certs -z /etc/openldap/certs/noise.txt -f /etc/openldap/certs/password
 
 RUN chmod 644 /etc/openldap/certs/*
 
-RUN chown -Rf ldap:ldap /var/lib/ldap
-
 # Copy the basic LDIF files into the container.
-COPY ./tests/testenv/ldifs/base.ldif /root/base.ldif
-COPY ./tests/testenv/ldifs/users.ldif /root/users.ldif
-COPY ./tests/testenv/ldifs/sasl.ldif /root/sasl.ldif
-COPY ./tests/testenv/ldifs/overlays.ldif /root/overlays.ldif
-COPY ./tests/testenv/ldifs/ppolicy.ldif /root/ppolicy.ldif
-COPY ./tests/testenv/ldifs/referrals.ldif /root/referrals.ldif
-COPY ./tests/testenv/test.jpeg /root/test.jpeg
+COPY ./tests/testenv/ldifs/base.ldif /home/ldap/base.ldif
+COPY ./tests/testenv/ldifs/users.ldif /home/ldap/users.ldif
+COPY ./tests/testenv/ldifs/sasl.ldif /home/ldap/sasl.ldif
+COPY ./tests/testenv/ldifs/overlays.ldif /home/ldap/overlays.ldif
+COPY ./tests/testenv/ldifs/ppolicy.ldif /home/ldap/ppolicy.ldif
+COPY ./tests/testenv/ldifs/referrals.ldif /home/ldap/referrals.ldif
+COPY ./tests/testenv/test.jpeg /home/ldap/test.jpeg
+
+RUN mkdir /home/ldap/run
+COPY ./.travis/docker/start_slapd.sh /home/ldap/start_slapd.sh
+
+USER root
 
 # Open LDAP and LDAPS port.
 EXPOSE 389 636
