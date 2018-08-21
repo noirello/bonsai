@@ -1,5 +1,37 @@
 Changelog
 ==========
+[1.0.0] - 2018-08-22
+--------------------
+
+Changed
+~~~~~~~
+
+-  Separate basic search functionality to three different methods in
+   LDAPConnection: search, paged_search and virtual_list_search.
+-  LDAPClient's set_credentials method uses optional named parameters instead
+   of tuples.
+-  Drop Heimdal support for advanced Kerberos capabilities (at least
+   temporarily).
+
+Added
+~~~~~
+
+-  LDIFReader and LDIFWriter objects for handling LDIF format.
+-  The delete_old_rdn parameter for LDAPEntry's rename method (Issue #17).
+-  Kerberos keytab support for set_credentials (Thanks to @Mirraz).
+-  The escape_filter and escape_attribute_value functions (Issue #18).
+-  Support for ldapi connection in LDAPURL and LDAPConnection.
+-  BaseLDAPConnection as a super class for all connection classes.
+-  Type annotations for several methods.
+
+Fixed
+~~~~~
+
+-  Several reference counting errors that caused memory leaks (Issue #19).
+-  Escaping brackets in LDAPURL's regular expressions (Issue #22).
+-  Missing ManageDsaIT control during LDAPConnection's delete.
+-  Typo in documentation (Thanks to @magnuswatn).
+
 [0.9.1] - 2017-12-03
 --------------------
 
@@ -18,7 +50,7 @@ Added
 Fixed
 ~~~~~
 
--  Signaling after LDAP initialisation is failed.
+-  Signalling after LDAP initialisation is failed.
 -  Using TLS settings while getting the root DSE in get_rootDSE method.
 
 [0.9.0] - 2017-02-15
@@ -35,7 +67,7 @@ Changed
    setup.cfg (Thanks to @LukeXuan).
 -  When recursive is True, LDAPConnection.delete uses LDAP_SERVER_TREE_DELETE
    control (if it is possible).
--  LDAPClient.url property became writable.
+-  LDAPClient.url property became writeable.
 
 Added
 ~~~~~
