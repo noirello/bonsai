@@ -27,6 +27,12 @@ matrix:
       services:
         - docker
     - language: python
+      python: "3.7"
+      dist: xenial
+      sudo: true
+      services:
+        - docker
+    - language: python
       python: "nightly"
       services:
         - docker
