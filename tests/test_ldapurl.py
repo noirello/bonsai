@@ -73,6 +73,7 @@ def test_str(valid_ldapurl):
     assert str(LDAPURL("ldap://127.0.0.1/cn=x?cn")) == "ldap://127.0.0.1:389/cn=x?cn"
     assert str(LDAPURL("ldap:///")) == "ldap://localhost:389"
     assert str(LDAPURL("ldapi:///")) == "ldapi://localhost"
+    assert not LDAPURL("ldap:///") == "http://localhost:389"
     assert "<LDAPURL" in repr(valid_ldapurl)
 
 

@@ -3,6 +3,7 @@ import os.path
 import unittest
 import time
 import xmlrpc.client as rpc
+import sys
 
 import bonsai
 from bonsai import LDAPClient, escape_filter
@@ -241,11 +242,17 @@ class LDAPClientTest(unittest.TestCase):
             proxy.remove_delay()
 
     def test_escape_filter(self):
+        """ Test escaping filter expresions. """
         self.assertEqual(escape_filter("(parenthesis)"), "\\28parenthesis\\29")
         self.assertEqual(escape_filter("cn=*"), "cn=\\2A")
         self.assertEqual(escape_filter("\\backslash"), "\\5Cbackslash")
         self.assertEqual(escape_filter("term\0"), "term\\0")
 
+    @unittest.skipIf(sys.platform.startswith("win"), "No IPC support on Windows")
+    def test_ldapi(self):
+        """ Test making connection via IPC. """
+        client = LDAPClient("ldapi://%2Ftmp%2Fbonsai%2Fldapi")
+        self.assertIsNotNone(client.connect())
 
 if __name__ == '__main__':
     unittest.main()
