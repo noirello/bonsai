@@ -1,117 +1,130 @@
-import unittest
+import pytest
 
 from bonsai import LDAPURL
 from bonsai import LDAPDN
 from bonsai.errors import InvalidDN
 
-class LDAPURLTest(unittest.TestCase):
-    """ Testing LDAPURL object. """
-    def setUp(self):
-        """ Set test URL. """
-        self.strurl = "ldaps://testurl:444/cn=test,dc=test?sn,gn?base?(objectclass=*)?1.2.3.4"
-        self.url = LDAPURL(self.strurl)
 
-    def test_get_address(self):
-        """ Test get_address method. """
-        self.assertEqual(self.url.get_address(), "ldaps://testurl:444")
+@pytest.fixture
+def valid_ldapurl():
+    strurl = "ldaps://testurl:444/cn=test,dc=test?sn,gn?base?(objectclass=*)?1.2.3.4"
+    return LDAPURL(strurl)
 
-    def test_get_host_properties(self):
-        """ Test getting LDAPURL host properties. """
-        self.assertEqual(self.url.scheme, "ldaps")
-        self.assertEqual(self.url.host, "testurl")
-        self.assertEqual(self.url.port, 444)
 
-    def test_set_host_properties(self):
-        """ Test setting LDAPURL host properties. """
-        url = LDAPURL()
-        def invalid_host():
-            url.host = ":malformed,@äđĐ-"
-        self.assertRaises(ValueError, invalid_host)
-        def invalid_port():
-            url.port = '9922'
-        self.assertRaises(ValueError, invalid_port)
-        def invalid_scheme():
-            url.scheme = 'http'
-        self.assertRaises(ValueError, invalid_scheme)
-        url.host = 'testurl2'
-        url.port = 589
-        url.scheme = 'ldap'
-        self.assertEqual(url.scheme, "ldap")
-        self.assertEqual(url.host, "testurl2")
-        self.assertEqual(url.port, 589)
+def test_get_address(valid_ldapurl):
+    """ Test get_address method. """
+    ldapi_url = LDAPURL("ldapi://%2Ftmp%2Fldapi")
+    assert valid_ldapurl.get_address() == "ldaps://testurl:444"
+    assert ldapi_url.get_address() == "ldapi://%2Ftmp%2Fldapi"
 
-    def test_get_bind_properties(self):
-        """ Test getting LDAPURL bind properties. """
-        self.assertEqual(self.url.basedn, LDAPDN("cn=test,dc=test"))
-        self.assertEqual(self.url.scope, "base")
-        self.assertEqual(self.url.filter, "(objectclass=*)")
-        self.assertEqual(self.url.attributes, ["sn", "gn"])
 
-    def test_set_bind_properties(self):
-        """ Test setting LDAPURL bind properties. """
-        url = LDAPURL()
-        def invalid_basedn():
-            url.basedn = "test"
-        self.assertRaises(InvalidDN, invalid_basedn)
-        url.basedn = LDAPDN("cn=test")
-        self.assertEqual(str(url.basedn), "cn=test")
+def test_get_host_properties(valid_ldapurl):
+    """ Test getting LDAPURL host properties. """
+    ldapi_url = LDAPURL("ldapi://%2Ftmp%2Fldapi")
+    assert valid_ldapurl.scheme == "ldaps"
+    assert valid_ldapurl.host == "testurl"
+    assert valid_ldapurl.port == 444
+    assert ldapi_url.scheme == "ldapi"
+    assert ldapi_url.port == 0
 
-    def test_str(self):
-        """ Test __str__ method of LDAPURL. """
-        self.assertEqual(str(self.url), self.strurl)
-        self.assertEqual(str(LDAPURL("ldap://127.0.0.1/cn=x?cn")),
-                         "ldap://127.0.0.1:389/cn=x?cn")
-        self.assertEqual(str(LDAPURL("ldap:///")), "ldap://localhost:389")
-        self.assertIn("<LDAPURL", repr(self.url))
 
-    def test_conversion(self):
-        """ Test ValueError exception for invalid URL format. """
-        self.assertRaises(ValueError,
-                          lambda: LDAPURL("ldap://failed.com/?falsedn?d"))
+def test_set_host_properties():
+    """ Test setting LDAPURL host properties. """
+    url = LDAPURL()
+    with pytest.raises(ValueError):
+        url.host = ":malformed,@äđĐ-"
+    with pytest.raises(ValueError):
+        url.port = "9922"
+    with pytest.raises(ValueError):
+        url.scheme = "http"
 
-    def test_del_attr(self):
-        """ Test trying to delete an attribute. """
-        def test():
-            del self.url.host
-        self.assertRaises(Exception, test)
-        try:
-            self.url.host
-        except AttributeError:
-            self.fail("Attribute not should be deleted.")
+    url.host = "testurl2"
+    url.port = 589
+    url.scheme = "ldap"
+    assert url.scheme == "ldap"
+    assert url.host == "testurl2"
+    assert url.port == 589
 
-    def test_invalid(self):
-        """ Test invalid LDAP URLs. """
-        self.assertRaises(ValueError,
-                          lambda: LDAPURL("http://localhost"))
-        self.assertRaises(ValueError,
-                          lambda: LDAPURL("ldaps://localost."))
 
-    def test_scope(self):
-        """ Test scope and scope_num property. """
-        url = LDAPURL("ldap:///??one")
-        self.assertEqual(url.scope_num, 1)
-        url.scope = "base"
-        self.assertEqual(url.scope_num, 0)
-        def invalid_scope_type():
-            self.url.scope = 2.1
-        self.assertRaises(TypeError, invalid_scope_type)
-        def invalid_scope_value():
-            url.scope = 'all'
-        self.assertRaises(ValueError, invalid_scope_value)
+def test_get_bind_properties(valid_ldapurl):
+    """ Test getting LDAPURL bind properties. """
+    assert valid_ldapurl.basedn == LDAPDN("cn=test,dc=test")
+    assert valid_ldapurl.scope == "base"
+    assert valid_ldapurl.filter == "(objectclass=*)"
+    assert valid_ldapurl.attributes == ["sn", "gn"]
 
-    def test_ipv6(self):
-        """ Test IPv6 address """
-        url = LDAPURL("ldap://[2001:db8:85a3::8a2e:370:7334]:1498/"
-                      "o=University%20of%20Michigan,c=US??one?"
-                      "(cn=Babs%20Jensen)")
-        self.assertEqual(url.host, "2001:db8:85a3::8a2e:370:7334")
-        self.assertEqual(url.port, 1498)
-        self.assertEqual(url.scope, "one")
-        self.assertEqual(url.filter, "(cn=Babs Jensen)")
-        addr = url.get_address()
-        self.assertEqual(addr, "ldap://[2001:db8:85a3::8a2e:370:7334]:1498")
-        self.assertRaises(ValueError,
-                          lambda: LDAPURL("ldap://2001::85::37:7334"))
 
-if __name__ == '__main__':
-    unittest.main()
+def test_set_bind_properties():
+    """ Test setting LDAPURL bind properties. """
+    url = LDAPURL()
+    with pytest.raises(InvalidDN):
+        url.basedn = "test"
+
+    url.basedn = LDAPDN("cn=test")
+    assert str(url.basedn) == "cn=test"
+
+
+def test_str(valid_ldapurl):
+    """ Test __str__ method of LDAPURL. """
+    assert (
+        str(valid_ldapurl)
+        == "ldaps://testurl:444/cn=test,dc=test?sn,gn?base?(objectclass=*)?1.2.3.4"
+    )
+    assert str(LDAPURL("ldap://127.0.0.1/cn=x?cn")) == "ldap://127.0.0.1:389/cn=x?cn"
+    assert str(LDAPURL("ldap:///")) == "ldap://localhost:389"
+    assert str(LDAPURL("ldapi:///")) == "ldapi://localhost"
+    assert "<LDAPURL" in repr(valid_ldapurl)
+
+
+def test_conversion():
+    """ Test ValueError exception for invalid URL format. """
+    with pytest.raises(ValueError):
+        _ = LDAPURL("ldap://failed.com/?falsedn?d")
+
+
+def test_del_attr(valid_ldapurl):
+    """ Test trying to delete an attribute. """
+    with pytest.raises(AttributeError):
+        del valid_ldapurl.host
+    try:
+        _ = valid_ldapurl.host
+    except AttributeError:
+        pytest.fail("Attribute not should be deleted.")
+
+
+def test_invalid():
+    """ Test invalid LDAP URLs. """
+    with pytest.raises(ValueError):
+        _ = LDAPURL("http://localhost")
+    with pytest.raises(ValueError):
+        _ = LDAPURL("ldaps://localost.")
+
+
+def test_scope():
+    """ Test scope and scope_num property. """
+    url = LDAPURL("ldap:///??one")
+    assert url.scope_num == 1
+    url.scope = "base"
+    assert url.scope_num == 0
+
+    with pytest.raises(TypeError):
+        url.scope = 2.1
+    with pytest.raises(ValueError):
+        url.scope = "all"
+
+
+def test_ipv6():
+    """ Test IPv6 address """
+    url = LDAPURL(
+        "ldap://[2001:db8:85a3::8a2e:370:7334]:1498/"
+        "o=University%20of%20Michigan,c=US??one?"
+        "(cn=Babs%20Jensen)"
+    )
+    assert url.host == "2001:db8:85a3::8a2e:370:7334"
+    assert url.port == 1498
+    assert url.scope == "one"
+    assert url.filter == "(cn=Babs Jensen)"
+    addr = url.get_address()
+    assert addr == "ldap://[2001:db8:85a3::8a2e:370:7334]:1498"
+    with pytest.raises(ValueError):
+        _ = LDAPURL("ldap://2001::85::37:7334")
