@@ -60,7 +60,7 @@ class LDAPValueList(list):
         raise TypeError("Can not change _status_dict")
 
     def __contains__(self, item: Any) -> bool:
-        return bonsai._unique_contains(self, item)[0]
+        return bonsai.utils._unique_contains(self, item)[0]
 
     def __delitem__(self, idx: Union[int, slice]) -> None:
         old_value = super().__getitem__(idx)
@@ -156,7 +156,7 @@ class LDAPValueList(list):
         :param value: the item to be removed.
         :raises ValueError: if `value` is not int the list.
         """
-        contain, obj = bonsai._unique_contains(self, value)
+        contain, obj = bonsai.utils._unique_contains(self, value)
         if not contain:
             raise ValueError("%r is not in the list." % value)
         super().remove(obj)
