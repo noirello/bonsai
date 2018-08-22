@@ -152,17 +152,17 @@ API documentation
 
 .. _RFC3062: https://www.ietf.org/rfc/rfc3062.txt
 
-.. method:: LDAPConnection.search(base=None, scope=None, filter=None, attrlist=None, timeout=None,\
-                                  sizelimit=0, attrsonly=False, sort_order=None, page_size=0, \
-                                  offset=0, before_count=0, after_count=0, est_list_count=0, \
-                                  attrvalue=None)
+.. method:: LDAPConnection.search(base=None, scope=None, filterexp=None, attrlist=None, timeout=None,\
+                                  sizelimit=0, attrsonly=False, sort_order=None)
 
     Perform a search on the directory server. A base DN and a search scope is always necessary to
     perform a search, but these values - along with the attribute's list and search filter - can
     also be set with the :class:`LDAPClient` LDAP URL parameter. The parameters, which are passed
     to the :meth:`LDAPConnection.search` method will overrule the previously set ones with the
     LDAP URL.
-   
+
+    Setting `sort_order` will invoke server side sorting LDAP control, based on the provided attribute list.
+
     >>> from bonsai import LDAPClient
     >>> client = LDAPClient("ldap://localhost") # without additional parameters
     >>> conn = client.connect()
@@ -174,27 +174,11 @@ API documentation
     [{'sn': ['Bartowski'], 'cn': ['chuck'], 'givenName': ['Chuck']}]
     >>> conn.search(filter="(cn=j*)")
     [{'sn': ['Barnes'], 'cn': ['jeff'], 'givenName': ['Jeff']}]
-   
-    Depending which optional parameters are set additional LDAP controls are appended to the search
-    request. These controls will change the behaviour of the :meth:`LDAPConnection.search` method:
-
-        - setting `sort_order` will invoke server side sorting, based on the provided attribute
-          list.
-        - `page_size` will invoke paged search result and the method will return with an
-          :class:`ldapsearchiter` instead of a list.
-        - setting `offset` or `attrvalue` with `sort_order` will invoke virtual list view and the
-          method will return with a tuple of (list, dict) where the list contains the result of the
-          search and the dict contains the LDAP VLV response control from the server.
-   
-    The method raises :class:`bonsai.UnwillingToPerform` if an `offset` or `attrvalue` is set
-    without `sort_order`, or if an `offset` or `attrvalue` is set along with `page_size`.
-
-    For further details using these controls please see :ref:`ldap-controls`.
 
     :param str base: the base DN of the search.
     :param int scope: the scope of the search. An :class:`LDAPSearchScope` also can be used as
                       value.
-    :param str filter: string to filter the search in LDAP search filter syntax.
+    :param str filterexp: string to filter the search in LDAP search filter syntax.
     :param list attrlist: list of attribute's names to receive only those attributes from the
                           directory server.
     :param float timeout: time limit in seconds for the search.
@@ -203,7 +187,61 @@ API documentation
                            attributes without their values.
     :param list sort_order: list of attribute's names to use for server-side ordering, start name
                             with '-' for descending order.
-    :param int page_size: the number of entries on a page for paged search result.
+    :return: the search result.
+    :rtype: list
+
+.. method:: LDAPConnection.paged_search(base=None, scope=None, filterexp=None, attrlist=None,\
+                                        timeout=None, sizelimit=0, attrsonly=False,\
+                                        sort_order=None, page_size=1)
+
+    Perform a search that returns a paged search result. The number of entries on a page is limited
+    with the `page_size` parameter. The return value is an :class:`ldapsearchiter` which is an
+    iterable object. By default, after returning the last entry on the page it automatically requests
+    the next page from the server until the final page is delivered. This functionality can be
+    disabled by setting the :attr:`LDAPClient.auto_page_acquire` to `false`. Then the next page
+    can be acquired manually by calling the :meth:`ldapsearchiter.acquire_next_page` method.
+
+    :param str base: the base DN of the search.
+    :param int scope: the scope of the search. An :class:`LDAPSearchScope` also can be used as
+                      value.
+    :param str filterexp: string to filter the search in LDAP search filter syntax.
+    :param list attrlist: list of attribute's names to receive only those attributes from the
+                          directory server.
+    :param float timeout: time limit in seconds for the search.
+    :param int sizelimit: the number of entries to limit the search.
+    :param bool attrsonly: if it's set True, search result will contain only the name of the
+                           attributes without their values.
+    :param list sort_order: list of attribute's names to use for server-side ordering, start name
+                            with '-' for descending order.
+    :param int page_size: the number of entries on a page.
+    :return: the search result.
+    :rtype: ldapsearchiter
+
+.. method:: LDAPConnection.virtual_list_search(base=None, scope=None, filterexp=None, attrlist=None,\
+                                               timeout=None, sizelimit=0, attrsonly=False,\
+                                               sort_order=None, offset=1, before_count=0,\
+                                               after_count=0, est_list_count=0, attrvalue=None)
+
+    Perform a search using virtual list view control. To perform the search the server side sort
+    control has to be set with `sort_order`. The result set will be shifted to the `offset` or
+    `attrvalue` and contains the specific number of entries after and before, set with
+    `after_count` and `before_count`. The `est_list_count` is an estimation of the entire searched
+    list that helps to the server to position the target entry.
+
+    For further details using these controls please see :ref:`ldap-controls`.
+
+    :param str base: the base DN of the search.
+    :param int scope: the scope of the search. An :class:`LDAPSearchScope` also can be used as
+                      value.
+    :param str filterexp: string to filter the search in LDAP search filter syntax.
+    :param list attrlist: list of attribute's names to receive only those attributes from the
+                          directory server.
+    :param float timeout: time limit in seconds for the search.
+    :param int sizelimit: the number of entries to limit the search.
+    :param bool attrsonly: if it's set True, search result will contain only the name of the
+                           attributes without their values.
+    :param list sort_order: list of attribute's names to use for server-side ordering, start name
+                            with '-' for descending order.
     :param int offset: an offset of the search result to select a target entry for virtual list
                        view (VLV).
     :param int before_count: the number of entries before the target entry for VLV.
@@ -212,7 +250,7 @@ API documentation
     :param attrvalue: an attribute value (of the attribute that is used for sorting) for
                       identifying the target entry for VLV.
     :return: the search result.
-    :rtype: list, ldapsearchiter or (list, dict) tuple.
+    :rtype: (list, dict)
 
 .. automethod:: LDAPConnection.whoami(timeout=None)
 .. seealso::
@@ -282,7 +320,7 @@ Example for working with LDAPDN objects.
 .. automethod:: LDAPEntry.delete(timeout=None, recursive=False)
 .. automethod:: LDAPEntry.get
 .. automethod:: LDAPEntry.modify(timeout=None)
-.. automethod:: LDAPEntry.rename(newdn, timeout=None)
+.. automethod:: LDAPEntry.rename(newdn, timeout=None, delete_old_rdn=True)
 .. automethod:: LDAPEntry.update
 
 .. attribute:: LDAPEntry.connection
@@ -391,6 +429,23 @@ Example for working with LDAPDN objects.
 .. automethod:: LDAPValueList.copy
 .. autoattribute:: LDAPValueList.status
 
+:class:`LDIFReader`
+===================
+
+.. autoclass:: LDIFReader
+.. autoattribute:: LDIFReader.autoload
+.. autoattribute:: LDIFReader.input_file
+.. autoattribute:: LDIFReader.resource_handlers
+
+:class:`LDIFWriter`
+===================
+
+.. autoclass:: LDIFWriter
+.. automethod:: LDIFWriter.write_entry
+.. automethod:: LDIFWriter.write_entries
+.. automethod:: LDIFWriter.write_changes
+.. autoattribute:: LDIFWriter.output_file
+
 :class:`ldapsearchiter`
 =======================
 
@@ -436,8 +491,19 @@ Errors
 .. autoclass:: bonsai.PasswordTooShort
 .. autoclass:: bonsai.PasswordTooYoung
 
-Module functions
-================
+Utility functions
+=================
+.. autofunction:: bonsai.utils.escape_attribute_value
+
+    >>> import bonsai
+    >>> bonsai.escape_attribute_value(",cn=escaped")
+    '\\,cn\\=escaped'
+
+.. autofunction:: bonsai.utils.escape_filter
+
+    >>> import bonsai
+    >>> bonsai.escape_filter("(objectclass=*)")
+    '\\28objectclass=\\2A\\29'
 
 .. function:: bonsai.get_tls_impl_name
 

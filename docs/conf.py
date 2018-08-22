@@ -32,7 +32,7 @@ class Mock(MagicMock):
         if name == 'ldapsearchiter':
             return object
 
-MOCK_MODULES = ['lib._bonsai', 'bonsai']
+MOCK_MODULES = ['lib._bonsai', 'bonsai', 'bonsai._bonsai']
 try:
     import typing
 except ImportError:
@@ -75,7 +75,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'bonsai'
-copyright = '2014-2017, noirello'
+copyright = '2014-2018, noirello'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
