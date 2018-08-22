@@ -13,7 +13,8 @@ from .asyncio import AIOLDAPConnection
 from .ldapconnection import LDAPSearchScope
 from .ldapentry import LDAPEntry
 
-CT = TypeVar('CT', bound=BaseLDAPConnection)
+CT = TypeVar("CT", bound=BaseLDAPConnection)
+
 
 class LDAPClient:
     """
@@ -24,22 +25,22 @@ class LDAPClient:
     :raises TypeError: if the `url` parameter is not string \
     or not a valid LDAP URL.
     """
-    def __init__(self, url: Union[LDAPURL, str] = "ldap://",
-                 tls: bool = False) -> None:
+
+    def __init__(self, url: Union[LDAPURL, str] = "ldap://", tls: bool = False) -> None:
         """ init method. """
         self.__tls = tls
         self.set_url(url)
-        self.__credentials = None # type: Optional[Dict[str, Optional[str]]]
-        self.__raw_list = [] # type: List[str]
+        self.__credentials = None  # type: Optional[Dict[str, Optional[str]]]
+        self.__raw_list = []  # type: List[str]
         self.__mechanism = "SIMPLE"
         self.__cert_policy = -1
-        self.__ca_cert = "" # type: Optional[str]
-        self.__ca_cert_dir = "" # type: Optional[str]
-        self.__client_cert = "" # type: Optional[str]
-        self.__client_key = "" # type: Optional[str]
+        self.__ca_cert = ""  # type: Optional[str]
+        self.__ca_cert_dir = ""  # type: Optional[str]
+        self.__client_cert = ""  # type: Optional[str]
+        self.__client_key = ""  # type: Optional[str]
         self.__async_conn = AIOLDAPConnection
         self.__ppolicy_ctrl = False
-        self.__ext_dn = None # type: Optional[int]
+        self.__ext_dn = None  # type: Optional[int]
         self.__auto_acquire = True
         self.__chase_referrals = True
         self.__managedsait_ctrl = False
@@ -54,14 +55,15 @@ class LDAPClient:
             return socket.socketpair()
         # Backward compatibility on Windows from Python 3.5.
         # Origin: https://gist.github.com/4325783, by Geert Jansen. Public domain.
-        def socketpair(family: Any = socket.AF_INET,
-                       type: Any = socket.SOCK_STREAM,
-                       proto: int = 0) -> Tuple[socket.socket, socket.socket]:
+        def socketpair(
+            family: Any = socket.AF_INET, type: Any = socket.SOCK_STREAM, proto: int = 0
+        ) -> Tuple[socket.socket, socket.socket]:
             import errno
+
             # We create a connected TCP socket. Note the trick with setblocking(0)
             # that prevents us from having to create a thread.
             lsock = socket.socket(family, type, proto)
-            lsock.bind(('localhost', 0))
+            lsock.bind(("localhost", 0))
             lsock.listen(1)
             addr, port = lsock.getsockname()
             csock = socket.socket(family, type, proto)
@@ -75,6 +77,7 @@ class LDAPClient:
             csock.setblocking(1)
             lsock.close()
             return (ssock, csock)
+
         return socketpair()
 
     def set_raw_attributes(self, raw_list: List[str]) -> None:
@@ -98,12 +101,15 @@ class LDAPClient:
             raise ValueError("Attribute names must be different from each other.")
         self.__raw_list = raw_list
 
-    def set_credentials(self, mechanism: str,
-                        user: Optional[str] = None,
-                        password: Optional[str] = None,
-                        realm: Optional[str] = None,
-                        authz_id: Optional[str] = None,
-                        keytab: Optional[str] = None) -> None:
+    def set_credentials(
+        self,
+        mechanism: str,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
+        realm: Optional[str] = None,
+        authz_id: Optional[str] = None,
+        keytab: Optional[str] = None,
+    ) -> None:
         """
         Set binding mechanism and credential information. All parameters \
         are optional except the `mechanism`. Different mechanism applies \
@@ -128,13 +134,16 @@ class LDAPClient:
             raise TypeError("The mechanism must be a string.")
         mechanism = mechanism.upper()
         creds = {
-            'user': user,
-            'password': password,
-            'realm': realm,
-            'authz_id': authz_id,
-            'keytab': keytab
+            "user": user,
+            "password": password,
+            "realm": realm,
+            "authz_id": authz_id,
+            "keytab": keytab,
         }
-        if list(filter(lambda x: not isinstance(x, (str, type(None))), creds.values())) != []:
+        if (
+            list(filter(lambda x: not isinstance(x, (str, type(None))), creds.values()))
+            != []
+        ):
             raise TypeError("Every parameter must be a string or None.")
         self.__mechanism = mechanism.upper()
         self.__credentials = creds
@@ -158,7 +167,7 @@ class LDAPClient:
            Set off the cert verification is dangerous. Without verification \
            there is a chance of man-in-the-middle attack.
         """
-        tls_options = {'never' : 0, 'demand' : 2, 'allow': 3, 'try' : 4}
+        tls_options = {"never": 0, "demand": 2, "allow": 3, "try": 4}
         if not isinstance(policy, str):
             raise TypeError("Policy parameter must be string.")
         policy = policy.lower()
@@ -519,10 +528,15 @@ class LDAPClient:
         :return: the root DSE entry.
         :rtype: :class:`LDAPEntry`
         """
-        attrs = ["namingContexts", "altServer", "supportedExtension",
-                 "supportedControl", "supportedSASLMechanisms",
-                 "supportedLDAPVersion"]
-        tls_options = {0: 'never', 2: 'demand', 3: 'allow', 4: 'try', -1: None}
+        attrs = [
+            "namingContexts",
+            "altServer",
+            "supportedExtension",
+            "supportedControl",
+            "supportedSASLMechanisms",
+            "supportedLDAPVersion",
+        ]
+        tls_options = {0: "never", 2: "demand", 3: "allow", 4: "try", -1: None}
         this = self.__class__(self.url, self.tls)
         cert_policy = tls_options[self.cert_policy]
         if cert_policy is not None:
@@ -533,16 +547,19 @@ class LDAPClient:
         this.client_key = self.client_key
         with LDAPConnection(this).open() as conn:
             try:
-                root_dse = conn.search("", LDAPSearchScope.BASE,
-                                       "(objectclass=*)",
-                                       attrs, None, False)[0]
+                root_dse = conn.search(
+                    "", LDAPSearchScope.BASE, "(objectclass=*)", attrs, None, False
+                )[0]
                 return root_dse
             except IndexError:
                 return None
 
-    def connect(self, is_async: bool = False,
-                timeout: Optional[float] = None,
-                **kwargs: Dict[str, Any]) -> CT:
+    def connect(
+        self,
+        is_async: bool = False,
+        timeout: Optional[float] = None,
+        **kwargs: Dict[str, Any]
+    ) -> CT:
         """
         Open a connection to the LDAP server.
 

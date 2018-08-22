@@ -4,6 +4,7 @@ from .ldapclient import LDAPClient
 from .ldapurl import LDAPURL
 from .errors import LDAPError
 
+
 class LDAPReference:
     """
     Object for handling an LDAP reference.
@@ -12,7 +13,10 @@ class LDAPReference:
     :param list references: list of valid LDAP URLs (as string or \
     :class:`LDAPURL` objects).
     """
-    def __init__(self, client: LDAPClient, references: List[Union[str, LDAPURL]]) -> None:
+
+    def __init__(
+        self, client: LDAPClient, references: List[Union[str, LDAPURL]]
+    ) -> None:
         if type(client) != LDAPClient:
             raise TypeError("Client parameter must be an LDAPClient.")
         self.__client = client

@@ -72,7 +72,7 @@ class LDAPEntry(ldapentry):
 
         :param str|LDAPDN newdn: the new DN of the entry.
         :param float timeout: time limit in seconds for the operation.
-        :param bool delete_old_rdn: remove old rdn with renaming.
+        :param bool delete_old_rdn: remove old RDN with renaming.
         :return: True, if the operation is finished.
         :rtype: bool
         """
