@@ -1,77 +1,80 @@
-import unittest
+import pytest
 
 from bonsai import LDAPDN
 from bonsai import errors
 
-class LDAPDNTest(unittest.TestCase):
-    """ Testing LDAP DN object. """
-    def setUp(self):
-        """ Set up distinguished name for testing. """
-        self.strdn = "cn=user,dc=test,dc=local"
-        self.dnobj = LDAPDN(self.strdn)
-
-    def test_rdn(self):
-        """ Test methods for retrieving and changing RDNs. """
-        self.assertEqual(self.dnobj.rdns[0], (('cn', 'user'),))
-        self.assertEqual(self.dnobj[0], "cn=user")
-        self.assertEqual(self.dnobj[1:], "dc=test,dc=local")
-        self.dnobj[1:] = "dc=test2"
-        self.assertEqual(self.dnobj, "cn=user,dc=test2")
-        self.assertRaises(IndexError, lambda: self.dnobj[7])
-        self.assertRaises(TypeError, lambda: self.dnobj['test'])
-        def set_rdns():
-            self.dnobj.rdns = (("dc", "test"),)
-        self.assertRaises(ValueError, set_rdns)
-
-    def test_str(self):
-        """ Test __str__ method of LDAPDN object. """
-        self.assertEqual(str(self.dnobj), self.strdn)
-
-    def test_emptydn(self):
-        """ Test empty distinguished name. """
-        empty = LDAPDN("")
-        self.assertEqual(empty[1:], "")
-
-    def test_equal(self):
-        """ Test __eq__ method of LDAPDN object. """
-        self.assertEqual(self.dnobj, LDAPDN(self.strdn))
-        self.assertEqual(self.dnobj, LDAPDN(self.strdn.title()))
-        self.assertEqual(self.dnobj, self.strdn.upper())
-
-    def test_invaliddn(self):
-        """ Test InvalidDN exception. """
-        self.assertRaises(errors.InvalidDN,
-                          lambda: LDAPDN("cn=test,dc=one+two"))
-
-    def test_special_char(self):
-        """ Test parsing special characters in DN string. """
-        spec = LDAPDN(r"cn=special\, name,dc=test,dc=local")
-        self.assertEqual(str(spec), r"cn=special\, name,dc=test,dc=local")
-
-    def test_setitem(self):
-        """ Test setting RDNs for DN object. """
-        dnobj = LDAPDN("sn=some+gn=thing,dc=test,dc=local")
-        self.assertEqual("sn=some+gn=thing", dnobj[0])
-        dnobj[0] = "cn=user"
-        self.assertEqual("cn=user,dc=test,dc=local", dnobj)
-        dnobj[1] = "ou=group1,ou=group2"
-        self.assertEqual("cn=user,ou=group1,ou=group2,dc=local", dnobj)
-        dnobj[2:] = "dc=local"
-        self.assertEqual("cn=user,ou=group1,dc=local", dnobj)
-        def str_idx():
-            dnobj['invalid'] = "ou=group1,ou=group2"
-        self.assertRaises(TypeError, str_idx)
-        def not_str():
-            dnobj[0] = 3
-        self.assertRaises(ValueError, not_str)
-        def invalid():
-            dnobj[1] = "test,group"
-        self.assertRaises(errors.InvalidDN, invalid)
-
-    def test_repr(self):
-        """ Test representation. """
-        self.assertIn("<LDAPDN", repr(self.dnobj))
+VALID_STRDN = "cn=user,dc=test,dc=local"
 
 
-if __name__ == '__main__':
-    unittest.main()
+@pytest.fixture
+def dnobj():
+    return LDAPDN(VALID_STRDN)
+
+
+def test_rdn(dnobj):
+    """ Test methods for retrieving and changing RDNs. """
+    assert dnobj.rdns[0] == (("cn", "user"),)
+    assert dnobj[0] == "cn=user"
+    assert dnobj[1:] == "dc=test,dc=local"
+    dnobj[1:] = "dc=test2"
+    assert dnobj == "cn=user,dc=test2"
+    with pytest.raises(IndexError):
+        _ = dnobj[7]
+    with pytest.raises(TypeError):
+        _ = dnobj["test"]
+    with pytest.raises(ValueError):
+        dnobj.rdns = (("dc", "test"),)
+
+
+def test_str(dnobj):
+    """ Test __str__ method of LDAPDN object. """
+    assert str(dnobj) == VALID_STRDN
+
+
+def test_emptydn():
+    """ Test empty distinguished name. """
+    empty = LDAPDN("")
+    assert empty[1:] == ""
+
+
+def test_equal(dnobj):
+    """ Test __eq__ method of LDAPDN object. """
+    assert dnobj == LDAPDN(VALID_STRDN)
+    assert dnobj == LDAPDN(VALID_STRDN.title())
+    assert dnobj == VALID_STRDN.upper()
+
+
+def test_invaliddn():
+    """ Test InvalidDN exception. """
+    with pytest.raises(errors.InvalidDN):
+        _ = LDAPDN("cn=test,dc=one+two")
+
+
+def test_special_char():
+    """ Test parsing special characters in DN string. """
+    spec = LDAPDN(r"cn=special\, name,dc=test,dc=local")
+    assert str(spec) == r"cn=special\, name,dc=test,dc=local"
+
+
+def test_setitem():
+    """ Test setting RDNs for DN object. """
+    dnobj = LDAPDN("sn=some+gn=thing,dc=test,dc=local")
+    assert "sn=some+gn=thing" == dnobj[0]
+    dnobj[0] = "cn=user"
+    assert "cn=user,dc=test,dc=local" == dnobj
+    dnobj[1] = "ou=group1,ou=group2"
+    assert "cn=user,ou=group1,ou=group2,dc=local" == dnobj
+    dnobj[2:] = "dc=local"
+    assert "cn=user,ou=group1,dc=local" == dnobj
+
+    with pytest.raises(TypeError):
+        dnobj["invalid"] = "ou=group1,ou=group2"
+    with pytest.raises(ValueError):
+        dnobj[0] = 3
+    with pytest.raises(errors.InvalidDN):
+        dnobj[1] = "test,group"
+
+
+def test_repr(dnobj):
+    """ Test representation. """
+    assert "<LDAPDN" in repr(dnobj)
