@@ -308,9 +308,9 @@ Example for working with LDAPDN objects.
     <LDAPDN cn=testuser,ou=buymore,dc=bonsai,dc=test>
 
 .. autoclass:: LDAPDN
-.. automethod:: LDAPDN.__getitem__
-.. automethod:: LDAPDN.__setitem__
-.. automethod:: LDAPDN.__eq__
+.. automethod:: LDAPDN.__getitem__(idx)
+.. automethod:: LDAPDN.__setitem__(idx, value)
+.. automethod:: LDAPDN.__eq__(other)
 .. automethod:: LDAPDN.__str__
 .. autoattribute:: LDAPDN.rdns
 
@@ -322,10 +322,10 @@ Example for working with LDAPDN objects.
 .. automethod:: LDAPEntry.clear
 .. automethod:: LDAPEntry.clear_attribute_changes(name)
 .. automethod:: LDAPEntry.delete(timeout=None, recursive=False)
-.. automethod:: LDAPEntry.get
+.. automethod:: LDAPEntry.get(key, default)
 .. automethod:: LDAPEntry.modify(timeout=None)
 .. automethod:: LDAPEntry.rename(newdn, timeout=None, delete_old_rdn=True)
-.. automethod:: LDAPEntry.update
+.. automethod:: LDAPEntry.update(*args, **kwds)
 
 .. attribute:: LDAPEntry.connection
 
@@ -357,7 +357,7 @@ Example for working with LDAPDN objects.
 :class:`LDAPReference`
 ======================
 
-.. autoclass:: LDAPReference
+.. autoclass:: LDAPReference(client, references)
 
 .. autoattribute:: LDAPReference.client
 .. autoattribute:: LDAPReference.references
@@ -381,7 +381,7 @@ Example for working with LDAPDN objects.
 
 .. _RFC4516: http://tools.ietf.org/html/rfc4516
 
-.. autoclass:: LDAPURL
+.. autoclass:: LDAPURL(str)
 
     An example of a valid LDAP URL with port number, base DN, list of 
     attributes and search filter:
@@ -417,18 +417,18 @@ Example for working with LDAPDN objects.
 :class:`LDAPValueList`
 ======================
 
-.. autoclass:: LDAPValueList
-.. automethod:: LDAPValueList.__contains__
-.. automethod:: LDAPValueList.__delitem__
-.. automethod:: LDAPValueList.__setitem__
-.. automethod:: LDAPValueList.__add__
-.. automethod:: LDAPValueList.__iadd__
-.. automethod:: LDAPValueList.__mul__
-.. automethod:: LDAPValueList.append
-.. automethod:: LDAPValueList.extend
-.. automethod:: LDAPValueList.insert
-.. automethod:: LDAPValueList.remove
-.. automethod:: LDAPValueList.pop
+.. autoclass:: LDAPValueList(items)
+.. automethod:: LDAPValueList.__contains__(item)
+.. automethod:: LDAPValueList.__delitem__(idx)
+.. automethod:: LDAPValueList.__setitem__(idx, value)
+.. automethod:: LDAPValueList.__add__(other)
+.. automethod:: LDAPValueList.__iadd__(other)
+.. automethod:: LDAPValueList.__mul__(value)
+.. automethod:: LDAPValueList.append(item)
+.. automethod:: LDAPValueList.extend(items)
+.. automethod:: LDAPValueList.insert(idx, value)
+.. automethod:: LDAPValueList.remove(value)
+.. automethod:: LDAPValueList.pop(idx=-1)
 .. automethod:: LDAPValueList.clear
 .. automethod:: LDAPValueList.copy
 .. autoattribute:: LDAPValueList.status
@@ -436,7 +436,7 @@ Example for working with LDAPDN objects.
 :class:`LDIFReader`
 ===================
 
-.. autoclass:: LDIFReader
+.. autoclass:: LDIFReader(input_file, autoload=True, max_length=76)
 .. autoattribute:: LDIFReader.autoload
 .. autoattribute:: LDIFReader.input_file
 .. autoattribute:: LDIFReader.resource_handlers
@@ -444,10 +444,10 @@ Example for working with LDAPDN objects.
 :class:`LDIFWriter`
 ===================
 
-.. autoclass:: LDIFWriter
-.. automethod:: LDIFWriter.write_entry
-.. automethod:: LDIFWriter.write_entries
-.. automethod:: LDIFWriter.write_changes
+.. autoclass:: LDIFWriter(output_file, max_length=76)
+.. automethod:: LDIFWriter.write_entry(entry)
+.. automethod:: LDIFWriter.write_entries(entries, write_version=True)
+.. automethod:: LDIFWriter.write_changes(entry)
 .. autoattribute:: LDIFWriter.output_file
 
 :class:`ldapsearchiter`
@@ -484,26 +484,26 @@ Errors
 .. autoclass:: bonsai.TimeoutError
 .. autoclass:: bonsai.TypeOrValueExists
 .. autoclass:: bonsai.UnwillingToPerform
-.. autoclass:: bonsai.PasswordPolicyError
-.. autoclass:: bonsai.AccountLocked
-.. autoclass:: bonsai.ChangeAfterReset
-.. autoclass:: bonsai.InsufficientPasswordQuality
-.. autoclass:: bonsai.MustSupplyOldPassword
-.. autoclass:: bonsai.PasswordExpired
-.. autoclass:: bonsai.PasswordInHistory
-.. autoclass:: bonsai.PasswordModNotAllowed
-.. autoclass:: bonsai.PasswordTooShort
-.. autoclass:: bonsai.PasswordTooYoung
+.. autoclass:: bonsai.PasswordPolicyError()
+.. autoclass:: bonsai.AccountLocked()
+.. autoclass:: bonsai.ChangeAfterReset()
+.. autoclass:: bonsai.InsufficientPasswordQuality()
+.. autoclass:: bonsai.MustSupplyOldPassword()
+.. autoclass:: bonsai.PasswordExpired()
+.. autoclass:: bonsai.PasswordInHistory()
+.. autoclass:: bonsai.PasswordModNotAllowed()
+.. autoclass:: bonsai.PasswordTooShort()
+.. autoclass:: bonsai.PasswordTooYoung()
 
 Utility functions
 =================
-.. autofunction:: bonsai.utils.escape_attribute_value
+.. autofunction:: bonsai.utils.escape_attribute_value(attrval)
 
     >>> import bonsai
     >>> bonsai.escape_attribute_value(",cn=escaped")
     '\\,cn\\=escaped'
 
-.. autofunction:: bonsai.utils.escape_filter
+.. autofunction:: bonsai.utils.escape_filter(fltstr)
 
     >>> import bonsai
     >>> bonsai.escape_filter("(objectclass=*)")

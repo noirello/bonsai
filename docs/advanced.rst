@@ -117,7 +117,7 @@ are all provided:
     >>> client.connect().whoami()
     'dn:cn=admin,dc=bonsai,dc=test'
 
-It is also possible to use a Kerberos keytabs when the module is built with Kerberos support:
+It is also possible to use Kerberos keytabs when the module is built with Kerberos support:
     
     >>> client.set_credentials("GSSAPI", user="chuck", realm="BONSAI.TEST", keytab="./user.keytab")
     >>> client.connect().whoami()
@@ -376,7 +376,7 @@ An example for asynchronous search and modify with `asyncio`:
 
 .. _official documentation: https://docs.python.org/3/library/asyncio.html
 
-.. code-block:: python
+.. code-block:: python3
     
     import asyncio
     import bonsai

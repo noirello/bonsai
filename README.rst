@@ -73,7 +73,7 @@ Simple search and modify:
 
 Using with asyncio (on Python 3.5 or newer):
 
-.. code:: python
+.. code:: python3
 
         import asyncio
         import bonsai
