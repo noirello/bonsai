@@ -58,7 +58,7 @@ are considered as weak security protocols, but still popular ones. An example of
     >>> client.connect().whoami()
     "dn:cn=user,dc=bonsai,dc=test"
 
-The credentials consist of a username and a password, just like for the simple authenticaton.
+The credentials consist of a username and a password, just like for the simple authentication.
 When using DIGEST-MD5 you can also use an authorization ID during the bind to perform operation
 under the authority of a different identity afterwards, if the necessary rights are granted for you.
 NTLM does not support this functionality.
@@ -95,7 +95,7 @@ The acquired TGT can be listed with `klist`::
 After successfully acquire a TGT, the module can used it for authenticating:
 
     >>> import bonsai
-    >>> client = bonsai.LDAPClient()
+    >>> client = bonsai.LDAPClient("ldap://bonsai.test")
     >>> client.set_credentials("GSSAPI")
     >>> client.connect().whoami()
     'dn:cn=admin,dc=bonsai,dc=test'
@@ -104,7 +104,7 @@ In normal case the passed credentials with the exception of the authorization ID
 -- at least on a Unix system, the underlying SASL library figures it out on its own. The
 module's client can only interfere with the authorization ID:
 
-    >>> client.set_credentials("GSSAPI", autz_id="u:chuck")
+    >>> client.set_credentials("GSSAPI", authz_id="u:chuck")
     >>> client.connect().whoami()
     'dn:cn=chuck,ou=nerdherd,dc=bonsai,dc=test'
 
@@ -112,10 +112,16 @@ But on a Windows system (by default) or if Bonsai is built with the optional Ker
 it is possible to requesting a TGT with the module's client if username, password and realm name
 are all provided:
 
-    >>> client = bonsai.LDAPClient()
+    >>> client = bonsai.LDAPClient("ldap://bonsai.test")
     >>> client.set_credentials("GSSAPI", "admin", "secret", "BONSAI.TEST")
     >>> client.connect().whoami()
     'dn:cn=admin,dc=bonsai,dc=test'
+
+It is also possible to use a Kerberos keytabs when the module is built with Kerberos support:
+    
+    >>> client.set_credentials("GSSAPI", user="chuck", realm="BONSAI.TEST", keytab="./user.keytab")
+    >>> client.connect().whoami()
+    'dn:cn=chuck,ou=nerdherd,dc=bonsai,dc=test'
 
 Please note that the Kerberos realm names are typically uppercase with few exceptions.
 
@@ -222,10 +228,11 @@ Paged search result
 -------------------
 
 Paged search can be used to reduce large search result into smaller pages. Page result can be used
-if the `page_size` is set for the :meth:`LDAPConnection.search` method:
+with the :meth:`LDAPConnection.paged_search` method and teh size of teh page can be set with the
+`page_size` parameter:
     
     >>> conn = client.connect()
-    >>> conn.search("ou=nerdherd,dc=bonsai,dc=test", 2, page_size=3)
+    >>> conn.paged_search("ou=nerdherd,dc=bonsai,dc=test", 2, page_size=3)
     <_bonsai.ldapsearchiter object at 0x7f006ad455d0>
 
 Please note that the return value is changed from list to :class:`ldapsearchiter`. This object can
@@ -233,8 +240,6 @@ be iterated over the entries of the page. By default the next page of results is
 during the iteration. This behaviour can be changed by setting the :attr:`LDAPClient.auto_page_acquire`
 to `False` and using the :meth:`ldapsearchiter.acquire_next_page` method which explicitly initiates
 a new search request to get the next page.
-
-Paged search result cannot be used with virtual list view.
 
 .. note::
     The OID of paged search control is: 1.2.840.113556.1.4.319.
@@ -247,21 +252,22 @@ Virtual list view mimics the scrolling view of an application: it can select a t
 large list (ordered search result) with an offset or an attribute value and receiving only a
 given number of entries before and after it as a partial result of the entire search.
 
-The :meth:`LDAPConnection.search` method's `offset` or `attrvalue` can be used to select the
-target, the `before_count` and `after_count` for specifying the number of entries before and after
+The :meth:`LDAPConnection.virtual_list_search` method's `offset` or `attrvalue` can be used to select
+the target, the `before_count` and `after_count` for specifying the number of entries before and after
 the target.
 
 Also need to set the `est_list_count` parameter: the estimated size of the entire list by the
 client. The server will adjust the position of the target entry based on the real list size,
 estimated size and the offset.  
 
-Virtual list view control cannot be used without a server side sort control. 
+Virtual list view control cannot be used without a server side sort control thus a sort order
+always has to be set.
 
-    >>> conn.search("ou=nerdherd,dc=bonsai,dc=test", 2, attrlist=['cn', 'uidNumber'], sort_order=['-uidNumber'], offset=4, before_count=1, after_count=1, est_list_count=6)
+    >>> conn.virtual_list_search("ou=nerdherd,dc=bonsai,dc=test", 2, attrlist=['cn', 'uidNumber'], sort_order=['-uidNumber'], offset=4, before_count=1, after_count=1, est_list_count=6)
     ([{'cn': ['sam'], 'uidNumber': [4]}, {'cn': ['skip'], 'uidNumber': [3]}, {'cn': ['jeff'],
     'uidNumber': [2]}], {'target_position': 4, 'oid': '2.16.840.1.113730.3.4.10', 'list_count': 7})
 
-The return value of the search is a tuple of the list and a dictionary. The dictionary contains
+The return value of the search is a tuple of a list and a dictionary. The dictionary contains
 the VLV server response: the target position and the real list size.
 
 .. note::
@@ -293,7 +299,7 @@ can also receive new exceptions related to password modifications.
     {'grace': 1, 'expire': 3612, 'oid': '1.3.6.1.4.1.42.2.27.8.5.1'})
 
 If the server does not support password policy control or the given credentials does not have
-policies (like anonym or administrator user) the second item in the tuple will be `None`.
+policies (like anonymous or administrator user) the second item in the tuple will be `None`.
 
 .. note::
     Because the password policy is not standardized, it is not listed by the server among
@@ -332,7 +338,7 @@ Server tree delete
 ------------------
 
 Server tree delete control allows the client to remove entire subtree with a single request if
-the user has appropriate permissions to remove every corresponding entries. Setting the `recursive` 
+the user has appropriate permissions to remove every corresponding entry. Setting the `recursive` 
 parameter of :meth:`LDAPConnection.delete` and :meth:`LDAPEntry.delete` to `True` will send 
 the control with the delete request automatically, no further settings are required.
 
@@ -375,17 +381,16 @@ An example for asynchronous search and modify with `asyncio`:
     import asyncio
     import bonsai
 
-    @asyncio.coroutine
-    def do():
+    async def do():
         cli = bonsai.LDAPClient("ldap://localhost")
-        with (yield from cli.connect(is_async=True)) as conn:
-            results = yield from conn.search("ou=nerdherd,dc=bonsai,dc=test", 1)
+        async with cli.connect(is_async=True) as conn:
+            results = await conn.search("ou=nerdherd,dc=bonsai,dc=test", 1)
             for res in results:
                 print(res['givenName'][0])
-            search = yield from conn.search("cn=chuck,ou=nerdherd,dc=bonsai,dc=test", 0)
+            search = await conn.search("cn=chuck,ou=nerdherd,dc=bonsai,dc=test", 0)
             entry = search[0]
             entry['mail'] = "chuck@nerdherd.com"
-            yield from entry.modify()
+            await entry.modify()
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(do())
@@ -419,4 +424,4 @@ For example using the module with Gevent:
     gevent.joinall([gevent.spawn(do)])
 
 .. _Gevent: http://www.gevent.org/
-.. _Tornado: http://www.tornadoweb.org/en/stable/  
+.. _Tornado: http://www.tornadoweb.org/en/stable/

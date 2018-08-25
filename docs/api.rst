@@ -228,6 +228,10 @@ API documentation
     `after_count` and `before_count`. The `est_list_count` is an estimation of the entire searched
     list that helps to the server to position the target entry.
 
+    The result of the operation is a tuple of a list and a dictionary. The dictionary contains
+    the VLV server response: the target position and the real list size. Thi list contains the
+    searched entries.
+
     For further details using these controls please see :ref:`ldap-controls`.
 
     :param str base: the base DN of the search.

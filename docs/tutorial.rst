@@ -96,7 +96,7 @@ then call :meth:`LDAPConnection.add` to add to the server:
     >>> conn.add(anna)
     True
     
-It's important, that we must set the schemas and every other attributes, that the schemas require.
+It's important, that we must set the schemas and every other attribute, that the schemas require.
 If we miss a required attribute, the server will not finish the operation and return with an
 :class:`bonsai.ObjectClassViolation` error.
 
