@@ -321,9 +321,8 @@ Example for working with LDAPDN objects.
 .. automethod:: LDAPEntry.change_attribute(name, optype, *values)
 
 .. note::
-    You cannot override previously made changes with :meth:`LDAPEntry.change_attribute`
-    therefore it is possible to create an inconsistent state that the server will reject.
-    To get a clean state use :meth:`LDAPEntry.clear_attribute_changes`.
+    It is possible to create an inconsistent state that the server will reject. To
+    get a clean state use :meth:`LDAPEntry.clear_attribute_changes`.
 
 .. automethod:: LDAPEntry.clear
 .. automethod:: LDAPEntry.clear_attribute_changes(name)
