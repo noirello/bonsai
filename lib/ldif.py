@@ -12,6 +12,7 @@ from .errors import LDAPError
 
 
 class LDIFError(LDAPError):
+    """ General exception that is raised during reading or writing an LDIF file. """
     code = -300
 
 

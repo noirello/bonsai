@@ -319,6 +319,12 @@ Example for working with LDAPDN objects.
 .. class:: LDAPEntry(dn[, conn])
 
 .. automethod:: LDAPEntry.change_attribute(name, optype, *values)
+
+.. note::
+    You cannot override previously made changes with :meth:`LDAPEntry.change_attribute`
+    therefore it is possible to create an inconsistent state that the server will reject.
+    To get a clean state use :meth:`LDAPEntry.clear_attribute_changes`.
+
 .. automethod:: LDAPEntry.clear
 .. automethod:: LDAPEntry.clear_attribute_changes(name)
 .. automethod:: LDAPEntry.delete(timeout=None, recursive=False)
@@ -437,6 +443,18 @@ Example for working with LDAPDN objects.
 ===================
 
 .. autoclass:: LDIFReader(input_file, autoload=True, max_length=76)
+
+Example of reading an LDIF file:
+
+.. code-block:: python
+
+    import bonsai
+
+    with open("./users.ldif") as fileobj:
+        reader = bonsai.LDIFReader(fileobj)
+        for entry in reader:
+            print(entry.dn)
+
 .. autoattribute:: LDIFReader.autoload
 .. autoattribute:: LDIFReader.input_file
 .. autoattribute:: LDIFReader.resource_handlers
@@ -446,7 +464,23 @@ Example for working with LDAPDN objects.
 
 .. autoclass:: LDIFWriter(output_file, max_length=76)
 .. automethod:: LDIFWriter.write_entry(entry)
+
+   >>> import bonsai
+   >>> output = open("./out.ldif", "w")
+   >>> writer = bonsai.LDIFWriter(output)
+   >>> entry = bonsai.LDAPEntry("cn=test")
+   >>> entry["cn"] = "test"
+   >>> writer.write_entry(entry)
+
 .. automethod:: LDIFWriter.write_entries(entries, write_version=True)
+
+   >>> client = bonsai.LDAPClient()
+   >>> conn = client.connect()
+   >>> res = conn.search("ou=nerdherd,dc=bonsai,dc=test", bonsai.LDAPSearchScope.ONE)
+   >>> output = open("./out.ldif", "w")
+   >>> writer = bonsai.LDIFWriter(output)
+   >>> writer.write_entries(res)
+
 .. automethod:: LDIFWriter.write_changes(entry)
 .. autoattribute:: LDIFWriter.output_file
 
@@ -466,6 +500,7 @@ Helper class for paged search result.
 Errors
 ======
 .. autoclass:: bonsai.LDAPError
+.. autoclass:: bonsai.LDIFError
 .. autoclass:: bonsai.AffectsMultipleDSA
 .. autoclass:: bonsai.AlreadyExists
 .. autoclass:: bonsai.AuthenticationError

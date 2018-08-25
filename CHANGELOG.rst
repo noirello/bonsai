@@ -35,6 +35,8 @@ Fixed
 -  Several reference counting errors that caused memory leaks. (Issue #19)
 -  Escaping brackets in LDAPURL's regular expressions. (Issue #22)
 -  Missing ManageDsaIT control during LDAPConnection's delete.
+-  Honouring timeout settings for network connections, but only on
+   Linux with newer OpenLDAP than 2.4.43. (Issue #21)
 -  Typo in documentation (Thanks to @magnuswatn).
 
 [0.9.1] - 2017-12-03
