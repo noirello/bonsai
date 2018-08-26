@@ -1,6 +1,6 @@
 Changelog
 ==========
-[1.0.0] - 2018-08-26
+[1.0.0] - 2018-08-27
 --------------------
 
 Changed
@@ -10,6 +10,7 @@ Changed
    LDAPConnection: search, paged_search and virtual_list_search.
 -  LDAPClient's set_credentials method uses optional named parameters instead
    of tuples.
+-  LDAPClient's credentials property returns a dict instead of a tuple.
 -  The representation of LDAPEntry honours the last call of its
    change_attribute method better than previously.
 -  Drop Heimdal support for advanced Kerberos capabilities (at least

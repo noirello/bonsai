@@ -10,7 +10,7 @@ from bonsai import LDAPClient
 from bonsai import LDAPURL
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def host_url():
     """ Set host url for connection. """
     curdir = os.path.abspath(os.path.dirname(__file__))

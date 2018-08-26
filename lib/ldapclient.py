@@ -400,7 +400,7 @@ class LDAPClient:
 
     @property
     def credentials(self) -> Optional[Dict[str, Optional[str]]]:
-        """ A tuple with the credential information. It cannot be set. """
+        """ A dict with the credential information. It cannot be set. """
         return self.__credentials
 
     @credentials.setter
