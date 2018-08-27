@@ -48,7 +48,10 @@ class LDAPEntry(ldapentry):
         """
         res = self.connection.delete(self.dn, timeout, recursive)
         for value in self.values():
-            value.status = 2
+            try:
+                value.status = 2
+            except AttributeError:
+                continue  # Skip DN.
         return res
 
     def modify(self, timeout: Optional[float] = None) -> Any:
@@ -105,7 +108,10 @@ class LDAPEntry(ldapentry):
         """ Remove all items from the dictionary. """
         keys = list(self.keys())
         for key in keys:
-            del self[key]
+            try:
+                del self[key]
+            except TypeError:
+                continue  # Skip DN.
 
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -149,7 +155,9 @@ class LDAPEntry(ldapentry):
         pair as a 2-tuple; but raise KeyError if LDAPEntry is empty.
         """
         try:
-            key = list(self.keys()).pop(0)
+            keylist = LDAPValueList(self.keys())
+            keylist.remove("dn")
+            key = keylist.pop(0)
             value = self[key]
             del self[key]
             return (key, value)
@@ -172,7 +180,10 @@ class LDAPEntry(ldapentry):
     def _status(self) -> Dict:
         status = {}
         for key, value in self.items():
-            status[key] = value._status_dict
+            try:
+                status[key] = value._status_dict
+            except AttributeError:
+                continue  # Skip DN
         status["@deleted_keys"] = self.deleted_keys
         return status
 

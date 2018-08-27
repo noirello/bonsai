@@ -93,6 +93,7 @@ LDAPModList *
 LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
     int status = -1;
     Py_ssize_t i;
+    char *strkey = NULL;
     PyObject *keys = PyMapping_Keys((PyObject *)self);
     PyObject *iter = NULL, *key = NULL;
     LDAPModList *mods = NULL;
@@ -115,6 +116,16 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
 
     DEBUG("LDAPEntry_CreateLDAPMods (self:%p)", self);
     for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
+        strkey = lowercase(PyObject2char(key));
+        if (strkey == NULL) goto error;
+
+        /* Skip DN key. */
+        if (strcmp(strkey, "dn") == 0) {
+            free(strkey);
+            continue;
+        }
+        free(strkey);
+
         /* Return value: Borrowed reference. */
         value = LDAPEntry_GetItem(self, key);
         if (value == NULL) goto error;
@@ -767,6 +778,11 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
             }
         }
     } else {
+        if (strcmp(newkey, "dn") == 0) {
+            free(newkey);
+            PyErr_SetString(PyExc_TypeError, "Cannot delete the DN key");
+            return -1;
+        }
         free(newkey);
         /* This means, the item has to be removed. */
         if (PyList_Append(self->deleted, cikey) != 0) {
@@ -897,6 +913,7 @@ LDAPEntry_SetDN(LDAPEntry *self, PyObject *value) {
 
     Py_DECREF(self->dn);
     self->dn = dn;
+    if (PyDict_SetItemString((PyObject *)self, "dn", dn) != 0) return -1;
 
     return 0;
 }

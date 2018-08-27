@@ -7,6 +7,7 @@ import pytest
 from bonsai import LDAPClient
 from bonsai import LDAPEntry
 from bonsai import LDAPModOp
+from bonsai import LDAPDN
 import bonsai.errors
 from bonsai.errors import InvalidDN
 
@@ -76,7 +77,7 @@ def test_set_get():
     """ Test LDAPEntry's SetItem, GetItem and get methods. """
     entry = LDAPEntry("cn=test")
     entry["sn"] = "Test"
-    assert entry == {"sn": ["Test"]}
+    assert entry == {"dn": LDAPDN("cn=test"), "sn": ["Test"]}
     entry["givenname"] = "Test"
     assert entry.get("None") is None
     assert entry.get("GivenName") == entry["givenNAME"]
@@ -135,7 +136,7 @@ def test_clear():
     entry["sn"] = ["test1", "test2"]
     entry["gn"] = ["test3"]
     entry.clear()
-    assert entry == {}
+    assert entry == {"dn": LDAPDN("cn=test")}
     assert entry.dn == "cn=test"
 
 
@@ -161,7 +162,7 @@ def test_equal():
     entry3 = LDAPEntry("cn=test1")
     assert entry1 == entry2
     assert not (entry1 == entry3)
-    assert entry1 == dict()
+    assert entry1 == {"dn": LDAPDN("cn=test")}
     assert not (entry1 == 2)
 
 
