@@ -143,15 +143,14 @@ def test_items():
     entry = LDAPEntry("cn=test")
     entry["cn"] = "test"
     entry["sn"] = "Test"
-    assert list(entry.items()) == [
-        ("dn", entry.dn),
-        ("cn", entry["cn"]),
-        ("sn", entry["sn"]),
-    ]
-    assert list(entry.items(exclude_dn=True)) == [
-        ("cn", entry["cn"]),
-        ("sn", entry["sn"]),
-    ]
+    assert len(entry.items()) == 3
+    assert ("dn", entry.dn) in entry.items()
+    assert ("cn", entry["cn"]) in entry.items()
+    assert ("sn", entry["sn"]) in entry.items()
+    assert len(list(entry.items(exclude_dn=True))) == 2
+    assert ("dn", entry.dn) not in entry.items(exclude_dn=True)
+    assert ("cn", entry["cn"]) in entry.items(exclude_dn=True)
+    assert ("sn", entry["sn"]) in entry.items(exclude_dn=True)
 
 
 def test_keys():
@@ -168,9 +167,14 @@ def test_values():
     entry = LDAPEntry("cn=test")
     entry["cn"] = "test"
     entry["sn"] = "Test"
-    assert list(entry.values()) == [entry.dn, entry["cn"], entry["sn"]]
+    assert len(entry.values()) == 3
+    assert entry.dn in entry.values()
+    assert entry["cn"] in entry.values()
+    assert entry["sn"] in entry.values()
+    assert len(list(entry.values(exclude_dn=True))) == 2
     assert entry.dn not in entry.values(exclude_dn=True)
-    assert list(entry.values(exclude_dn=True)) == [entry["cn"], entry["sn"]]
+    assert entry["cn"] in entry.values(exclude_dn=True)
+    assert entry["sn"] in entry.values(exclude_dn=True)
 
 
 def test_update():
