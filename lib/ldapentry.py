@@ -1,5 +1,16 @@
 from enum import IntEnum
-from typing import Union, TypeVar, Any, Tuple, Dict, Optional
+from typing import (
+    Union,
+    TypeVar,
+    Any,
+    Tuple,
+    Dict,
+    Optional,
+    KeysView,
+    ItemsView,
+    ValuesView,
+    Iterator,
+)
 
 from ._bonsai import ldapentry
 from .errors import InvalidDN
@@ -245,3 +256,49 @@ class LDAPEntry(ldapentry):
         lvl.deleted.clear()
         self[name] = lvl
         lvl.status = 0
+
+    def items(self, *, exclude_dn: bool = False) -> Union[ItemsView, Iterator]:
+        """
+        Same functionality as dict.items() but with an optional `exclude_dn`
+        keyword-only argument. When `exclude_dn` is True it returns a
+        generator of the LDAPEntry's key-value pairs without the dn key and value.
+
+        :param bool exclude_dn: exclude dn key from the list.
+        :return: sequence of key-value pairs.
+        :rtype: dict_items, generator
+        """
+        if exclude_dn:
+            return (item for item in super().items() if item[0] != "dn")
+        else:
+            return super().items()
+
+    def keys(self, *, exclude_dn: bool = False) -> Union[KeysView, Iterator]:
+        """
+        Same functionality as dict.keys() but with an optional `exclude_dn`
+        keyword-only argument. When `exclude_dn` is True it returns a
+        generator of the LDAPEntry's keys without the dn key.
+
+        :param bool exclude_dn: exclude dn key from the list.
+        :return: sequence of keys.
+        :rtype: dict_keys, generator
+        """
+        if exclude_dn:
+            return (key for key in super().keys() if key != "dn")
+        else:
+            return super().keys()
+
+    def values(self, *, exclude_dn: bool = False) -> Union[ValuesView, Iterator]:
+        """
+        Same functionality as dict.values() but with an optional `exclude_dn`
+        keyword-only argument. When `exclude_dn` is True it returns a
+        generator of the LDAPEntry's values without the value of the dn key.
+
+        :param bool exclude_dn: exclude dn key from the list.
+        :return: sequence of values.
+        :rtype: dict_values, generator
+        """
+        if exclude_dn:
+            return (item for item in super().values() if item is not self.dn)
+        else:
+            return super().values()
+

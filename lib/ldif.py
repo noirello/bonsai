@@ -268,7 +268,7 @@ class LDIFWriter:
         :param LDAPEntry entry: the LDAP entry to serialise.
         """
         self.__write_attribute("dn", (entry.dn,))
-        for attrname, attrvalue in entry.items():
+        for attrname, attrvalue in entry.items(exclude_dn=True):
             self.__write_attribute(attrname, attrvalue)
 
     def write_entries(

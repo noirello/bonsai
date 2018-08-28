@@ -327,10 +327,19 @@ Example for working with LDAPDN objects.
 .. automethod:: LDAPEntry.clear
 .. automethod:: LDAPEntry.clear_attribute_changes(name)
 .. automethod:: LDAPEntry.delete(timeout=None, recursive=False)
-.. automethod:: LDAPEntry.get(key, default)
+.. automethod:: LDAPEntry.get(key, default=None)
+.. automethod:: LDAPEntry.items(exclude_dn=False)
+.. automethod:: LDAPEntry.keys(exclude_dn=False)
+
+.. note::
+    Be aware when the `exclude_dn` argument of :meth:`LDAPEntry.items`, :meth:`LDAPEntry.keys`
+    or :meth:`LDAPEntry.values` is set to `True` you lose the benefits of `dict views`_ and
+    get a generator object that will be sensitive of adding and removing items to the entry.
+
 .. automethod:: LDAPEntry.modify(timeout=None)
 .. automethod:: LDAPEntry.rename(newdn, timeout=None, delete_old_rdn=True)
 .. automethod:: LDAPEntry.update(*args, **kwds)
+.. automethod:: LDAPEntry.values(exclude_dn=False)
 
 .. attribute:: LDAPEntry.connection
 
@@ -581,3 +590,5 @@ Utility functions
 
     :param bool debug: Enabling/disabling debug mode.
     :param int level: The debug level (for OpenLDAP only).
+
+.. _dict views: https://docs.python.org/3/library/stdtypes.html#dict-views

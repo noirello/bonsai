@@ -27,9 +27,7 @@ def client():
     url = "ldap://%s:%s" % (cfg["SERVER"]["hostip"], cfg["SERVER"]["port"])
     cli = LDAPClient(url)
     cli.set_credentials(
-        "SIMPLE",
-        user=cfg["SIMPLEAUTH"]["user"],
-        password=cfg["SIMPLEAUTH"]["password"]
+        "SIMPLE", user=cfg["SIMPLEAUTH"]["user"], password=cfg["SIMPLEAUTH"]["password"]
     )
     return cli
 
@@ -138,6 +136,41 @@ def test_clear():
     entry.clear()
     assert entry == {"dn": LDAPDN("cn=test")}
     assert entry.dn == "cn=test"
+
+
+def test_items():
+    """ Test LDAPEntry's items method. """
+    entry = LDAPEntry("cn=test")
+    entry["cn"] = "test"
+    entry["sn"] = "Test"
+    assert list(entry.items()) == [
+        ("dn", entry.dn),
+        ("cn", entry["cn"]),
+        ("sn", entry["sn"]),
+    ]
+    assert list(entry.items(exclude_dn=True)) == [
+        ("cn", entry["cn"]),
+        ("sn", entry["sn"]),
+    ]
+
+
+def test_keys():
+    """ Test LDAPEntry's keys method. """
+    entry = LDAPEntry("cn=test")
+    entry["cn"] = "test"
+    entry["sn"] = "Test"
+    assert set(entry.keys()) == set(["dn", "cn", "sn"])
+    assert set(entry.keys(exclude_dn=True)) == set(["cn", "sn"])
+
+
+def test_values():
+    """ Test LDAPEntry's values method. """
+    entry = LDAPEntry("cn=test")
+    entry["cn"] = "test"
+    entry["sn"] = "Test"
+    assert list(entry.values()) == [entry.dn, entry["cn"], entry["sn"]]
+    assert entry.dn not in entry.values(exclude_dn=True)
+    assert list(entry.values(exclude_dn=True)) == [entry["cn"], entry["sn"]]
 
 
 def test_update():
