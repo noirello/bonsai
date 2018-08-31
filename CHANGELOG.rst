@@ -8,6 +8,7 @@ Changed
 
 -  Separate basic search functionality to three different methods in
    LDAPConnection: search, paged_search and virtual_list_search.
+-  LDAPEntry's DN is listed among its attributes under the dn key.
 -  LDAPClient's set_credentials method uses optional named parameters instead
    of tuples.
 -  LDAPClient's credentials property returns a dict instead of a tuple.
@@ -26,6 +27,8 @@ Added
 -  Kerberos keytab support for set_credentials (Thanks to @Mirraz).
 -  Utils submodule with escape_filter and escape_attribute_value
    functions. (Issue #18)
+-  An exclude_dn keyword-only argument to LDAPEntry's keys, items and
+   values methods to exclude the dn key and value from the return values.
 -  Support for ldapi connection in LDAPURL and LDAPConnection.
 -  BaseLDAPConnection as a super class for all connection classes.
 -  Type annotations for several methods.
