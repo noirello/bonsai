@@ -1,6 +1,6 @@
 Changelog
 ==========
-[1.0.0] - 2018-08-27
+[1.0.0] - 2018-09-
 --------------------
 
 Changed
@@ -16,7 +16,7 @@ Changed
 -  Drop Heimdal support for advanced Kerberos capabilities (at least
    temporarily).
 -  The get_tls_impl_name, get_vendor_info, has_krb5_support, and set_debug
-   functions are moved to utils submodule.
+   functions are moved to the utils submodule.
 
 Added
 ~~~~~
