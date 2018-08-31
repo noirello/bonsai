@@ -1,138 +1,161 @@
-import configparser
-import os
-import unittest
-
+import bonsai.errors
+from bonsai import get_vendor_info
 from bonsai import LDAPClient
 from bonsai import LDAPEntry
-import bonsai.errors
+
+import pytest
+from conftest import get_config, network_delay
 
 try:
+    from gevent import socket
     from bonsai.gevent import GeventLDAPConnection
-    MOD_INSTALLED = True
 except ImportError:
-    MOD_INSTALLED = False
+    pass
+gevent = pytest.importorskip("gevent")
 
-@unittest.skipIf(not MOD_INSTALLED, "Gevent is not installed.")
-class GeventLDAPConnectionTest(unittest.TestCase):
-    """ Test GeventLDAPConnection object. """
-    @classmethod
-    def setUpClass(cls):
-        """ Set LDAP URL and open connection. """
-        curdir = os.path.abspath(os.path.dirname(__file__))
-        cls.cfg = configparser.ConfigParser()
-        cls.cfg.read(os.path.join(curdir, 'test.ini'))
-        cls.url = "ldap://%s:%s/%s?%s?%s" % (cls.cfg["SERVER"]["hostip"],
-                                             cls.cfg["SERVER"]["port"],
-                                             cls.cfg["SERVER"]["basedn"],
-                                             cls.cfg["SERVER"]["search_attr"],
-                                             cls.cfg["SERVER"]["search_scope"])
-        cls.basedn = cls.cfg["SERVER"]["basedn"]
-        cls.ipaddr = cls.cfg["SERVER"]["hostip"]
-        cls.client = LDAPClient(cls.url)
-        cls.client.set_credentials("SIMPLE",
-                                   user=cls.cfg["SIMPLEAUTH"]["user"],
-                                   password=cls.cfg["SIMPLEAUTH"]["password"])
-        cls.client.set_async_connection_class(GeventLDAPConnection)
 
-    def test_connection(self):
-        """ Test opening a connection. """
-        conn = self.client.connect(True)
-        self.assertIsNotNone(conn)
-        self.assertFalse(conn.closed)
+@pytest.fixture(scope="module")
+def gclient():
+    """ Get an LDAPClient with GeventLDAPConnection async class. """
+    cfg = get_config()
+    url = "ldap://%s:%s/%s?%s?%s" % (
+        cfg["SERVER"]["hostip"],
+        cfg["SERVER"]["port"],
+        cfg["SERVER"]["basedn"],
+        cfg["SERVER"]["search_attr"],
+        cfg["SERVER"]["search_scope"],
+    )
+    cli = LDAPClient(url)
+    cli.set_credentials(
+        "SIMPLE", user=cfg["SIMPLEAUTH"]["user"], password=cfg["SIMPLEAUTH"]["password"]
+    )
+    cli.set_async_connection_class(GeventLDAPConnection)
+    return cli
 
-    def test_search(self):
-        """ Test search. """
-        with self.client.connect(True) as conn:
-            res = conn.search()
-            self.assertIsNotNone(res)
 
-    def test_add_and_delete(self):
-        """ Test adding and deleting an LDAP entry. """
-        with self.client.connect(True) as conn:
-            entry = LDAPEntry("cn=async_test,%s" % self.basedn)
-            entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
-                                    'organizationalPerson']
-            entry['sn'] = "async_test"
-            try:
-                conn.add(entry)
-            except bonsai.errors.AlreadyExists:
-                conn.delete(entry.dn)
-                conn.add(entry)
-            except:
-                self.fail("Unexpected error.")
-            res = conn.search()
-            self.assertIn(entry, res)
-            entry.delete()
-            res = conn.search()
-            self.assertNotIn(entry, res)
+def test_connection(gclient):
+    """ Test opening a connection. """
+    conn = gclient.connect(True)
+    assert conn is not None
+    assert not conn.closed
 
-    def test_recursive_delete(self):
-        """ Test removing a subtree recursively. """
-        org1 = bonsai.LDAPEntry("ou=testusers,%s" % self.basedn)
-        org1.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "testusers"})
-        org2 = bonsai.LDAPEntry("ou=tops,ou=testusers,%s" % self.basedn)
-        org2.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "tops"})
-        entry = bonsai.LDAPEntry("cn=tester,ou=tops,ou=testusers,%s" % self.basedn)
-        entry.update({"objectclass" : ["top", "inetorgperson"], "cn" : "tester", "sn" : "example"})
+
+def test_search(gclient):
+    """ Test search. """
+    with gclient.connect(True) as conn:
+        res = conn.search()
+        assert res is not None
+
+
+def test_add_and_delete(gclient, basedn):
+    """ Test adding and deleting an LDAP entry. """
+    with gclient.connect(True) as conn:
+        entry = LDAPEntry("cn=async_test,%s" % basedn)
+        entry["objectclass"] = [
+            "top",
+            "inetOrgPerson",
+            "person",
+            "organizationalPerson",
+        ]
+        entry["sn"] = "async_test"
         try:
-            with self.client.connect(True) as conn:
-                conn.add(org1)
-                conn.add(org2)
-                conn.add(entry)
-                try:
-                    conn.delete(org1.dn)
-                except bonsai.LDAPError as exc:
-                    self.assertIsInstance(exc, bonsai.errors.NotAllowedOnNonleaf)
-                conn.delete(org1.dn, recursive=True)
-                res = conn.search(org1.dn, 2)
-                self.assertListEqual(res, [])
-        except bonsai.LDAPError as err:
-            self.fail("Recursive delete is failed: %s" % err)
-
-    def test_modify_and_rename(self):
-        """ Test modifying and renaming LDAP entry. """
-        with self.client.connect(True) as conn:
-            entry = LDAPEntry("cn=async_test,%s" % self.basedn)
-            entry['objectclass'] = ['top', 'inetOrgPerson', 'person',
-                                    'organizationalPerson']
-            entry['sn'] = "async_test"
-            oldname = "cn=async_test,%s" % self.basedn
-            newname = "cn=async_test2,%s" % self.basedn
-            res = conn.search(newname, 0)
-            if res:
-                res[0].delete()
-            try:
-                conn.add(entry)
-            except bonsai.errors.AlreadyExists:
-                conn.delete(entry.dn)
-                conn.add(entry)
-            except:
-                self.fail("Unexpected error.")
-            entry['sn'] = "async_test2"
-            entry.modify()
-            entry.rename(newname)
-            res = conn.search(entry.dn, 0, attrlist=['sn'])
-            self.assertEqual(entry['sn'], res[0]['sn'])
-            res = conn.search(oldname, 0)
-            self.assertEqual(res, [])
+            conn.add(entry)
+        except bonsai.errors.AlreadyExists:
             conn.delete(entry.dn)
+            conn.add(entry)
+        except:
+            pytest.fail("Unexpected error.")
+        res = conn.search()
+        assert entry in res
+        entry.delete()
+        res = conn.search()
+        assert entry not in res
 
-    def test_obj_err(self):
-        """ Test object class violation error. """
-        entry = LDAPEntry("cn=async_test,%s" % self.basedn)
-        entry['cn'] = ['async_test']
-        def err():
-            with self.client.connect(True) as conn:
-                conn.add(entry)
-        self.assertRaises(bonsai.errors.ObjectClassViolation, err)
 
-    def test_whoami(self):
-        """ Test whoami. """
-        with self.client.connect(True) as conn:
-            obj = conn.whoami()
-            expected_res = ["dn:%s" % self.cfg["SIMPLEAUTH"]["user"],
-                            self.cfg["SIMPLEAUTH"]["adusername"]]
-            self.assertIn(obj, expected_res)
+def test_recursive_delete(gclient, basedn):
+    """ Test removing a subtree recursively. """
+    org1 = bonsai.LDAPEntry("ou=testusers,%s" % basedn)
+    org1.update({"objectclass": ["organizationalUnit", "top"], "ou": "testusers"})
+    org2 = bonsai.LDAPEntry("ou=tops,ou=testusers,%s" % basedn)
+    org2.update({"objectclass": ["organizationalUnit", "top"], "ou": "tops"})
+    entry = bonsai.LDAPEntry("cn=tester,ou=tops,ou=testusers,%s" % basedn)
+    entry.update(
+        {"objectclass": ["top", "inetorgperson"], "cn": "tester", "sn": "example"}
+    )
+    try:
+        with gclient.connect(True) as conn:
+            conn.add(org1)
+            conn.add(org2)
+            conn.add(entry)
+            with pytest.raises(bonsai.errors.NotAllowedOnNonleaf):
+                conn.delete(org1.dn)
+            conn.delete(org1.dn, recursive=True)
+            res = conn.search(org1.dn, 2)
+            assert res == []
+    except bonsai.LDAPError as err:
+        pytest.fail("Recursive delete is failed: %s" % err)
 
-if __name__ == '__main__':
-    unittest.main()
+
+def test_modify_and_rename(gclient, basedn):
+    """ Test modifying and renaming LDAP entry. """
+    with gclient.connect(True) as conn:
+        entry = LDAPEntry("cn=async_test,%s" % basedn)
+        entry["objectclass"] = [
+            "top",
+            "inetOrgPerson",
+            "person",
+            "organizationalPerson",
+        ]
+        entry["sn"] = "async_test"
+        oldname = "cn=async_test,%s" % basedn
+        newname = "cn=async_test2,%s" % basedn
+        res = conn.search(newname, 0)
+        if res:
+            res[0].delete()
+        try:
+            conn.add(entry)
+        except bonsai.errors.AlreadyExists:
+            conn.delete(entry.dn)
+            conn.add(entry)
+        except:
+            pytest.fail("Unexpected error.")
+        entry["sn"] = "async_test2"
+        entry.modify()
+        entry.rename(newname)
+        res = conn.search(entry.dn, 0, attrlist=["sn"])
+        assert entry["sn"] == res[0]["sn"]
+        res = conn.search(oldname, 0)
+        assert res == []
+        conn.delete(entry.dn)
+
+
+def test_obj_err(gclient, basedn):
+    """ Test object class violation error. """
+    entry = LDAPEntry("cn=async_test,%s" % basedn)
+    entry["cn"] = ["async_test"]
+    with pytest.raises(bonsai.errors.ObjectClassViolation):
+        with gclient.connect(True) as conn:
+            conn.add(entry)
+
+
+def test_whoami(gclient):
+    """ Test whoami. """
+    with gclient.connect(True) as conn:
+        cfg = get_config()
+        obj = conn.whoami()
+        expected_res = [
+            "dn:%s" % cfg["SIMPLEAUTH"]["user"],
+            cfg["SIMPLEAUTH"]["adusername"],
+        ]
+        assert obj in expected_res
+
+
+@pytest.mark.skipif(
+    get_vendor_info()[1] < 20445,
+    reason="No async timeout support"
+)
+def test_connection_timeout(gclient):
+    """ Test connection timeout. """
+    with network_delay(6.0):
+        with pytest.raises(socket.timeout):
+            gclient.connect(True, timeout=5.0)

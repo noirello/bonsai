@@ -1,4 +1,3 @@
-import configparser
 import os.path
 import sys
 
@@ -12,35 +11,9 @@ import bonsai.errors
 from bonsai.errors import InvalidDN
 
 
-def get_config():
-    """ Load config parameters. """
-    curdir = os.path.abspath(os.path.dirname(__file__))
-    cfg = configparser.ConfigParser()
-    cfg.read(os.path.join(curdir, "test.ini"))
-    return cfg
-
-
-@pytest.fixture(scope="module")
-def client():
-    """ Set LDAP client. """
-    cfg = get_config()
-    url = "ldap://%s:%s" % (cfg["SERVER"]["hostip"], cfg["SERVER"]["port"])
-    cli = LDAPClient(url)
-    cli.set_credentials(
-        "SIMPLE", user=cfg["SIMPLEAUTH"]["user"], password=cfg["SIMPLEAUTH"]["password"]
-    )
-    return cli
-
-
-@pytest.fixture(scope="module")
-def basedn():
-    """ Get base DN. """
-    cfg = get_config()
-    return cfg["SERVER"]["basedn"]
-
-
 @pytest.fixture
 def test_entry():
+    """ Create a test LDAP entry. """
     gconn = None
     entry = None
 

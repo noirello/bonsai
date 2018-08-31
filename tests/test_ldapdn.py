@@ -8,6 +8,7 @@ VALID_STRDN = "cn=user,dc=test,dc=local"
 
 @pytest.fixture
 def dnobj():
+    """ Get a LDAPDN object with valid DN. """
     return LDAPDN(VALID_STRDN)
 
 

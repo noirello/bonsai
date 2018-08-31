@@ -7,6 +7,7 @@ from bonsai.errors import InvalidDN
 
 @pytest.fixture
 def valid_ldapurl():
+    """ Get a valid LDAPURL. """
     strurl = "ldaps://testurl:444/cn=test,dc=test?sn,gn?base?(objectclass=*)?1.2.3.4"
     return LDAPURL(strurl)
 

@@ -1,12 +1,9 @@
 import asyncio
-import configparser
-import os
-import time
 import sys
-from contextlib import contextmanager
 from functools import wraps
 
 import pytest
+from conftest import get_config, network_delay
 
 from bonsai import LDAPClient
 from bonsai import LDAPEntry
@@ -22,54 +19,6 @@ def asyncio_test(func):
         loop.run_until_complete(future)
 
     return wrapper
-
-
-@contextmanager
-def network_delay(delay):
-    import xmlrpc.client as rpc
-
-    ipaddr = get_config()["SERVER"]["hostip"]
-    proxy = rpc.ServerProxy("http://%s:%d/" % (ipaddr, 8000))
-    proxy.set_delay(delay)
-    time.sleep(2.0)
-    try:
-        yield proxy
-    finally:
-        proxy.remove_delay()
-
-
-def get_config():
-    """ Load config parameters. """
-    curdir = os.path.abspath(os.path.dirname(__file__))
-    cfg = configparser.ConfigParser()
-    cfg.read(os.path.join(curdir, "test.ini"))
-    return cfg
-
-
-@pytest.fixture(scope="module")
-def client():
-    """ Set LDAP client. """
-    cfg = get_config()
-    url = "ldap://%s:%s/%s?%s?%s" % (
-        cfg["SERVER"]["hostip"],
-        cfg["SERVER"]["port"],
-        cfg["SERVER"]["basedn"],
-        cfg["SERVER"]["search_attr"],
-        cfg["SERVER"]["search_scope"],
-    )
-    cli = LDAPClient(url)
-    cli.set_credentials(
-        "SIMPLE", user=cfg["SIMPLEAUTH"]["user"], password=cfg["SIMPLEAUTH"]["password"]
-    )
-    return cli
-
-
-@pytest.fixture(scope="module")
-def basedn():
-    """ Get base DN. """
-    cfg = get_config()
-    return cfg["SERVER"]["basedn"]
-
 
 @asyncio_test
 def test_connection(client):
