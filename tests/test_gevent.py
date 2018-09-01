@@ -1,3 +1,4 @@
+import sys
 import bonsai.errors
 from bonsai import get_vendor_info
 from bonsai import LDAPClient
@@ -151,7 +152,7 @@ def test_whoami(gclient):
 
 
 @pytest.mark.skipif(
-    get_vendor_info()[1] < 20445,
+    get_vendor_info()[1] < 20445 or sys.platform != "linux",
     reason="No async timeout support"
 )
 def test_connection_timeout(gclient):
