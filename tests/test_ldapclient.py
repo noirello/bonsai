@@ -109,7 +109,7 @@ def test_connection_timeout(client):
         _ = client.connect(timeout=0)
     with network_delay(9.0):
         with pytest.raises(bonsai.TimeoutError):
-            client.connect(timeout=7.0)
+            client.connect(timeout=5.0)
 
 
 def test_ppolicy(url):
@@ -220,7 +220,7 @@ def test_tls_timeout(url):
     client.set_ca_cert_dir(None)
     with network_delay(9.0):
         with pytest.raises(bonsai.TimeoutError):
-            client.connect(timeout=7.0)
+            client.connect(timeout=5.0)
 
 
 @pytest.mark.skipif(sys.platform.startswith("win"), reason="No IPC support on Windows")

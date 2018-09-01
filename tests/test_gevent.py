@@ -153,8 +153,9 @@ def test_whoami(gclient):
 
 @pytest.mark.skipif(
     get_vendor_info()[1] < 20445 or sys.platform != "linux",
-    reason="No async timeout support"
+    reason="No async timeout support",
 )
+@pytest.mark.timeout(18)
 def test_connection_timeout(gclient):
     """ Test connection timeout. """
     with network_delay(6.0):

@@ -20,6 +20,7 @@ def asyncio_test(func):
 
     return wrapper
 
+
 @asyncio_test
 def test_connection(client):
     """ Test opening a connection. """
@@ -144,6 +145,7 @@ def test_whoami(client):
         assert obj in expected_res
 
 
+@pytest.mark.timeout(18)
 @asyncio_test
 def test_connection_timeout(client):
     """ Test connection timeout. """
@@ -152,6 +154,7 @@ def test_connection_timeout(client):
             yield from client.connect(True, timeout=8.0)
 
 
+@pytest.mark.timeout(18)
 @asyncio_test
 def test_search_timeout(client):
     """ Test search timeout. """
