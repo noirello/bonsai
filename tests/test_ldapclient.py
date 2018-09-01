@@ -1,251 +1,230 @@
-import configparser
-import os.path
-import unittest
-import time
-import xmlrpc.client as rpc
 import sys
+
+import pytest
+from conftest import get_config, network_delay
 
 import bonsai
 from bonsai import LDAPClient
 from bonsai.ldapconnection import LDAPConnection
 
-def receive_timeout_error(client):
-    """ Function for connection TimeoutError. """
-    client.connect(timeout=7.0)
 
-class LDAPClientTest(unittest.TestCase):
-    """ Testing LDAPClient object. """
-    @classmethod
-    def setUpClass(cls):
-        """ Set host url and connection. """
-        curdir = os.path.abspath(os.path.dirname(__file__))
-        cfg = configparser.ConfigParser()
-        cfg.read(os.path.join(curdir, 'test.ini'))
-        cls.ipaddr = cfg["SERVER"]["hostip"]
-        cls.url = "ldap://%s:%s" % (cls.ipaddr, cfg["SERVER"]["port"])
-        cls.client = LDAPClient(cls.url)
-        cls.has_tls = cfg['SERVER']['has_tls'] != 'False'
-        proxy = rpc.ServerProxy("http://%s:%d/" % (cls.ipaddr, 8000))
-        proxy.remove_delay()
+@pytest.fixture(scope="module")
+def url():
+    """ Get an LDAPClient with simple authentication. """
+    cfg = get_config()
+    url = "ldap://%s:%s" % (cfg["SERVER"]["hostip"], cfg["SERVER"]["port"])
+    return bonsai.LDAPURL(url)
 
-    def test_ldapurl(self):
-        """ Test setting LDAPURL. """
-        url = bonsai.LDAPURL(self.url)
-        client = LDAPClient(url)
-        self.assertEqual(client.url, url)
-        self.assertRaises(TypeError, lambda: LDAPClient(None))
-        client.url = "ldap://localhost"
-        self.assertEqual(client.url, "ldap://localhost")
 
-    def test_connect(self):
-        """ Test connect method. """
-        self.assertIsNotNone(self.client.connect())
+def test_ldapurl(url):
+    """ Test setting LDAPURL. """
+    cli = LDAPClient(url)
+    assert cli.url == url
+    with pytest.raises(TypeError):
+        _ = LDAPClient(None)
+    cli.url = "ldap://localhost"
+    assert cli.url == "ldap://localhost"
 
-    def test_rootdse(self):
-        """ Test receiving root DSE. """
-        root_dse = self.client.get_rootDSE()
-        self.assertEqual(root_dse['supportedLDAPVersion'][0], 3)
 
-    def test_raw_attributes(self):
-        """ Test setting raw attributes to keep in bytearray format. """
-        def type_err():
-            self.client.set_raw_attributes([5])
-        def value_err():
-            self.client.raw_attributes = ['ou', 'cn', 'ou']
-        self.assertRaises(TypeError, type_err)
-        self.assertRaises(ValueError, value_err)
-        self.client.set_raw_attributes(["ou"])
-        conn = self.client.connect()
-        result = conn.search("ou=nerdherd,dc=bonsai,dc=test", 0)[0]
-        if type(result["ou"][0]) != bytes:
-            self.fail("The type of the value is not bytes.")
-        if type(result["objectClass"][0]) == bytes:
-            self.fail("Not set attribute is bytes.")
+def test_connect(client):
+    """ Test connect method. """
+    assert client.connect() is not None
 
-    def test_set_credentials(self):
-        """
-        Test set_credentials method, mechanism and credentials properties.
-        """
-        self.assertRaises(TypeError,
-                          lambda: self.client.set_credentials(2323, user=None))
-        self.assertRaises(TypeError, lambda: self.client
-                          .set_credentials("Simple", "Name", 2, None, None))
-        self.client.set_credentials("SIMPLE", "cn=admin", "password")
-        self.assertEqual(self.client.mechanism, "SIMPLE")
-        self.assertEqual(self.client.credentials, {"user": "cn=admin",
-                                                   "password": "password",
-                                                   "realm": None,
-                                                   "authz_id": None,
-                                                   "keytab": None})
-        self.client.set_credentials("EXTERNAL", authz_id="authzid")
-        self.assertEqual(self.client.credentials["authz_id"], "authzid")
 
-    def test_vendor_info(self):
-        """ Test vendor information. """
-        info = bonsai.get_vendor_info()
-        if len(info) != 2:
-            self.fail()
-        self.assertIsInstance(info[0], str)
-        self.assertIsInstance(info[1], int)
+def test_rootdse(client):
+    """ Test receiving root DSE. """
+    root_dse = client.get_rootDSE()
+    assert root_dse["supportedLDAPVersion"][0] == 3
 
-    def test_tls_impl_name(self):
-        """ Test TLS implementation name. """
-        tls_impl = bonsai.get_tls_impl_name()
-        self.assertIn(tls_impl, ("GnuTLS", "MozNSS", "OpenSSL", "SChannel"))
 
-    def test_debug(self):
-        """ Test setting debug mode. """
-        import sys
-        import subprocess
-        code = "import bonsai; bonsai.set_debug(True); bonsai.LDAPClient('ldap://a.com').connect()"
-        try:
-            output = subprocess.check_output([sys.executable, "-c", code], universal_newlines=True)
-        except subprocess.CalledProcessError as exc:
-            output = exc.output
-        self.assertIn("DBG: ldapconnection_new ", output)
+def test_raw_attributes(client):
+    """ Test setting raw attributes to keep in bytearray format. """
+    with pytest.raises(TypeError):
+        client.set_raw_attributes([5])
+    with pytest.raises(ValueError):
+        client.raw_attributes = ["ou", "cn", "ou"]
+    client.set_raw_attributes(["ou"])
+    conn = client.connect()
+    result = conn.search("ou=nerdherd,dc=bonsai,dc=test", 0)[0]
+    assert isinstance(result["ou"][0], bytes)
+    assert not isinstance(result["objectClass"][0], bytes)
 
-    def test_connection_timeout(self):
-        """
-        Test connection timeout. Runs in a separate process,
-        because that can be easily polled and terminated.
-        """
-        import multiprocessing
-        self.assertRaises(TypeError, lambda: self.client.connect(timeout="Wrong"))
-        self.assertRaises(ValueError, lambda: self.client.connect(timeout=-1.5))
-        self.assertRaises(bonsai.TimeoutError, lambda: self.client.connect(timeout=0))
-        proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
-        proxy.set_delay(9.0, 15)
-        time.sleep(3.0)
-        pool = multiprocessing.Pool(processes=1)
-        try:
-            result = pool.apply_async(receive_timeout_error, args=(self.client,))
-            result.get(timeout=18.0)
-        except Exception as exc:
-            self.assertIsInstance(exc, bonsai.TimeoutError)
-        else:
-            self.fail("Failed to receive TimeoutError.")
-        finally:
-            pool.terminate()
-            proxy.remove_delay()
 
-    def test_ppolicy(self):
-        """ Test password policy setting. """
-        client = LDAPClient(self.url)
-        self.assertRaises(TypeError, lambda: client.set_password_policy("F"))
-        client.password_policy = True
-        client.set_credentials("SIMPLE", "cn=chuck,ou=nerdherd,dc=bonsai,dc=test",
-                               "p@ssword")
-        ret_val = client.connect()
-        self.assertIsInstance(ret_val, tuple)
-        self.assertIsInstance(ret_val[0], LDAPConnection)
-        if ret_val[1] is None:
-            pass
-        elif type(ret_val[1]) == dict:
-            self.assertIn("oid", ret_val[1].keys())
-            self.assertIn("expire", ret_val[1].keys())
-            self.assertIn("grace", ret_val[1].keys())
-            self.assertEqual('1.3.6.1.4.1.42.2.27.8.5.1', ret_val[1]['oid'])
-        else:
-            self.fail("Invalid second object in the tuple.")
-        ret_val[0].close()
+def test_set_credentials(url):
+    """ Test set_credentials method, mechanism and credentials properties. """
+    client = LDAPClient(url)
+    with pytest.raises(TypeError):
+        client.set_credentials(2323, user=None)
+    with pytest.raises(TypeError):
+        client.set_credentials("Simple", "Name", 2, None, None)
+    client.set_credentials("SIMPLE", "cn=admin", "password")
+    assert client.mechanism == "SIMPLE"
+    assert client.credentials == {
+        "user": "cn=admin",
+        "password": "password",
+        "realm": None,
+        "authz_id": None,
+        "keytab": None,
+    }
+    client.set_credentials("EXTERNAL", authz_id="authzid")
+    assert client.credentials["authz_id"] == "authzid"
 
-    def test_extended_dn(self):
-        """ Test extended dn control. """
-        client = LDAPClient(self.url)
-        self.assertRaises(TypeError, lambda: client.set_extended_dn("A"))
-        self.assertRaises(ValueError, lambda: client.set_extended_dn(2))
-        client.extended_dn_format = 0
-        self.assertEqual(client.extended_dn_format, 0)
+
+def test_vendor_info():
+    """ Test vendor information. """
+    info = bonsai.get_vendor_info()
+    assert len(info) == 2
+    assert isinstance(info[0], str)
+    assert isinstance(info[1], int)
+
+
+def test_tls_impl_name():
+    """ Test TLS implementation name. """
+    tls_impl = bonsai.get_tls_impl_name()
+    assert tls_impl in ("GnuTLS", "MozNSS", "OpenSSL", "SChannel")
+
+
+def test_debug():
+    """ Test setting debug mode. """
+    import subprocess
+
+    code = "import bonsai; bonsai.set_debug(True); bonsai.LDAPClient('ldap://a.com').connect()"
+    try:
+        output = subprocess.check_output(
+            [sys.executable, "-c", code], universal_newlines=True
+        )
+    except subprocess.CalledProcessError as exc:
+        output = exc.output
+    assert "DBG: ldapconnection_new " in output
+
+
+@pytest.mark.timeout(18)
+def test_connection_timeout(client):
+    """ Test connection timeout. """
+    with pytest.raises(TypeError):
+        _ = client.connect(timeout="Wrong")
+    with pytest.raises(ValueError):
+        _ = client.connect(timeout=-1.5)
+    with pytest.raises(bonsai.TimeoutError):
+        _ = client.connect(timeout=0)
+    with network_delay(9.0):
+        with pytest.raises(bonsai.TimeoutError):
+            client.connect(timeout=7.0)
+
+
+def test_ppolicy(url):
+    """ Test password policy setting. """
+    client = LDAPClient(url)
+    with pytest.raises(TypeError):
+        client.set_password_policy("F")
+    client.password_policy = True
+    client.set_credentials(
+        "SIMPLE", "cn=chuck,ou=nerdherd,dc=bonsai,dc=test", "p@ssword"
+    )
+    ret_val = client.connect()
+    assert isinstance(ret_val, tuple)
+    assert isinstance(ret_val[0], LDAPConnection)
+    if ret_val[1] is None:
+        pass  # Password policy is not supported.
+    elif isinstance(ret_val[1], dict):
+        assert "oid" in ret_val[1].keys()
+        assert "expire" in ret_val[1].keys()
+        assert "grace" in ret_val[1].keys()
+        assert "1.3.6.1.4.1.42.2.27.8.5.1" == ret_val[1]["oid"]
+    else:
+        pytest.fail("Invalid second object in the tuple.")
+    ret_val[0].close()
+
+
+def test_extended_dn(url):
+    """ Test extended dn control. """
+    client = LDAPClient(url)
+    with pytest.raises(TypeError):
+        client.set_extended_dn("A")
+    with pytest.raises(ValueError):
+        client.set_extended_dn(2)
+    client.extended_dn_format = 0
+    assert client.extended_dn_format == 0
+    conn = client.connect()
+    root_dse = client.get_rootDSE()
+    result = conn.search("ou=nerdherd,dc=bonsai,dc=test", 0)[0]
+    if "1.2.840.113556.1.4.529" in root_dse["supportedControl"]:
+        assert result.extended_dn is not None
+        assert result.extended_dn.split(";")[-1] == str(result.dn)
+    else:
+        assert result.extended_dn is None
+
+
+def test_readonly_attributes(client):
+    """ Test read-only attributes of LDAPClient. """
+    with pytest.raises(ValueError):
+        client.mechanism = "SIMPLE"
+    with pytest.raises(ValueError):
+        client.credentials = {"user": "test", "password": "test"}
+    with pytest.raises(ValueError):
+        client.tls = False
+
+
+def test_auto_acquire_prop(client):
+    """ Test auto_page_acquire property. """
+    with pytest.raises(TypeError):
+        client.set_auto_page_acquire("A")
+    assert client.auto_page_acquire
+    client.auto_page_acquire = False
+    assert not client.auto_page_acquire
+
+
+def test_server_chase_referrals(client):
+    """ Test server_chase_referrals property. """
+    with pytest.raises(TypeError):
+        client.set_server_chase_referrals(2)
+    assert client.server_chase_referrals
+    client.server_chase_referrals = False
+    assert not client.server_chase_referrals
+
+
+def test_managedsait(client):
+    """ Test managedsait property. """
+    with pytest.raises(TypeError):
+        client.set_managedsait("B")
+    assert not client.managedsait
+    client.managedsait = True
+    assert client.managedsait
+
+
+@pytest.mark.skipif(
+    get_config()["SERVER"]["has_tls"] == "False", reason="TLS is not set"
+)
+def test_tls(url):
+    """ Test TLS connection. """
+    client = LDAPClient(url, True)
+    client.set_cert_policy("ALLOW")
+    client.set_ca_cert(None)
+    client.set_ca_cert_dir(None)
+    try:
         conn = client.connect()
-        root_dse = client.get_rootDSE()
-        result = conn.search("ou=nerdherd,dc=bonsai,dc=test", 0)[0]
-        if '1.2.840.113556.1.4.529' in root_dse['supportedControl']:
-            self.assertIsNotNone(result.extended_dn)
-            self.assertEqual(result.extended_dn.split(';')[-1], str(result.dn))
-        else:
-            self.assertIsNone(result.extended_dn)
+        conn.close()
+    except Exception as exc:
+        pytest.fail("TLS connection is failed with: %s" % str(exc))
 
-    def test_readonly_attributes(self):
-        """ Test read-only attributes of LDAPClient. """
-        def set_mechanism():
-            self.client.mechanism = "SIMPLE"
-        self.assertRaises(ValueError, set_mechanism)
-        def set_credentials():
-            self.client.credentials = {"user": "test", "password": "test"}
-        self.assertRaises(ValueError, set_credentials)
-        def set_tls():
-            self.client.tls = False
-        self.assertRaises(ValueError, set_tls)
 
-    def test_auto_acquire_prop(self):
-        """ Test auto_page_acquire property. """
-        client = LDAPClient(self.url)
-        self.assertRaises(TypeError, lambda: client.set_auto_page_acquire("A"))
-        self.assertTrue(client.auto_page_acquire)
-        client.auto_page_acquire = False
-        self.assertFalse(client.auto_page_acquire)
+@pytest.mark.skipif(
+    get_config()["SERVER"]["has_tls"] == "False", reason="TLS is not set"
+)
+@pytest.mark.timeout(18)
+def test_tls_timeout(url):
+    """ Test TLS connection timeout. """
+    client = LDAPClient(url, True)
+    client.set_cert_policy("ALLOW")
+    client.set_ca_cert(None)
+    client.set_ca_cert_dir(None)
+    with network_delay(9.0):
+        with pytest.raises(bonsai.TimeoutError):
+            client.connect(timeout=7.0)
 
-    def test_server_chase_referrals(self):
-        """ Test server_chase_referrals property. """
-        client = LDAPClient(self.url)
-        self.assertRaises(TypeError,
-                          lambda: client.set_server_chase_referrals(2))
-        self.assertTrue(client.server_chase_referrals)
-        client.server_chase_referrals = False
-        self.assertFalse(client.server_chase_referrals)
 
-    def test_managedsait(self):
-        """ Test managedsait property. """
-        client = LDAPClient(self.url)
-        self.assertRaises(TypeError,
-                          lambda: client.set_managedsait("B"))
-        self.assertFalse(client.managedsait)
-        client.managedsait = True
-        self.assertTrue(client.managedsait)
-
-    def test_tls(self):
-        """ Test TLS connection. """
-        if not self.has_tls:
-            self.skipTest("TLS is not set.")
-        client = LDAPClient(self.url, True)
-        client.set_cert_policy("ALLOW")
-        client.set_ca_cert(None)
-        client.set_ca_cert_dir(None)
-        try:
-            conn = client.connect()
-            conn.close()
-        except Exception as exc:
-            self.fail("TLS connection is failed with: %s" % str(exc))
-
-    def test_tls_timeout(self):
-        """ Test TLS connection timeout. """
-        if not self.has_tls:
-            self.skipTest("TLS is not set.")
-        import multiprocessing
-        client = LDAPClient(self.url, True)
-        client.set_cert_policy("ALLOW")
-        client.set_ca_cert(None)
-        client.set_ca_cert_dir(None)
-        proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
-        proxy.set_delay(9.0, 15)
-        time.sleep(2.0)
-        pool = multiprocessing.Pool(processes=1)
-        try:
-            result = pool.apply_async(receive_timeout_error, args=(client,))
-            result.get(timeout=18.0)
-        except Exception as exc:
-            self.assertIsInstance(exc, bonsai.TimeoutError)
-        else:
-            self.fail("Failed to receive TimeoutError.")
-        finally:
-            pool.terminate()
-            proxy.remove_delay()
-
-    @unittest.skipIf(sys.platform.startswith("win"), "No IPC support on Windows")
-    def test_ldapi(self):
-        """ Test making connection via IPC. """
-        client = LDAPClient("ldapi://%2Ftmp%2Fbonsai%2Fldapi")
-        self.assertIsNotNone(client.connect())
-
-if __name__ == '__main__':
-    unittest.main()
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="No IPC support on Windows")
+def test_ldapi():
+    """ Test making connection via IPC. """
+    client = LDAPClient("ldapi://%2Ftmp%2Fbonsai%2Fldapi")
+    assert client.connect() is not None
