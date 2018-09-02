@@ -187,7 +187,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             with network_delay(7.0):
                 with pytest.raises(gen.TimeoutError):
-                    yield conn.search(timeout=4.0)
+                    yield conn.search(timeout=3.0)
 
     @pytest.mark.skipif(
         sys.version_info.minor < 5,
