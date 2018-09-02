@@ -1,11 +1,11 @@
-import configparser
 import os
 import sys
-import unittest
 import subprocess
 import tempfile
 import time
-import xmlrpc.client as rpc
+
+import pytest
+from conftest import get_config, network_delay
 
 import bonsai
 from bonsai import LDAPDN
@@ -16,6 +16,7 @@ import bonsai.errors
 from bonsai.errors import ClosedConnection
 from bonsai.ldapconnection import BaseLDAPConnection
 
+
 class SimpleAsyncConn(BaseLDAPConnection):
     def __init__(self, client):
         super().__init__(client, True)
@@ -23,700 +24,740 @@ class SimpleAsyncConn(BaseLDAPConnection):
     def _evaluate(self, msg_id, timeout=None):
         return msg_id
 
-def invoke_kinit(user, password):
-    """ Invoke kinit command with credential parameters. """
-    proc = subprocess.Popen(['kinit', '--version'], stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, universal_newlines=True)
-    output = " ".join(proc.communicate())
-    if "Heimdal" in output:
-        # Heimdal Kerberos implementation.
-        with tempfile.NamedTemporaryFile() as psw_tmp:
-            psw_tmp.write(password.encode())
-            psw_tmp.flush()
-            cmd = ['kinit', '--password-file=%s' % psw_tmp.name, user]
-            subprocess.check_call(cmd)
-    else:
-        # MIT Kerberos implementation.
-        cmd = 'echo "%s" | kinit %s' % (password, user)
-        subprocess.check_output(cmd, shell=True)
 
-def receive_search_timeout(client, ipaddr, search_dn):
-    """ Set network delay and wait for a TimeoutError during search. """
-    conn = client.connect()
-    proxy = rpc.ServerProxy("http://%s:%d/" % (ipaddr, 8000))
-    proxy.set_delay(6.1)
-    time.sleep(3.0)
-    return conn.search(search_dn, 1, timeout=3.2)
+@pytest.fixture(scope="module")
+def cfg():
+    """ Get config. """
+    return get_config()
 
-def receive_whoami_timeout(client, ipaddr):
-    """ Set network delay and wait for a TimeoutError during whoami. """
-    conn = client.connect()
-    proxy = rpc.ServerProxy("http://%s:%d/" % (ipaddr, 8000))
-    proxy.set_delay(6.1)
-    time.sleep(3.0)
-    return conn.whoami(timeout=3.2)
 
-class LDAPConnectionTest(unittest.TestCase):
-    """ Test LDAPConnection object. """
-    def setUp(self):
-        """ Set LDAP URL and open connection. """
-        curdir = os.path.abspath(os.path.dirname(__file__))
-        self.cfg = configparser.ConfigParser()
-        self.cfg.read(os.path.join(curdir, 'test.ini'))
-        self.ipaddr = self.cfg["SERVER"]["hostip"]
-        self.url = "ldap://%s:%s/ou=nerdherd,%s?%s?%s" % \
-            (self.cfg["SERVER"]["hostip"], self.cfg["SERVER"]["port"],
-             self.cfg["SERVER"]["basedn"], self.cfg["SERVER"]["search_attr"],
-             self.cfg["SERVER"]["search_scope"])
-        self.host = "ldap://%s" % self.cfg['SERVER']['hostname']
-        self.basedn = self.cfg["SERVER"]["basedn"]
-        client = LDAPClient(self.url)
-        client.set_credentials("SIMPLE", user=self.cfg["SIMPLEAUTH"]["user"],
-                               password=self.cfg["SIMPLEAUTH"]["password"])
-        client.auto_page_acquire = False
-        self.conn = client.connect()
-        self.async_conn = SimpleAsyncConn(client)
+@pytest.fixture(scope="module")
+def ipaddr():
+    """ Get IP address. """
+    cfg = get_config()
+    return cfg["SERVER"]["hostip"]
 
-    def tearDown(self):
-        """ Close connection. """
-        self.conn.close()
-        del self.conn
 
-    def _binding(self, auth, mech, authzid, realm=None):
-        if auth not in self.cfg:
-            self.skipTest("%s authentication is not set." % mech)
-        client = LDAPClient(self.host)
-        client.set_credentials(mech, self.cfg[auth]["user"],
-                                     self.cfg[auth]["password"],
-                                     realm, authzid)
+@pytest.fixture(scope="module")
+def ktpath():
+    """ Get keytab file path. """
+    cfg = get_config()
+    proj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+    ktpath = os.path.abspath(os.path.join(proj_dir, cfg["GSSAPIAUTH"]["keytab"]))
+    return ktpath
+
+
+@pytest.fixture
+def binding():
+    """ Create a binding with the server. """
+
+    def _create_binding(auth, mech, authzid=None, realm=None):
+        cfg = get_config()
+        host = "ldap://%s" % cfg["SERVER"]["hostname"]
+        client = LDAPClient(host)
+        client.set_credentials(
+            mech, cfg[auth]["user"], cfg[auth]["password"], realm, authzid
+        )
+        return client.connect()
+
+    return _create_binding
+
+
+@pytest.fixture
+def kinit():
+    def _create_kinit(authzid=None):
         try:
-            conn = client.connect()
-        except (bonsai.errors.ConnectionError, \
-                bonsai.errors.AuthenticationError) as err:
-            self.fail(err)
-        else:
-            self.assertNotEqual("anonymous", conn.whoami(),
-                                "%s authentication was unsuccessful." % mech)
-            return conn
-
-    def test_bind_digest(self):
-        """ Test DIGEST-MD5 connection. """
-        conn = self._binding("DIGESTAUTH", "DIGEST-MD5", None)
-        conn.close()
-
-    def test_bind_digest_with_authzid(self):
-        """ Test DIGEST-MD5 connection with authorization ID. """
-        if self.cfg["DIGESTAUTH"]["authzid"] == "None":
-            self.skipTest("Authorization ID is not set.")
-        if sys.platform == "win32":
-            self.skipTest("Authz is not set on AD.")
-        authzid = self.cfg["DIGESTAUTH"]["authzid"]
-        with self._binding("DIGESTAUTH", "DIGEST-MD5", authzid) as conn:
-            self.assertEqual(self.cfg["DIGESTAUTH"]["dn"], conn.whoami(),
-                             "Digest authorization was failed. ")
-
-    @unittest.skipIf(sys.platform.startswith("win"),
-                     "NTLM is not enabled on Windows.")
-    def test_bind_ntlm(self):
-        """ Test NTLM connection. """
-        conn = self._binding("NTLMAUTH", "NTLM", None)
-        conn.close()
-
-    def test_bind_not_supported_auth(self):
-        """ Test not supported authentication mechanism by the server. """
-        connect = lambda: self._binding("DIGESTAUTH", "SCRAM-SHA-1", None)
-        self.assertRaises(bonsai.AuthMethodNotSupported, connect)
-
-    def _bind_gssapi_kinit(self, authzid):
-        if sys.platform == "win32" or sys.platform == "darwin":
-            self.skipTest("Kerberos kinit is available only on Linux.")
-        try:
-            invoke_kinit(self.cfg["GSSAPIAUTH"]["user"],
-                         self.cfg["GSSAPIAUTH"]["password"])
-            conn = self._binding("GSSAPIAUTH", "GSSAPI", authzid)
-            subprocess.call("kdestroy")
-            return conn
+            cfg = get_config()
+            user = cfg["GSSAPIAUTH"]["user"]
+            password = cfg["GSSAPIAUTH"]["password"]
+            proc = subprocess.Popen(
+                ["kinit", "--version"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            )
+            output = " ".join(proc.communicate())
+            if "Heimdal" in output:
+                # Heimdal Kerberos implementation.
+                with tempfile.NamedTemporaryFile() as psw_tmp:
+                    psw_tmp.write(password.encode())
+                    psw_tmp.flush()
+                    cmd = ["kinit", "--password-file=%s" % psw_tmp.name, user]
+                    subprocess.check_call(cmd)
+            else:
+                # MIT Kerberos implementation.
+                cmd = 'echo "%s" | kinit %s' % (password, user)
+                subprocess.check_output(cmd, shell=True)
+            host = "ldap://%s" % cfg["SERVER"]["hostname"]
+            client = LDAPClient(host)
+            client.set_credentials(
+                "GSSAPI",
+                cfg["GSSAPIAUTH"]["user"],
+                cfg["GSSAPIAUTH"]["password"],
+                None,
+                authzid,
+            )
+            return client.connect()
         except subprocess.CalledProcessError:
-            self.fail("Receiving TGT is failed.")
+            pytest.fail("Receiving TGT is failed.")
 
-    def test_bind_gssapi_kinit(self):
-        """ Test GSSAPI connection. """
-        self._bind_gssapi_kinit(None)
-
-    def test_bind_gssapi_with_authzid_kinit(self):
-        """ Test GSSAPI connection with authorization ID. """
-        if self.cfg["GSSAPIAUTH"]["authzid"] == "None":
-            self.skipTest("Authorization ID is not set.")
-        authzid = self.cfg["GSSAPIAUTH"]["authzid"]
-        conn = self._bind_gssapi_kinit(authzid)
-        self.assertEqual(self.cfg["GSSAPIAUTH"]["dn"], conn.whoami(),
-                         "GSSAPI authorization was failed. ")
-        conn.close()
-
-    @unittest.skipIf(not bonsai.has_krb5_support() or sys.platform == "darwin",
-                     "Module doesn't have KRB5 support.")
-    def test_bind_gssapi(self):
-        """ Test GSSAPI connection with automatic TGT requesting. """
-        if ("realm" not in self.cfg["GSSAPIAUTH"]
-                or self.cfg["GSSAPIAUTH"]["realm"] == "None"):
-            self.skipTest("Realm is not set.")
-        if sys.platform == "linux":
-            # Make sure keytab is empty.
-            subprocess.call("kdestroy")
-        conn = self._binding("GSSAPIAUTH", "GSSAPI", None,
-                             self.cfg["GSSAPIAUTH"]["realm"].upper())
-        conn.close()
-
-    def test_bind_gssapi_error(self):
-        """ Test automatic TGT requesting with wrong realm name. """
-        if "GSSAPIAUTH" not in self.cfg:
-            self.skipTest("GSSAPI authentication is not set.")
-        if not bonsai.has_krb5_support():
-            self.skipTest("Module doesn't have KRB5 support.")
-        if sys.platform == "darwin":
-            self.skipTest("Kerberos is not available on Mac.")
-        if ("realm" not in self.cfg["GSSAPIAUTH"]
-                or self.cfg["GSSAPIAUTH"]["realm"] == "None"):
-            self.skipTest("Realm is not set.")
-        client = LDAPClient(self.url)
-        client.set_credentials("GSSAPI", self.cfg["GSSAPIAUTH"]["user"],
-                                         self.cfg["GSSAPIAUTH"]["password"],
-                                         self.cfg["GSSAPIAUTH"]["realm"],
-                                         None)
-        self.assertRaises(bonsai.AuthenticationError, client.connect)
-
-    @unittest.skipIf(not bonsai.has_krb5_support() or sys.platform != "linux",
-                     "Keytab-based auth only available on linux.")
-    def test_bind_gssapi_keytab_error(self):
-        client = LDAPClient(self.url)
-        client.set_credentials("GSSAPI", user=self.cfg["GSSAPIAUTH"]["user"],
-                               realm=self.cfg["GSSAPIAUTH"]["realm"].upper(),
-                               keytab="invalid")
-        self.assertRaises(bonsai.AuthenticationError, client.connect)
-        proj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                os.pardir))
-        ktpath = os.path.abspath(os.path.join(proj_dir,
-                                              self.cfg["GSSAPIAUTH"]["keytab"]))
-        client.set_credentials("GSSAPI", user="invalid",
-                        realm=self.cfg["GSSAPIAUTH"]["realm"].upper(),
-                        keytab=ktpath)
-        self.assertRaises(bonsai.AuthenticationError, client.connect)
+    yield _create_kinit
+    subprocess.call("kdestroy")
 
 
-    @unittest.skipIf(not bonsai.has_krb5_support() or sys.platform != "linux",
-                     "Keytab-based auth only available on linux.")
-    def test_bind_gssapi_keytab(self):
-        proj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                os.pardir))
-        ktpath = os.path.abspath(os.path.join(proj_dir,
-                                              self.cfg["GSSAPIAUTH"]["keytab"]))
-        client = LDAPClient(self.url)
-        client.set_credentials("GSSAPI", user=self.cfg["GSSAPIAUTH"]["user"],
-                               realm=self.cfg["GSSAPIAUTH"]["realm"].upper(),
-                               keytab=ktpath)
-        conn = client.connect()
-        self.assertEqual(conn.whoami(), "dn:cn=chuck,ou=nerdherd,dc=bonsai,dc=test")
-        client.set_credentials("GSSAPI", user="admin",
-                               realm=self.cfg["GSSAPIAUTH"]["realm"].upper(),
-                               keytab=ktpath)
-        conn = client.connect()
-        self.assertEqual(conn.whoami(), "dn:cn=admin,dc=bonsai,dc=test")
+@pytest.fixture
+def external_binding():
+    """ Create a binding using external mechanism. """
 
-    @unittest.skipIf('TRAVIS' in os.environ, "No GSS-SPNEGO mech on Trusty")
-    def test_bind_spnego(self):
-        """ Test GSS-SPNEGO connection with automatic TGT requesting. """
-        if ("realm" not in self.cfg["GSSAPIAUTH"]
-                or self.cfg["GSSAPIAUTH"]["realm"] == "None"):
-            self.skipTest("Realm is not set.")
-        if sys.platform == "linux":
-            # Make sure keytab is empty.
-            subprocess.call("kdestroy")
-        conn = self._binding("GSSAPIAUTH", "GSS-SPNEGO", None,
-                             self.cfg["GSSAPIAUTH"]["realm"].upper())
-        conn.close()
-
-    def _bind_external(self, authzid):
-        if 'EXTERNALAUTH' not in self.cfg:
-            self.skipTest("EXTERNAL authentication is not set.")
-        if sys.platform == "win32":
-            self.skipTest("Windows relies on set certs in its cert store.")
+    def _create_external(authzid=None):
         tls_impl = bonsai.get_tls_impl_name()
         if tls_impl == "GnuTLS" or tls_impl == "OpenSSL":
+            cfg = get_config()
             curdir = os.path.abspath(os.path.dirname(__file__))
-            cert_path = os.path.join(curdir, 'testenv', 'certs')
-            cli = LDAPClient(self.host, tls=True)
-            cli.set_ca_cert(cert_path + '/cacert.pem')
-            cli.set_client_cert(cert_path + '/client.pem')
-            cli.set_client_key(cert_path + '/client.key')
-            cli.set_credentials('EXTERNAL', authz_id=authzid)
-            try:
-                conn = cli.connect()
-            except (bonsai.errors.ConnectionError,
-                    bonsai.errors.AuthenticationError):
-                self.fail()
-            else:
-                self.assertNotEqual("anonymous", conn.whoami(),
-                                    "EXTERNAL authentication was"
-                                    " unsuccessful.")
-                return conn
+            cert_path = os.path.join(curdir, "testenv", "certs")
+            host = "ldap://%s" % cfg["SERVER"]["hostname"]
+            cli = LDAPClient(host, tls=True)
+            cli.set_ca_cert(cert_path + "/cacert.pem")
+            cli.set_client_cert(cert_path + "/client.pem")
+            cli.set_client_key(cert_path + "/client.key")
+            cli.set_credentials("EXTERNAL", authz_id=authzid)
+            return cli.connect()
         else:
-            self.skipTest("")
+            pytest.skip("")
 
-    def test_bind_external(self):
-        """ Test EXTERNAL connection. """
-        conn = self._bind_external(None)
-        conn.close()
+    return _create_external
 
-    def test_bind_external_with_authzid(self):
-        """ Test EXTERNAL connection with authorization ID. """
-        if self.cfg["EXTERNALAUTH"]["authzid"] == "None":
-            self.skipTest("Authorization ID is not set.")
-        authzid = self.cfg["EXTERNALAUTH"]["authzid"]
-        with self._bind_external(authzid) as conn:
-            self.assertEqual(self.cfg["EXTERNALAUTH"]["dn"], conn.whoami(),
-                             "EXTERNAL authorization was failed. ")
 
-    def test_search(self):
-        """ Test searching. """
-        obj = self.conn.search("ou=nerdherd,%s" % self.basedn,
-                               LDAPSearchScope.SUB)
-        self.assertIsNotNone(obj)
-        self.assertCountEqual(obj, self.conn.search())
+def _generate_client(cfg):
+    url = "ldap://{host}:{port}/ou=nerdherd,{basedn}?{attr}?{scope}".format(
+        host=cfg["SERVER"]["hostip"],
+        port=cfg["SERVER"]["port"],
+        basedn=cfg["SERVER"]["basedn"],
+        attr=cfg["SERVER"]["search_attr"],
+        scope=cfg["SERVER"]["search_scope"],
+    )
+    client = LDAPClient(url)
+    client.set_credentials(
+        "SIMPLE", user=cfg["SIMPLEAUTH"]["user"], password=cfg["SIMPLEAUTH"]["password"]
+    )
+    client.auto_page_acquire = False
+    return client
 
-    def test_search_ldapdn(self):
-        """ Test searching with LDAPDN object. """
-        ldap_dn = LDAPDN(self.basedn)
-        obj = self.conn.search(ldap_dn, 1)
-        self.assertIsNotNone(obj)
 
-    def test_search_attr(self):
-        """ Test searching with given list of attributes. """
-        obj = self.conn.search(self.basedn, 2, "(objectclass=person)",
-                               ['cn'])[0]
-        self.assertIsNotNone(obj)
-        if 'cn' not in obj.keys():
-            self.fail()
+@pytest.fixture
+def conn():
+    """ Create a connection. """
+    cfg = get_config()
+    client = _generate_client(cfg)
+    return client.connect()
 
-    def test_search_attrsonly(self):
-        """ Test search receiving only attributes. """
-        obj = self.conn.search(self.basedn, 2, "(objectclass=person)",
-                               ['cn'], attrsonly=True)[0]
-        self.assertIsNotNone(obj)
-        self.assertListEqual(obj['cn'], [])
 
-    def test_add_and_delete(self):
-        """ Test adding and removing an LDAP entry. """
-        entry = bonsai.LDAPEntry("cn=example,%s" % self.basedn)
-        entry.update({"objectclass" : ["top", "inetorgperson"],
-                      "cn" : "example", "sn" : "example"})
-        try:
-            self.conn.add(entry)
-            res = self.conn.search(entry.dn, 0)
-            self.assertEqual(res[0], entry)
-            self.conn.delete("cn=example,%s" % self.cfg["SERVER"]["basedn"])
-            res = self.conn.search(entry.dn, 0)
-            self.assertListEqual(res, [])
-            self.assertRaises(ValueError,
-                              lambda: self.conn.add(bonsai.LDAPEntry("")))
-        except bonsai.LDAPError:
-            self.fail("Add and delete new entry is failed.")
+@pytest.fixture
+def async_conn():
+    cfg = get_config()
+    client = _generate_client(cfg)
+    return SimpleAsyncConn(client)
 
-    def test_recursive_delete(self):
-        """ Test removing a subtree recursively. """
-        org1 = bonsai.LDAPEntry("ou=testusers,%s" % self.basedn)
-        org1.update({"objectclass" : ['organizationalUnit', 'top'],
-                     "ou" : "testusers"})
-        org2 = bonsai.LDAPEntry("ou=tops,ou=testusers,%s" % self.basedn)
-        org2.update({"objectclass" : ['organizationalUnit', 'top'], "ou" : "tops"})
-        entry = bonsai.LDAPEntry("cn=tester,ou=tops,ou=testusers,%s" % self.basedn)
-        entry.update({"objectclass" : ["top", "inetorgperson"],
-                      "cn" : "tester", "sn" : "example"})
-        try:
-            self.conn.add(org1)
-            self.conn.add(org2)
-            self.conn.add(entry)
-            self.conn.delete(org1.dn, recursive=True)
-            res = self.conn.search(org1.dn, 2)
-            self.assertListEqual(res, [])
-        except bonsai.LDAPError:
-            self.fail("Recursive delete is failed.")
 
-    def test_whoami(self):
-        """ Test whoami. """
-        obj = self.conn.whoami()
-        expected_res = ["dn:%s" % self.cfg["SIMPLEAUTH"]["user"],
-                        self.cfg["SIMPLEAUTH"]["adusername"]]
-        self.assertIn(obj, expected_res)
+def test_bind_digest(binding):
+    """ Test DIGEST-MD5 connection. """
+    with binding("DIGESTAUTH", "DIGEST-MD5") as conn:
+        assert "anonymous" != conn.whoami()
 
-    def test_connection_error(self):
-        """ Test connection error. """
-        client = LDAPClient("ldap://invalid")
-        self.assertRaises(bonsai.ConnectionError, client.connect)
 
-    def test_simple_auth_error(self):
-        """ Test simple authentication error. """
-        client = LDAPClient(self.url)
-        client.set_credentials("SIMPLE", "cn=wrong", "wronger")
-        self.assertRaises(bonsai.AuthenticationError, client.connect)
+@pytest.mark.skipif(
+    sys.platform.startswith("win") or get_config()["DIGESTAUTH"]["authzid"] == "None",
+    reason="Authzid is not set",
+)
+def test_bind_digest_with_authzid(binding, cfg):
+    """ Test DIGEST-MD5 connection with authorization ID. """
+    authzid = cfg["DIGESTAUTH"]["authzid"]
+    with binding("DIGESTAUTH", "DIGEST-MD5", authzid) as conn:
+        assert cfg["DIGESTAUTH"]["dn"] == conn.whoami()
 
-    def test_digest_auth_error(self):
-        """ Test DIGEST-MD5 authentication error. """
-        if "DIGESTAUTH" not in self.cfg:
-            self.skipTest("No digest authentication is set.")
-        client = LDAPClient(self.url)
-        if self.cfg["DIGESTAUTH"]["realm"] == "None":
-            realm = None
-        else:
-            realm = self.cfg["DIGESTAUTH"]["realm"]
-        client.set_credentials("DIGEST-MD5", self.cfg["DIGESTAUTH"]["user"],
-                                             "wrongpassword",
-                                             realm, None)
-        self.assertRaises(bonsai.AuthenticationError, client.connect)
 
-    def test_sort_order(self):
-        """ Test setting sort order. """
-        obj = self.conn.search(self.basedn, 2, attrlist=['uidNumber'],
-                               sort_order=["-uidNumber"])
-        sort = [o['uidNumber'][0] for o in obj if 'uidNumber' in o]
-        self.assertTrue((all(sort[i] >= sort[i+1]
-                             for i in range(len(sort)-1))), "Not sorted")
+@pytest.mark.skipif(
+    sys.platform.startswith("win"), reason="NTLM is not enabled on Windows."
+)
+def test_bind_ntlm(binding):
+    """ Test NTLM connection. """
+    with binding("NTLMAUTH", "NTLM") as conn:
+        assert "anonymous" != conn.whoami()
 
-    def test_fileno(self):
-        """ Test fileno method. """
-        self.assertIsInstance(self.conn.fileno(), int)
-        try:
-            import socket
-            sock = socket.fromfd(self.conn.fileno(),
-                                 socket.AF_INET,
-                                 socket.SOCK_RAW)
-            self.assertEqual(sock.getpeername(),
-                             (self.cfg["SERVER"]["hostip"],
-                              int(self.cfg["SERVER"]["port"])))
-            sock.close()
-        except OSError:
-            self.fail("Not a valid socket descriptor.")
 
-    def test_close(self):
-        """ Test close method. """
-        self.conn.close()
-        self.assertTrue(self.conn.closed)
-        self.assertRaises(bonsai.ClosedConnection, self.conn.whoami)
+def test_bind_not_supported_auth(binding):
+    """ Test not supported authentication mechanism by the server. """
+    with pytest.raises(bonsai.AuthMethodNotSupported):
+        _ = binding("DIGESTAUTH", "SCRAM-SHA-1")
 
-    def test_abandon(self):
-        """ Test abandon method. """
-        msgid = self.async_conn.open()
-        while self.async_conn.get_result(msgid) is None:
-            pass
-        msgid = self.async_conn.search(self.basedn, 2)
-        self.async_conn.abandon(msgid)
-        self.assertRaises(bonsai.InvalidMessageID,
-                          lambda: self.async_conn.get_result(msgid))
 
-    def test_async_close_remove_pendig_ops(self):
-        """ Test remove pending operations after close. """
-        msgid = self.async_conn.open()
-        while self.async_conn.get_result(msgid) is None:
-            pass
-        self.async_conn.search(self.basedn, 2)
-        self.async_conn.search(self.basedn, 0)
-        self.async_conn.close()
-        self.assertTrue(self.async_conn.closed)
+@pytest.mark.skipif(sys.platform != "linux", reason="Kinit only available on Linux.")
+def test_bind_gssapi_kinit(kinit):
+    """ Test GSSAPI connection. """
+    with kinit() as conn:
+        assert "anonymous" != conn.whoami()
 
-    def test_vlv_offset(self):
-        """ Test VLV control with offset. """
-        search_dn = "ou=nerdherd,%s" % self.basedn
-        res, ctrl = self.conn.virtual_list_search(search_dn, 1, attrlist=['uidNumber'],
-                                     offset=2, sort_order=["-uidNumber"],
-                                     before_count=1, after_count=1,
-                                     est_list_count=6)
-        self.assertEqual(len(res), 3)
-        self.assertEqual(ctrl['target_position'], 2)
-        self.assertEqual(ctrl['list_count'], 6)
-        self.assertEqual(res[1]['uidNumber'][0], 4)
 
-    def test_vlv_attrvalue(self):
-        """ Test VLV control with attribute value. """
-        search_dn = "ou=nerdherd,%s" % self.basedn
-        res, ctrl = self.conn.virtual_list_search(search_dn, 1, attrlist=['uidNumber'],
-                                     attrvalue=2, sort_order=["uidNumber"],
-                                     before_count=1, after_count=2,
-                                     est_list_count=6)
-        self.assertEqual(len(res), 4)
-        self.assertEqual(ctrl['target_position'], 3)
-        self.assertEqual(res[0]['uidNumber'][0], 1)
+@pytest.mark.skipif(sys.platform != "linux", reason="Kinit only available on Linux.")
+def test_bind_gssapi_with_authzid_kinit(kinit, cfg):
+    """ Test GSSAPI connection with authorization ID. """
+    authzid = cfg["GSSAPIAUTH"]["authzid"]
+    with kinit(authzid) as conn:
+        assert cfg["GSSAPIAUTH"]["dn"] == conn.whoami()
 
-    def test_vlv_without_sort_order(self):
-        """ Test VLV control without sort control. """
-        search_dn = "ou=nerdherd,%s" % self.basedn
-        self.assertRaises(bonsai.UnwillingToPerform,
-                          lambda: self.conn.virtual_list_search(search_dn, 1,
-                                                   attrlist=['uidNumber'],
-                                                   offset=1, before_count=1,
-                                                   after_count=2,
-                                                   est_list_count=6))
 
-    def test_paged_search(self):
-        """ Test paged results control. """
-        search_dn = "ou=nerdherd,%s" % self.basedn
-        res = self.conn.paged_search(search_dn, 1, page_size=2)
-        for ent in res:
-            self.assertIsInstance(ent, bonsai.LDAPEntry)
-        page = 1  # First page is already acquired.
-        while True:
-            if len(res) > 2:
-                self.fail("The size of the page is greater than expected.")
-            msgid = res.acquire_next_page()
-            if msgid is None:
-                break
-            res = self.conn.get_result(msgid)
-            page += 1
-        self.assertEqual(page, 3)
+@pytest.mark.skipif(
+    not bonsai.has_krb5_support() or sys.platform == "darwin",
+    reason="Module doesn't have KRB5 support.",
+)
+def test_bind_gssapi(binding, cfg):
+    """ Test GSSAPI connection with automatic TGT requesting. """
+    with binding(
+        "GSSAPIAUTH", "GSSAPI", None, cfg["GSSAPIAUTH"]["realm"].upper()
+    ) as conn:
+        assert "anonymous" != conn.whoami()
 
-    def test_paged_search_with_auto_acq(self):
-        """ Test paged results control with automatic page acquiring. """
-        client = LDAPClient(self.url)
-        conn = client.connect()
-        search_dn = "ou=nerdherd,%s" % self.basedn
-        res = conn.paged_search(search_dn, 1, page_size=3)
-        if len(res) != 3:
-            self.fail("The size of the page is not what is expected.")
-        entry = 0
-        for ent in res:
-            self.assertIsInstance(ent, bonsai.LDAPEntry)
-            entry += 1
-        self.assertEqual(entry, 6)
-        self.assertIsNone(res.acquire_next_page())
 
-    def test_search_timeout(self):
-        """ Test search's timeout. """
-        search_dn = "ou=nerdherd,%s" % self.basedn
-        import multiprocessing
-        self.assertRaises(TypeError,
-                          lambda: self.conn.search(search_dn, 1, timeout=True))
-        self.assertRaises(ValueError,
-                          lambda: self.conn.search(search_dn, 1, timeout=-15))
-        proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
-        pool = multiprocessing.Pool(processes=1)
-        try:
-            client = LDAPClient(self.url)
-            result = pool.apply_async(receive_search_timeout,
-                                      args=(client, self.ipaddr, search_dn))
-            result.get(timeout=9.0)
-        except Exception as exc:
-            self.assertIsInstance(exc, bonsai.TimeoutError)
-        else:
-            self.fail("Failed to receive TimeoutError.")
-        finally:
-            pool.terminate()
-            proxy.remove_delay()
+@pytest.mark.skipif(
+    not bonsai.has_krb5_support() or sys.platform == "darwin",
+    reason="Module doesn't have KRB5 support.",
+)
+def test_bind_gssapi_error(cfg):
+    """ Test automatic TGT requesting with wrong realm name. """
+    client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])
+    client.set_credentials(
+        "GSSAPI",
+        cfg["GSSAPIAUTH"]["user"],
+        cfg["GSSAPIAUTH"]["password"],
+        cfg["GSSAPIAUTH"]["realm"],
+        None,
+    )
+    with pytest.raises(bonsai.AuthenticationError):
+        _ = client.connect()
 
-    def test_whoami_timeout(self):
-        """ Test whoami's timeout. """
-        import multiprocessing
-        self.assertRaises(TypeError,
-                          lambda: self.conn.whoami(timeout='A'))
-        self.assertRaises(ValueError,
-                          lambda: self.conn.whoami(timeout=-10))
-        self.assertRaises(bonsai.TimeoutError,
-                          lambda: self.conn.whoami(timeout=0))
-        proxy = rpc.ServerProxy("http://%s:%d/" % (self.ipaddr, 8000))
-        pool = multiprocessing.Pool(processes=1)
-        try:
-            client = LDAPClient(self.url)
-            result = pool.apply_async(receive_whoami_timeout,
-                                      args=(client, self.ipaddr))
-            result.get(timeout=9.0)
-        except Exception as exc:
-            self.assertIsInstance(exc, bonsai.TimeoutError)
-        else:
-            self.fail("Failed to receive TimeoutError.")
-        finally:
-            pool.terminate()
-            proxy.remove_delay()
 
-    def test_wrong_conn_param(self):
-        """ Test passing wrong parameters for LDAPConnection. """
-        self.assertRaises(TypeError, lambda: LDAPConnection("wrong"))
-        self.assertRaises(TypeError, lambda: LDAPConnection(1))
+@pytest.mark.skipif(
+    not bonsai.has_krb5_support() or sys.platform != "linux",
+    reason="Keytab-based auth only available on linux.",
+)
+def test_bind_gssapi_keytab_error(cfg, ktpath):
+    client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])
+    client.set_credentials(
+        "GSSAPI",
+        user=cfg["GSSAPIAUTH"]["user"],
+        realm=cfg["GSSAPIAUTH"]["realm"].upper(),
+        keytab="invalid",
+    )
+    with pytest.raises(bonsai.AuthenticationError):
+        _ = client.connect()
+    client.set_credentials(
+        "GSSAPI",
+        user="invalid",
+        realm=cfg["GSSAPIAUTH"]["realm"].upper(),
+        keytab=ktpath,
+    )
+    with pytest.raises(bonsai.AuthenticationError):
+        _ = client.connect()
 
-    def test_wrong_search_param(self):
-        """ Test passing wrong parameters for search method. """
-        def close_conn():
-            cli = LDAPClient("ldap://%s" % self.ipaddr)
-            LDAPConnection(cli).search()
-        def missing_scope():
-            cli = LDAPClient("ldap://%s" % self.ipaddr)
-            LDAPConnection(cli).open().search()
-        def wrong():
-            cli = LDAPClient("ldap://%s" % self.ipaddr)
-            LDAPConnection(cli).open().search("", 0, 3)
-        self.assertRaises(ClosedConnection, close_conn)
-        self.assertRaises(ValueError, missing_scope)
-        self.assertRaises(TypeError, wrong)
 
-    def test_wrong_add_param(self):
-        """ Test passing wrong parameter for add method. """
-        def close_conn():
-            cli = LDAPClient("ldap://%s" % self.ipaddr)
-            LDAPConnection(cli).add(bonsai.LDAPEntry("cn=dummy"))
-        self.assertRaises(ClosedConnection, close_conn)
-        self.assertRaises(TypeError, lambda: self.conn.add("wrong"))
+@pytest.mark.skipif(
+    not bonsai.has_krb5_support() or sys.platform != "linux",
+    reason="Keytab-based auth only available on linux.",
+)
+def test_bind_gssapi_keytab(cfg, ktpath):
+    client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])
+    client.set_credentials(
+        "GSSAPI",
+        user=cfg["GSSAPIAUTH"]["user"],
+        realm=cfg["GSSAPIAUTH"]["realm"].upper(),
+        keytab=ktpath,
+    )
+    conn = client.connect()
+    assert conn.whoami() == "dn:cn=chuck,ou=nerdherd,dc=bonsai,dc=test"
+    client.set_credentials(
+        "GSSAPI", user="admin", realm=cfg["GSSAPIAUTH"]["realm"].upper(), keytab=ktpath
+    )
+    conn = client.connect()
+    assert conn.whoami() == "dn:cn=admin,dc=bonsai,dc=test"
 
-    def test_wrong_delete_param(self):
-        """ Test passing wrong parameter for delete method. """
-        def close_conn():
-            cli = LDAPClient("ldap://%s" % self.ipaddr)
-            LDAPConnection(cli).delete("cn=dummy")
-        self.assertRaises(ClosedConnection, close_conn)
-        self.assertRaises(TypeError, lambda: self.conn.delete(0))
 
-    def test_password_lockout(self):
-        """ Test password locking with password policy. """
-        if sys.platform == "win32":
-            self.skipTest("Cannot use password policy on Windows")
-        user_dn = "cn=jeff,ou=nerdherd,dc=bonsai,dc=test"
-        cli = LDAPClient("ldap://%s" % self.ipaddr)
-        cli.set_password_policy(True)
-        try:
-            cli.set_credentials("SIMPLE", user_dn, "wrong_pass")
-            conn, ctrl = cli.connect()
-        except bonsai.errors.AuthenticationError:
-            try:
-                cli.set_credentials("SIMPLE", user_dn, "p@ssword")
-                conn, ctrl = cli.connect()
-            except Exception as exc:
-                self.assertIsInstance(exc, bonsai.errors.AccountLocked)
-            else:
-                self.fail("No exception.")
-        finally:
-            entry = self.conn.search(user_dn, 0,
-                                     attrlist=["pwdAccountLockedTime"])[0]
-            if "pwdAccountLockedTime" in entry.keys():
-                del entry['pwdAccountLockedTime']
-                entry.modify()
+@pytest.mark.skipif("TRAVIS" in os.environ, reason="No GSS-SPNEGO mech on Trusty")
+def test_bind_spnego(binding, cfg):
+    """ Test GSS-SPNEGO connection with automatic TGT requesting. """
+    with binding(
+        "GSSAPIAUTH", "GSS-SPNEGO", None, cfg["GSSAPIAUTH"]["realm"].upper()
+    ) as conn:
+        assert "anonymous" != conn.whoami()
 
-    @unittest.skipIf(sys.platform.startswith("win"),
-                     "Cannot use password policy on Windows")
-    def test_password_expire(self):
-        """ Test password expiring with password policy. """
-        user_dn = "cn=skip,ou=nerdherd,dc=bonsai,dc=test"
-        cli = LDAPClient("ldap://%s" % self.ipaddr)
-        cli.set_password_policy(True)
-        cli.set_credentials("SIMPLE", user_dn, "p@ssword")
-        conn, ctrl = cli.connect()
-        entry = conn.search(user_dn, 0)[0]
-        entry['userPassword'] = "newvalidpassword"
+
+def test_bind_external(external_binding):
+    """ Test EXTERNAL connection. """
+    with external_binding() as conn:
+        assert "anonymous" != conn.whoami()
+
+
+def test_bind_external_with_authzid(external_binding, cfg):
+    """ Test EXTERNAL connection with authorization ID. """
+    authzid = cfg["EXTERNALAUTH"]["authzid"]
+    with external_binding(authzid) as conn:
+        assert cfg["EXTERNALAUTH"]["dn"] == conn.whoami()
+
+
+def test_search(conn, basedn):
+    """ Test searching. """
+    res = conn.search("ou=nerdherd,%s" % basedn, LDAPSearchScope.SUB)
+    assert res is not None
+    assert len(res) == len(conn.search())
+
+
+def test_search_ldapdn(conn, basedn):
+    """ Test searching with LDAPDN object. """
+    ldap_dn = LDAPDN(basedn)
+    obj = conn.search(ldap_dn, 1)
+    assert obj is not None
+
+
+def test_search_attr(conn, basedn):
+    """ Test searching with given list of attributes. """
+    obj = conn.search(basedn, 2, "(objectclass=person)", ["cn"])[0]
+    assert obj is not None
+    assert "cn" in obj.keys()
+
+
+def test_search_attrsonly(conn, basedn):
+    """ Test search receiving only attributes. """
+    obj = conn.search(basedn, 2, "(objectclass=person)", ["cn"], attrsonly=True)[0]
+    assert obj is not None
+    assert obj["cn"] == []
+
+
+def test_add_and_delete(conn, basedn):
+    """ Test adding and removing an LDAP entry. """
+    entry = bonsai.LDAPEntry("cn=example,%s" % basedn)
+    entry.update(
+        {"objectclass": ["top", "inetorgperson"], "cn": "example", "sn": "example"}
+    )
+    try:
+        conn.add(entry)
+        res = conn.search(entry.dn, 0)
+        assert res[0] == entry
+        conn.delete("cn=example,%s" % basedn)
+        res = conn.search(entry.dn, 0)
+        assert res == []
+        with pytest.raises(ValueError):
+            conn.add(bonsai.LDAPEntry(""))
+    except bonsai.LDAPError:
+        pytest.fail("Add and delete new entry is failed.")
+
+
+def test_recursive_delete(conn, basedn):
+    """ Test removing a subtree recursively. """
+    org1 = bonsai.LDAPEntry("ou=testusers,%s" % basedn)
+    org1.update({"objectclass": ["organizationalUnit", "top"], "ou": "testusers"})
+    org2 = bonsai.LDAPEntry("ou=tops,ou=testusers,%s" % basedn)
+    org2.update({"objectclass": ["organizationalUnit", "top"], "ou": "tops"})
+    entry = bonsai.LDAPEntry("cn=tester,ou=tops,ou=testusers,%s" % basedn)
+    entry.update(
+        {"objectclass": ["top", "inetorgperson"], "cn": "tester", "sn": "example"}
+    )
+    try:
+        conn.add(org1)
+        conn.add(org2)
+        conn.add(entry)
+        conn.delete(org1.dn, recursive=True)
+        res = conn.search(org1.dn, 2)
+        assert res == []
+    except bonsai.LDAPError:
+        pytest.fail("Recursive delete is failed.")
+
+
+def test_whoami(conn, cfg):
+    """ Test whoami. """
+    obj = conn.whoami()
+    expected_res = [
+        "dn:%s" % cfg["SIMPLEAUTH"]["user"],
+        cfg["SIMPLEAUTH"]["adusername"],
+    ]
+    assert obj in expected_res
+
+
+def test_connection_error():
+    """ Test connection error. """
+    client = LDAPClient("ldap://invalid")
+    with pytest.raises(bonsai.ConnectionError):
+        _ = client.connect()
+
+
+def test_simple_auth_error(cfg):
+    """ Test simple authentication error. """
+    client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])
+    client.set_credentials("SIMPLE", "cn=wrong", "wronger")
+    with pytest.raises(bonsai.AuthenticationError):
+        _ = client.connect()
+
+
+def test_digest_auth_error(cfg):
+    """ Test DIGEST-MD5 authentication error. """
+    client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])
+    if cfg["DIGESTAUTH"]["realm"] == "None":
+        realm = None
+    else:
+        realm = cfg["DIGESTAUTH"]["realm"].upper()
+    client.set_credentials(
+        "DIGEST-MD5", cfg["DIGESTAUTH"]["user"], "wrongpassword", realm, None
+    )
+    with pytest.raises(bonsai.AuthenticationError):
+        _ = client.connect()
+
+
+def test_sort_order(conn, basedn):
+    """ Test setting sort order. """
+    obj = conn.search(basedn, 2, attrlist=["uidNumber"], sort_order=["-uidNumber"])
+    sort = [o["uidNumber"][0] for o in obj if "uidNumber" in o]
+    assert all(sort[i] >= sort[i + 1] for i in range(len(sort) - 1))
+
+
+def test_fileno(conn, cfg):
+    """ Test fileno method. """
+    assert isinstance(conn.fileno(), int)
+    try:
+        import socket
+
+        sock = socket.fromfd(conn.fileno(), socket.AF_INET, socket.SOCK_RAW)
+        assert sock.getpeername() == (
+            cfg["SERVER"]["hostip"],
+            int(cfg["SERVER"]["port"]),
+        )
+        sock.close()
+    except OSError:
+        pytest.fail("Not a valid socket descriptor.")
+
+
+def test_close(conn):
+    """ Test close method. """
+    conn.close()
+    assert conn.closed
+    with pytest.raises(bonsai.ClosedConnection):
+        _ = conn.whoami()
+
+
+def test_abandon(async_conn, basedn):
+    """ Test abandon method. """
+    msgid = async_conn.open()
+    while async_conn.get_result(msgid) is None:
+        pass
+    msgid = async_conn.search(basedn, 2)
+    async_conn.abandon(msgid)
+    with pytest.raises(bonsai.InvalidMessageID):
+        _ = async_conn.get_result(msgid)
+
+
+def test_async_close_remove_pendig_ops(async_conn, basedn):
+    """ Test remove pending operations after close. """
+    msgid = async_conn.open()
+    while async_conn.get_result(msgid) is None:
+        pass
+    async_conn.search(basedn, 2)
+    async_conn.search(basedn, 0)
+    async_conn.close()
+    assert async_conn.closed
+
+
+def test_vlv_offset(conn, basedn):
+    """ Test VLV control with offset. """
+    search_dn = "ou=nerdherd,%s" % basedn
+    res, ctrl = conn.virtual_list_search(
+        search_dn,
+        1,
+        attrlist=["uidNumber"],
+        offset=2,
+        sort_order=["-uidNumber"],
+        before_count=1,
+        after_count=1,
+        est_list_count=6,
+    )
+    assert len(res) == 3
+    assert ctrl["target_position"] == 2
+    assert ctrl["list_count"] == 6
+    assert res[1]["uidNumber"][0] == 4
+
+
+def test_vlv_attrvalue(conn, basedn):
+    """ Test VLV control with attribute value. """
+    search_dn = "ou=nerdherd,%s" % basedn
+    res, ctrl = conn.virtual_list_search(
+        search_dn,
+        1,
+        attrlist=["uidNumber"],
+        attrvalue=2,
+        sort_order=["uidNumber"],
+        before_count=1,
+        after_count=2,
+        est_list_count=6,
+    )
+    assert len(res) == 4
+    assert ctrl["target_position"] == 3
+    assert res[0]["uidNumber"][0] == 1
+
+
+def test_vlv_without_sort_order(conn, basedn):
+    """ Test VLV control without sort control. """
+    search_dn = "ou=nerdherd,%s" % basedn
+    with pytest.raises(bonsai.UnwillingToPerform):
+        _ = conn.virtual_list_search(
+            search_dn,
+            1,
+            attrlist=["uidNumber"],
+            offset=1,
+            before_count=1,
+            after_count=2,
+            est_list_count=6,
+        )
+
+
+def test_paged_search(conn, basedn):
+    """ Test paged results control. """
+    search_dn = "ou=nerdherd,%s" % basedn
+    res = conn.paged_search(search_dn, 1, page_size=2)
+    for ent in res:
+        assert isinstance(ent, bonsai.LDAPEntry)
+    page = 1  # First page is already acquired.
+    while True:
+        if len(res) > 2:
+            pytest.fail("The size of the page is greater than expected.")
+        msgid = res.acquire_next_page()
+        if msgid is None:
+            break
+        res = conn.get_result(msgid)
+        page += 1
+    assert page == 3
+
+
+def test_paged_search_with_auto_acq(cfg, basedn):
+    """ Test paged results control with automatic page acquiring. """
+    client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])
+    conn = client.connect()
+    search_dn = "ou=nerdherd,%s" % basedn
+    res = conn.paged_search(search_dn, 1, page_size=3)
+    if len(res) != 3:
+        pytest.fail("The size of the page is not what is expected.")
+    entry = 0
+    for ent in res:
+        assert isinstance(ent, bonsai.LDAPEntry)
+        entry += 1
+    assert entry == 6
+    assert res.acquire_next_page() is None
+
+
+@pytest.mark.timeout(15)
+def test_search_timeout(conn, basedn):
+    """ Test search method's timeout. """
+    search_dn = "ou=nerdherd,%s" % basedn
+    with pytest.raises(TypeError):
+        _ = conn.search(search_dn, 1, timeout=True)
+    with pytest.raises(ValueError):
+        _ = conn.search(search_dn, 1, timeout=-15)
+    with network_delay(6.1):
+        with pytest.raises(bonsai.TimeoutError):
+            _ = conn.search(search_dn, 1, timeout=3.0)
+
+
+@pytest.mark.timeout(10)
+def test_whoami_timeout(conn):
+    """ Test whoami's timeout. """
+    with pytest.raises(TypeError):
+        _ = conn.whoami(timeout="A")
+    with pytest.raises(ValueError):
+        _ = conn.whoami(timeout=-10)
+    with pytest.raises(bonsai.TimeoutError):
+        _ = conn.whoami(timeout=0)
+    with network_delay(6.1):
+        with pytest.raises(bonsai.TimeoutError):
+            _ = conn.whoami(timeout=3.2)
+
+
+def test_wrong_conn_param():
+    """ Test passing wrong parameters for LDAPConnection. """
+    with pytest.raises(TypeError):
+        _ = LDAPConnection("wrong")
+    with pytest.raises(TypeError):
+        _ = LDAPConnection(1)
+
+
+def test_wrong_search_param(ipaddr):
+    """ Test passing wrong parameters for search method. """
+    with pytest.raises(ClosedConnection):
+        cli = LDAPClient("ldap://%s" % ipaddr)
+        LDAPConnection(cli).search()
+    with pytest.raises(ValueError):
+        cli = LDAPClient("ldap://%s" % ipaddr)
+        LDAPConnection(cli).open().search()
+    with pytest.raises(TypeError):
+        cli = LDAPClient("ldap://%s" % ipaddr)
+        LDAPConnection(cli).open().search("", 0, 3)
+
+
+def test_wrong_add_param(conn, ipaddr):
+    """ Test passing wrong parameter for add method. """
+    with pytest.raises(ClosedConnection):
+        cli = LDAPClient("ldap://%s" % ipaddr)
+        LDAPConnection(cli).add(bonsai.LDAPEntry("cn=dummy"))
+    with pytest.raises(TypeError):
+        conn.add("wrong")
+
+
+def test_wrong_delete_param(conn, ipaddr):
+    """ Test passing wrong parameter for delete method. """
+    with pytest.raises(ClosedConnection):
+        cli = LDAPClient("ldap://%s" % ipaddr)
+        LDAPConnection(cli).delete("cn=dummy")
+    with pytest.raises(TypeError):
+        conn.delete(0)
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="Cannot use password policy on Windows."
+)
+def test_password_lockout(conn, ipaddr):
+    """ Test password locking with password policy. """
+    user_dn = "cn=jeff,ou=nerdherd,dc=bonsai,dc=test"
+    cli = LDAPClient("ldap://%s" % ipaddr)
+    cli.set_password_policy(True)
+    try:
+        cli.set_credentials("SIMPLE", user_dn, "wrong_pass")
+        test_conn, ctrl = cli.connect()
+    except bonsai.errors.AuthenticationError:
+        with pytest.raises(bonsai.errors.AccountLocked):
+            cli.set_credentials("SIMPLE", user_dn, "p@ssword")
+            test_conn, ctrl = cli.connect()
+    finally:
+        entry = conn.search(user_dn, 0, attrlist=["pwdAccountLockedTime"])[0]
+        if "pwdAccountLockedTime" in entry.keys():
+            del entry["pwdAccountLockedTime"]
+            entry.modify()
+
+
+@pytest.mark.skipif(
+    sys.platform.startswith("win"), reason="Cannot use password policy on Windows."
+)
+def test_password_expire(conn, ipaddr):
+    """ Test password expiring with password policy. """
+    user_dn = "cn=skip,ou=nerdherd,dc=bonsai,dc=test"
+    cli = LDAPClient("ldap://%s" % ipaddr)
+    cli.set_password_policy(True)
+    cli.set_credentials("SIMPLE", user_dn, "p@ssword")
+    test_conn, ctrl = cli.connect()
+    entry = test_conn.search(user_dn, 0)[0]
+    entry["userPassword"] = "newvalidpassword"
+    entry.modify()
+    test_conn.close()
+    cli.set_credentials("SIMPLE", user_dn, "newvalidpassword")
+    time.sleep(2.0)
+    test_conn, ctrl = cli.connect()
+    if not (ctrl["expire"] <= 10 and ctrl["expire"] > 0):
+        pytest.fail("Expire time is in the wrong range (Expire: %d)." % ctrl["expire"])
+    test_conn.close()
+    time.sleep(10)
+    test_conn, ctrl = cli.connect()
+    assert ctrl["grace"] == 1
+    test_conn.close()
+    with pytest.raises(bonsai.errors.PasswordExpired):
+        test_conn, ctrl = cli.connect()
+    entry = conn.search(user_dn, 0, attrlist=["userPassword"])[0]
+    entry["userPassword"] = "p@ssword"
+    entry.modify()
+    entry = conn.search(user_dn, 0, attrlist=["pwdChangeTime", "pwdGraceUseTime"])[0]
+    if ("pwdChangeTime", "pwdGraceUseTime") in entry.keys():
+        del entry["pwdChangeTime"]
+        del entry["pwdGraceUseTime"]
         entry.modify()
-        conn.close()
-        cli.set_credentials("SIMPLE", user_dn, "newvalidpassword")
-        time.sleep(2.0)
-        conn, ctrl = cli.connect()
-        if not (ctrl['expire'] <= 10 and ctrl['expire'] > 0):
-            self.fail("Expire time is in "
-                      "the wrong range (Expire: %d)." % ctrl['expire'])
-        conn.close()
-        time.sleep(10)
-        conn, ctrl = cli.connect()
-        self.assertEqual(ctrl['grace'], 1)
-        conn.close()
-        try:
-            conn, ctrl = cli.connect()
-        except Exception as exc:
-            self.assertIsInstance(exc, bonsai.errors.PasswordExpired)
-        finally:
-            entry = self.conn.search(user_dn, 0,
-                                     attrlist=["userPassword"])[0]
-            entry['userPassword'] = "p@ssword"
+
+
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason="Cannot use password modify extended operation on Windows.",
+)
+def test_password_modify_extop(conn, ipaddr):
+    """ Test Password Modify extended operation. """
+    user_dn = LDAPDN("cn=skip,ou=nerdherd,dc=bonsai,dc=test")
+    cli = LDAPClient("ldap://%s" % ipaddr)
+    cli.set_credentials("SIMPLE", str(user_dn), "p@ssword")
+    test_conn = cli.connect()
+    with pytest.raises(TypeError):
+        test_conn.modify_password(new_password=0)
+    test_conn.modify_password(user_dn, "newpassword", "p@ssword")
+    test_conn.close()
+    with pytest.raises(ClosedConnection):
+        test_conn.modify_password()
+    try:
+        cli.set_credentials("SIMPLE", str(user_dn), "newpassword")
+        cli.set_password_policy(True)
+        test_conn, ctrl = cli.connect()
+        newpass = test_conn.modify_password()
+        test_conn.close()
+        assert isinstance(newpass, str)
+        cli.set_credentials("SIMPLE", str(user_dn), newpass)
+        test_conn, ctrl = cli.connect()
+        test_conn.close()
+    except bonsai.AuthenticationError:
+        pytest.fail("Failed to authenticate with the new password.")
+    finally:
+        entry = conn.search(user_dn, 0, attrlist=["userPassword"])[0]
+        entry["userPassword"] = "p@ssword"
+        entry.modify()
+        entry = conn.search(user_dn, 0, attrlist=["pwdChangeTime", "pwdGraceUseTime"])[
+            0
+        ]
+        if ("pwdChangeTime", "pwdGraceUseTime") in entry.keys():
+            del entry["pwdChangeTime"]
+            del entry["pwdGraceUseTime"]
             entry.modify()
-            entry = self.conn.search(user_dn, 0,
-                                     attrlist=["pwdChangeTime",
-                                               "pwdGraceUseTime"])[0]
-            if ("pwdChangeTime", "pwdGraceUseTime") in entry.keys():
-                del entry['pwdChangeTime']
-                del entry['pwdGraceUseTime']
-                entry.modify()
 
-    @unittest.skipIf(sys.platform.startswith("win"),
-                     "Cannot use password modify extended operation on Windows")
-    def test_password_modify_extop(self):
-        """ Test Password Modify extended operation. """
-        user_dn = LDAPDN("cn=skip,ou=nerdherd,dc=bonsai,dc=test")
-        cli = LDAPClient("ldap://%s" % self.ipaddr)
-        cli.set_credentials("SIMPLE", str(user_dn), "p@ssword")
-        conn = cli.connect()
-        self.assertRaises(TypeError,
-                          lambda: conn.modify_password(new_password=0))
-        conn.modify_password(user_dn, "newpassword", "p@ssword")
-        conn.close()
-        self.assertRaises(ClosedConnection, conn.modify_password)
-        try:
-            cli.set_credentials("SIMPLE", str(user_dn), "newpassword")
-            cli.set_password_policy(True)
-            conn, ctrl = cli.connect()
-            newpass = conn.modify_password()
-            conn.close()
-            self.assertIsInstance(newpass, str)
-            cli.set_credentials("SIMPLE", str(user_dn), newpass)
-            conn, ctrl = cli.connect()
-            conn.close()
-        except bonsai.AuthenticationError:
-            self.fail("Failed to authenticate with the new password.")
-        finally:
-            entry = self.conn.search(user_dn, 0,
-                                     attrlist=["userPassword"])[0]
-            entry['userPassword'] = "p@ssword"
-            entry.modify()
-            entry = self.conn.search(user_dn, 0,
-                                     attrlist=["pwdChangeTime",
-                                               "pwdGraceUseTime"])[0]
-            if ("pwdChangeTime", "pwdGraceUseTime") in entry.keys():
-                del entry['pwdChangeTime']
-                del entry['pwdGraceUseTime']
-                entry.modify()
 
-    @unittest.skipIf(sys.platform.startswith("win"),
-                     "Cannot use ManageDsaIT on Windows")
-    def test_search_with_managedsait_ctrl(self):
-        """ Test searching with manageDsaIT control. """
-        refdn = LDAPDN("o=admin-ref,ou=nerdherd,dc=bonsai,dc=test")
-        cli = LDAPClient("ldap://%s" % self.ipaddr)
-        with cli.connect() as conn:
-            res = conn.search(refdn, LDAPSearchScope.BASE, attrlist=['ref'])[0]
-            self.assertEqual(str(res.dn), "cn=admin,dc=bonsai,dc=test")
-        cli.set_managedsait(True)
-        with cli.connect() as conn:
-            res = conn.search(refdn, LDAPSearchScope.BASE, attrlist=['ref'])[0]
-            self.assertEqual(refdn, res.dn)
-            self.assertEqual('ldap://bonsai.test/cn=admin,dc=bonsai,dc=test',
-                             res['ref'][0])
+@pytest.mark.skipif(
+    sys.platform.startswith("win"), reason="Cannot use ManageDsaIT on Windows"
+)
+def test_search_with_managedsait_ctrl(ipaddr):
+    """ Test searching with manageDsaIT control. """
+    refdn = LDAPDN("o=admin-ref,ou=nerdherd,dc=bonsai,dc=test")
+    cli = LDAPClient("ldap://%s" % ipaddr)
+    with cli.connect() as conn:
+        res = conn.search(refdn, LDAPSearchScope.BASE, attrlist=["ref"])[0]
+        assert str(res.dn) == "cn=admin,dc=bonsai,dc=test"
+    cli.set_managedsait(True)
+    with cli.connect() as conn:
+        res = conn.search(refdn, LDAPSearchScope.BASE, attrlist=["ref"])[0]
+        assert refdn == res.dn
+        assert "ldap://bonsai.test/cn=admin,dc=bonsai,dc=test" == res["ref"][0]
 
-    @unittest.skipIf(sys.platform.startswith("win"),
-                     "Cannot use ManageDsaIT on Windows")
-    def test_add_and_delete_referrals(self):
-        """ Test add and delete an LDAP referral with ManageDdsIT control. """
-        refdn = bonsai.LDAPDN("o=test-ref,ou=nerdherd,dc=bonsai,dc=test")
-        ref = "ldap://test.host/cn=nobody"
-        cli = LDAPClient("ldap://%s" % self.ipaddr)
-        cli.set_credentials("SIMPLE", user=self.cfg["SIMPLEAUTH"]["user"],
-                            password=self.cfg["SIMPLEAUTH"]["password"])
-        cli.managedsait = True
-        with cli.connect() as conn:
-            entry = bonsai.LDAPEntry(refdn, conn)
-            entry['objectClass'] = ['referral', 'extensibleObject']
-            entry['o'] = 'test-ref'
-            entry['ref'] = ref
-            conn.add(entry)
-            res = conn.search(refdn, 0, attrlist=['ref'])[0]
-            self.assertEqual(entry.dn, res.dn)
-            self.assertListEqual(entry['ref'], res['ref'])
-        cli.managedsait = False
-        with cli.connect() as conn:
-            self.assertRaises(bonsai.LDAPError, lambda: conn.delete(entry.dn))
-        cli.managedsait = True
-        with cli.connect() as conn:
+
+@pytest.mark.skipif(
+    sys.platform.startswith("win"), reason="Cannot use ManageDsaIT on Windows"
+)
+def test_add_and_delete_referrals(cfg, ipaddr):
+    """ Test add and delete an LDAP referral with ManageDdsIT control. """
+    refdn = bonsai.LDAPDN("o=test-ref,ou=nerdherd,dc=bonsai,dc=test")
+    ref = "ldap://test.host/cn=nobody"
+    cli = LDAPClient("ldap://%s" % ipaddr)
+    cli.set_credentials(
+        "SIMPLE", user=cfg["SIMPLEAUTH"]["user"], password=cfg["SIMPLEAUTH"]["password"]
+    )
+    cli.managedsait = True
+    with cli.connect() as conn:
+        entry = bonsai.LDAPEntry(refdn, conn)
+        entry["objectClass"] = ["referral", "extensibleObject"]
+        entry["o"] = "test-ref"
+        entry["ref"] = ref
+        conn.add(entry)
+        res = conn.search(refdn, 0, attrlist=["ref"])[0]
+        assert entry.dn == res.dn
+        assert entry["ref"] == res["ref"]
+    cli.managedsait = False
+    with cli.connect() as conn:
+        with pytest.raises(bonsai.LDAPError):
             conn.delete(entry.dn)
-            res = conn.search(refdn, 0, attrlist=['ref'])
-            self.assertListEqual(res, [])
-
-if __name__ == '__main__':
-    unittest.main()
+    cli.managedsait = True
+    with cli.connect() as conn:
+        conn.delete(entry.dn)
+        res = conn.search(refdn, 0, attrlist=["ref"])
+        assert res == []
