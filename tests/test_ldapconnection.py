@@ -224,7 +224,7 @@ def test_bind_gssapi(binding, cfg):
 )
 def test_bind_gssapi_error(cfg):
     """ Test automatic TGT requesting with wrong realm name. """
-    client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])
+    client = _generate_client(cfg)
     client.set_credentials(
         "GSSAPI",
         cfg["GSSAPIAUTH"]["user"],
