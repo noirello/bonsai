@@ -52,7 +52,7 @@ class LDAPURL:
             re.IGNORECASE,
         )
         scheme, host, port = self.__hostinfo
-        binddn, attrlist, scope, filterexp = self.__searchinfo
+        binddn, attrlist, scope, filter_exp = self.__searchinfo
         match = valid.match(strurl)
         if match:
             scheme = match.group(1).lower()
@@ -94,12 +94,12 @@ class LDAPURL:
                 scope = _scope
             # Filter
             if match.group(12):
-                filterexp = urllib.parse.unquote(match.group(12))
+                filter_exp = urllib.parse.unquote(match.group(12))
             # Extensions
             if match.group(13):
                 self.__extensions = match.group(13).split(",")
             self.__hostinfo = (scheme, host, port)
-            self.__searchinfo = (binddn, attrlist, scope, filterexp)
+            self.__searchinfo = (binddn, attrlist, scope, filter_exp)
         else:
             raise ValueError("'%s' is not a valid LDAP URL." % strurl)
 
@@ -219,8 +219,8 @@ class LDAPURL:
             return -1
 
     @property
-    def filter(self) -> str:
-        """ The searching filter. """
+    def filter_exp(self) -> str:
+        """ The searching filter expression. """
         return self.__searchinfo[3]
 
     def get_address(self) -> str:
@@ -245,7 +245,7 @@ class LDAPURL:
                 and self.port == other.port
                 and self.basedn == other.basedn
                 and self.scope == other.scope
-                and self.filter == other.filter
+                and self.filter_exp == other.filter_exp
                 and self.attributes == other.attributes
             )
         elif isinstance(other, str):

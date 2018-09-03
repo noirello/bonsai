@@ -69,7 +69,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         self,
         base: Optional[Union[str, LDAPDN]] = None,
         scope: Optional[Union[LDAPSearchScope, int]] = None,
-        filterexp: Optional[str] = None,
+        filter_exp: Optional[str] = None,
         attrlist: Optional[List[str]] = None,
         timeout: Optional[float] = None,
         sizelimit: int = 0,
@@ -85,7 +85,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
 
         _base = str(base) if base is not None else str(self.__client.url.basedn)
         _scope = scope if scope is not None else self.__client.url.scope_num
-        _filter = filterexp if filterexp is not None else self.__client.url.filter
+        _filter = filter_exp if filter_exp is not None else self.__client.url.filter_exp
         _attrlist = attrlist if attrlist is not None else self.__client.url.attributes
         _timeout = timeout if timeout is not None else 0.0
         if sort_order is not None:
@@ -140,7 +140,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         self,
         base: Optional[Union[str, LDAPDN]] = None,
         scope: Optional[Union[LDAPSearchScope, int]] = None,
-        filterexp: Optional[str] = None,
+        filter_exp: Optional[str] = None,
         attrlist: Optional[List[str]] = None,
         timeout: Optional[float] = None,
         sizelimit: int = 0,
@@ -148,14 +148,14 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         sort_order: Optional[List[str]] = None,
     ) -> Any:
         return self.__base_search(
-            base, scope, filterexp, attrlist, timeout, sizelimit, attrsonly, sort_order
+            base, scope, filter_exp, attrlist, timeout, sizelimit, attrsonly, sort_order
         )
 
     def paged_search(
         self,
         base: Optional[Union[str, LDAPDN]] = None,
         scope: Optional[Union[LDAPSearchScope, int]] = None,
-        filterexp: Optional[str] = None,
+        filter_exp: Optional[str] = None,
         attrlist: Optional[List[str]] = None,
         timeout: Optional[float] = None,
         sizelimit: int = 0,
@@ -166,7 +166,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         return self.__base_search(
             base,
             scope,
-            filterexp,
+            filter_exp,
             attrlist,
             timeout,
             sizelimit,
@@ -179,7 +179,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         self,
         base: Optional[Union[str, LDAPDN]] = None,
         scope: Optional[Union[LDAPSearchScope, int]] = None,
-        filterexp: Optional[str] = None,
+        filter_exp: Optional[str] = None,
         attrlist: Optional[List[str]] = None,
         timeout: Optional[float] = None,
         sizelimit: int = 0,
@@ -198,7 +198,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         return self.__base_search(
             base,
             scope,
-            filterexp,
+            filter_exp,
             attrlist,
             timeout,
             sizelimit,
@@ -295,7 +295,7 @@ class LDAPConnection(BaseLDAPConnection):
         self,
         base: Optional[Union[str, LDAPDN]] = None,
         scope: Optional[Union[LDAPSearchScope, int]] = None,
-        filterexp: Optional[str] = None,
+        filter_exp: Optional[str] = None,
         attrlist: Optional[List[str]] = None,
         timeout: Optional[float] = None,
         sizelimit: int = 0,
@@ -306,14 +306,14 @@ class LDAPConnection(BaseLDAPConnection):
         # Load values from the LDAPURL, if it is not presented on the
         # parameter list.
         return super().search(
-            base, scope, filterexp, attrlist, timeout, sizelimit, attrsonly, sort_order
+            base, scope, filter_exp, attrlist, timeout, sizelimit, attrsonly, sort_order
         )
 
     def paged_search(
         self,
         base: Optional[Union[str, LDAPDN]] = None,
         scope: Optional[Union[LDAPSearchScope, int]] = None,
-        filterexp: Optional[str] = None,
+        filter_exp: Optional[str] = None,
         attrlist: Optional[List[str]] = None,
         timeout: Optional[float] = None,
         sizelimit: int = 0,
@@ -324,7 +324,7 @@ class LDAPConnection(BaseLDAPConnection):
         return super().paged_search(
             base,
             scope,
-            filterexp,
+            filter_exp,
             attrlist,
             timeout,
             sizelimit,
@@ -337,7 +337,7 @@ class LDAPConnection(BaseLDAPConnection):
         self,
         base: Optional[Union[str, LDAPDN]] = None,
         scope: Optional[Union[LDAPSearchScope, int]] = None,
-        filterexp: Optional[str] = None,
+        filter_exp: Optional[str] = None,
         attrlist: Optional[List[str]] = None,
         timeout: Optional[float] = None,
         sizelimit: int = 0,
@@ -352,7 +352,7 @@ class LDAPConnection(BaseLDAPConnection):
         return super().virtual_list_search(
             base,
             scope,
-            filterexp,
+            filter_exp,
             attrlist,
             timeout,
             sizelimit,

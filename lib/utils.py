@@ -28,12 +28,12 @@ def escape_attribute_value(attrval: str):
     return attrval
 
 
-def escape_filter(fltstr: str):
+def escape_filter_exp(filter_exp: str):
     """
     Escapes the special characters in an LDAP filter based on RFC 4515.
 
-    :param str fltstr: the unescaped filter string.
-    :return: the escaped filter string.
+    :param str filter_exp: the unescaped filter expression.
+    :return: the escaped filter expression.
     :rtype: str
     """
     chars_to_escape = (
@@ -44,5 +44,5 @@ def escape_filter(fltstr: str):
         ("\0", "\\0"),
     )
     for char, repl in chars_to_escape:
-        fltstr = fltstr.replace(char, repl)
-    return fltstr
+        filter_exp = filter_exp.replace(char, repl)
+    return filter_exp
