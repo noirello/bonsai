@@ -89,7 +89,8 @@ API documentation
     >>> client.set_raw_attributes(["cn", "sn"])
     >>> conn = client.connect()
     >>> conn.search("cn=jeff,ou=nerdherd,dc=bonsai,dc=test", 0, attrlist=['cn', 'sn', 'gn'])
-    [{'givenName': ['Jeff'], 'sn': [b'Barnes'], 'cn': [b'jeff']}]
+    [{'dn': <LDAPDN cn=jeff,ou=nerdherd,dc=bonsai,dc=test>, 'sn': [b'Barnes'], 'cn': [b'jeff'],
+    'givenName': ['Jeff']}]
 
 .. automethod:: LDAPClient.set_server_chase_referrals(val)
 .. automethod:: LDAPClient.set_url(url)
@@ -152,7 +153,7 @@ API documentation
 
 .. _RFC3062: https://www.ietf.org/rfc/rfc3062.txt
 
-.. method:: LDAPConnection.search(base=None, scope=None, filterexp=None, attrlist=None, timeout=None,\
+.. method:: LDAPConnection.search(base=None, scope=None, filter_exp=None, attrlist=None, timeout=None,\
                                   sizelimit=0, attrsonly=False, sort_order=None)
 
     Perform a search on the directory server. A base DN and a search scope is always necessary to
@@ -167,18 +168,21 @@ API documentation
     >>> client = LDAPClient("ldap://localhost") # without additional parameters
     >>> conn = client.connect()
     >>> conn.search("ou=nerdherd,dc=bonsai,dc=test", 1, "(cn=ch*)", ["cn", "sn", "gn"])
-    [{'sn': ['Bartowski'], 'cn': ['chuck'], 'givenName': ['Chuck']}]
+    [{'dn': <LDAPDN cn=chuck,ou=nerdherd,dc=bonsai,dc=test>, 'sn': ['Bartowski'], 'cn': ['chuck'],
+    'givenName': ['Chuck']}]
     >>> client = LDAPClient("ldap://localhost/ou=nerdherd,dc=bonsai,dc=test?cn,sn,gn?one?(cn=ch*)") # with additional parameters
     >>> conn = client.connect()
     >>> conn.search()
-    [{'sn': ['Bartowski'], 'cn': ['chuck'], 'givenName': ['Chuck']}]
-    >>> conn.search(filter="(cn=j*)")
-    [{'sn': ['Barnes'], 'cn': ['jeff'], 'givenName': ['Jeff']}]
+    [{'dn': <LDAPDN cn=chuck,ou=nerdherd,dc=bonsai,dc=test>, 'sn': ['Bartowski'], 'cn': ['chuck'],
+    'givenName': ['Chuck']}]
+    >>> conn.search(filter_exp="(cn=j*)")
+    [{'dn': <LDAPDN cn=jeff,ou=nerdherd,dc=bonsai,dc=test>, 'sn': ['Barnes'], 'cn': ['jeff'],
+    'givenName': ['Jeff']}]
 
     :param str base: the base DN of the search.
     :param int scope: the scope of the search. An :class:`LDAPSearchScope` also can be used as
                       value.
-    :param str filterexp: string to filter the search in LDAP search filter syntax.
+    :param str filter_exp: string to filter the search in LDAP search filter syntax.
     :param list attrlist: list of attribute's names to receive only those attributes from the
                           directory server.
     :param float timeout: time limit in seconds for the search.
@@ -190,7 +194,7 @@ API documentation
     :return: the search result.
     :rtype: list
 
-.. method:: LDAPConnection.paged_search(base=None, scope=None, filterexp=None, attrlist=None,\
+.. method:: LDAPConnection.paged_search(base=None, scope=None, filter_exp=None, attrlist=None,\
                                         timeout=None, sizelimit=0, attrsonly=False,\
                                         sort_order=None, page_size=1)
 
@@ -204,7 +208,7 @@ API documentation
     :param str base: the base DN of the search.
     :param int scope: the scope of the search. An :class:`LDAPSearchScope` also can be used as
                       value.
-    :param str filterexp: string to filter the search in LDAP search filter syntax.
+    :param str filter_exp: string to filter the search in LDAP search filter syntax.
     :param list attrlist: list of attribute's names to receive only those attributes from the
                           directory server.
     :param float timeout: time limit in seconds for the search.
@@ -217,7 +221,7 @@ API documentation
     :return: the search result.
     :rtype: ldapsearchiter
 
-.. method:: LDAPConnection.virtual_list_search(base=None, scope=None, filterexp=None, attrlist=None,\
+.. method:: LDAPConnection.virtual_list_search(base=None, scope=None, filter_exp=None, attrlist=None,\
                                                timeout=None, sizelimit=0, attrsonly=False,\
                                                sort_order=None, offset=1, before_count=0,\
                                                after_count=0, est_list_count=0, attrvalue=None)
@@ -237,7 +241,7 @@ API documentation
     :param str base: the base DN of the search.
     :param int scope: the scope of the search. An :class:`LDAPSearchScope` also can be used as
                       value.
-    :param str filterexp: string to filter the search in LDAP search filter syntax.
+    :param str filter_exp: string to filter the search in LDAP search filter syntax.
     :param list attrlist: list of attribute's names to receive only those attributes from the
                           directory server.
     :param float timeout: time limit in seconds for the search.
@@ -423,7 +427,7 @@ Example for working with LDAPDN objects.
 .. autoattribute:: LDAPURL.basedn
 .. autoattribute:: LDAPURL.host
 .. autoattribute:: LDAPURL.port
-.. autoattribute:: LDAPURL.filter
+.. autoattribute:: LDAPURL.filter_exp
 .. autoattribute:: LDAPURL.scope
 .. autoattribute:: LDAPURL.scope_num
 .. autoattribute:: LDAPURL.scheme
@@ -546,10 +550,10 @@ Utility functions
     >>> bonsai.escape_attribute_value(",cn=escaped")
     '\\,cn\\=escaped'
 
-.. autofunction:: bonsai.utils.escape_filter(fltstr)
+.. autofunction:: bonsai.utils.escape_filter_exp(filter_exp)
 
     >>> import bonsai
-    >>> bonsai.escape_filter("(objectclass=*)")
+    >>> bonsai.escape_filter_exp("(objectclass=*)")
     '\\28objectclass=\\2A\\29'
 
 .. function:: bonsai.get_tls_impl_name

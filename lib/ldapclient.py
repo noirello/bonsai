@@ -264,10 +264,10 @@ class LDAPClient:
         default connection class is `AIOLDAPConnection` that uses the
         asyncio event loop.
 
-        :param LDAPConnection conn: the new asynchronous connection class \
+        :param BaseLDAPConnection conn: the new asynchronous connection class \
         that is a subclass of LDAPConnection.
         :raises TypeError: if `conn` parameter is not a subclass \
-        of :class:`LDAPConnection`.
+        of :class:`BaseLDAPConnection`.
         """
         if not issubclass(conn, BaseLDAPConnection):
             raise TypeError("Class must be a subclass of BaseLDAPConnection. ")

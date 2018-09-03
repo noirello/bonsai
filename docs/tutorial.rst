@@ -57,15 +57,17 @@ The third parameter is a standard LDAP filter string.
 The result will be a list of LDAPEntry objects or an empty list, if no object is found.
 
     >>> conn = client.connect()
-    >>> conn.search("ou=nerdherd,dc=bonsai,dc=test", LDAPSearchScope.ONE, "(objectclass=*)")
-    [{'sn': ['Bartowski'], 'cn': ['chuck'], 'givenName': ['Chuck'],
-    'objectClass': ['inetOrgPerson', 'organizationalPerson', 'person', 'top']},
-    {'sn': ['Patel'], cn': ['lester'], 'givenName': ['Laster'], 
-    'objectClass': ['inetOrgPerson', 'organizationalPerson', 'person', 'top']},
-    {'sn': ['Barnes'], 'cn': ['jeff'], 'givenName': ['Jeff'], 
-    'objectClass': ['inetOrgPerson', 'organizationalPerson', 'person', 'top']}]
+    >>> conn.search("ou=nerdherd,dc=bonsai,dc=test", bonsai.LDAPSearchScope.ONE, "(objectclass=*)")
+    [{'dn': <LDAPDN cn=chuck,ou=nerdherd,dc=bonsai,dc=test>, 'sn': ['Bartowski'],
+    'cn': ['chuck'], 'givenName': ['Chuck'], 'objectClass': ['inetOrgPerson',
+    'organizationalPerson', 'person', 'top']}, {'dn': <LDAPDN cn=lester,ou=nerdherd,dc=bonsai,dc=test>,
+    'sn': ['Patel'], cn': ['lester'], 'givenName': ['Laster'],  'objectClass': ['inetOrgPerson',
+    'organizationalPerson', 'person', 'top']}, {'dn': <LDAPDN cn=jeff,ou=nerdherd,dc=bonsai,dc=test>,
+    'sn': ['Barnes'], 'cn': ['jeff'], 'givenName': ['Jeff'], 'objectClass': ['inetOrgPerson',
+    'organizationalPerson', 'person', 'top']}]
     >>> conn.search("ou=nerdherd,dc=bonsai,dc=test", 0, "(objectclass=*)")
-    [{'objectClass': ['organizationalUnit', 'top'], 'ou': ['nerdherd']}]
+    [{'dn': <LDAPDN ou=nerdherd,dc=bonsai,dc=test>, 'objectClass': ['organizationalUnit', 'top'],
+    'ou': ['nerdherd']}]
     
 The other possible parameters are listed on the API page of :meth:`LDAPConnection.search`.
 
@@ -89,7 +91,8 @@ LDAP DN:
     >>> anna.dn
     <LDAPDN cn=anna,ou=nerdherd,dc=bonsai,dc=test>
     >>> anna
-    {'cn': ['anna'], 'objectClass': ['top', 'inetorgperson'], 'sn': ['Wu'], 'mail' : ['anna@nerdherd.com']}
+    {'dn': <LDAPDN cn=anna,ou=nerdherd,dc=bonsai,dc=test>, 'objectClass': ['top', 'inetOrgPerson'],
+    'sn': ['Wu'], 'mail': ['anna@nerdherd.com']}
 
 then call :meth:`LDAPConnection.add` to add to the server:
 

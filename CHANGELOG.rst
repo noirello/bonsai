@@ -12,6 +12,8 @@ Changed
 -  LDAPClient's set_credentials method uses optional named parameters instead
    of tuples.
 -  LDAPClient's credentials property returns a dict instead of a tuple.
+-  LDAPURL's filter property and the filter parameters of LDAPConnection's
+   search methods are renamed to filter_exp.
 -  The representation of LDAPEntry honours the last call of its
    change_attribute method better than previously.
 -  Drop Heimdal support for advanced Kerberos capabilities (at least
@@ -25,7 +27,7 @@ Added
 -  LDIFReader and LDIFWriter objects for handling LDIF format.
 -  The delete_old_rdn parameter for LDAPEntry's rename method. (Issue #17)
 -  Kerberos keytab support for set_credentials (Thanks to @Mirraz).
--  Utils submodule with escape_filter and escape_attribute_value
+-  Utils submodule with escape_filter_exp and escape_attribute_value
    functions. (Issue #18)
 -  An exclude_dn keyword-only argument to LDAPEntry's keys, items and
    values methods to exclude the dn key and value from the return values.

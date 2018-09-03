@@ -42,7 +42,8 @@ are accessible from the server, check the root DSE's `supportedSASLMechanisms` v
 
 .. note::
     On Unix systems, make sure that the necessary libraries of the certain mechanism are also
-    installed on the client. (E.g. `libsasl2-modules-gssapi-mit` or `cyrus-sasl-gssapi`)
+    installed on the client (e.g. `libsasl2-modules-gssapi-mit` or `cyrus-sasl-gssapi` for GSSAPI
+    support).
 
 .. _SASL: https://tools.ietf.org/html/rfc4422
 .. _SSPI: https://msdn.microsoft.com/en-us/library/windows/desktop/aa380493%28v=vs.85%29.aspx
@@ -201,7 +202,7 @@ necessary certificates have to be loaded manually before the client tries to use
 LDAP controls
 =============
 
-Several LDAP controls can be used to extend and improved the basic LDAP operations. Bonsai is
+Several LDAP controls can be used to extend and improve the basic LDAP operations. Bonsai is
 supporting the following controls. Always check (the root DSE's `supportedControls`) that the
 server also supports the selected control.  
 
@@ -228,18 +229,18 @@ Paged search result
 -------------------
 
 Paged search can be used to reduce large search result into smaller pages. Page result can be used
-with the :meth:`LDAPConnection.paged_search` method and teh size of teh page can be set with the
+with the :meth:`LDAPConnection.paged_search` method and the size of the page can be set with the
 `page_size` parameter:
     
     >>> conn = client.connect()
     >>> conn.paged_search("ou=nerdherd,dc=bonsai,dc=test", 2, page_size=3)
     <_bonsai.ldapsearchiter object at 0x7f006ad455d0>
 
-Please note that the return value is changed from list to :class:`ldapsearchiter`. This object can
-be iterated over the entries of the page. By default the next page of results is acquired automatically
-during the iteration. This behaviour can be changed by setting the :attr:`LDAPClient.auto_page_acquire`
-to `False` and using the :meth:`ldapsearchiter.acquire_next_page` method which explicitly initiates
-a new search request to get the next page.
+Please note that the return value of :meth:`LDAPConnection.paged_search` is an :class:`ldapsearchiter`.
+This object can be iterated over the entries of the page. By default the next page of results is
+acquired automatically during the iteration. This behaviour can be changed by setting the 
+:attr:`LDAPClient.auto_page_acquire` to `False` and using the :meth:`ldapsearchiter.acquire_next_page`
+method which explicitly initiates a new search request to get the next page.
 
 .. note::
     The OID of paged search control is: 1.2.840.113556.1.4.319.
@@ -264,8 +265,10 @@ Virtual list view control cannot be used without a server side sort control thus
 always has to be set.
 
     >>> conn.virtual_list_search("ou=nerdherd,dc=bonsai,dc=test", 2, attrlist=['cn', 'uidNumber'], sort_order=['-uidNumber'], offset=4, before_count=1, after_count=1, est_list_count=6)
-    ([{'cn': ['sam'], 'uidNumber': [4]}, {'cn': ['skip'], 'uidNumber': [3]}, {'cn': ['jeff'],
-    'uidNumber': [2]}], {'target_position': 4, 'oid': '2.16.840.1.113730.3.4.10', 'list_count': 7})
+    ([{'dn': <LDAPDN cn=sam,ou=nerdherd,dc=bonsai,dc=test>, 'cn': ['sam'], 'uidNumber': [4]},
+    {'dn': <LDAPDN cn=skip,ou=nerdherd,dc=bonsai,dc=test>, 'cn': ['skip'], 'uidNumber': [3]},
+    {'dn': <LDAPDN cn=jeff,ou=nerdherd,dc=bonsai,dc=test>, 'cn': ['jeff'], 'uidNumber': [2]}],
+    {'oid': '2.16.840.1.113730.3.4.10', 'target_position': 4, 'list_count': 7})
 
 The return value of the search is a tuple of a list and a dictionary. The dictionary contains
 the VLV server response: the target position and the real list size.
@@ -348,7 +351,7 @@ the control with the delete request automatically, no further settings are requi
 ManageDsaIT
 -----------
 
-The ManageDsaIT control can be used to work with LDAP referrals as simple LDAP entries. After 
+The ManageDsaIT control can be used to work with LDAP referrals as simple LDAP entries. After
 setting it with the :meth:`LDAPClient.set_managedsait` method, the referrals can be added
 removed, and modified just like entries.
 
@@ -357,7 +360,8 @@ removed, and modified just like entries.
     >>> conn = client.connect()
     >>> ref = conn.search("o=admin-ref,ou=nerdherd,dc=bonsai,dc=test", 0)[0]
     >>> ref
-    {'objectClass': ['referral', 'extensibleObject'], 'o': ['admin-ref']}
+    {'dn': <LDAPDN o=admin-ref,ou=nerdherd,dc=bonsai,dc=test>, 'objectClass': ['referral',
+    'extensibleObject'], 'o': ['admin-ref']}
     >>> type(ref)
     <class 'bonsai.ldapentry.LDAPEntry'>
 
@@ -367,9 +371,9 @@ removed, and modified just like entries.
 Asynchronous operations
 =======================
 
-It is possible to start asynchronous operations, if the :meth:`LDAPClient.connect` method's async
-parameter is set to True. By default the returned connection object can be used with Python's
-`asyncio` library. For further details about how to use the asyncio library see the
+It is possible to start asynchronous operations, if the :meth:`LDAPClient.connect` method's
+is_async parameter is set to True. By default the returned connection object can be used with
+Python's `asyncio` library. For further details about how to use the asyncio library see the
 `official documentation`_.
 
 An example for asynchronous search and modify with `asyncio`:
@@ -395,7 +399,7 @@ An example for asynchronous search and modify with `asyncio`:
     loop = asyncio.get_event_loop()
     loop.run_until_complete(do())
 
-It is also possible to change this class to a different one with
+It is also possible to change this asynchronous class to a different one with
 :meth:`LDAPClient.set_async_connection_class` that is able to work with other non-blocking
 I/O modules like `Gevent`_ or `Tornado`_.
 
