@@ -51,7 +51,7 @@ def test_get_bind_properties(valid_ldapurl):
     """ Test getting LDAPURL bind properties. """
     assert valid_ldapurl.basedn == LDAPDN("cn=test,dc=test")
     assert valid_ldapurl.scope == "base"
-    assert valid_ldapurl.filter == "(objectclass=*)"
+    assert valid_ldapurl.filter_exp == "(objectclass=*)"
     assert valid_ldapurl.attributes == ["sn", "gn"]
 
 
@@ -125,7 +125,7 @@ def test_ipv6():
     assert url.host == "2001:db8:85a3::8a2e:370:7334"
     assert url.port == 1498
     assert url.scope == "one"
-    assert url.filter == "(cn=Babs Jensen)"
+    assert url.filter_exp == "(cn=Babs Jensen)"
     addr = url.get_address()
     assert addr == "ldap://[2001:db8:85a3::8a2e:370:7334]:1498"
     with pytest.raises(ValueError):
