@@ -368,6 +368,55 @@ removed, and modified just like entries.
 .. note::
     The OID of ManageDsaIT control is: 2.16.840.1.113730.3.4.2
 
+Reading and writing LDIF files
+==============================
+
+Bonsai has a limited support to read and write LDIF files. LDIF (LDAP Data Interchange Format)
+is a plain text file format for representing LDAP changes and updates. It can be used to exchange
+data between directory servers.
+
+To read an LDIF file, simply open the file in read-mode, pass it to the :class:`LDIFReader`,
+then the reader object can be used as an iterator to get the entries from the LDIF file.
+
+.. code-block:: python3
+
+    from bonsai import LDIFReader
+
+    with open("users.ldif", "r") as data:
+        reader = LDIFReader(data)
+        for ent in reader:
+            print(ent)
+
+
+Writing LDIF files is similar. The :class:`LDIFWriter` needs an open file-object in write-mode,
+and the :meth:`LDIFWriter.write_entry` expects an :class:`LDAPEntry` object whose attributes will be
+serialised. It also possible to serialise the changes of an entry with :meth:`LDIFWriter.write_changes`.
+
+.. code-block:: python3
+
+    from bonsai import LDAPClient
+    from bonsai import LDIFWriter
+
+    client = LDAPClient("ldap://bonsai.test")
+    with client.connect() as conn:
+        res = conn.search("cn=jeff,ou=nerdherd,dc=bonsai,dc=test", 0)
+        with open("user.ldif", "w") as data:
+            writer = LDIFWriter(data)
+            writer.write_entry(res[0])
+        # Make some changes on the entry.
+        res[0]["mail"].append("jeff_secondary@mail.test")
+        res[0]["homeDirectory"] = "/opt/jeff"
+        with open("changes.ldif", "w") as data:
+            writer = LDIFWriter(data)
+            writer.write_changes(res[0])
+
+.. note::
+
+    As mentioned above :class:`LDIFReader` and :class:`LDIFWriter` have their limitations. They
+    can handle basic attribute changes (adding, modifying and removing), serialising attributes,
+    but they're not capable to cope with deleting and renaming entries, or processing LDAP controls
+    that are presented in the LDIF file.
+
 Asynchronous operations
 =======================
 
@@ -381,7 +430,7 @@ An example for asynchronous search and modify with `asyncio`:
 .. _official documentation: https://docs.python.org/3/library/asyncio.html
 
 .. code-block:: python3
-    
+
     import asyncio
     import bonsai
 
