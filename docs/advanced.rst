@@ -566,7 +566,7 @@ The following code is a simple litmus test that the created class plays nice wit
     if __name__ == "__main__":
         curio.run(tasks)
 
-This example class has only the minimal functionalities but hopefully gives you the basic idea how
+This example class has the minimal functionalities only but hopefully gives you the basic idea how
 the asynchronous integration works.
 
 .. _Curio: https://curio.readthedocs.io/en/latest/
