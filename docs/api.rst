@@ -132,6 +132,13 @@ API documentation
     
 .. automethod:: LDAPConnection.delete(dname, timeout=None, recursive=False)
 
+.. method:: LDAPConnection.fileno()
+
+    Return the file descriptor of the underlying socket that is used for the LDAP connection.
+
+    :return: The file descriptor.
+    :rtype: int
+
 .. method:: LDAPConnection.get_result(msg_id, timeout=None)
 
     Get the result of an ongoing asynchronous operation associated with the given message id.

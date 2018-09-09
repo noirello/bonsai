@@ -420,14 +420,24 @@ serialised. It also possible to serialise the changes of an entry with :meth:`LD
 Asynchronous operations
 =======================
 
-It is possible to start asynchronous operations, if the :meth:`LDAPClient.connect` method's
-is_async parameter is set to True. By default the returned connection object can be used with
-Python's `asyncio` library. For further details about how to use the asyncio library see the
-`official documentation`_.
+Asynchronous operations are first-class citizens in the underlying C API that Bonsai is built on.
+That makes relatively easy to integrate the module with popular Python async libraries. Bonsai is
+shipped with support to some: `asyncio`_, `gevent`_, and `Tornado`_.
 
-An example for asynchronous search and modify with `asyncio`:
+.. _asyncio: https://docs.python.org/3/library/asyncio.html
+.. _gevent: http://www.gevent.org/
+.. _Tornado: http://www.tornadoweb.org/en/stable/
+
+Using async out-of-the-box
+--------------------------
+
+To start asynchronous operations set the :meth:`LDAPClient.connect` method's `is_async` parameter
+to True. By default the returned connection object can be used with Python's `asyncio` library.
+For further details about how to use `asyncio` see the `official documentation`_.
 
 .. _official documentation: https://docs.python.org/3/library/asyncio.html
+
+An example for asynchronous search and modify with `asyncio`:
 
 .. code-block:: python3
 
@@ -448,11 +458,11 @@ An example for asynchronous search and modify with `asyncio`:
     loop = asyncio.get_event_loop()
     loop.run_until_complete(do())
 
-It is also possible to change this asynchronous class to a different one with
-:meth:`LDAPClient.set_async_connection_class` that is able to work with other non-blocking
-I/O modules like `Gevent`_ or `Tornado`_.
+To work with other non-blocking I/O modules the default asynchronous class has to be set to a
+different one with :meth:`LDAPClient.set_async_connection_class`.
 
-For example using the module with Gevent:
+For example changing it to `GeventLDAPConnection` makes it possible to use the module with
+gevent:
 
 .. code-block:: python
 
@@ -476,5 +486,87 @@ For example using the module with Gevent:
 
     gevent.joinall([gevent.spawn(do)])
 
-.. _Gevent: http://www.gevent.org/
-.. _Tornado: http://www.tornadoweb.org/en/stable/
+Create your own async class
+---------------------------
+
+If you would like to use an asynchronous library that is currently not supported by Bonsai,
+then you have to work a little bit more to make it possible. The following example will help
+you to achieve that by showing how to create a new async class for `Curio`_. Inspecting the
+implementations of the supported libraries can also help.
+
+.. warning::
+    This class is just for education purposes, the implementation is made after just scraping the
+    surface of Curio. It's far from perfect and not meant to use in production.
+
+The C API's asynchronous functions are designed to return a message ID immediately after calling
+them, and then polling the state of the executed operations. The `BaseLDAPConnection` class exposes
+the same functionality of the C API. That makes possible to start an operation then poll the result
+with :meth:`LDAPConnection.get_result()` periodically in the `_evaluate` method which happens to be
+called in every other method to evaluate the LDAP operations.
+
+.. code-block:: python3
+
+    from typing import Optional
+    import bonsai
+    import curio
+
+    from bonsai.ldapconnection import BaseLDAPConnection
+
+    # You have to inherit from BaseLDAPConnection.
+    class CurioLDAPConnection(BaseLDAPConnection):
+        def __init__(self, client: "LDAPClient"):
+            super().__init__(client, is_async=True)
+
+        async def _evaluate(self, msg_id: int, timeout: Optional[float] = None):
+            while True:
+                res = self.get_result(msg_id)
+                if res is not None:
+                    return res
+                await curio.sleep(1)
+
+Even better registering to an I/O event to figure out when the data will be available than avoiding
+constant polling with voluntarily sleep. The :meth:`LDAPConnection.fileno()` method returns the socket's
+file descriptor that can be used with the OS's default I/O monitoring function (e.g select or epoll).
+In Curio you can wait until a socket becomes writable with `curio.traps._write_wait`:
+
+.. code-block:: python3
+
+        async def _evaluate(self, msg_id: int, timeout: Optional[float] = None):
+            while True:
+                await curio.traps._write_wait(self.fileno())
+                res = self.get_result(msg_id)
+                if res is not None:
+                    return res
+
+
+The following code is a simple litmus test that the created class plays nice with other coroutines:
+
+.. code-block:: python3
+
+    async def countdown(n):
+        while n > 0:
+            print(f"T-minus {n}")
+            await curio.sleep(1)
+            n -= 1
+
+    async def search():
+        cli = bonsai.LDAPClient()
+        cli.set_async_connection_class(CurioLDAPConnection)
+        conn = await cli.connect(is_async=True)
+        res = await conn.search("ou=nerdherd,dc=bonsai,dc=test", 1)
+        for ent in res:
+            print(ent.dn)
+
+    async def tasks():
+        tsk1 = await curio.spawn(countdown, 20)
+        tsk2 = await curio.spawn(search)
+        await tsk1.join()
+        await tsk2.join()
+
+    if __name__ == "__main__":
+        curio.run(tasks)
+
+This example class has only the minimal functionalities but hopefully gives you the basic idea how
+the asynchronous integration works.
+
+.. _Curio: https://curio.readthedocs.io/en/latest/
