@@ -500,9 +500,9 @@ implementations of the supported libraries can also help.
 
 The C API's asynchronous functions are designed to return a message ID immediately after calling
 them, and then polling the state of the executed operations. The `BaseLDAPConnection` class exposes
-the same functionality of the C API. That makes possible to start an operation then poll the result
-with :meth:`LDAPConnection.get_result()` periodically in the `_evaluate` method which happens to be
-called in every other method to evaluate the LDAP operations.
+the same functionality of the C API. Therefore it makes possible to start an operation then poll
+the result with :meth:`LDAPConnection.get_result()` periodically in the `_evaluate` method which
+happens to be called in every other method that evaluates an LDAP operation.
 
 .. code-block:: python3
 
@@ -524,10 +524,11 @@ called in every other method to evaluate the LDAP operations.
                     return res
                 await curio.sleep(1)
 
-Even better registering to an I/O event to figure out when the data will be available than avoiding
-constant polling with voluntarily sleep. The :meth:`LDAPConnection.fileno()` method returns the socket's
-file descriptor that can be used with the OS's default I/O monitoring function (e.g select or epoll).
-In Curio you can wait until a socket becomes writable with `curio.traps._write_wait`:
+The constant polling can be avoided with voluntarily sleep, but it's more efficient to register to an
+I/O event that will notify when the data is available. The :meth:`LDAPConnection.fileno()` method
+returns the socket's file descriptor that can be used with the OS's default I/O monitoring function
+(e.g select or epoll) for this purpose. In Curio you can wait until a socket becomes writable with
+`curio.traps._write_wait`:
 
 .. code-block:: python3
 
@@ -539,7 +540,8 @@ In Curio you can wait until a socket becomes writable with `curio.traps._write_w
                     return res
 
 
-The following code is a simple litmus test that the created class plays nice with other coroutines:
+The following code is a simple litmus test for proving that the created class plays nice with other
+coroutines:
 
 .. code-block:: python3
 
