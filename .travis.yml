@@ -8,9 +8,9 @@ branches:
     - testing
     - refactor
 
-dist: trusty
+dist: xenial
 group: edge
-sudo: required
+sudo: true
 
 matrix:
   include:
@@ -24,8 +24,6 @@ matrix:
         - docker
     - language: python
       python: "3.7"
-      dist: xenial
-      sudo: true
       services:
         - docker
     - language: python
