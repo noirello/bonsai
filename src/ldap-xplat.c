@@ -722,15 +722,13 @@ ldap_init_thread_func(void *params) {
         set_cert_policy(data->ld, data->cert_policy);
     }
 
-#if !defined(WIN32) && !defined(MACOSX) && LDAP_VENDOR_VERSION > 20443
-    /* The asynchronous connection build does not function properly on
-       macOS and only works on other unix systems from version 2.4.44 */
+if (async_conn) {
     struct timeval tv;
     tv.tv_sec = 0;
     /* Set asynchronous connect for OpenLDAP. */
     ldap_set_option(data->ld, LDAP_OPT_CONNECT_ASYNC, LDAP_OPT_ON);
     ldap_set_option(data->ld, LDAP_OPT_NETWORK_TIMEOUT, &tv);
-#endif
+}
 
 #ifdef HAVE_KRB5
     if (data->info->request_tgt == 1) {

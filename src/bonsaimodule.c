@@ -12,6 +12,32 @@ PyObject *LDAPEntryObj = NULL;
 PyObject *LDAPValueListObj = NULL;
 char debugmod = 0;
 
+#if !defined(WIN32) && !defined(MACOSX) && LDAP_VENDOR_VERSION > 20443
+/* The asynchronous connection build does not function properly on
+   macOS and only works on other unix systems from version 2.4.44 */
+int async_conn = 1;
+#else
+int async_conn = 0;
+#endif
+
+/* Get or set if we will attempt async connections */
+static PyObject *
+bonsai_get_async_conn(PyObject *self) {
+    if (async_conn) {
+        Py_RETURN_TRUE;
+    } else {
+        Py_RETURN_FALSE;
+    }
+}
+
+static PyObject *
+bonsai_set_async_conn(PyObject *self, PyObject *args) {
+    if (!PyArg_ParseTuple(args,"p",&async_conn)) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
 /* Turn on and off debug mod. */
 static PyObject *
 bonsai_set_debug(PyObject *self, PyObject *args, PyObject *kwds) {
@@ -100,6 +126,10 @@ bonsai_free(PyObject *self) {
 }
 
 static PyMethodDef bonsai_methods[] = {
+    {"get_async_conn", (PyCFunction)bonsai_get_async_conn, METH_NOARGS,
+        "Returns if bonsai will attempt async connections."},
+    {"set_async_conn", (PyCFunction)bonsai_set_async_conn, METH_VARARGS,
+        "Sets if bonsai will attempt async connections."},
     {"get_vendor_info", (PyCFunction)bonsai_get_vendor_info, METH_NOARGS,
         "Returns the vendor information of LDAP library."},
     {"get_tls_impl_name", (PyCFunction)bonsai_get_tls_impl_name, METH_NOARGS,
