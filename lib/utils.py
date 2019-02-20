@@ -1,6 +1,5 @@
 from ._bonsai import (
     get_tls_impl_name,
-    get_async_conn,
     set_async_conn,
     get_vendor_info,
     has_krb5_support,
