@@ -49,7 +49,7 @@ matrix:
         # Install Cyrus SASL.
         - curl https://pastebin.com/raw/whf8egYA -o cyrussasl.rb
         - cat ./cyrussasl.rb
-        - brew install --build-from-formula ./cyrussasl.rb --with-ntlm
+        - brew install -s ./cyrussasl.rb --with-ntlm
         # Set alias for localhost.
         - sudo sed -i.bak "/^127.0.0.1/ s/$/ bonsai.test/" /etc/hosts
         - ping -c 2 bonsai.test
