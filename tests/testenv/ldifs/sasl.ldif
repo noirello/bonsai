@@ -64,11 +64,14 @@ olcAuthzPolicy: to
 replace: olcTLSCertificateFile
 olcTLSCertificateFile: "slapd"
 -
-replace: olcTLSCACertificatePath
-olcTLSCACertificatePath: /etc/openldap/certs
+replace: olcTLSCACertificateFile
+olcTLSCACertificateFile: /etc/openldap/certs/cacert.pem
+-
+replace: olcTLSCertificateFile
+olcTLSCertificateFile: /etc/openldap/certs/server.pem
 -
 replace: olcTLSCertificateKeyFile
-olcTLSCertificateKeyFile: /etc/openldap/certs/password
+olcTLSCertificateKeyFile: /etc/openldap/certs/server.key
 -
 add: olcTLSVerifyClient
 olcTLSVerifyClient: allow
