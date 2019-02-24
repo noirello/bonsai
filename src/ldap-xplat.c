@@ -725,13 +725,14 @@ ldap_init_thread_func(void *params) {
 #if !defined(WIN32) && LDAP_VENDOR_VERSION > 20443
     /* The asynchronous connection build only works on unix systems from
        version 2.4.44 */
-if (asyncmod) {
-    struct timeval tv;
-    tv.tv_sec = 0;
-    /* Set asynchronous connect for OpenLDAP. */
-    ldap_set_option(data->ld, LDAP_OPT_CONNECT_ASYNC, LDAP_OPT_ON);
-    ldap_set_option(data->ld, LDAP_OPT_NETWORK_TIMEOUT, &tv);
-}
+    DEBUG("set connecting async: %d", asyncmod);
+    if (asyncmod) {
+        struct timeval tv;
+        tv.tv_sec = 0;
+        /* Set asynchronous connect for OpenLDAP. */
+        ldap_set_option(data->ld, LDAP_OPT_CONNECT_ASYNC, LDAP_OPT_ON);
+        ldap_set_option(data->ld, LDAP_OPT_NETWORK_TIMEOUT, &tv);
+    }
 #endif
 
 #ifdef HAVE_KRB5
