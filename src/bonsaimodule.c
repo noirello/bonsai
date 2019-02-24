@@ -12,6 +12,27 @@ PyObject *LDAPEntryObj = NULL;
 PyObject *LDAPValueListObj = NULL;
 char debugmod = 0;
 
+#ifdef MACOSX
+/* The asynchronous connection build does not function properly on macOS */
+char asyncmod = 0;
+#else
+char asyncmod = 1;
+#endif
+
+/* Set if async connections will be used. */
+static PyObject *
+bonsai_set_connect_async(PyObject *self, PyObject *args) {
+    PyObject *flag;
+
+    if (!PyArg_ParseTuple(args,"O!", &PyBool_Type, &flag)) {
+        return NULL;
+    }
+
+    asyncmod = (char)PyObject_IsTrue(flag);
+
+    Py_RETURN_NONE;
+}
+
 /* Turn on and off debug mod. */
 static PyObject *
 bonsai_set_debug(PyObject *self, PyObject *args, PyObject *kwds) {
@@ -100,6 +121,8 @@ bonsai_free(PyObject *self) {
 }
 
 static PyMethodDef bonsai_methods[] = {
+    {"set_connect_async", (PyCFunction)bonsai_set_connect_async, METH_VARARGS,
+        "Sets if bonsai will attempt async connections."},
     {"get_vendor_info", (PyCFunction)bonsai_get_vendor_info, METH_NOARGS,
         "Returns the vendor information of LDAP library."},
     {"get_tls_impl_name", (PyCFunction)bonsai_get_tls_impl_name, METH_NOARGS,

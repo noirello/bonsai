@@ -19,6 +19,7 @@ extern PyObject *LDAPDNObj;
 extern PyObject *LDAPEntryObj;
 extern PyObject *LDAPValueListObj;
 extern char debugmod;
+extern char asyncmod;
 
 #define DEBUG(fmt, ...) \
     do { if (debugmod) { \
