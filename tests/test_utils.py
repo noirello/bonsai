@@ -2,6 +2,7 @@ import pytest
 
 from bonsai.utils import escape_filter_exp
 from bonsai.utils import escape_attribute_value
+from bonsai.utils import set_connect_async
 
 
 def test_escape_attribute_value():
@@ -20,3 +21,12 @@ def test_escape_filter_exp():
     assert escape_filter_exp("cn=*") == "cn=\\2A"
     assert escape_filter_exp("\\backslash") == "\\5Cbackslash"
     assert escape_filter_exp("term\0") == "term\\0"
+
+
+def test_set_async_connect(client):
+    """ Dummy test for set_connect_async. """
+    with pytest.raises(TypeError):
+        set_connect_async("true")
+    set_connect_async(False)
+    conn = client.connect()
+    assert conn is not None
