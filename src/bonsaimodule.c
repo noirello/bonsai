@@ -21,7 +21,7 @@ char asyncmod = 1;
 
 /* Set if async connections will be used. */
 static PyObject *
-bonsai_set_async_conn(PyObject *self, PyObject *args) {
+bonsai_set_connect_async(PyObject *self, PyObject *args) {
     PyObject *flag;
 
     if (!PyArg_ParseTuple(args,"O!", &PyBool_Type, &flag)) {
@@ -121,7 +121,7 @@ bonsai_free(PyObject *self) {
 }
 
 static PyMethodDef bonsai_methods[] = {
-    {"set_async_conn", (PyCFunction)bonsai_set_async_conn, METH_VARARGS,
+    {"set_connect_async", (PyCFunction)bonsai_set_connect_async, METH_VARARGS,
         "Sets if bonsai will attempt async connections."},
     {"get_vendor_info", (PyCFunction)bonsai_get_vendor_info, METH_NOARGS,
         "Returns the vendor information of LDAP library."},
