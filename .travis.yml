@@ -41,7 +41,7 @@ matrix:
         - pipenv install --dev --skip-lock
         - pipenv graph
         # Install Cyrus SASL.
-        - curl https://pastebin.com/raw/MkjrKcSn -o cyrussasl.rb
+        - curl https://pastebin.com/raw/tRndcWM8 -o cyrussasl.rb
         - cat ./cyrussasl.rb
         - brew install -s ./cyrussasl.rb --with-ntlm
         # Set alias for localhost.
