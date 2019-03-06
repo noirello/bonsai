@@ -1,5 +1,19 @@
 Changelog
 ==========
+[1.1.0] - 2019-03-XX (Unreleased)
+
+Changed
+~~~~~~~
+
+Added
+~~~~~
+
+-  New set_connect_async function to disable/enable asynchronous connection
+   process during socket initialisation. (Thanks to @tck42)
+
+Fixed
+~~~~~
+
 [1.0.0] - 2018-09-09
 --------------------
 

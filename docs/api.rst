@@ -591,6 +591,20 @@ Utility functions
     :return: True if the module is built with the optional Kerberos/GSSAPI headers.
     :rtype: bool
 
+.. function:: bonsai.set_connect_async(allow)
+
+    Disable/enable asynchronous connection for the underlying socket, which means
+    that the socket is set to be non-blocking when it's enabled. The default setting
+    is `True` on Linux with newer OpenLDAP library version than 2.4.43, `False` in any
+    other case. This is an OpenLDAP specific setting (see `LDAP_OPT_CONNECT_ASYNC` option
+    in the OpenLDAP documentation for further details).
+
+    :param bool allow: Enabling/disabling async connect mode.
+
+.. warning:: Experience shows that this is a delicate setting. Even with a newer OpenLDAP,
+    the TLS library version used by libldap might be unable to handle non-blocking
+    sockets correctly.
+
 .. function:: bonsai.set_debug(debug, level=0)
 
     Set debug mode for the module. Turning it on will provide traceback information
