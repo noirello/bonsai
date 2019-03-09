@@ -4,6 +4,8 @@ Changelog
 
 Changed
 ~~~~~~~
+-  Drop support for Python 3.4. From further releases 3.4 related codes will
+   be removed, and the module will require 3.5 or newer Python to be built.
 
 Added
 ~~~~~
