@@ -1,4 +1,5 @@
 import threading
+from contextlib import contextmanager
 from typing import Optional
 
 from .ldapclient import LDAPClient
@@ -17,11 +18,11 @@ class EmptyPool(PoolError):
 
 
 class ConnectionPool:
-    def __init__(self, client: LDAPClient, minconn: int = 1, maxconn: int = 10):
+    def __init__(self, client: LDAPClient, minconn: int = 1, maxconn: int = 10) -> None:
         if minconn < 0:
-            raise AttributeError("The minconn must be positive.")
+            raise ValueError("The minconn must be positive.")
         if minconn > maxconn:
-            raise AttributeError("The maxconn must be greater than minconn,")
+            raise ValueError("The maxconn must be greater than minconn.")
         self._minconn = minconn
         self._maxconn = maxconn
         self._client = client
@@ -29,7 +30,7 @@ class ConnectionPool:
         self._idles = set()
         self._used = set()
 
-    def open(self):
+    def open(self) -> None:
         for _ in range(self._minconn):
             self._idles.add(self._client.connect())
         self._closed = False
@@ -47,7 +48,7 @@ class ConnectionPool:
         self._used.add(conn)
         return conn
 
-    def put(self, conn):
+    def put(self, conn) -> None:
         if self._closed:
             raise ClosedPool("The pool is closed.")
         try:
@@ -56,11 +57,7 @@ class ConnectionPool:
         except KeyError:
             raise PoolError("The %r is not managed by this pool." % conn) from None
 
-    @property
-    def empty(self):
-        return len(self._idles) == 0 and len(self._used) == self._maxconn
-
-    def close(self):
+    def close(self) -> None:
         for conn in self._idles:
             conn.close()
         for conn in self._used:
@@ -68,6 +65,32 @@ class ConnectionPool:
         self._closed = True
         self._idles = set()
         self._used = set()
+
+    @property
+    def empty(self) -> bool:
+        return len(self._idles) == 0 and len(self._used) == self._maxconn
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
+    @property
+    def shared_connection(self) -> int:
+        return len(self._used)
+
+    @property
+    def idle_connection(self) -> int:
+        return len(self._idles)
+
+    @property
+    def max_connection(self) -> int:
+        return self._maxconn
+
+    @max_connection.setter
+    def max_connection(self, val) -> None:
+        if val < self._minconn:
+            raise ValueError("The maxconn must be greater than minconn.")
+        self._maxconn = val
 
 
 class ThreadedConnectionPool(ConnectionPool):
@@ -77,7 +100,7 @@ class ThreadedConnectionPool(ConnectionPool):
         minconn: int = 1,
         maxconn: int = 10,
         block: bool = True,
-    ):
+    ) -> None:
         super().__init__(client, minconn, maxconn)
         self._block = block
         self._lock = threading.Condition()
@@ -93,7 +116,7 @@ class ThreadedConnectionPool(ConnectionPool):
         finally:
             self._lock.release()
 
-    def put(self, conn):
+    def put(self, conn) -> None:
         self._lock.acquire()
         try:
             super().put(conn)
@@ -101,7 +124,7 @@ class ThreadedConnectionPool(ConnectionPool):
         finally:
             self._lock.release()
 
-    def close(self):
+    def close(self) -> None:
         self._lock.acquire()
         try:
             super().close()
