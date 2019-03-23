@@ -66,6 +66,16 @@ class ConnectionPool:
         self._idles = set()
         self._used = set()
 
+    @contextmanager
+    def spawn(self, *args, **kwargs):
+        try:
+            if self._closed:
+                self.open()
+            conn = self.get(*args, **kwargs)
+            yield conn
+        finally:
+            self.put(conn)
+
     @property
     def empty(self) -> bool:
         return len(self._idles) == 0 and len(self._used) == self._maxconn
