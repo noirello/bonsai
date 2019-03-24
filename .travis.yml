@@ -1,13 +1,6 @@
 notifications:
   email: false
 
-branches:
-  only:
-    - master
-    - dev
-    - testing
-    - refactor
-
 dist: xenial
 group: edge
 sudo: true
