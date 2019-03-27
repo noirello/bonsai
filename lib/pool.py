@@ -2,7 +2,10 @@ import threading
 from contextlib import contextmanager
 from typing import Optional
 
-from .ldapclient import LDAPClient
+MYPY = False
+
+if MYPY:
+    from .ldapclient import LDAPClient
 
 
 class PoolError(Exception):
@@ -18,7 +21,9 @@ class EmptyPool(PoolError):
 
 
 class ConnectionPool:
-    def __init__(self, client: LDAPClient, minconn: int = 1, maxconn: int = 10) -> None:
+    def __init__(
+        self, client: "LDAPClient", minconn: int = 1, maxconn: int = 10
+    ) -> None:
         if minconn < 0:
             raise ValueError("The minconn must be positive.")
         if minconn > maxconn:
@@ -106,7 +111,7 @@ class ConnectionPool:
 class ThreadedConnectionPool(ConnectionPool):
     def __init__(
         self,
-        client: LDAPClient,
+        client: "LDAPClient",
         minconn: int = 1,
         maxconn: int = 10,
         block: bool = True,

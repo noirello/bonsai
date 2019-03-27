@@ -1,14 +1,17 @@
 import asyncio
 
-from ..client import LDAPClient
 from ..pool import ConnectionPool, ClosedPool, EmptyPool
 
 from .aioconnection import AIOLDAPConnection
 
+MYPY = False
+
+if MYPY:
+    from ..ldapclient import LDAPClient
 
 class AIOConnectionPool(ConnectionPool):
     def __init__(
-        self, client: LDAPClient, minconn: int = 1, maxconn: int = 10, loop=None
+        self, client: "LDAPClient", minconn: int = 1, maxconn: int = 10, loop=None
     ):
         super().__init__(client, minconn, maxconn)
         self._lock = asyncio.Condition(loop=loop)
