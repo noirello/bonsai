@@ -1,5 +1,6 @@
 import asyncio
 import sys
+import time
 from functools import wraps
 
 import pytest
@@ -7,6 +8,7 @@ from conftest import get_config, network_delay
 
 from bonsai import LDAPClient
 from bonsai import LDAPEntry
+from bonsai.asyncio import AIOConnectionPool
 import bonsai.errors
 
 
@@ -204,3 +206,32 @@ def test_async_with(client):
     else:
         yield from aexit(mgr, None, None, None)
     assert conn.closed
+
+
+@asyncio.coroutine
+def keep(pool, delay):
+    conn = yield from pool.get()
+    yield from asyncio.sleep(delay)
+    yield from pool.put(conn)
+
+
+@asyncio_test
+def test_pool_get(client):
+    delay = 2
+    pool = AIOConnectionPool(client, minconn=1, maxconn=1)
+    yield from pool.open()
+    assert pool.closed == False
+    task1 = asyncio.ensure_future(keep(pool, delay))
+    task2 = asyncio.ensure_future(keep(pool, delay))
+    start = time.time()
+    yield from task1
+    yield from task2
+    assert time.time() - start >= delay * 2
+    # With enough connection in the pool for both tasks.
+    pool.max_connection = 2
+    task1 = asyncio.ensure_future(keep(pool, delay))
+    task2 = asyncio.ensure_future(keep(pool, delay))
+    start = time.time()
+    yield from task1
+    yield from task2
+    assert time.time() - start >= delay
