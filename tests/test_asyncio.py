@@ -9,6 +9,7 @@ from conftest import get_config, network_delay
 from bonsai import LDAPClient
 from bonsai import LDAPEntry
 from bonsai.asyncio import AIOConnectionPool
+from bonsai.pool import ClosedPool
 import bonsai.errors
 
 
@@ -216,11 +217,15 @@ def keep(pool, delay):
 
 
 @asyncio_test
-def test_pool_get(client):
+def test_pool_get_put(client):
+    """ Test getting and putting back connection from pool. """
     delay = 2
     pool = AIOConnectionPool(client, minconn=1, maxconn=1)
+    with pytest.raises(ClosedPool):
+        _ = yield from pool.get()
     yield from pool.open()
     assert pool.closed == False
+    assert pool.idle_connection == 1
     task1 = asyncio.ensure_future(keep(pool, delay))
     task2 = asyncio.ensure_future(keep(pool, delay))
     start = time.time()
@@ -235,3 +240,15 @@ def test_pool_get(client):
     yield from task1
     yield from task2
     assert time.time() - start >= delay
+
+
+@asyncio_test
+def test_pool_close(client):
+    """ Test closing the pool. """
+    pool = AIOConnectionPool(client, minconn=1, maxconn=1)
+    yield from pool.open()
+    assert pool.closed == False
+    assert pool.idle_connection == 1
+    yield from pool.close()
+    assert pool.closed == True
+    assert pool.idle_connection == 0
