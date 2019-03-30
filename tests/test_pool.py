@@ -128,7 +128,8 @@ def test_threaded_pool_block(client):
     time.sleep(2)
     start = time.time()
     conn = pool.get()
-    assert math.ceil(time.time() - start) + 1.2 >= sleep
+    # Some assertation that it didn't happen immediately.
+    assert math.ceil(time.time() - start) + 1.2 >= sleep / 2.0
     assert not conn.closed
     pool.put(conn)
 
