@@ -11,15 +11,15 @@ if MYPY:
 
 class AIOConnectionPool(ConnectionPool):
     def __init__(
-        self, client: "LDAPClient", minconn: int = 1, maxconn: int = 10, loop=None
+        self, client: "LDAPClient", minconn: int = 1, maxconn: int = 10, loop=None, **kwargs
     ):
-        super().__init__(client, minconn, maxconn)
+        super().__init__(client, minconn, maxconn, **kwargs)
         self._lock = asyncio.Condition(loop=loop)
 
     @asyncio.coroutine
     def open(self):
         for _ in range(self._minconn):
-            conn = yield from self._client.connect(is_async=True)
+            conn = yield from self._client.connect(is_async=True, **self._kwargs)
             self._idles.add(conn)
         self._closed = False
 
@@ -33,7 +33,7 @@ class AIOConnectionPool(ConnectionPool):
                 conn = self._idles.pop()
             except KeyError:
                 if len(self._used) < self._maxconn:
-                    conn = yield from self._client.connect(is_async=True)
+                    conn = yield from self._client.connect(is_async=True, **self._kwargs)
                 else:
                     raise EmptyPool("Pool is empty.") from None
             self._used.add(conn)

@@ -1,6 +1,6 @@
 import threading
 from contextlib import contextmanager
-from typing import Optional
+from typing import Optional, Dict, Any
 
 MYPY = False
 
@@ -22,7 +22,11 @@ class EmptyPool(PoolError):
 
 class ConnectionPool:
     def __init__(
-        self, client: "LDAPClient", minconn: int = 1, maxconn: int = 10
+        self,
+        client: "LDAPClient",
+        minconn: int = 1,
+        maxconn: int = 10,
+        **kwargs: Dict[str, Any]
     ) -> None:
         if minconn < 0:
             raise ValueError("The minconn must be positive.")
@@ -31,13 +35,14 @@ class ConnectionPool:
         self._minconn = minconn
         self._maxconn = maxconn
         self._client = client
+        self._kwargs = kwargs
         self._closed = True
         self._idles = set()
         self._used = set()
 
     def open(self) -> None:
         for _ in range(self._minconn):
-            self._idles.add(self._client.connect())
+            self._idles.add(self._client.connect(self._kwargs))
         self._closed = False
 
     def get(self):
@@ -47,7 +52,7 @@ class ConnectionPool:
             conn = self._idles.pop()
         except KeyError:
             if len(self._used) < self._maxconn:
-                conn = self._client.connect()
+                conn = self._client.connect(self._kwargs)
             else:
                 raise EmptyPool("Pool is empty.") from None
         self._used.add(conn)
@@ -115,8 +120,9 @@ class ThreadedConnectionPool(ConnectionPool):
         minconn: int = 1,
         maxconn: int = 10,
         block: bool = True,
+        **kwargs: Dict[str, Any]
     ) -> None:
-        super().__init__(client, minconn, maxconn)
+        super().__init__(client, minconn, maxconn, **kwargs)
         self._block = block
         self._lock = threading.Condition()
 

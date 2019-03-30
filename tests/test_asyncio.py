@@ -252,3 +252,12 @@ def test_pool_close(client):
     yield from pool.close()
     assert pool.closed == True
     assert pool.idle_connection == 0
+
+
+@asyncio_test
+def test_pool_pass_param(client):
+    """ Test passing parameter to connect. """
+    pool = AIOConnectionPool(client, minconn=1, maxconn=1, timeout=0)
+    with pytest.raises(asyncio.TimeoutError):
+        yield from pool.open()
+        _ = yield from pool.get()
