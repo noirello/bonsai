@@ -1,17 +1,21 @@
 Changelog
 ==========
-[1.1.0] - 2019-03-XX (Unreleased)
+[1.1.0] - 2019-04-XX (Unreleased)
+---------------------------------
 
 Changed
 ~~~~~~~
 -  Drop support for Python 3.4. From further releases 3.4 related codes will
-   be removed, and the module will require 3.5 or newer Python to be built.
+   be removed (some asyncio related code has already changed), and the module
+   will require 3.5 or newer Python to be built.
 
 Added
 ~~~~~
 
 -  New set_connect_async function to disable/enable asynchronous connection
    process during socket initialisation. (Thanks to @tck42)
+-  New connection pool classes: simple ConnectionPool, ThreadedConnectionPool
+   that can be shared between threads and AIOConnectionPool for asyncio tasks.
 
 Fixed
 ~~~~~
