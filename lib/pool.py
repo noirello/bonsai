@@ -9,18 +9,34 @@ if MYPY:
 
 
 class PoolError(Exception):
+    """ Connection pool related errors. """
     pass
 
 
 class ClosedPool(PoolError):
+    """ Raised, when the connection pool is closed. """
     pass
 
 
 class EmptyPool(PoolError):
+    """ Raised, when the connection pool is empty. """
     pass
 
 
 class ConnectionPool:
+    """
+    A connection pool object for managing multiple open connections.
+
+    :param LDAPClient client: the :class:`bonsai.LDAPClient` that's used to create
+                connections.
+    :param int minconn: the minimum number of connections that's created
+                after the pool is opened.
+    :param int maxconn: the maximum number of connections in the pool.
+    :param \*\*kwargs: additional keyword arguments that are passed to
+                the :meth:`bonsai.LDAPClient.connect` method.
+    :raises ValueError: when the minconn is negative or the maxconn is less
+        than the minconn.
+    """
     def __init__(
         self,
         client: "LDAPClient",
@@ -28,6 +44,7 @@ class ConnectionPool:
         maxconn: int = 10,
         **kwargs: Dict[str, Any]
     ) -> None:
+        """ Init method. """
         if minconn < 0:
             raise ValueError("The minconn must be positive.")
         if minconn > maxconn:
@@ -41,11 +58,22 @@ class ConnectionPool:
         self._used = set()
 
     def open(self) -> None:
+        """
+        Open the connection pool by initialising the minimal number of
+        connections.
+        """
         for _ in range(self._minconn):
             self._idles.add(self._client.connect(self._kwargs))
         self._closed = False
 
     def get(self):
+        """
+        Get a connection from the connection pool.
+
+        :raises EmptyPool: when the pool is empty.
+        :raises ClosedPool: when the method is called on a closed pool.
+        :return: an LDAP connection object.
+        """
         if self._closed:
             raise ClosedPool("The pool is closed.")
         try:
@@ -59,6 +87,14 @@ class ConnectionPool:
         return conn
 
     def put(self, conn) -> None:
+        """
+        Put back a connection to the connection pool.
+
+        :param LDAPConnection conn: the connection managed by the pool.
+        :raises ClosedPool: when the method is called on a closed pool.
+        :raises PoolError: when tying to put back an object that's not managed
+                by this pool.
+        """
         if self._closed:
             raise ClosedPool("The pool is closed.")
         try:
@@ -68,6 +104,7 @@ class ConnectionPool:
             raise PoolError("The %r is not managed by this pool." % conn) from None
 
     def close(self) -> None:
+        """ Close the pool and all of its managed connections. """
         for conn in self._idles:
             conn.close()
         for conn in self._used:
@@ -78,6 +115,16 @@ class ConnectionPool:
 
     @contextmanager
     def spawn(self, *args, **kwargs):
+        """
+        Context manager method that acquire a connection from the pool
+        and returns it on exit. It also opens the pool if it hasn't been
+        opened before.
+
+        :params \*args: the positional arguments passed to
+                :meth:`bonsai.pool.ConnectionPool.get`.
+        :params \*\*kwargs: the keyword arguments passed to
+                :meth:`bonsai.pool.ConnectionPool.get`.
+        """
         try:
             if self._closed:
                 self.open()
@@ -88,32 +135,60 @@ class ConnectionPool:
 
     @property
     def empty(self) -> bool:
+        """
+        Read-only property that will be True when the connection pool has
+        no free connection to use.
+        """
         return len(self._idles) == 0 and len(self._used) == self._maxconn
 
     @property
     def closed(self) -> bool:
+        """
+        Read-only property that will be True when the connection pool has
+        been closed.
+        """
         return self._closed
 
     @property
     def shared_connection(self) -> int:
+        """ The number of shared connections. """
         return len(self._used)
 
     @property
     def idle_connection(self) -> int:
+        """ the number of idle connection. """
         return len(self._idles)
 
     @property
     def max_connection(self) -> int:
+        """ The maximal number of connections that the pool can have. """
         return self._maxconn
 
     @max_connection.setter
     def max_connection(self, val) -> None:
+        """ The maximal number of connections that the pool can have. """
         if val < self._minconn:
             raise ValueError("The maxconn must be greater than minconn.")
         self._maxconn = val
 
 
 class ThreadedConnectionPool(ConnectionPool):
+    """
+    A connection pool that can be shared between threads. It's inherited from 
+    :class:`bonsai.pool.ConnectionPool`.
+
+    :param LDAPClient client: the :class:`bonsai.LDAPClient` that's used to create
+                connections.
+    :param int minconn: the minimum number of connections that's created
+                after the pool is opened.
+    :param int maxconn: the maximum number of connections in the pool.
+    :param bool block: when it's True, the get method will block when no
+                connection is available in the pool.
+    :param \*\*kwargs: additional keyword arguments that are passed to
+                the :meth:`bonsai.LDAPClient.connect` method.
+    :raises ValueError: when the minconn is negative or the maxconn is less
+        than the minconn.
+    """
     def __init__(
         self,
         client: "LDAPClient",
@@ -122,11 +197,20 @@ class ThreadedConnectionPool(ConnectionPool):
         block: bool = True,
         **kwargs: Dict[str, Any]
     ) -> None:
+        """ Init method. """
         super().__init__(client, minconn, maxconn, **kwargs)
         self._block = block
         self._lock = threading.Condition()
 
     def get(self, timeout: Optional[float] = None):
+        """
+        Get a connection from the connection pool.
+
+        :param float timeout: a timeout until waiting for free connection.
+        :raises EmptyPool: when the pool is empty.
+        :raises ClosedPool: when the method is called on a closed pool.
+        :return: an LDAP connection object.
+        """
         self._lock.acquire()
         try:
             if self._block:

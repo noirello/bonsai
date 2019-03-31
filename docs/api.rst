@@ -516,6 +516,47 @@ Helper class for paged search result.
     :return: an ID of the next search operation.
     :rtype: int.
 
+
+:class:`ConnectionPool`
+=======================
+
+.. autoclass:: bonsai.pool.ConnectionPool
+
+   >>> import bonsai
+   >>> from bonsai.pool import ConnectionPool
+   >>> client = bonsai.LDAPClient()
+   >>> pool = ConnectionPool(client, 1, 2)
+   >>> pool.open()
+   >>> conn = pool.get()
+   >>> conn.whomai()
+   'anonymus'
+   >>> pool.put(conn)
+   >>> pool.close()
+
+.. automethod:: bonsai.pool.ConnectionPool.close
+.. automethod:: bonsai.pool.ConnectionPool.get
+.. automethod:: bonsai.pool.ConnectionPool.open
+.. automethod:: bonsai.pool.ConnectionPool.put
+.. automethod:: bonsai.pool.ConnectionPool.spawn
+
+    Example usage:
+
+.. code-block:: python
+
+    import bonsai
+    from bonsai.pool import ConnectionPool
+
+    client = bonsai.LDAPClient()
+    pool = ConnectionPool(client)
+    with pool.spawn() as conn:
+        print(conn.whoami())
+
+:class:`ThreadedConnectionPool`
+===============================
+
+.. autoclass:: bonsai.pool.ThreadedConnectionPool
+.. automethod:: bonsai.pool.ThreadedConnectionPool.get
+
 Errors
 ======
 .. autoclass:: bonsai.LDAPError
@@ -548,6 +589,9 @@ Errors
 .. autoclass:: bonsai.PasswordModNotAllowed()
 .. autoclass:: bonsai.PasswordTooShort()
 .. autoclass:: bonsai.PasswordTooYoung()
+.. autoclass:: bonsai.pool.PoolError
+.. autoclass:: bonsai.pool.ClosedPool
+.. autoclass:: bonsai.pool.EmptyPool
 
 Utility functions
 =================
