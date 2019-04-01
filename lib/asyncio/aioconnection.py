@@ -8,29 +8,25 @@ from ..errors import LDAPError, NotAllowedOnNonleaf
 if sys.version_info.minor < 5:
     StopAsyncIteration = StopIteration
 
+
 class AIOLDAPConnection(BaseLDAPConnection):
     def __init__(self, client, loop=None):
         self._loop = loop or asyncio.get_event_loop()
-        self.__open_gen = None
+        self.__open_coro = None
         super().__init__(client, is_async=True)
 
-    @asyncio.coroutine
-    def __aenter__(self):
+    async def __aenter__(self):
         """ Async context manager entry point. """
-        res = yield from self.__open_gen
-        return res
+        return await self.__open_coro
 
-    @asyncio.coroutine
-    def __aexit__(self, *exc):
+    async def __aexit__(self, *exc):
         """ Async context manager exit point. """
         self.close()
 
     def __await__(self):
-        res = yield from self.__open_gen
-        return res
+        return self.__open_coro.__await__()  # Hack to avoid returning a coroutine.
 
-    def __iter__(self):
-        return self.__await__()
+    __iter__ = __await__
 
     def _ready(self, msg_id, fut):
         self._loop.remove_reader(self.fileno())
@@ -45,14 +41,12 @@ class AIOLDAPConnection(BaseLDAPConnection):
         except LDAPError as exc:
             fut.set_exception(exc)
 
-    @asyncio.coroutine
-    def _poll(self, msg_id, timeout=None):
+    async def _poll(self, msg_id, timeout=None):
         fut = asyncio.Future()
         self._loop.add_reader(self.fileno(), self._ready, msg_id, fut)
         self._loop.add_writer(self.fileno(), self._ready, msg_id, fut)
         try:
-            res = yield from asyncio.wait_for(fut, timeout, loop=self._loop)
-            return res
+            return await asyncio.wait_for(fut, timeout)
         except Exception as exc:
             self._loop.remove_reader(self.fileno())
             self._loop.remove_writer(self.fileno())
@@ -62,34 +56,29 @@ class AIOLDAPConnection(BaseLDAPConnection):
         return self._poll(msg_id, timeout)
 
     def open(self, timeout=None):
-        self.__open_gen = super().open(timeout)
+        self.__open_coro = super().open(timeout)
         return self
 
-    @asyncio.coroutine
-    def delete(self, dname, timeout=None, recursive=False):
+    async def delete(self, dname, timeout=None, recursive=False):
         try:
-            res = yield from super().delete(dname, timeout, recursive)
-            return res
+            return await super().delete(dname, timeout, recursive)
         except NotAllowedOnNonleaf as exc:
             if recursive:
-                results = yield from self.search(dname,
-                                                 LDAPSearchScope.ONELEVEL,
-                                                 attrlist=['1.1'],
-                                                 timeout=timeout)
+                results = await self.search(
+                    dname, LDAPSearchScope.ONELEVEL, attrlist=["1.1"], timeout=timeout
+                )
                 for res in results:
-                    yield from self.delete(res.dn, timeout, True)
-                res = yield from self.delete(dname, timeout, False)
-                return res
+                    await self.delete(res.dn, timeout, True)
+                return await self.delete(dname, timeout, False)
             else:
                 raise exc
 
-    @asyncio.coroutine
-    def _search_iter_anext(self, search_iter):
+    async def _search_iter_anext(self, search_iter):
         try:
             return next(search_iter)
         except StopIteration:
             msgid = search_iter.acquire_next_page()
             if msgid is None:
                 raise StopAsyncIteration
-            search_iter = yield from self._evaluate(msgid)
+            search_iter = await self._evaluate(msgid)
             return next(search_iter)
