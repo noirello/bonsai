@@ -259,3 +259,15 @@ async def test_pool_pass_param(client):
     with pytest.raises(asyncio.TimeoutError):
         await pool.open()
         _ = await pool.get()
+
+
+@asyncio_test
+async def test_pool_spawn(client):
+    """ Test context manager. """
+    pool = AIOConnectionPool(client, minconn=1, maxconn=1)
+    assert pool.idle_connection == 0
+    async with pool.spawn() as conn:
+        assert pool.shared_connection == 1
+        _ = await conn.whoami()
+    assert pool.idle_connection == 1
+    assert pool.shared_connection == 0

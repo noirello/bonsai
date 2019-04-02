@@ -10,6 +10,20 @@ if MYPY:
     from ..ldapclient import LDAPClient
 
 
+class AIOPoolContextManager:
+    def __init__(self, pool, *args, **kwargs):
+        self.pool = pool
+        self.__conn = None
+
+    async def __aenter__(self):
+        if self.pool.closed:
+            await self.pool.open()
+        self.__conn = await self.pool.get()
+        return self.__conn
+
+    async def __aexit__(self, *exc):
+        await self.pool.put(self.__conn)
+
 class AIOConnectionPool(ConnectionPool):
     def __init__(
         self,
@@ -58,3 +72,6 @@ class AIOConnectionPool(ConnectionPool):
         async with self._lock:
             super().close()
             self._lock.notify_all()
+
+    def spawn(self, *args, **kwargs):
+        return AIOPoolContextManager(self, *args, **kwargs)
