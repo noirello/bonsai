@@ -21,7 +21,7 @@ class AIOPoolContextManager:
         self.__conn = await self.pool.get()
         return self.__conn
 
-    async def __aexit__(self, *exc):
+    async def __aexit__(self, type, value, traceback):
         await self.pool.put(self.__conn)
 
 class AIOConnectionPool(ConnectionPool):

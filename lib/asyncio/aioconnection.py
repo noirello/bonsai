@@ -19,7 +19,7 @@ class AIOLDAPConnection(BaseLDAPConnection):
         """ Async context manager entry point. """
         return await self.__open_coro
 
-    async def __aexit__(self, *exc):
+    async def __aexit__(self, type, value, traceback):
         """ Async context manager exit point. """
         self.close()
 

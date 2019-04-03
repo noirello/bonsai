@@ -32,7 +32,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         """ Context manager entry point. """
         return self
 
-    def __exit__(self, *exc: Tuple) -> None:
+    def __exit__(self, type, value, traceback) -> None:
         """ Context manager exit point. """
         self.close()
 
