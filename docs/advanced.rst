@@ -368,6 +368,36 @@ removed, and modified just like entries.
 .. note::
     The OID of ManageDsaIT control is: 2.16.840.1.113730.3.4.2
 
+Using connection pools
+======================
+
+When your application requires to use multiple open LDAP connections, Bonsai
+provides you connection pools to help you creating and accessing them. This way
+you can acquire an opened connection, do some operations and put it back into
+the pool for other threads/tasks to use.
+
+.. code-block:: python3
+
+    import bonsai
+    import threading
+    from bonsai.pool import ThreadedConnectionPool
+
+    def work(pool):
+        with pool.spawn() as conn:
+            print(conn.whoami())
+            # Some other operations...
+
+    client = bonsai.LDAPClient()
+    pool = ThreadedConnectionPool(client, minconn=5, maxconn=10)
+    thr = threading.Thread(target=work, args=(pool,))
+    thr.start()
+    conn = pool.get()
+    res = conn.search()
+    # After finishing up...
+    pool.put(conn)
+
+
+
 Reading and writing LDIF files
 ==============================
 

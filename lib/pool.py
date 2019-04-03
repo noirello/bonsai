@@ -116,7 +116,7 @@ class ConnectionPool:
     @contextmanager
     def spawn(self, *args, **kwargs):
         """
-        Context manager method that acquire a connection from the pool
+        Context manager method that acquires a connection from the pool
         and returns it on exit. It also opens the pool if it hasn't been
         opened before.
 
