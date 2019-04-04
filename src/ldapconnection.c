@@ -516,7 +516,7 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     int sizelimit = 0, attrsonly = 0;
     int page_size = 0;
     int offset = 0, after_count = 0, before_count = 0, list_count = 0;
-    long int len = 0;
+    Py_ssize_t len = 0;
     double timeout = 0;
     char *basestr = NULL;
     char *filterstr = NULL;
@@ -667,7 +667,7 @@ static PyObject *
 ldapconnection_modpasswd(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     int rc = -1;
     int msgid = -1;
-    int user_len = 0, newpwd_len = 0, oldpwd_len = 0;
+    Py_ssize_t user_len = 0, newpwd_len = 0, oldpwd_len = 0;
     struct berval user, newpwd, oldpwd;
     struct berval *data = NULL;
     BerElement *ber = NULL;

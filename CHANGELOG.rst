@@ -20,6 +20,9 @@ Added
 Fixed
 ~~~~~
 
+-  Defining PY_SSIZE_T_CLEAN and changing parameter size variables from int to
+   Py_ssize_t for Python 3.8.
+
 [1.0.0] - 2018-09-09
 --------------------
 

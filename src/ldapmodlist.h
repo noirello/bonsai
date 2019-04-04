@@ -1,6 +1,8 @@
 #ifndef LDAPMODLIST_H_
 #define LDAPMODLIST_H_
 
+#define PY_SSIZE_T_CLEAN
+
 #include <Python.h>
 
 #include "ldap-xplat.h" /* OpenLDAP/WinLDAP headers. */

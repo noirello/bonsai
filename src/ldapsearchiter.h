@@ -1,6 +1,8 @@
 #ifndef LDAPSEARCHITER_H_
 #define LDAPSEARCHITER_H_
 
+#define PY_SSIZE_T_CLEAN
+
 #include <Python.h>
 
 #include "ldapconnection.h"

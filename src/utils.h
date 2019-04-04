@@ -1,5 +1,8 @@
 #ifndef UTILS_H_
 #define UTILS_H_
+
+#define PY_SSIZE_T_CLEAN
+
 #include <Python.h>
 
 #include "ldap-xplat.h"

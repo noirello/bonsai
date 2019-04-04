@@ -1,6 +1,8 @@
 #ifndef LDAPENTRY_H_
 #define LDAPENTRY_H_
 
+#define PY_SSIZE_T_CLEAN
+
 #include <Python.h>
 
 #include "ldapconnection.h"

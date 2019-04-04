@@ -1,6 +1,8 @@
 #ifndef LDAPCONNECTITER_H_
 #define LDAPCONNECTITER_H_
 
+#define PY_SSIZE_T_CLEAN
+
 #include <Python.h>
 
 #include "ldap-xplat.h"
