@@ -14,16 +14,18 @@ try:
 except ImportError:
     from distutils.core import setup, Extension, Command
 
+
 @contextmanager
 def silent_stderr():
     """ Shush stderr for receiving unnecessary errors during setup. """
-    devnull = open(os.devnull, 'w')
+    devnull = open(os.devnull, "w")
     old = os.dup(sys.stderr.fileno())
     os.dup2(devnull.fileno(), sys.stderr.fileno())
     try:
         yield devnull
     finally:
         os.dup2(old, sys.stderr.fileno())
+
 
 def have_krb5(libs, libdirs=None):
     """ Check that the target platform has KRB5 support. """
@@ -45,21 +47,19 @@ def have_krb5(libs, libdirs=None):
     """
     curdir = os.path.abspath(os.path.dirname(__file__))
     cfg = configparser.ConfigParser()
-    cfg.read(os.path.join(curdir, 'setup.cfg'))
+    cfg.read(os.path.join(curdir, "setup.cfg"))
     with tempfile.TemporaryDirectory() as tmp_dir:
-        name = os.path.join(tmp_dir, 'test_krb5')
-        src_name = name + '.c'
-        with open(src_name, 'w') as source:
+        name = os.path.join(tmp_dir, "test_krb5")
+        src_name = name + ".c"
+        with open(src_name, "w") as source:
             source.write(code)
 
         comp = distutils.ccompiler.new_compiler()
         distutils.sysconfig.customize_compiler(comp)
-        for include_dir in cfg.get("build_ext", "include_dirs",
-                                   fallback="").split(":"):
+        for include_dir in cfg.get("build_ext", "include_dirs", fallback="").split(":"):
             if include_dir:
                 comp.add_include_dir(include_dir)
-        for library_dir in cfg.get("build_ext", "library_dirs",
-                                   fallback="").split(":"):
+        for library_dir in cfg.get("build_ext", "library_dirs", fallback="").split(":"):
             if library_dir:
                 comp.add_library_dir(library_dir)
         try:
@@ -69,11 +69,15 @@ def have_krb5(libs, libdirs=None):
                     libs.append("gcov")
                 comp.link_executable(
                     comp.compile([src_name], output_dir=tmp_dir),
-                    name, libraries=libs, library_dirs=libdirs)
+                    name,
+                    libraries=libs,
+                    library_dirs=libdirs,
+                )
         except (CompileError, LinkError):
             return False
         else:
             return True
+
 
 class TestCommand(Command):
     description = "Run the tests."
@@ -87,20 +91,35 @@ class TestCommand(Command):
 
     def run(self):
         import unittest
+
         tests = unittest.defaultTestLoader.discover("./tests")
         suite = unittest.TestSuite()
         suite.addTests(tests)
-        #result = unittest.TestResult()
+        # result = unittest.TestResult()
         unittest.TextTestRunner().run(suite)
         sys.exit(0)
 
-SOURCES = ["bonsaimodule.c", "ldapentry.c", "ldapconnectiter.c",
-           "ldapconnection.c", "ldapmodlist.c", "ldap-xplat.c",
-           "ldapsearchiter.c", "utils.c"]
 
-DEPENDS = ["ldapconnection.h", "ldapentry.h", "ldapconnectiter.h",
-           "ldapmodlist.h", "ldapsearchiter.h", "ldap-xplat.h",
-           "utils.h"]
+SOURCES = [
+    "bonsaimodule.c",
+    "ldapentry.c",
+    "ldapconnectiter.c",
+    "ldapconnection.c",
+    "ldapmodlist.c",
+    "ldap-xplat.c",
+    "ldapsearchiter.c",
+    "utils.c",
+]
+
+DEPENDS = [
+    "ldapconnection.h",
+    "ldapentry.h",
+    "ldapconnectiter.h",
+    "ldapmodlist.h",
+    "ldapsearchiter.h",
+    "ldap-xplat.h",
+    "utils.h",
+]
 
 LIBDIRS = []
 MACROS = []
@@ -122,18 +141,22 @@ else:
         LIBS.extend(["krb5", "gssapi_krb5"])
         MACROS.append(("HAVE_KRB5", 1))
     else:
-        print("INFO: Kerberos headers and libraries are not found."
-              " Additional GSSAPI capabilities won't be installed.")
+        print(
+            "INFO: Kerberos headers and libraries are not found."
+            " Additional GSSAPI capabilities won't be installed."
+        )
 
-SOURCES = [os.path.join('src', x) for x in SOURCES]
-DEPENDS = [os.path.join('src', x) for x in DEPENDS]
+SOURCES = [os.path.join("src/_bonsai", x) for x in SOURCES]
+DEPENDS = [os.path.join("src/_bonsai", x) for x in DEPENDS]
 
-BONSAI_MODULE = Extension("bonsai._bonsai",
-                          libraries=LIBS,
-                          sources=SOURCES,
-                          depends=DEPENDS,
-                          define_macros=MACROS,
-                          library_dirs=LIBDIRS)
+BONSAI_MODULE = Extension(
+    "bonsai._bonsai",
+    libraries=LIBS,
+    sources=SOURCES,
+    depends=DEPENDS,
+    define_macros=MACROS,
+    library_dirs=LIBDIRS,
+)
 PYTHON_DEPS = []
 
 if sys.version_info.minor < 5:
@@ -141,39 +164,42 @@ if sys.version_info.minor < 5:
     PYTHON_DEPS.append("typing")
 
 # Get long description from the README.rst file.
-with open('README.rst') as file:
+with open("README.rst") as file:
     LONG_DESC = file.read()
 
 # Get version number from the module's __init__.py file.
-with open('./lib/__init__.py') as src:
-    VER = [line.split("\"")[1] for line in src.readlines()
-           if line.startswith('__version__')][0]
+with open("./src/bonsai/__init__.py") as src:
+    VER = [
+        line.split('"')[1] for line in src.readlines() if line.startswith("__version__")
+    ][0]
 
-setup(name="bonsai",
-      version=VER,
-      description="Python 3 module for accessing LDAP directory servers.",
-      author="noirello",
-      author_email="noirello@gmail.com",
-      url="https://github.com/noirello/bonsai",
-      long_description=LONG_DESC,
-      license="MIT",
-      ext_modules=[BONSAI_MODULE],
-      package_dir={"bonsai": "lib"},
-      packages=["bonsai", "bonsai.asyncio", "bonsai.gevent", "bonsai.tornado"],
-      include_package_data=True,
-      install_requires=PYTHON_DEPS,
-      cmdclass={"test": TestCommand},
-      keywords=["python3", "ldap", "libldap", "winldap", "asyncio",
-                "gevent", "tornado"],
-      classifiers=[
-          'Development Status :: 4 - Beta',
-          'Intended Audience :: Developers',
-          'Intended Audience :: System Administrators',
-          'License :: OSI Approved :: MIT License',
-          'Operating System :: Microsoft :: Windows',
-          'Operating System :: Unix',
-          'Programming Language :: C',
-          'Programming Language :: Python :: 3',
-          'Topic :: Software Development :: Libraries :: Python Modules',
-          'Topic :: System :: Systems Administration :: Authentication/Directory :: LDAP']
-     )
+setup(
+    name="bonsai",
+    version=VER,
+    description="Python 3 module for accessing LDAP directory servers.",
+    author="noirello",
+    author_email="noirello@gmail.com",
+    url="https://github.com/noirello/bonsai",
+    long_description=LONG_DESC,
+    license="MIT",
+    ext_modules=[BONSAI_MODULE],
+    package_dir={"bonsai": "src/bonsai"},
+    packages=["bonsai", "bonsai.asyncio", "bonsai.gevent", "bonsai.tornado"],
+    include_package_data=True,
+    install_requires=PYTHON_DEPS,
+    cmdclass={"test": TestCommand},
+    keywords=["python3", "ldap", "libldap", "winldap", "asyncio", "gevent", "tornado"],
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "Intended Audience :: System Administrators",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: Microsoft :: Windows",
+        "Operating System :: Unix",
+        "Programming Language :: C",
+        "Programming Language :: Python :: 3",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Topic :: System :: Systems Administration :: Authentication/Directory :: LDAP",
+    ],
+)
+

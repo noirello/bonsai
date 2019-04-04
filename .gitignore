@@ -4,10 +4,11 @@ build
 .cproject
 .pydevproject
 .cache/*
+.coverage
 dist
 tests/__pycache__
-lib/__pycache__
-lib/asyncio/__pycache__
+src/bonsai/__pycache__
+src/bonsai/asyncio/__pycache__
 docs/_build
 docs/_static
 docs/_templates
