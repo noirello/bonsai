@@ -68,7 +68,7 @@ matrix:
         - INSTALL_PATH=`pipenv run python -c "import bonsai; print(bonsai.__file__[:-12])"`
         - echo $INSTALL_PATH
       after_success:
-        - sed -i.bak 's|'$INSTALL_PATH'|'$TRAVIS_BUILD_DIR/lib'|g' .coverage
+        - sed -i.bak 's|'$INSTALL_PATH'|'$TRAVIS_BUILD_DIR/src/bonsai'|g' .coverage
         - codecov
         - unset CFLAGS
         - rm -rf ./dist/*
@@ -130,7 +130,7 @@ script:
 
 after_success:
   # Change path of the Python source files in .coverage.
-  - sed -i.bak 's|'$INSTALL_PATH'|'$TRAVIS_BUILD_DIR/lib'|g' .coverage
+  - sed -i.bak 's|'$INSTALL_PATH'|'$TRAVIS_BUILD_DIR/src/bonsai'|g' .coverage
   - codecov
 
 #after_failure:

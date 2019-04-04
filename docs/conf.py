@@ -32,7 +32,7 @@ class Mock(MagicMock):
         if name == 'ldapsearchiter':
             return object
 
-MOCK_MODULES = ['lib._bonsai', 'bonsai', 'bonsai._bonsai']
+MOCK_MODULES = ['src.bonsai._bonsai', 'bonsai', 'bonsai._bonsai']
 try:
     import typing
 except ImportError:
@@ -40,7 +40,7 @@ except ImportError:
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 
-import lib as bonsai
+import src.bonsai as bonsai
 sys.modules['bonsai'] = bonsai
 
 # If extensions (or modules to document with autodoc) are in another directory,
