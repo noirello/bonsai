@@ -2,8 +2,10 @@
 #define LDAPCONNECTITER_H_
 
 #include <Python.h>
+
 #include "ldap-xplat.h"
 #include "ldapconnection.h"
+
 #ifndef WIN32
 #include <poll.h>
 #endif

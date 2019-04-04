@@ -4,7 +4,6 @@
 #include <Python.h>
 #include "structmember.h"
 
-#include "ldap-xplat.h"
 #include "utils.h"
 
 typedef struct {

@@ -2,9 +2,8 @@
 #define LDAPMODLIST_H_
 
 #include <Python.h>
-#include "structmember.h"
 
-#include "ldap-xplat.h"
+#include "ldap-xplat.h" /* OpenLDAP/WinLDAP headers. */
 
 typedef struct {
     PyObject_HEAD

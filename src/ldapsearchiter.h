@@ -2,7 +2,7 @@
 #define LDAPSEARCHITER_H_
 
 #include <Python.h>
-#include "structmember.h"
+
 #include "ldapconnection.h"
 
 typedef struct {

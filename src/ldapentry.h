@@ -2,11 +2,9 @@
 #define LDAPENTRY_H_
 
 #include <Python.h>
-#include "structmember.h"
 
 #include "ldapconnection.h"
 #include "ldapmodlist.h"
-#include "ldap-xplat.h"
 
 typedef struct {
     PyDictObject dict;
