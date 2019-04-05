@@ -69,7 +69,7 @@ matrix:
         - echo $INSTALL_PATH
       after_success:
         - sed -i.bak 's|'$INSTALL_PATH'|'$TRAVIS_BUILD_DIR/src/bonsai'|g' .coverage
-        - codecov
+        - pipenv run codecov
         - unset CFLAGS
         - rm -rf ./dist/*
         - pipenv run python setup.py clean
