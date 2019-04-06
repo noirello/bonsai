@@ -1,10 +1,13 @@
 API documentation
 *****************
 
+bonsai
+======
+
 .. automodule:: bonsai
 
 :class:`LDAPClient`
-===================
+-------------------
 .. autoclass:: LDAPClient(url, tls=False)
 .. automethod:: LDAPClient.connect(is_async=False, timeout=None, **kwargs)
 .. automethod:: LDAPClient.get_rootDSE()
@@ -39,7 +42,7 @@ API documentation
 .. automethod:: LDAPClient.set_client_key(name)
 
 .. automethod:: LDAPClient.set_credentials(mechanism, user=None, password=None, realm=None, authz_id=None, keytab=None)
-    
+
     >>> from bonsai import LDAPClient
     >>> client = LDAPClient()
     >>> client.set_credentials("SIMPLE", user="cn=user,dc=bonsai,dc=test", password="secret")
@@ -112,7 +115,7 @@ API documentation
 .. autoattribute:: LDAPClient.url
 
 :class:`LDAPConnection`
-=======================
+-----------------------
 .. autoclass:: LDAPConnection
 
 .. method:: LDAPConnection.abandon(msg_id)
@@ -282,7 +285,7 @@ API documentation
     A readonly attribute to define that the connections is asynchronous.
 
 :class:`LDAPDN`
-===============
+---------------
 
 Class for representing LDAP distinguished names.
  
@@ -326,7 +329,7 @@ Example for working with LDAPDN objects.
 .. autoattribute:: LDAPDN.rdns
 
 :class:`LDAPEntry`
-==================
+------------------
 .. class:: LDAPEntry(dn[, conn])
 
 .. automethod:: LDAPEntry.change_attribute(name, optype, *values)
@@ -371,7 +374,7 @@ Example for working with LDAPDN objects.
 
 
 :class:`LDAPModOp`
-==================
+------------------
 
 .. autoclass:: LDAPModOp
 
@@ -380,7 +383,7 @@ Example for working with LDAPDN objects.
 .. autoattribute:: LDAPModOp.REPLACE
 
 :class:`LDAPReference`
-======================
+----------------------
 
 .. autoclass:: LDAPReference(client, references)
 
@@ -388,7 +391,7 @@ Example for working with LDAPDN objects.
 .. autoattribute:: LDAPReference.references
 
 :class:`LDAPSearchScope`
-========================
+------------------------
 
 .. autoclass:: LDAPSearchScope
 
@@ -399,7 +402,7 @@ Example for working with LDAPDN objects.
 .. autoattribute:: LDAPSearchScope.SUB
 
 :class:`LDAPURL`
-================
+----------------
 .. seealso:: 
     
     RFC about **LDAP: Uniform Resource Locator** `RFC4516`_.
@@ -440,7 +443,7 @@ Example for working with LDAPDN objects.
 .. autoattribute:: LDAPURL.scheme
 
 :class:`LDAPValueList`
-======================
+----------------------
 
 .. autoclass:: LDAPValueList(items)
 .. automethod:: LDAPValueList.__contains__(item)
@@ -458,8 +461,39 @@ Example for working with LDAPDN objects.
 .. automethod:: LDAPValueList.copy
 .. autoattribute:: LDAPValueList.status
 
+bonsai.asyncio
+==============
+
+.. automodule:: bonsai.asyncio
+
+
+:class:`AIOLDAPConnection`
+--------------------------
+
+.. autoclass:: AIOLDAPConnection
+
+:class:`AIOConnectionPool`
+--------------------------
+
+.. autoclass:: AIOConnectionPool
+
+bonsai.gevent
+=============
+
+.. automodule:: bonsai.gevent
+
+:class:`GeventLDAPConnection`
+-----------------------------
+
+.. autoclass:: bonsai.gevent.GeventLDAPConnection
+
+bonsai.ldif
+===========
+
+.. automodule:: bonsai
+
 :class:`LDIFReader`
-===================
+-------------------
 
 .. autoclass:: LDIFReader(input_file, autoload=True, max_length=76)
 
@@ -479,7 +513,7 @@ Example of reading an LDIF file:
 .. autoattribute:: LDIFReader.resource_handlers
 
 :class:`LDIFWriter`
-===================
+-------------------
 
 .. autoclass:: LDIFWriter(output_file, max_length=76)
 .. automethod:: LDIFWriter.write_entry(entry)
@@ -503,22 +537,11 @@ Example of reading an LDIF file:
 .. automethod:: LDIFWriter.write_changes(entry)
 .. autoattribute:: LDIFWriter.output_file
 
-:class:`ldapsearchiter`
-=======================
-
-Helper class for paged search result.
-
-.. method:: ldapsearchiter.acquire_next_page
-
-    Request the next page of result. Returns with the message ID of the search operation.
-    This method can only be used if the :attr:`LDAPClient.auto_page_acquire` is `False`.
-
-    :return: an ID of the next search operation.
-    :rtype: int.
-
+bonsai.pool
+===========
 
 :class:`ConnectionPool`
-=======================
+-----------------------
 
 .. autoclass:: bonsai.pool.ConnectionPool
 
@@ -552,10 +575,34 @@ Helper class for paged search result.
         print(conn.whoami())
 
 :class:`ThreadedConnectionPool`
-===============================
+-------------------------------
 
 .. autoclass:: bonsai.pool.ThreadedConnectionPool
 .. automethod:: bonsai.pool.ThreadedConnectionPool.get
+
+bonsai.tornado
+==============
+
+:class:`TornadoLDAPConnection`
+------------------------------
+
+.. autoclass:: bonsai.tornado.TornadoLDAPConnection
+
+_bonsai
+=======
+
+:class:`ldapsearchiter`
+-----------------------
+
+Helper class for paged search result.
+
+.. method:: ldapsearchiter.acquire_next_page
+
+    Request the next page of result. Returns with the message ID of the search operation.
+    This method can only be used if the :attr:`LDAPClient.auto_page_acquire` is `False`.
+
+    :return: an ID of the next search operation.
+    :rtype: int.
 
 Errors
 ======

@@ -25,6 +25,20 @@ class AIOPoolContextManager:
         await self.pool.put(self.__conn)
 
 class AIOConnectionPool(ConnectionPool):
+    """
+    A connection pool that can be used with asnycio tasks. It's inherited from 
+    :class:`bonsai.pool.ConnectionPool`.
+
+    :param LDAPClient client: the :class:`bonsai.LDAPClient` that's used to create
+                connections.
+    :param int minconn: the minimum number of connections that's created
+                after the pool is opened.
+    :param int maxconn: the maximum number of connections in the pool.
+    :param \*\*kwargs: additional keyword arguments that are passed to
+                the :meth:`bonsai.LDAPClient.connect` method.
+    :raises ValueError: when the minconn is negative or the maxconn is less
+        than the minconn.
+    """
     def __init__(
         self,
         client: "LDAPClient",

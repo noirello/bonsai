@@ -272,8 +272,8 @@ class LDAPClient:
     def set_async_connection_class(self, conn: BaseLDAPConnection) -> None:
         """
         Set the LDAP connection class for asynchronous connection. The \
-        default connection class is `AIOLDAPConnection` that uses the
-        asyncio event loop.
+        default connection class is :class:`bonsai.asyncio.AIOLDAPConnection`
+        that uses the asyncio event loop.
 
         :param BaseLDAPConnection conn: the new asynchronous connection class \
         that is a subclass of LDAPConnection.

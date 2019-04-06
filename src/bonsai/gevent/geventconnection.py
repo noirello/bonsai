@@ -11,6 +11,13 @@ if MYPY:
     from ..ldapclient import LDAPClient
 
 class GeventLDAPConnection(BaseLDAPConnection):
+    """
+    Asynchronous LDAP connection object that works with Gevent.
+    It has the same methods and properties as :class:`bonsai.LDAPConnection`.
+
+    :param LDAPClient client: a client object.
+    """
+
     def __init__(self, client: 'LDAPClient') -> None:
         super().__init__(client, is_async=True)
 

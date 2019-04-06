@@ -10,6 +10,16 @@ if sys.version_info.minor < 5:
 
 
 class AIOLDAPConnection(BaseLDAPConnection):
+    """
+    Asynchronous LDAP connection object that works with asyncio.
+    It has the same methods and properties as :class:`bonsai.LDAPConnection`, but
+    with the exception of :meth:`bonsai.LDAPConnection.close` and
+    :meth:`bonsai.LDAPConnection.fileno` all of them are awaitable.
+
+    :param LDAPClient client: a client object.
+    :param loop: an asyncio IO loop.
+    """
+
     def __init__(self, client, loop=None):
         self._loop = loop or asyncio.get_event_loop()
         self.__open_coro = None

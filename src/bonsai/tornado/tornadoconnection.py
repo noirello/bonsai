@@ -13,6 +13,14 @@ if sys.version_info.minor < 5:
     StopAsyncIteration = StopIteration
 
 class TornadoLDAPConnection(BaseLDAPConnection):
+    """
+    Asynchronous LDAP connection object that works with Torando.
+    It has the same methods and properties as :class:`bonsai.LDAPConnection`.
+
+    :param LDAPClient client: a client object.
+    :param ioloop: a Tornado IO loop.
+    """
+
     def __init__(self, client, ioloop=None):
         super().__init__(client, is_async=True)
         self._ioloop = ioloop or IOLoop.instance()

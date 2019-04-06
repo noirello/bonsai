@@ -9,6 +9,8 @@ dist
 tests/__pycache__
 src/bonsai/__pycache__
 src/bonsai/asyncio/__pycache__
+src/bonsai/gevent/__pycache__
+src/bonsai/tornado/__pycache__
 docs/_build
 docs/_static
 docs/_templates

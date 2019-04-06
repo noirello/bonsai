@@ -32,7 +32,7 @@ class Mock(MagicMock):
         if name == 'ldapsearchiter':
             return object
 
-MOCK_MODULES = ['src.bonsai._bonsai', 'bonsai', 'bonsai._bonsai']
+MOCK_MODULES = ['src.bonsai._bonsai', 'bonsai', 'bonsai._bonsai', 'bonsai.asyncio']
 try:
     import typing
 except ImportError:
@@ -41,7 +41,13 @@ sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 
 import src.bonsai as bonsai
+#from src.bonsai import asyncio as bonsai_asyncio
+#from src.bonsai import ldaif as bonsai_ldif
+
 sys.modules['bonsai'] = bonsai
+sys.modules['bonsai.asyncio'] = bonsai.asyncio
+
+autodoc_mock_imports = ["gevent"]
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the

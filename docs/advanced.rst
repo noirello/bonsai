@@ -27,7 +27,7 @@ bind DN and a password::
 
 .. warning::
     Be aware that during the authentication the password is sent to the server in clear text form.
-    It is ill-advised to use simple bind without secure channel (TLS/SSL) in production. 
+    It is ill-advised to use simple bind without secure channel (TLS/SSL) in production.
 
 Simple Authentication and Security Layer
 ----------------------------------------
