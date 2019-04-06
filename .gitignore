@@ -30,3 +30,4 @@ vc140.pdb
 .mypy_cache/
 .pytest_cache/
 Pipfile.lock
+pip-wheel-metadata
