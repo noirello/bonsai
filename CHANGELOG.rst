@@ -1,13 +1,14 @@
 Changelog
 ==========
-[1.1.0] - 2019-04-XX (Unreleased)
----------------------------------
+[1.1.0] - 2019-04-06
+--------------------
 
 Changed
 ~~~~~~~
 -  Drop support for Python 3.4. From further releases 3.4 related codes will
    be removed (some asyncio related code has already changed), and the module
    will require 3.5 or newer Python to be built.
+-  Add gevent and tornado as extra requirements for setup.py.
 
 Added
 ~~~~~
