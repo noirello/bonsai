@@ -13,6 +13,7 @@ from .errors import LDAPError
 
 class LDIFError(LDAPError):
     """ General exception that is raised during reading or writing an LDIF file. """
+
     code = -300
 
 
@@ -233,7 +234,9 @@ class LDIFWriter:
         self.output_file = output_file
         self.max_length = max_length
 
-    def __write_attribute(self, attrname: str, attrvalue: Iterable[Any]) -> None:
+    def _get_attr_lines(
+        self, attrname: str, attrvalue: Iterable[Any]
+    ) -> Iterator[str]:
         for val in attrvalue:
             if isinstance(val, (bytes, bytearray)):
                 # If it's a binary has to be base64 encoded anyway.
@@ -257,9 +260,9 @@ class LDIFWriter:
             for i in range(0, len(line), self.max_length):
                 # Split the line into self.max_length.
                 if i != 0:
-                    self.__file.write(" {0}\n".format(line[i : i + self.max_length]))
+                    yield " {0}\n".format(line[i : i + self.max_length])
                 else:
-                    self.__file.write("{0}\n".format(line[i : i + self.max_length]))
+                    yield "{0}\n".format(line[i : i + self.max_length])
 
     def write_entry(self, entry: LDAPEntry) -> None:
         """
@@ -267,9 +270,11 @@ class LDIFWriter:
 
         :param LDAPEntry entry: the LDAP entry to serialise.
         """
-        self.__write_attribute("dn", (entry.dn,))
+        for line in self._get_attr_lines("dn", (entry.dn,)):
+            self.__file.write(line)
         for attrname, attrvalue in entry.items(exclude_dn=True):
-            self.__write_attribute(attrname, attrvalue)
+            for line in self._get_attr_lines(attrname, attrvalue):
+                self.__file.write(line)
 
     def write_entries(
         self, entries: Iterable[LDAPEntry], write_version: bool = True
@@ -282,7 +287,7 @@ class LDIFWriter:
         :param bool write_version: if it's True, write version header.
         """
         if write_version:
-            self.__write_attribute("version", (1,))
+            self.__file.write(next(self._get_attr_lines("version", (1,))))
         for ent in entries:
             self.write_entry(ent)
             self.__file.write("\n")
@@ -294,25 +299,28 @@ class LDIFWriter:
 
         :param LDAPEntry entry: the LDAP entry to serialise.
         """
-        self.__write_attribute("dn", (entry.dn,))
-        self.__write_attribute("changetype", ("modify",))
+        self.__file.write(next(self._get_attr_lines("dn", (entry.dn,))))
+        self.__file.write(next(self._get_attr_lines("changetype", ("modify",))))
         changes = dict(entry._status())
         deleted_keys = changes.pop("@deleted_keys")
         for attrname, stat in sorted(changes.items(), key=lambda s: s[1]["@status"]):
             if stat["@status"] == 1 and stat["@added"]:
-                self.__write_attribute("add", (attrname,))
-                self.__write_attribute(attrname, stat["@added"])
+                self.__file.write(next(self._get_attr_lines("add", (attrname,))))
+                for line in self._get_attr_lines(attrname, stat["@added"]):
+                    self.__file.write(line)
                 self.__file.write("-\n")
             elif stat["@status"] == 1 and stat["@deleted"]:
-                self.__write_attribute("delete", (attrname,))
-                self.__write_attribute(attrname, stat["@deleted"])
+                self.__file.write(next(self._get_attr_lines("delete", (attrname,))))
+                for line in self._get_attr_lines(attrname, stat["@deleted"]):
+                    self.__file.write(line)
                 self.__file.write("-\n")
             elif stat["@status"] == 2:
-                self.__write_attribute("replace", (attrname,))
-                self.__write_attribute(attrname, stat["@added"])
+                self.__file.write(next(self._get_attr_lines("replace", (attrname,))))
+                for line in self._get_attr_lines(attrname, stat["@added"]):
+                    self.__file.write(line)
                 self.__file.write("-\n")
         for key in deleted_keys:
-            self.__write_attribute("delete", (key,))
+            self.__file.write(next(self._get_attr_lines("delete", (key,))))
             self.__file.write("-\n")
         self.__file.write("\n")
 
