@@ -79,27 +79,6 @@ def have_krb5(libs, libdirs=None):
             return True
 
 
-class TestCommand(Command):
-    description = "Run the tests."
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        import unittest
-
-        tests = unittest.defaultTestLoader.discover("./tests")
-        suite = unittest.TestSuite()
-        suite.addTests(tests)
-        # result = unittest.TestResult()
-        unittest.TextTestRunner().run(suite)
-        sys.exit(0)
-
-
 SOURCES = [
     "bonsaimodule.c",
     "ldapentry.c",
@@ -187,7 +166,6 @@ setup(
     packages=["bonsai", "bonsai.asyncio", "bonsai.gevent", "bonsai.tornado"],
     include_package_data=True,
     install_requires=PYTHON_DEPS,
-    cmdclass={"test": TestCommand},
     keywords=["python3", "ldap", "libldap", "winldap", "asyncio", "gevent", "tornado"],
     classifiers=[
         "Development Status :: 4 - Beta",
