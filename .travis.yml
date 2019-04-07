@@ -76,7 +76,6 @@ matrix:
         - pipenv run python setup.py build -f
         - pipenv run python setup.py bdist_wheel
         - pipenv run delocate-wheel -v ./dist/bonsai-*.whl
-        - pip3 install clint pycryptodome requests requests_toolbelt
         - curl -L https://github.com/timvisee/ffsend/releases/download/v0.2.44/ffsend-v0.2.44-macos -o ffsend && chmod +x ./ffsend
         - ./ffsend upload ./dist/bonsai-*.whl
         - sleep 2
