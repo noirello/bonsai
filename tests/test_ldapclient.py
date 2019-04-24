@@ -203,6 +203,7 @@ def test_tls(url):
     client.set_ca_cert_dir(None)
     try:
         conn = client.connect()
+        assert conn is not None
         conn.close()
     except Exception as exc:
         pytest.fail("TLS connection is failed with: %s" % str(exc))
