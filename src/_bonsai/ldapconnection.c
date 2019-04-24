@@ -1329,6 +1329,7 @@ ldapconnection_fileno(LDAPConnection *self) {
     /* For ongoing initialisation return the dummy socket descriptor,
     that will be pinged when the init thread is finished. */
     if (self->closed && self->csock != -1) {
+        DEBUG("ldapconnection_fileno (self:%p)[desc:%d, dummy]", self, desc);
         return PyLong_FromLong((long int)self->csock);
     }
 
@@ -1337,7 +1338,7 @@ ldapconnection_fileno(LDAPConnection *self) {
         set_exception(self->ld, rc);
         return NULL;
     }
-    DEBUG("ldapconnection_fileno (self:%p)[desc:%d]", self, desc);
+    DEBUG("ldapconnection_fileno (self:%p)[desc:%d, ldap_opt_desc]", self, desc);
     return PyLong_FromLong((long int)desc);
 }
 
