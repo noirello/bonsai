@@ -58,7 +58,7 @@ class AIOLDAPConnection(BaseLDAPConnection):
         try:
             return await asyncio.wait_for(fut, timeout)
         except Exception as exc:
-            if self.fileno() > 0:
+            if self.fileno() > -1:
                 self._loop.remove_reader(self.fileno())
                 self._loop.remove_writer(self.fileno())
             raise exc
