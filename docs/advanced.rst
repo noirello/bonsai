@@ -165,11 +165,21 @@ library uses. Please for more information see :ref:`tls-settings`.
 TLS settings
 ============
 
-The TLS related methods -- :meth:`LDAPClient.set_ca_cert_dir`, :meth:`LDAPClient.set_ca_cert`,
-:meth:`LDAPClient.set_client_cert` and :meth:`LDAPClient.set_client_key` -- are expecting different
-inputs depending on which TLS library is used by the LDAP library.
+There are two practices to use secure connection:
 
-To find out which TLS library is used call :func:`bonsai.get_tls_impl_name`.
+* Either use the `ldaps://` scheme in the LDAP URL, then the client will use
+  the LDAP over SSL protocol (similar to HTTPS).
+* Or set the tls parameter of the :class:`LDAPClient` to True, which will
+  instruct the client to preform a `StartTLS` operation after connected to the
+  LDAP server.
+
+Both practices rely on well-set credentials with the TLS related methods --
+:meth:`LDAPClient.set_ca_cert_dir`, :meth:`LDAPClient.set_ca_cert`,
+:meth:`LDAPClient.set_client_cert` and :meth:`LDAPClient.set_client_key`.
+
+These are expecting different inputs depending on which TLS library is used by
+the LDAP library. To find out which TLS library is used call
+:func:`bonsai.get_tls_impl_name`.
 
 .. rubric:: GnuTLS and OpenSSL
 
