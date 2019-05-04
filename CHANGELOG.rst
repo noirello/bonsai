@@ -1,5 +1,14 @@
 Changelog
 ==========
+[1.2.0] - YYYY-MM-DD (Unreleased)
+
+Fixed
+~~~~~
+
+-  Raising ConnectionError instead of ValueError of invalid file descriptor 
+   with AIOLDAPConnection when the server is unreachable. (Issue #27)
+
+
 [1.1.0] - 2019-04-06
 --------------------
 

@@ -93,7 +93,7 @@ Using with asyncio (on Python 3.5 or newer):
 Changelog
 ---------
 
-Currently, you can read the changelog `here`_.
+The changelog is available `here`_ and included in the documentation as well.
 
 Contribution
 ------------
