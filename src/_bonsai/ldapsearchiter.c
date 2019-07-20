@@ -73,8 +73,7 @@ ldapsearchiter_acquirenextpage(LDAPSearchIter *self) {
 
     DEBUG("ldapsearchiter_acquirenextpage (self:%p)", self);
     /* If paged LDAP search is in progress. */
-    if ((self->cookie != NULL) && (self->cookie->bv_val != NULL) &&
-            (strlen(self->cookie->bv_val) > 0)) {
+    if (self->cookie != NULL && self->cookie->bv_val != NULL && self->cookie->bv_len > 0) {
         Py_INCREF(self);
         msgid = LDAPConnection_Searching(self->conn, NULL, (PyObject *)self);
         if (msgid < 0) return NULL;

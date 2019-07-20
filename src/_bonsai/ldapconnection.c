@@ -874,9 +874,6 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, PyObject *obj) {
     if (err == LDAP_NO_SUCH_OBJECT && search_iter == NULL) {
         /* Shortcut for normal search to return empty list. */
         return buffer;
-    } else {
-        /* Ignore LDAP_NO_SUCH_OBJECT otherwise. */
-        err = LDAP_SUCCESS;
     }
 
     if (err != LDAP_SUCCESS && err != LDAP_PARTIAL_RESULTS) {
@@ -912,6 +909,11 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, PyObject *obj) {
     if (search_iter != NULL) {
         if (search_iter->page_size > 0) {
             ctrl = ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL);
+            if (search_iter->cookie->bv_val != NULL) {
+                ber_memfree(search_iter->cookie->bv_val);
+                search_iter->cookie->bv_len = 0;
+                search_iter->cookie->bv_val = NULL;
+            }
             if (ctrl != NULL) {
                 rc = ldap_parse_pageresponse_control(self->ld, ctrl, NULL,
                                                 search_iter->cookie);
