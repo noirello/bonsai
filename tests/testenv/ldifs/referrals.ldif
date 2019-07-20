@@ -1,16 +1,21 @@
-dn: o=admin-ref,ou=nerdherd,dc=bonsai,dc=test
+dn: ou=nerdherd-refs,dc=bonsai,dc=test
+objectClass: organizationalUnit
+objectClass: top
+ou: nerdherd-refs
+
+dn: o=admin,ou=nerdherd-refs,dc=bonsai,dc=test
 objectClass: referral
 objectClass: extensibleObject
-o: admin-ref
+o: admin
 ref: ldap://bonsai.test/cn=admin,dc=bonsai,dc=test
 
-dn: o=lester-ref,ou=nerdherd,dc=bonsai,dc=test
+dn: o=lester,ou=nerdherd-refs,dc=bonsai,dc=test
 objectClass: referral
 objectClass: extensibleObject
-o: lester-ref
+o: lester
 ref: ldap://bonsai.test/cn=lester,ou=nerdherd,dc=bonsai,dc=test
 
-dn: o=invalid-ref,ou=nerdherd,dc=bonsai,dc=test
+dn: o=invalid-ref,ou=nerdherd-refs,dc=bonsai,dc=test
 objectClass: referral
 objectClass: extensibleObject
 o: invalid-ref

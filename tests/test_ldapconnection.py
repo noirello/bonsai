@@ -719,7 +719,7 @@ def test_password_modify_extop(conn, ipaddr):
 )
 def test_search_with_managedsait_ctrl(ipaddr):
     """ Test searching with manageDsaIT control. """
-    refdn = LDAPDN("o=admin-ref,ou=nerdherd,dc=bonsai,dc=test")
+    refdn = LDAPDN("o=admin,ou=nerdherd-refs,dc=bonsai,dc=test")
     cli = LDAPClient("ldap://%s" % ipaddr)
     with cli.connect() as conn:
         res = conn.search(refdn, LDAPSearchScope.BASE, attrlist=["ref"])[0]

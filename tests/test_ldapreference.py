@@ -58,7 +58,7 @@ def test_references_prop(host_url):
 )
 def test_referral_chasing(host_url):
     """ Testing referral chasing option. """
-    refdn = "o=admin-ref,ou=nerdherd,dc=bonsai,dc=test"
+    refdn = "o=admin,ou=nerdherd-refs,dc=bonsai,dc=test"
     client = LDAPClient(host_url)
     with client.connect() as conn:
         res = conn.search(refdn, 0)
@@ -67,6 +67,6 @@ def test_referral_chasing(host_url):
     with client.connect() as conn:
         res = conn.search(refdn, 0)
         assert len(res) == 0
-        res = conn.search("ou=nerdherd,dc=bonsai,dc=test", 1)
+        res = conn.search("ou=nerdherd-refs,dc=bonsai,dc=test", 1)
         refs = [item for item in res if isinstance(item, LDAPReference)]
         assert any(refs)

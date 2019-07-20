@@ -455,7 +455,7 @@ def test_clear_attribute_changes():
 )
 def test_modify_referrals(client):
     """ Test modifying an LDAP referral with ManageDdsIT control. """
-    refdn = bonsai.LDAPDN("o=invalid-ref,ou=nerdherd,dc=bonsai,dc=test")
+    refdn = bonsai.LDAPDN("o=invalid-ref,ou=nerdherd-refs,dc=bonsai,dc=test")
     newref = "ldap://invalid.host/cn=nobody"
     cli = LDAPClient(client.url)
     cli.set_credentials(client.mechanism, **client.credentials)
