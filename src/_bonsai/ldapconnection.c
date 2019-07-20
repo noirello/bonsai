@@ -876,7 +876,8 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, PyObject *obj) {
         return buffer;
     }
 
-    if (err != LDAP_SUCCESS && err != LDAP_PARTIAL_RESULTS) {
+    if (err != LDAP_SUCCESS && err != LDAP_PARTIAL_RESULTS && err != LDAP_REFERRAL) {
+        /* Ignore LDAP_REFERRAL error as well. */
         set_exception(self->ld, err);
         goto error;
     }
