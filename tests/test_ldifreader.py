@@ -35,10 +35,10 @@ def test_missing_dn():
     text = "changetype: add\nsn: test\ncn: test\n"
     with StringIO(text) as ldif:
         reader = LDIFReader(ldif)
-        with pytest.raises(LDIFError) as err:
+        with pytest.raises(LDIFError) as excinfo:
             _ = next(reader)
-        assert "Missing distinguished name" in str(err)
-        assert "entry #1" in str(err)
+        assert "Missing distinguished name" in str(excinfo.value)
+        assert "entry #1" in str(excinfo.value)
 
 
 def test_invalid_file():
@@ -46,30 +46,30 @@ def test_invalid_file():
     text = " invalid\n"
     with StringIO(text) as ldif:
         reader = LDIFReader(ldif)
-        with pytest.raises(LDIFError) as err:
+        with pytest.raises(LDIFError) as excinfo:
             _ = next(reader)
-        assert "Parser error" in str(err)
+        assert "Parser error" in str(excinfo.value)
     text = "dn: cn=test\nnotvalid attribute\n"
     with StringIO(text) as ldif:
         reader = LDIFReader(ldif)
-        with pytest.raises(LDIFError) as err:
+        with pytest.raises(LDIFError) as excinfo:
             _ = next(reader)
-        assert "Invalid attribute value pair:" in str(err)
-        assert "entry #1" in str(err)
+        assert "Invalid attribute value pair:" in str(excinfo.value)
+        assert "entry #1" in str(excinfo.value)
     text = "dn: cn=toolong\n"
     with StringIO(text) as ldif:
         reader = LDIFReader(ldif, max_length=12)
-        with pytest.raises(LDIFError) as err:
+        with pytest.raises(LDIFError) as excinfo:
             _ = next(reader)
-        assert "too long" in str(err)
-        assert "Line 1" in str(err)
+        assert "too long" in str(excinfo.value)
+        assert "Line 1" in str(excinfo.value)
     text = "dn: cn=test notvalid: attribute\n"
     with StringIO(text) as ldif:
         reader = LDIFReader(ldif)
-        with pytest.raises(LDIFError) as err:
+        with pytest.raises(LDIFError) as excinfo:
             _ = next(reader)
-        assert "Invalid attribute value pair:" in str(err)
-        assert "entry #1" in str(err)
+        assert "Invalid attribute value pair:" in str(excinfo.value)
+        assert "entry #1" in str(excinfo.value)
 
 
 def test_comment():
