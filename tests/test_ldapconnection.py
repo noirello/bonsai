@@ -13,7 +13,7 @@ from bonsai import LDAPClient
 from bonsai import LDAPConnection
 from bonsai import LDAPSearchScope
 import bonsai.errors
-from bonsai.errors import ClosedConnection
+from bonsai.errors import ClosedConnection, SizeLimitError
 from bonsai.ldapconnection import BaseLDAPConnection
 
 
@@ -106,6 +106,45 @@ def kinit():
 
 
 @pytest.fixture
+def sizelimit_org():
+    """ Create a populated sizelimit organization LDAP entry. """
+    gconn = None
+    entry = None
+
+    def _create_org(conn, basedn, entry_num):
+        nonlocal gconn
+        nonlocal entry
+        entry = bonsai.LDAPEntry("ou=limited,%s" % basedn)
+        entry.update({"objectclass": ["top", "organizationalUnit"], "ou": "limited"})
+        gconn = conn
+        try:
+            conn.add(entry)
+        except bonsai.AlreadyExists:
+            conn.delete(entry.dn, recursive=True)
+            conn.add(entry)
+        for idx in range(entry_num):
+            item = bonsai.LDAPEntry(
+                "cn=test_{idx},{base}".format(idx=idx, base=entry.dn)
+            )
+            item["objectclass"] = [
+                "top",
+                "inetOrgPerson",
+                "person",
+                "organizationalPerson",
+            ]
+            item["sn"] = "test_{idx}".format(idx=idx)
+            conn.add(item)
+        return entry
+
+    yield _create_org
+
+    if gconn.closed:
+        gconn = gconn.open()
+    gconn.delete(entry.dn, recursive=True)
+    gconn.close()
+
+
+@pytest.fixture
 def external_binding():
     """ Create a binding using external mechanism. """
 
@@ -149,6 +188,15 @@ def conn():
     """ Create a connection. """
     cfg = get_config()
     client = _generate_client(cfg)
+    return client.connect()
+
+
+@pytest.fixture
+def anonym_conn():
+    """ Create a connection with anonymous user. """
+    cfg = get_config()
+    client = _generate_client(cfg)
+    client.set_credentials("SIMPLE")
     return client.connect()
 
 
@@ -761,3 +809,27 @@ def test_add_and_delete_referrals(cfg, ipaddr):
         conn.delete(entry.dn)
         res = conn.search(refdn, 0, attrlist=["ref"])
         assert res == []
+
+
+def test_client_sizelimit_error(conn, basedn):
+    """ Test raising SizeLimitError when reaching client side size limit. """
+    with pytest.raises(SizeLimitError):
+        conn.search("ou=nerdherd,dc=bonsai,dc=test", LDAPSearchScope.SUBTREE, sizelimit=2)
+
+def test_server_sizelimit_error(conn, anonym_conn, basedn, sizelimit_org):
+    """ Test raising SizeLimitError when reaching server side size limit. """
+    entry_num = 25
+    page_size = 5
+    org = sizelimit_org(conn, basedn, entry_num)
+    with pytest.raises(SizeLimitError):
+        anonym_conn.search(org.dn, 1)
+    paged = anonym_conn.paged_search(org.dn, 1, page_size=page_size)
+    page_num = 1
+    with pytest.raises(SizeLimitError):
+        while True:
+            msgid = paged.acquire_next_page()
+            if msgid is None:
+                break
+            paged = anonym_conn.get_result(msgid)
+            page_num += 1
+    assert page_num == (entry_num // 5 - 1)
