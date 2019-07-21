@@ -911,7 +911,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, PyObject *obj) {
         if (search_iter->page_size > 0) {
             ctrl = ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL);
             if (search_iter->cookie->bv_val != NULL) {
-                ber_memfree(search_iter->cookie->bv_val);
+                free(search_iter->cookie->bv_val);
                 search_iter->cookie->bv_len = 0;
                 search_iter->cookie->bv_val = NULL;
             }
