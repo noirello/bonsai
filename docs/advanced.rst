@@ -252,6 +252,10 @@ acquired automatically during the iteration. This behaviour can be changed by se
 :attr:`LDAPClient.auto_page_acquire` to `False` and using the :meth:`ldapsearchiter.acquire_next_page`
 method which explicitly initiates a new search request to get the next page.
 
+.. warning::
+    Avoid using server-side referral chasing with paged search. It's likely to fail with invalid
+    cookie error.
+
 .. note::
     The OID of paged search control is: 1.2.840.113556.1.4.319.
 

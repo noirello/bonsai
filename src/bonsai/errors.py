@@ -114,7 +114,10 @@ class AffectsMultipleDSA(LDAPError):
 
 
 class SizeLimitError(LDAPError):
-    """Raised, when the size limit of the search is exceeded."""
+    """
+    Raised, when the search operation exceeds the client side size
+    limit or server side size limit that's applied to the bound user.
+    """
 
     code = 0x04
 
