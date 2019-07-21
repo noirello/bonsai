@@ -81,3 +81,6 @@ olcTLSProtocolMin: 3.1
 -
 add: olcTLSCipherSuite
 olcTLSCipherSuite: HIGH
+-
+replace: olcSizeLimit
+olcSizeLimit: 20

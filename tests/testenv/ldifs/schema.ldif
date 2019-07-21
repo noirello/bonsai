@@ -1,0 +1,12 @@
+dn: cn={0}core,cn=schema,cn=config
+changeType: modify
+delete: olcAttributeTypes
+olcAttributeTypes: ( 2.5.4.4 NAME ( 'sn' 'surname' )
+  DESC 'RFC2256: last (family) name(s) for which the entity is known by'
+  SUP name )
+-
+add: olcAttributeTypes
+olcAttributeTypes: ( 2.5.4.4 NAME ( 'sn' 'surname' )
+  DESC 'RFC2256: last (family) name(s) for which the entity is known by'
+  ORDERING caseIgnoreOrderingMatch
+  SUP name )

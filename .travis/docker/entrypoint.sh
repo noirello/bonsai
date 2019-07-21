@@ -26,12 +26,13 @@ setKerberos () {
 setLDAP () {
     /usr/sbin/slapd -u ldap -g ldap -h "ldap:// ldapi:// ldaps://"
     sleep 2
-    ldapmodify -Y EXTERNAL -H ldapi:/// -f /home/ldap/sasl.ldif
+    ldapmodify -Y EXTERNAL -H ldapi:/// -f /home/ldap/settings.ldif
     # Load schemas.
     ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/cosine.ldif
     ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/inetorgperson.ldif
     ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/nis.ldif
     ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/ppolicy.ldif
+    ldapmodify -Y EXTERNAL -H ldapi:/// -f /home/ldap/schema.ldif
     # Set overlays: allow vlv, server side sort and password policy.
     ldapmodify -Y EXTERNAL -H ldapi:/// -f /home/ldap/overlays.ldif
     # Create base entry and populate the dictionary.

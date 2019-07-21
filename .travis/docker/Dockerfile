@@ -43,10 +43,11 @@ RUN openssl x509 -req -days 500 -in /home/ldap/server.csr -CA /etc/openldap/cert
 # Copy the basic LDIF files into the container.
 COPY ./tests/testenv/ldifs/base.ldif /home/ldap/base.ldif
 COPY ./tests/testenv/ldifs/users.ldif /home/ldap/users.ldif
-COPY ./tests/testenv/ldifs/sasl.ldif /home/ldap/sasl.ldif
+COPY ./tests/testenv/ldifs/settings.ldif /home/ldap/settings.ldif
 COPY ./tests/testenv/ldifs/overlays.ldif /home/ldap/overlays.ldif
 COPY ./tests/testenv/ldifs/ppolicy.ldif /home/ldap/ppolicy.ldif
 COPY ./tests/testenv/ldifs/referrals.ldif /home/ldap/referrals.ldif
+COPY ./tests/testenv/ldifs/schema.ldif /home/ldap/schema.ldif
 COPY ./tests/testenv/test.jpeg /home/ldap/test.jpeg
 
 RUN mkdir /home/ldap/run
