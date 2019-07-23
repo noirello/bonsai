@@ -62,6 +62,18 @@ Set-ADObject "cn=directory service,cn=windows nt,cn=services,cn=configuration,DC
     -Replace @{dsHeuristics="0000002011001"} `
     -Credential $creds
 
+# Set MaxPageSize  and MaxValRange limits.
+$limits = (Get-ADObject -LDAPFilter "(objectclass=*)" `
+    -SearchBase "CN=Default Query Policy,CN=Query-Policies,CN=Directory Service,CN=Windows NT,CN=Services,CN=Configuration,DC=bonsai,DC=test" `
+    -Properties lDAPAdminLimits | Select-Object -Property lDAPAdminLimits).lDAPAdminLimits
+$limits.remove("MaxPageSize=1000")
+$limits.add("MaxPageSize=1024")
+$limits.remove("MaxValRange=1500")
+$limits.add("MaxValRange=50")
+Set-ADObject "CN=Default Query Policy,CN=Query-Policies,CN=Directory Service,CN=Windows NT,CN=Services,CN=Configuration,DC=bonsai,DC=test" `
+    -Replace @{lDAPAdminLimits=@($limits)} `
+    -Credential $creds
+
 # Add organization unit and users with passwords.
 New-ADOrganizationalUnit `
     -Name nerdherd `
@@ -80,7 +92,7 @@ New-ADUser `
     -Enabled $true `
     -OtherAttributes @{'uidNumber'="0"}
 # Add binary picture.
-$photo = [byte[]](Get-Content ".\tests\testenv\test.jpeg" -Encoding byte)            
+$photo = [byte[]](Get-Content ".\tests\testenv\test.jpeg" -Encoding byte)
 Set-ADUser chuck -Replace @{jpegPhoto=$photo}
 
 New-ADUser `
