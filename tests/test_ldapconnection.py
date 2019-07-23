@@ -814,22 +814,36 @@ def test_add_and_delete_referrals(cfg, ipaddr):
 def test_client_sizelimit_error(conn, basedn):
     """ Test raising SizeLimitError when reaching client side size limit. """
     with pytest.raises(SizeLimitError):
-        conn.search("ou=nerdherd,dc=bonsai,dc=test", LDAPSearchScope.SUBTREE, sizelimit=2)
+        conn.search(
+            "ou=nerdherd,dc=bonsai,dc=test", LDAPSearchScope.SUBTREE, sizelimit=2
+        )
+
 
 def test_server_sizelimit_error(conn, anonym_conn, basedn, sizelimit_org):
     """ Test raising SizeLimitError when reaching server side size limit. """
-    entry_num = 25
-    page_size = 5
+    import math
+
+    entry_num = 1048
+    page_size = 4
     org = sizelimit_org(conn, basedn, entry_num)
     with pytest.raises(SizeLimitError):
         anonym_conn.search(org.dn, 1)
     paged = anonym_conn.paged_search(org.dn, 1, page_size=page_size)
     page_num = 1
-    with pytest.raises(SizeLimitError):
+    try:
         while True:
             msgid = paged.acquire_next_page()
             if msgid is None:
                 break
             paged = anonym_conn.get_result(msgid)
             page_num += 1
-    assert page_num == (entry_num // 5 - 1)
+    except SizeLimitError as err:
+        if sys.platform.startswith("win"):
+            raise err
+    expected = math.ceil(entry_num / page_size)
+    expected = (
+        expected
+        if sys.platform.startswith("win")
+        else expected - (entry_num - 1024) / page_size
+    )
+    assert page_num == expected
