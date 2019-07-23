@@ -83,4 +83,4 @@ add: olcTLSCipherSuite
 olcTLSCipherSuite: HIGH
 -
 replace: olcSizeLimit
-olcSizeLimit: 20
+olcSizeLimit: 1024
