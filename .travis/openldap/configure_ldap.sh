@@ -29,7 +29,7 @@ setLDAP () {
     echo "Directory is populated..."
     # Set default password policy.
     ldapadd -x -D "cn=admin,dc=bonsai,dc=test" -w p@ssword -H ldap:/// -f ./tests/testenv/ldifs/ppolicy.ldif
-    # Stop the slapd. 
+    # Stop the slapd.
     sudo kill $(ps aux | grep /usr/local/opt/openldap/libexec/slapd | grep -v grep | awk '{print $2}')
     echo "Slapd is stopped..."
 }
