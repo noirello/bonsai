@@ -1,4 +1,4 @@
-dn: olcDatabase={2}mdb,cn=config
+dn: olcDatabase={1}mdb,cn=config
 changeType: modify
 replace: olcRootPW
 olcRootPW: {SSHA}wWpIvu+DAeRzfM5ldoypmEJLZg7GP5Hv
@@ -8,18 +8,6 @@ olcSuffix: dc=bonsai,dc=test
 -
 replace: olcRootDN
 olcRootDN: cn=admin,dc=bonsai,dc=test
--
-add: olcAccess
-olcAccess: {0}to attrs=userPassword by self write by anonymous auth
-  by * none
-olcAccess: {1}to * by self write by * read
-
-dn: olcDatabase={1}monitor,cn=config
-changeType: modify
-replace: olcAccess
-olcAccess: {0}to * by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=extern
- al,cn=auth" read by dn.base="cn=admin,dc=bonsai,dc=test" read by * n
- one
 
 dn: cn=config
 changeType: modify
@@ -61,17 +49,14 @@ olcAuthzRegexp: CN=user,OU=test,O=bonsai cn=admin,dc=bonsai,dc=test
 add: olcAuthzPolicy
 olcAuthzPolicy: to
 -
-replace: olcTLSCertificateFile
-olcTLSCertificateFile: "slapd"
+add: olcTLSCACertificateFile
+olcTLSCACertificateFile: /etc/ldap/certs/cacert.pem
 -
-replace: olcTLSCACertificateFile
-olcTLSCACertificateFile: /etc/openldap/certs/cacert.pem
+add: olcTLSCertificateFile
+olcTLSCertificateFile: /etc/ldap/certs/server.pem
 -
-replace: olcTLSCertificateFile
-olcTLSCertificateFile: /etc/openldap/certs/server.pem
--
-replace: olcTLSCertificateKeyFile
-olcTLSCertificateKeyFile: /etc/openldap/certs/server.key
+add: olcTLSCertificateKeyFile
+olcTLSCertificateKeyFile: /etc/ldap/certs/server.key
 -
 add: olcTLSVerifyClient
 olcTLSVerifyClient: allow
@@ -79,8 +64,10 @@ olcTLSVerifyClient: allow
 add: olcTLSProtocolMin
 olcTLSProtocolMin: 3.1
 -
-add: olcTLSCipherSuite
-olcTLSCipherSuite: HIGH
--
+replace: olcSizeLimit
+olcSizeLimit: 1024
+
+dn: olcDatabase={-1}frontend,cn=config
+changetype: modify
 replace: olcSizeLimit
 olcSizeLimit: 1024
