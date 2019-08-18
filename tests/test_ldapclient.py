@@ -10,9 +10,17 @@ from bonsai.ldapconnection import LDAPConnection
 
 @pytest.fixture(scope="module")
 def url():
-    """ Get an LDAPClient with simple authentication. """
+    """ Get the LDAPURL. """
     cfg = get_config()
     url = "ldap://%s:%s" % (cfg["SERVER"]["hostip"], cfg["SERVER"]["port"])
+    return bonsai.LDAPURL(url)
+
+
+@pytest.fixture(scope="module")
+def ldaps_url():
+    """ Get the LDAPURL for LDAP over TLS. """
+    cfg = get_config()
+    url = "ldaps://%s" % (cfg["SERVER"]["hostname"])
     return bonsai.LDAPURL(url)
 
 
@@ -195,8 +203,25 @@ def test_managedsait(client):
 @pytest.mark.skipif(
     get_config()["SERVER"]["has_tls"] == "False", reason="TLS is not set"
 )
-def test_tls(url):
-    """ Test TLS connection. """
+def test_ldap_over_tls(ldaps_url):
+    """ Test LDAP over TLS connection. """
+    client = LDAPClient(ldaps_url)
+    client.set_cert_policy("ALLOW")
+    client.set_ca_cert(None)
+    client.set_ca_cert_dir(None)
+    try:
+        conn = client.connect()
+        assert conn is not None
+        conn.close()
+    except Exception as exc:
+        pytest.fail("TLS connection is failed with: %s" % str(exc))
+
+
+@pytest.mark.skipif(
+    get_config()["SERVER"]["has_tls"] == "False", reason="TLS is not set"
+)
+def test_starttls(url):
+    """ Test STARTTLS connection. """
     client = LDAPClient(url, True)
     client.set_cert_policy("ALLOW")
     client.set_ca_cert(None)
