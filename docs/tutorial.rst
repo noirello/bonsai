@@ -23,7 +23,13 @@ Or set the `tls` parameter to true for the LDAPClient:
        
     >>> client = LDAPClient("ldap://example.org", True)
     >>> conn = client.connect()
-    
+
+If we want to use a filesocket connection point the URL to `ldapi://`:
+
+    >>> client = LDAPClient("ldapi://%2Frun%2Fslapd%2Fldapi")
+
+(Please note that in this case the file location has to be URL-encoded.)
+
 Now, we have an anonym bind to the server, so LDAP whoami operation - which helps to get the
 identity about the authenticated user - will return with the following:
 
