@@ -55,9 +55,9 @@ install:
   # Upgrade to the latest version of pip to avoid it displaying warnings
   # about it being out of date.
   - "%PYTHON%\\python.exe -m pip install --disable-pip-version-check --user --upgrade pip"
-  - "pip install pipenv"
-  - "pipenv install --dev --system --skip-lock"
-  - "pip list"
+  - "python -m pip install pipenv"
+  - "python -m pipenv install --dev --system --skip-lock"
+  - "python -m pip list"
 
 build_script:
   # Build the compiled extension
