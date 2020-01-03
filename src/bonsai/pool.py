@@ -10,16 +10,19 @@ if MYPY:
 
 class PoolError(Exception):
     """ Connection pool related errors. """
+
     pass
 
 
 class ClosedPool(PoolError):
     """ Raised, when the connection pool is closed. """
+
     pass
 
 
 class EmptyPool(PoolError):
     """ Raised, when the connection pool is empty. """
+
     pass
 
 
@@ -37,6 +40,7 @@ class ConnectionPool:
     :raises ValueError: when the minconn is negative or the maxconn is less
         than the minconn.
     """
+
     def __init__(
         self,
         client: "LDAPClient",
@@ -62,7 +66,7 @@ class ConnectionPool:
         Open the connection pool by initialising the minimal number of
         connections.
         """
-        for _ in range(self._minconn):
+        for _ in range(self._minconn - self.idle_connection - self.shared_connection):
             self._idles.add(self._client.connect(self._kwargs))
         self._closed = False
 
@@ -189,6 +193,7 @@ class ThreadedConnectionPool(ConnectionPool):
     :raises ValueError: when the minconn is negative or the maxconn is less
         than the minconn.
     """
+
     def __init__(
         self,
         client: "LDAPClient",
@@ -211,28 +216,23 @@ class ThreadedConnectionPool(ConnectionPool):
         :raises ClosedPool: when the method is called on a closed pool.
         :return: an LDAP connection object.
         """
-        self._lock.acquire()
-        try:
+        with self._lock:
             if self._block:
                 self._lock.wait_for(lambda: not self.empty or self._closed, timeout)
             conn = super().get()
             self._lock.notify()
             return conn
-        finally:
-            self._lock.release()
 
     def put(self, conn) -> None:
-        self._lock.acquire()
-        try:
+        with self._lock:
             super().put(conn)
             self._lock.notify()
-        finally:
-            self._lock.release()
 
     def close(self) -> None:
-        self._lock.acquire()
-        try:
+        with self._lock:
             super().close()
             self._lock.notify_all()
-        finally:
-            self._lock.release()
+
+    def open(self) -> None:
+        with self._lock:
+            super().open()
