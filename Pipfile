@@ -4,6 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [dev-packages]
+coverage = "~=4.5"
 pytest = "*"
 codecov = "*"
 pytest-cov = "*"
@@ -17,4 +18,3 @@ wheel = "*"
 pydivert = {version = "*",sys_platform = "== 'win32'"}
 delocate = {version = "*",sys_platform = "== 'darwin'"}
 black = {version = "==18.6b4",markers = "python_version > '3.5'"}
-coverage = "~=4.5"

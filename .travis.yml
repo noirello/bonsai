@@ -25,7 +25,6 @@ matrix:
         - docker
     - language: generic
       os: osx
-      osx_image: xcode10.2
       before_install:
         - brew update
         - brew unlink python@2
