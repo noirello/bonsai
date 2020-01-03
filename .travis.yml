@@ -25,10 +25,11 @@ matrix:
         - docker
     - language: generic
       os: osx
-      osx_image: xcode10.1
+      osx_image: xcode10.2
       before_install:
         - brew update
-        - brew upgrade python3
+        - brew unlink python@2
+        #- brew upgrade python@3
         # Download OpenLDAP formula and append sssvlv flag.
         - curl https://raw.githubusercontent.com/Homebrew/homebrew-core/master/Formula/openldap.rb -o openldap.rb
         - sed -i.bak 's/--enable-valsort/\--enable-sssvlv=yes/g' openldap.rb && rm openldap.rb.bak

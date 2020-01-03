@@ -54,9 +54,9 @@ install:
 
   # Upgrade to the latest version of pip to avoid it displaying warnings
   # about it being out of date.
-  - "%PYTHON%\\python.exe -m pip install --disable-pip-version-check --user --upgrade pip==18.0"
+  - "%PYTHON%\\python.exe -m pip install --disable-pip-version-check --user --upgrade pip"
   - "python -m pip install pipenv"
-  - "pipenv run python -m pip install -U pip==18.0"
+  - "pipenv run python -m pip install -U pip"
   - "python -m pipenv install --dev --system --skip-lock"
   - "python -m pip list"
 
