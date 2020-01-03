@@ -36,8 +36,8 @@ setLDAP () {
 
 #Set passsword for SASL DIGEST-MD5.
 setDigest () {
-    echo "p@ssword" | /usr/local/opt/cyrussasl/sbin/saslpasswd2 -p admin
-    echo "p@ssword" | /usr/local/opt/cyrussasl/sbin/saslpasswd2 -p chuck
+    echo "p@ssword" | sudo /usr/local/opt/cyrussasl/sbin/saslpasswd2 -p -c admin
+    echo "p@ssword" | sudo /usr/local/opt/cyrussasl/sbin/saslpasswd2 -p -c chuck
     echo "Passwords are set..."
 }
 

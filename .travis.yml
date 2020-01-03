@@ -25,6 +25,7 @@ matrix:
         - docker
     - language: generic
       os: osx
+      osx_image: xcode11.3
       before_install:
         - brew update
         - brew unlink python@2
@@ -39,7 +40,7 @@ matrix:
         - pipenv install --dev --skip-lock
         - pipenv graph
         # Install Cyrus SASL.
-        - curl https://pastebin.com/raw/tRndcWM8 -o cyrussasl.rb
+        - curl https://pastebin.com/raw/k8JuNHRY -o cyrussasl.rb
         - cat ./cyrussasl.rb
         - brew install -s ./cyrussasl.rb --with-ntlm
         # Set alias for localhost.
