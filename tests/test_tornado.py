@@ -15,6 +15,10 @@ def dummy(timeout=None):
 
     return dummy_f
 
+if sys.platform == 'win32' and sys.version_info.minor >= 8:
+    # Enforce SelectorEventLoop as it's no longer default on Windows since Python 3.8.
+    import asyncio
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 try:
     from tornado import gen

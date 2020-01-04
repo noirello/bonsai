@@ -12,6 +12,9 @@ from bonsai.asyncio import AIOConnectionPool, AIOLDAPConnection
 from bonsai.pool import ClosedPool
 import bonsai.errors
 
+if sys.platform == 'win32' and sys.version_info.minor >= 8:
+    # Enforce SelectorEventLoop as it's no longer default on Windows since Python 3.8.
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 def asyncio_test(func):
     @wraps(func)
