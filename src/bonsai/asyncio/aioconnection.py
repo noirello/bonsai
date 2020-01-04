@@ -93,3 +93,6 @@ class AIOLDAPConnection(BaseLDAPConnection):
                 raise StopAsyncIteration
             search_iter = await self._evaluate(msgid)
             return next(search_iter)
+
+    async def get_result(self, msg_id, timeout=None):
+        return await self._evaluate(msg_id, timeout)

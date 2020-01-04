@@ -95,3 +95,8 @@ class TornadoLDAPConnection(BaseLDAPConnection):
                 raise StopAsyncIteration
             search_iter = yield self._evaluate(msgid)
             return next(search_iter)
+
+    @gen.coroutine
+    def get_result(self, msg_id, timeout=None):
+        res = yield self._evaluate(msg_id, timeout)
+        return res

@@ -189,13 +189,33 @@ class TornadoLDAPConnectionTest(TestCaseClass):
                 with pytest.raises(gen.TimeoutError):
                     yield conn.search(timeout=3.0)
 
+    @gen_test(timeout=20.0)
+    def test_paged_search(self):
+        """ Test paged results control. """
+        self.client.auto_page_acquire = False
+        search_dn = "ou=nerdherd,%s" % self.basedn
+        with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
+            res = yield conn.paged_search(search_dn, 1, page_size=2)
+            for ent in res:
+                assert isinstance(ent, bonsai.LDAPEntry)
+            page = 1  # First page is already acquired.
+            while True:
+                if len(res) > 2:
+                    pytest.fail("The size of the page is greater than expected.")
+                msgid = res.acquire_next_page()
+                if msgid is None:
+                    break
+                res = yield conn.get_result(msgid)
+                page += 1
+            assert page == 3
+
     @pytest.mark.skipif(
         sys.version_info.minor < 5,
         reason="No __aiter__ and __anext__ methods under 3.5.",
     )
     @gen_test(timeout=20.0)
-    def test_paged_search(self):
-        """ Test paged search. """
+    def test_paged_search_with_auto_acq(self):
+        """ Test paged search with auto page acquiring. """
         search_dn = "ou=nerdherd,%s" % self.basedn
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             # To keep compatibility with 3.4 it does not uses async for,

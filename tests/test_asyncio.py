@@ -166,12 +166,33 @@ async def test_search_timeout(client):
                 await conn.search(timeout=4.0)
 
 
+@asyncio_test
+async def test_paged_search(client, basedn):
+    """ Test paged results control. """
+    client.auto_page_acquire = False
+    search_dn = "ou=nerdherd,%s" % basedn
+    async with client.connect(True) as conn:
+        res = await conn.paged_search(search_dn, 1, page_size=2)
+        for ent in res:
+            assert isinstance(ent, bonsai.LDAPEntry)
+        page = 1  # First page is already acquired.
+        while True:
+            if len(res) > 2:
+                pytest.fail("The size of the page is greater than expected.")
+            msgid = res.acquire_next_page()
+            if msgid is None:
+                break
+            res = await conn.get_result(msgid)
+            page += 1
+        assert page == 3
+
+
 @pytest.mark.skipif(
     sys.version_info.minor < 5, reason="No __aiter__ and __anext__ methods under 3.5."
 )
 @asyncio_test
-async def test_paged_search(client, basedn):
-    """ Test paged search. """
+async def test_paged_search_with_auto_acq(client, basedn):
+    """ Test paged search with auto page acquiring. """
     search_dn = "ou=nerdherd,%s" % basedn
     async with client.connect(True) as conn:
         # To keep compatibility with 3.4 it does not uses async for,
