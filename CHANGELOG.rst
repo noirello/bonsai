@@ -1,13 +1,22 @@
 Changelog
 ==========
-[1.2.0] - YYYY-MM-DD (Unreleased)
+[1.2.0] - UNRELEASED
+--------------------
+
+Added
+~~~~~
+
+-  The get_result coroutines to AIOLDAPConnection and TornadoLDAPConnection.
+-  LDAPI example to docs. (Thanks to @senfomat)
 
 Fixed
 ~~~~~
 
--  Raising ConnectionError instead of ValueError of invalid file descriptor 
+-  Raising ConnectionError instead of ValueError of invalid file descriptor
    with AIOLDAPConnection when the server is unreachable. (Issue #27)
-
+-  Raising SizeLimitError when the query hits either the client-side or the
+   server-side limit, fix condition check when acquiring next page. (Issue #31)
+-  Race condition for open method of ThreadedConnectionPool.
 
 [1.1.0] - 2019-04-06
 --------------------
