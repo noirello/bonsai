@@ -24,6 +24,7 @@ class AIOPoolContextManager:
     async def __aexit__(self, type, value, traceback):
         await self.pool.put(self.__conn)
 
+
 class AIOConnectionPool(ConnectionPool):
     """
     A connection pool that can be used with asnycio tasks. It's inherited from 
@@ -39,6 +40,7 @@ class AIOConnectionPool(ConnectionPool):
     :raises ValueError: when the minconn is negative or the maxconn is less
         than the minconn.
     """
+
     def __init__(
         self,
         client: "LDAPClient",
@@ -51,13 +53,16 @@ class AIOConnectionPool(ConnectionPool):
         self._loop = loop
         self._lock = asyncio.Condition(loop=self._loop)
 
-    async def open(self):
-        for _ in range(self._minconn):
-            conn = await self._client.connect(
-                is_async=True, loop=self._loop, **self._kwargs
-            )
-            self._idles.add(conn)
-        self._closed = False
+    async def open(self) -> None:
+        async with self._lock:
+            for _ in range(
+                self._minconn - self.idle_connection - self.shared_connection
+            ):
+                conn = await self._client.connect(
+                    is_async=True, loop=self._loop, **self._kwargs
+                )
+                self._idles.add(conn)
+            self._closed = False
 
     async def get(self) -> AIOLDAPConnection:
         async with self._lock:
@@ -82,7 +87,7 @@ class AIOConnectionPool(ConnectionPool):
             super().put(conn)
             self._lock.notify()
 
-    async def close(self):
+    async def close(self) -> None:
         async with self._lock:
             super().close()
             self._lock.notify_all()
