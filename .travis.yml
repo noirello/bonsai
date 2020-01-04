@@ -20,6 +20,10 @@ matrix:
       services:
         - docker
     - language: python
+      python: "3.8"
+      services:
+        - docker
+    - language: python
       python: "nightly"
       services:
         - docker
