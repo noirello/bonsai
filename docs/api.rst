@@ -472,6 +472,21 @@ bonsai.asyncio
 
 .. autoclass:: AIOLDAPConnection
 
+.. note::
+    The default asyncio event loop is changed with Python 3.8 on Windows to
+    `ProactorEventLoop`. Unfortunately, bonsai's asynio connection requires
+    the old `SelectorEventLoop`. Make sure to change it back before using
+    the module:
+
+    .. code-block:: python
+
+        if sys.platform == 'win32':
+            import asyncio
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    Getting ``NotImplementedError`` from the ``add_reader`` method of the
+    event loop may indicate that it has not been properly set.
+
 :class:`AIOConnectionPool`
 --------------------------
 
