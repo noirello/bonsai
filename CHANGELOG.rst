@@ -1,6 +1,6 @@
 Changelog
 ==========
-[1.2.0] - UNRELEASED
+[1.2.0] - 2020-01-18
 --------------------
 
 Added
@@ -16,7 +16,7 @@ Fixed
    with AIOLDAPConnection when the server is unreachable. (Issue #27)
 -  Raising SizeLimitError when the query hits either the client-side or the
    server-side limit, fix condition check when acquiring next page. (Issue #31)
--  Race condition for open method of ThreadedConnectionPool.
+-  Race condition for open method of ThreadedConnectionPool and AIOConnectionPool.
 
 [1.1.0] - 2019-04-06
 --------------------
