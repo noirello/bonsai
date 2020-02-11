@@ -87,11 +87,13 @@ berval2PyObject(struct berval *bval, int keepbytes) {
 
 /*  Converts any Python objects to C string for `output` with length.
     For string object it uses UTF-8 encoding to convert bytes first,
-    then char *. For None object sets empty string, for bool it sets
+    then char *. If noneisnull is nonzero it and obj is None object it
+    sets len to -1 and output to NULL. If noneisnull is 0 and obj is
+    None object it sets empty string and len to 0. For bool it sets 
     TRUE or FALSE C strings.
 */
 int
-PyObject2char_withlength(PyObject *obj, char **output, long int *len) {
+PyObject2char_advanced(PyObject *obj, char **output, long int *len, int noneisnull) {
     int rc = 0;
     long int size = 0;
     char *tmp = NULL;
@@ -101,9 +103,15 @@ PyObject2char_withlength(PyObject *obj, char **output, long int *len) {
 
     /* If Python object is a None return an empty("") char*. */
     if (obj == Py_None) {
-        *output = strdup("");
-        if (len != NULL) *len = 0;
-        return 0;
+        if(noneisnull == 0) {
+            *output = strdup("");
+            if (len != NULL) *len = 0;
+            return 0;
+        } else {
+            *output = NULL;
+            if (len != NULL) *len = -1;
+            return 0;
+        }
     }
 
     if (PyBytes_Check(obj)) {
@@ -144,6 +152,16 @@ PyObject2char_withlength(PyObject *obj, char **output, long int *len) {
         Py_DECREF(tmpobj);
     }
     return rc;
+}
+
+/*  Converts any Python objects to C string for `output` with length.
+    For string object it uses UTF-8 encoding to convert bytes first,
+    then char *. For None object sets empty string, for bool it sets
+    TRUE or FALSE C strings.
+*/
+int
+PyObject2char_withlength(PyObject *obj, char **output, long int *len) {
+    return PyObject2char_advanced(obj, output, len, 0);
 }
 
 /* Converts any Python objects to C string. */

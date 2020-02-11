@@ -612,12 +612,22 @@ create_conn_info(char *mech, SOCKET sock, PyObject *creds) {
         if (strcmp(mech, "SIMPLE") == 0) {
             binddn = PyObject2char(PyDict_GetItemString(creds, "user"));
         } else {
+# ifdef WIN32
+            PyObject2char_advanced(PyDict_GetItemString(creds, "user"), &authcid, NULL, 1);
+            PyObject2char_advanced(PyDict_GetItemString(creds, "realm"), &realm, NULL, 1);
+            PyObject2char_advanced(PyDict_GetItemString(creds, "authz_id"), &authzid, NULL, 1);
+# else
             authcid = PyObject2char(PyDict_GetItemString(creds, "user"));
             realm = PyObject2char(PyDict_GetItemString(creds, "realm"));
             authzid = PyObject2char(PyDict_GetItemString(creds, "authz_id"));
+# endif
             ktname = PyObject2char(PyDict_GetItemString(creds, "keytab"));
         }
+# ifdef WIN32
+        PyObject2char_advanced(PyDict_GetItemString(creds, "password"), &passwd, NULL, 1);
+# else
         passwd = PyObject2char(PyDict_GetItemString(creds, "password"));
+# endif
     }
 
     defaults = malloc(sizeof(ldap_conndata_t));
