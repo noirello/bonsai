@@ -106,17 +106,21 @@ def kinit():
 
 
 @pytest.fixture
-def sizelimit_org():
-    """ Create a populated sizelimit organization LDAP entry. """
+def large_org():
+    """ Create a heavily populated organization LDAP entry. """
     gconn = None
     entry = None
+    gnum = None
 
-    def _create_org(conn, basedn, entry_num):
+    def _create_org(conn, org_dn, entry_num):
         nonlocal gconn
         nonlocal entry
-        entry = bonsai.LDAPEntry("ou=limited,%s" % basedn)
-        entry.update({"objectclass": ["top", "organizationalUnit"], "ou": "limited"})
+        nonlocal gnum
+        entry = bonsai.LDAPEntry(org_dn)
+        entry["objectclass"] = ["top", "organizationalUnit"]
+        entry["ou"] = entry.dn.rdns[0][0][1]
         gconn = conn
+        gnum = entry_num
         try:
             conn.add(entry)
         except bonsai.AlreadyExists:
@@ -140,6 +144,10 @@ def sizelimit_org():
 
     if gconn.closed:
         gconn = gconn.open()
+    for idx in range(gnum):
+        # Delete entries one by one to avoid Administration Limit Exceeded with AD.
+        item = bonsai.LDAPEntry("cn=test_{idx},{base}".format(idx=idx, base=entry.dn))
+        gconn.delete(item.dn)
     gconn.delete(entry.dn, recursive=True)
     gconn.close()
 
@@ -819,13 +827,13 @@ def test_client_sizelimit_error(conn, basedn):
         )
 
 
-def test_server_sizelimit_error(conn, anonym_conn, basedn, sizelimit_org):
+def test_server_sizelimit_error(conn, anonym_conn, basedn, large_org):
     """ Test raising SizeLimitError when reaching server side size limit. """
     import math
 
     entry_num = 1048
     page_size = 4
-    org = sizelimit_org(conn, basedn, entry_num)
+    org = large_org(conn, "ou=limited,{base}".format(base=basedn), entry_num)
     with pytest.raises(SizeLimitError):
         anonym_conn.search(org.dn, 1)
     paged = anonym_conn.paged_search(org.dn, 1, page_size=page_size)
@@ -847,3 +855,23 @@ def test_server_sizelimit_error(conn, anonym_conn, basedn, sizelimit_org):
         else expected - (entry_num - 1024) / page_size
     )
     assert page_num == expected
+
+
+@pytest.mark.skipif(
+    not sys.platform.startswith("win"),
+    reason="Large page result test is tested only with AD",
+)
+def test_paged_search_large_result(conn, anonym_conn, basedn, large_org):
+    page_size = 128
+    entry_num = 65535
+    org = large_org(conn, "ou=large,{base}".format(base=basedn), entry_num)
+    collected_entry = 0
+    result = anonym_conn.paged_search(org.dn, 1, page_size=page_size)
+    while True:
+        collected_entry += sum(1 for _ in result)
+        msgid = result.acquire_next_page()
+        if msgid is None:
+            break
+        result = anonym_conn.get_result(msgid)
+
+    assert entry_num == collected_entry

@@ -71,7 +71,9 @@ static PyObject *
 ldapsearchiter_acquirenextpage(LDAPSearchIter *self) {
     int msgid = -1;
 
-    DEBUG("ldapsearchiter_acquirenextpage (self:%p)", self);
+    DEBUG("ldapsearchiter_acquirenextpage (self:%p) cookie:%p", self,
+        (self != NULL) ? self->cookie : NULL
+    );
     /* If paged LDAP search is in progress. */
     if (self->cookie != NULL && self->cookie->bv_val != NULL && self->cookie->bv_len > 0) {
         Py_INCREF(self);
