@@ -27,7 +27,7 @@ from sources you will need:
   **libldap2-dev**.
   
 - The libsasl header files. They are usually installed in a package such as
-  **libsasl-dev**.
+  **libsasl2-dev**.
 
 - The Bonsai source files. You can download it from the project's `GitHub site`_.
 
