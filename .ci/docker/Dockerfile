@@ -65,5 +65,8 @@ COPY ./.ci/delay.py /root/delay.py
 COPY ./.ci/docker/supervisord.conf /etc/supervisord.conf
 
 COPY ./.ci/docker/entrypoint.sh /root/entrypoint.sh
+RUN chmod +x /root/entrypoint.sh
+RUN chmod +x /home/ldap/start_slapd.sh
+
 ENTRYPOINT ["/root/entrypoint.sh"]
 CMD ["supervisord", "-c", "/etc/supervisord.conf"]
