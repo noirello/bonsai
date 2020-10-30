@@ -53,12 +53,12 @@ matrix:
         - sudo pfctl -e
         # Settings for OpenLDAP.
         - rm /usr/local/etc/openldap/slapd.conf
-        - cp ./.travis/openldap/slapd.conf /usr/local/etc/openldap/
+        - cp ./.ci/openldap/slapd.conf /usr/local/etc/openldap/
         - mkdir /usr/local/var/openldap-data
-        - ./.travis/openldap/configure_ldap.sh
+        - ./.ci/openldap/configure_ldap.sh
         - mkdir /tmp/bonsai
         # Start services.
-        - sudo nohup python3 ./.travis/delay.py &
+        - sudo nohup python3 ./.ci/delay.py &
         - sudo /usr/local/opt/openldap/libexec/slapd -h "ldap:// ldaps:// ldapi://%2Ftmp%2Fbonsai%2Fldapi"
         # Waiting for slapd to start.
         - sleep 4
@@ -69,7 +69,7 @@ matrix:
         # Set library and include path.
         - printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
       before_script:
-        - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/.travis/krb5/krb5.conf"
+        - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/.ci/krb5/krb5.conf"
         - export SASL_PATH=/usr/local/opt/cyrussasl/lib/sasl2/
         - INSTALL_PATH=`pipenv run python -c "import bonsai; print(bonsai.__file__[:-12])"`
         - echo $INSTALL_PATH
@@ -98,7 +98,7 @@ before_install:
   - pipenv graph
   - mkdir /tmp/bonsai
   - sudo chown 2001:2000 /tmp/bonsai  # uid:gid for ldap group and user in container
-  - docker build -t bonsai -f ./.travis/docker/Dockerfile .
+  - docker build -t bonsai -f ./.ci/docker/Dockerfile .
   - docker run --cap-add=NET_ADMIN -v /tmp/bonsai/:/home/ldap/run/:z -d -h bonsai.test --name server bonsai
   # Set container IP in the hosts file.
   - DOCKER_IP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' server`
@@ -125,7 +125,7 @@ before_script:
   # Change localhost IP in test.ini to the container's.
   - sed -i.bak "s/127.0.0.1/$DOCKER_IP/g" ./tests/test.ini
   # Set used Kerberos config file to my own.
-  - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/.travis/krb5/krb5.conf"
+  - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/.ci/krb5/krb5.conf"
   # Set install path for coverage.py.
   - INSTALL_PATH=`pipenv run python -c "import bonsai; print(bonsai.__file__[:-12])"`
   - echo $INSTALL_PATH

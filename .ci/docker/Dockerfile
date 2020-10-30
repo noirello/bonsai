@@ -20,8 +20,8 @@ RUN chown -Rf ldap:ldap /etc/ldap/ /var/lib/ldap /var/lib/krb5kdc && chmod o+w /
 USER ldap
 
 # Setting Kerberos
-COPY --chown=ldap:ldap ./.travis/krb5/kdc.conf ./.travis/krb5/kadm5.acl /etc/krb5kdc/
-COPY --chown=ldap:ldap ./.travis/krb5/krb5.conf /etc/krb5.conf
+COPY --chown=ldap:ldap ./.ci/krb5/kdc.conf ./.ci/krb5/kadm5.acl /etc/krb5kdc/
+COPY --chown=ldap:ldap ./.ci/krb5/krb5.conf /etc/krb5.conf
 
 # Copy the root CA cert and key.
 COPY --chown=ldap:ldap ./tests/testenv/certs/cacert.pem /etc/ldap/certs/cacert.pem
@@ -48,7 +48,7 @@ COPY ./tests/testenv/ldifs/base.ldif \
      ./tests/testenv/test.jpeg \
      /home/ldap/
 
-COPY ./.travis/docker/start_slapd.sh /home/ldap/start_slapd.sh
+COPY ./.ci/docker/start_slapd.sh /home/ldap/start_slapd.sh
 
 RUN mkdir /home/ldap/run
 VOLUME /home/ldap/run
@@ -61,9 +61,9 @@ RUN chown -R ldap:ldap /etc/ldap/certs/ && chmod 644 /etc/ldap/certs/*
 # Open LDAP, LDAPS and Kerberos ports.
 EXPOSE 389 636 88 749
 
-COPY ./.travis/delay.py /root/delay.py
-COPY ./.travis/docker/supervisord.conf /etc/supervisord.conf
+COPY ./.ci/delay.py /root/delay.py
+COPY ./.ci/docker/supervisord.conf /etc/supervisord.conf
 
-COPY ./.travis/docker/entrypoint.sh /root/entrypoint.sh
+COPY ./.ci/docker/entrypoint.sh /root/entrypoint.sh
 ENTRYPOINT ["/root/entrypoint.sh"]
 CMD ["supervisord", "-c", "/etc/supervisord.conf"]

@@ -29,7 +29,7 @@ jobs:
         pipenv install --dev --skip-lock
         pipenv graph
     - name: Build Docker image
-      run: docker build -t bonsai -f ./.travis/docker/Dockerfile .
+      run: docker build -t bonsai -f ./.ci/docker/Dockerfile .
     - name: Configure Docker container
       run: |
         mkdir /tmp/bonsai
@@ -56,7 +56,7 @@ jobs:
       run: |
         export BONSAI_DOCKER_IP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' server`
         sed -i.bak "s/127.0.0.1/$BONSAI_DOCKER_IP/g" ./tests/test.ini
-        export KRB5_CONFIG="`pwd`/.travis/krb5/krb5.conf"
+        export KRB5_CONFIG="`pwd`/.ci/krb5/krb5.conf"
         export BONSAI_INSTALL_PATH=`pipenv run python -c "import bonsai; print(bonsai.__file__[:-12])"`
         echo $BONSAI_INSTALL_PATH
         pipenv run py.test -v --cov-config .coveragerc --cov-report= --cov=$BONSAI_INSTALL_PATH

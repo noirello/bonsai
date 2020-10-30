@@ -73,7 +73,7 @@ build_script:
   - "%CMD_IN_ENV% python setup.py install"
 
 before_test:
-  - ps: "Start-Process python -ArgumentList .\\.travis\\delay.py -Verb runas"
+  - ps: "Start-Process python -ArgumentList .\\.ci\\delay.py -Verb runas"
   # Change hostname to the computer's FQDN.
   - ps: "(Get-Content .\\tests\\test.ini).replace('hostname = bonsai.test', 'hostname = appvyr-win.bonsai.test') | Set-Content '.\\tests\\test.ini'"
 
