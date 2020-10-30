@@ -3,7 +3,7 @@ name: Build
 on: [push]
 
 jobs:
-  build:
+  ubuntu:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -56,6 +56,61 @@ jobs:
       run: |
         export BONSAI_DOCKER_IP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' server`
         sed -i.bak "s/127.0.0.1/$BONSAI_DOCKER_IP/g" ./tests/test.ini
+        export KRB5_CONFIG="`pwd`/.ci/krb5/krb5.conf"
+        export BONSAI_INSTALL_PATH=`pipenv run python -c "import bonsai; print(bonsai.__file__[:-12])"`
+        echo $BONSAI_INSTALL_PATH
+        pipenv run py.test -v --cov-config .coveragerc --cov-report= --cov=$BONSAI_INSTALL_PATH
+  macos:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.6, 3.7, 3.8, 3.9]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pipenv
+        pipenv install --dev --skip-lock
+        pipenv graph
+    - name: Install Docker
+      run: bash ./.github/workflows/scripts/install_docker_mac.sh
+    - name: Wait on Docker
+      run: |
+        bash ./.github/workflows/scripts/wait_docker_mac.sh
+        sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.Kerberos.kdc.plist
+    - name: Build Docker image
+      run: |
+        docker build -t bonsai -f ./.ci/docker/Dockerfile .
+    - name: Configure Docker container
+      run: |
+        mkdir /tmp/bonsai
+        sudo chown 2001:2000 /tmp/bonsai
+        docker run --cap-add=NET_ADMIN -p 389:389 -p 636:636 -p 88:88 -p 749:749 -p 8000:8000 -d -h bonsai.test --name server bonsai
+        sudo bash -c 'echo -e "\n127.0.0.1        bonsai.test" >> /etc/hosts'
+        cat /etc/hosts
+        ping -c 2 bonsai.test
+        sleep 4
+    - name: Check container and LDAP tools
+      run: |
+        docker exec server ps aux
+        ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U admin -w p@ssword
+        ldapsearch -x -h bonsai.test -b "" -s base 'objectclass=*' -LLL +
+        ldapsearch -VV
+    - name: Install package
+      run: |
+        printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
+        printf "\n\n[options]\nzip_safe = False" >> setup.cfg
+        export CFLAGS="-coverage"
+        pipenv run python setup.py install
+    - name: Run test
+      run: |
         export KRB5_CONFIG="`pwd`/.ci/krb5/krb5.conf"
         export BONSAI_INSTALL_PATH=`pipenv run python -c "import bonsai; print(bonsai.__file__[:-12])"`
         echo $BONSAI_INSTALL_PATH

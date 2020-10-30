@@ -58,8 +58,8 @@ USER root
 # Set ownership and access righta for certs.
 RUN chown -R ldap:ldap /etc/ldap/certs/ && chmod 644 /etc/ldap/certs/*
 
-# Open LDAP, LDAPS and Kerberos ports.
-EXPOSE 389 636 88 749
+# Open LDAP, LDAPS, Kerberos and delay script ports.
+EXPOSE 389 636 88 749 8000
 
 COPY ./.ci/delay.py /root/delay.py
 COPY ./.ci/docker/supervisord.conf /etc/supervisord.conf
