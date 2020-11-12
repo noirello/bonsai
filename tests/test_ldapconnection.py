@@ -241,6 +241,9 @@ def test_bind_ntlm(binding):
         assert "anonymous" != conn.whoami()
 
 
+@pytest.mark.skipif(
+    sys.platform == "darwin", reason="SCRAM is not supported on clients on Mac."
+)
 def test_bind_not_supported_auth(binding):
     """ Test not supported authentication mechanism by the server. """
     with pytest.raises(bonsai.AuthMethodNotSupported):
@@ -337,7 +340,9 @@ def test_bind_gssapi_keytab(cfg, ktpath):
     assert conn.whoami() == "dn:cn=admin,dc=bonsai,dc=test"
 
 
-@pytest.mark.skipif("TRAVIS" in os.environ, reason="No GSS-SPNEGO mech on Trusty")
+@pytest.mark.skipif(
+    not sys.platform.startswith("win"), reason="No GSS-SPNEGO mech on Ubuntu and Mac"
+)
 def test_bind_spnego(binding, cfg):
     """ Test GSS-SPNEGO connection with automatic TGT requesting. """
     with binding(

@@ -249,7 +249,9 @@ def test_tls_timeout(url):
             client.connect(timeout=5.0)
 
 
-@pytest.mark.skipif(sys.platform.startswith("win"), reason="No IPC support on Windows")
+@pytest.mark.skipif(
+    sys.platform != "linux", reason="No IPC support on Windows or Mac with Docker"
+)
 def test_ldapi():
     """ Test making connection via IPC. """
     client = LDAPClient("ldapi://%2Ftmp%2Fbonsai%2Fldapi")
