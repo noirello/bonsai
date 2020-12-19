@@ -7,6 +7,10 @@
 static void
 ldapconnection_dealloc(LDAPConnection* self) {
     DEBUG("ldapconnection_dealloc (self:%p)", self);
+    if (self->ld != NULL) {
+        /* Unbind connection and free resources allocated by the LDAP structure. */
+        ldap_unbind_ext(self->ld, NULL, NULL);
+    }
     Py_XDECREF(self->client);
     Py_XDECREF(self->pending_ops);
     Py_XDECREF(self->socketpair);
@@ -32,6 +36,7 @@ ldapconnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     if (self != NULL) {
         self->client = NULL;
         self->pending_ops = NULL;
+        self->ld = NULL;
         /* The connection should be closed. */
         self->closed = 1;
         self->async = 0;
@@ -230,6 +235,7 @@ ldapconnection_close(LDAPConnection *self) {
         return NULL;
     }
     self->closed = 1;
+    self->ld = NULL;
     Py_RETURN_NONE;
 }
 
