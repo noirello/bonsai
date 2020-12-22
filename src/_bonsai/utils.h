@@ -21,11 +21,11 @@ typedef struct {
 extern PyObject *LDAPDNObj;
 extern PyObject *LDAPEntryObj;
 extern PyObject *LDAPValueListObj;
-extern char debugmod;
-extern char asyncmod;
+extern char _g_debugmod;
+extern char _g_asyncmod;
 
 #define DEBUG(fmt, ...) \
-    do { if (debugmod) { \
+    do { if (_g_debugmod) { \
         fprintf(stdout, "DBG: "); \
         fprintf(stdout, fmt, __VA_ARGS__); \
         fprintf(stdout, "\n");} } while (0)

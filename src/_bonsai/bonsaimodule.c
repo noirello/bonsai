@@ -12,14 +12,10 @@
 PyObject *LDAPDNObj = NULL;
 PyObject *LDAPEntryObj = NULL;
 PyObject *LDAPValueListObj = NULL;
-char debugmod = 0;
+char _g_debugmod = 0;
 
-#ifdef MACOSX
 /* The asynchronous connection build does not function properly on macOS */
-char asyncmod = 0;
-#else
-char asyncmod = 1;
-#endif
+char _g_asyncmod = 0;
 
 /* Set if async connections will be used. */
 static PyObject *
@@ -30,7 +26,7 @@ bonsai_set_connect_async(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    asyncmod = (char)PyObject_IsTrue(flag);
+    _g_asyncmod = (char)PyObject_IsTrue(flag);
 
     Py_RETURN_NONE;
 }
@@ -47,7 +43,7 @@ bonsai_set_debug(PyObject *self, PyObject *args, PyObject *kwds) {
         return NULL;
     }
 
-    debugmod = (char)PyObject_IsTrue(flag);
+    _g_debugmod = (char)PyObject_IsTrue(flag);
 #ifndef WIN32
     ldap_set_option(NULL, LDAP_OPT_DEBUG_LEVEL, &deb_level);
 #endif
@@ -150,9 +146,6 @@ static PyModuleDef bonsai2module = {
 PyMODINIT_FUNC
 PyInit__bonsai(void) {
     PyObject* module = NULL;
-
-    /* Set debug mod off. */
-    debugmod = 0;
 
     /* Import LDAPDN object. */
     LDAPDNObj = load_python_object("bonsai.ldapdn", "LDAPDN");

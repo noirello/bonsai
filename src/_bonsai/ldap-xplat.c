@@ -725,8 +725,8 @@ ldap_init_thread_func(void *params) {
 #if !defined(WIN32) && LDAP_VENDOR_VERSION > 20443
     /* The asynchronous connection build only works on unix systems from
        version 2.4.44 */
-    DEBUG("set connecting async: %d", asyncmod);
-    if (asyncmod) {
+    DEBUG("set connecting async: %d", _g_asyncmod);
+    if (_g_asyncmod) {
         struct timeval tv;
         tv.tv_sec = 0;
         /* Set asynchronous connect for OpenLDAP. */
