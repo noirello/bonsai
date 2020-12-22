@@ -77,7 +77,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pipenv
-        pipenv install --dev --skip-lock
+        PIP_NO_BINARY=:all: pipenv install --system --dev --skip-lock
         pipenv graph
     - name: Install Docker
       run: bash ./.github/workflows/scripts/install_docker_mac.sh
@@ -108,10 +108,10 @@ jobs:
         printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
         printf "\n\n[options]\nzip_safe = False" >> setup.cfg
         export CFLAGS="-coverage"
-        pipenv run python setup.py install
+        python setup.py install
     - name: Run test
       run: |
         export KRB5_CONFIG="`pwd`/.ci/krb5/krb5.conf"
-        export BONSAI_INSTALL_PATH=`pipenv run python -c "import bonsai; print(bonsai.__file__[:-12])"`
+        export BONSAI_INSTALL_PATH=`python -c "import bonsai; print(bonsai.__file__[:-12])"`
         echo $BONSAI_INSTALL_PATH
-        pipenv run py.test -v --cov-config .coveragerc --cov-report= --cov=$BONSAI_INSTALL_PATH
+        py.test -v --cov-config .coveragerc --cov-report= --cov=$BONSAI_INSTALL_PATH
