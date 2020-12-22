@@ -76,9 +76,8 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pipenv
-        PIP_NO_BINARY=:all: pipenv install --system --dev --skip-lock
-        pipenv graph
+        pip install --no-binary gevent delocate
+        pip install coverage pytest codecov pytest-cov pytest-timeout tornado wheel
     - name: Install Docker
       run: bash ./.github/workflows/scripts/install_docker_mac.sh
     - name: Wait on Docker
@@ -96,7 +95,7 @@ jobs:
         sudo bash -c 'echo -e "\n127.0.0.1        bonsai.test" >> /etc/hosts'
         cat /etc/hosts
         ping -c 2 bonsai.test
-        sleep 4
+        sleep 5
     - name: Check container and LDAP tools
       run: |
         docker exec server ps aux
