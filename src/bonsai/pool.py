@@ -35,7 +35,7 @@ class ConnectionPool:
     :param int minconn: the minimum number of connections that's created
                 after the pool is opened.
     :param int maxconn: the maximum number of connections in the pool.
-    :param \*\*kwargs: additional keyword arguments that are passed to
+    :param \\*\\*kwargs: additional keyword arguments that are passed to
                 the :meth:`bonsai.LDAPClient.connect` method.
     :raises ValueError: when the minconn is negative or the maxconn is less
         than the minconn.
@@ -124,9 +124,9 @@ class ConnectionPool:
         and returns it on exit. It also opens the pool if it hasn't been
         opened before.
 
-        :params \*args: the positional arguments passed to
+        :params \\*args: the positional arguments passed to
                 :meth:`bonsai.pool.ConnectionPool.get`.
-        :params \*\*kwargs: the keyword arguments passed to
+        :params \\*\\*kwargs: the keyword arguments passed to
                 :meth:`bonsai.pool.ConnectionPool.get`.
         """
         try:
@@ -188,7 +188,7 @@ class ThreadedConnectionPool(ConnectionPool):
     :param int maxconn: the maximum number of connections in the pool.
     :param bool block: when it's True, the get method will block when no
                 connection is available in the pool.
-    :param \*\*kwargs: additional keyword arguments that are passed to
+    :param \\*\\*kwargs: additional keyword arguments that are passed to
                 the :meth:`bonsai.LDAPClient.connect` method.
     :raises ValueError: when the minconn is negative or the maxconn is less
         than the minconn.

@@ -222,7 +222,7 @@ class LDAPEntry(ldapentry):
         :param str name: the name of the attribute.
         :param int optype: the operation type, 0 for adding, 1 for deleting \
         and 2 for replacing. An :class:`LDAPModOp` also can be used as value.
-        :param \*values: the new value or values of the attribute.
+        :param \\*values: the new value or values of the attribute.
         """
         lvl = self.get(name, LDAPValueList())
         if optype == LDAPModOp.ADD:

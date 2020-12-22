@@ -576,7 +576,7 @@ class LDAPClient:
 
         :param bool is_async: Set `True` to use asynchronous connection.
         :param float timeout: time limit in seconds for the operation.
-        :param \*\*kwargs: additional keyword arguments that are passed to
+        :param \\*\\*kwargs: additional keyword arguments that are passed to
                          the async connection object (e.g. an eventloop
                          object as `loop` parameter).
         :return: an LDAP connection.
