@@ -34,6 +34,13 @@ def gclient():
     return cli
 
 
+@pytest.fixture
+def turn_async_conn():
+    bonsai.set_connect_async(True)
+    yield None
+    bonsai.set_connect_async(False)
+
+
 def test_connection(gclient):
     """ Test opening a connection. """
     conn = gclient.connect(True)
@@ -156,8 +163,9 @@ def test_whoami(gclient):
     reason="No async timeout support",
 )
 @pytest.mark.timeout(18)
-def test_connection_timeout(gclient):
+def test_connection_timeout(gclient, turn_async_conn):
     """ Test connection timeout. """
+    turn_async_conn
     with network_delay(6.0):
         with pytest.raises(socket.timeout):
             gclient.connect(True, timeout=5.0)
