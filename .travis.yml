@@ -8,18 +8,6 @@ sudo: true
 matrix:
   include:
     - language: python
-      python: "3.5"
-      services:
-        - docker
-    - language: python
-      python: "3.6"
-      services:
-        - docker
-    - language: python
-      python: "3.7"
-      services:
-        - docker
-    - language: python
       python: "3.8"
       services:
         - docker
@@ -27,64 +15,6 @@ matrix:
       python: "nightly"
       services:
         - docker
-    - language: generic
-      os: osx
-      osx_image: xcode11.3
-      before_install:
-        - brew update
-        - brew unlink python@2
-        #- brew upgrade python@3
-        # Download OpenLDAP formula and append sssvlv flag.
-        - curl https://raw.githubusercontent.com/Homebrew/homebrew-core/master/Formula/openldap.rb -o openldap.rb
-        - sed -i.bak 's/--enable-valsort/\--enable-sssvlv=yes/g' openldap.rb && rm openldap.rb.bak
-        - cat ./openldap.rb
-        - brew install -v -s ./openldap.rb
-        - pip3 install pipenv
-        - export PIP_NO_BINARY=gevent  # Fix issues with gevent 1.3.5/greenlet 0.4.13 on Python 3.7
-        - pipenv install --dev --skip-lock
-        - pipenv graph
-        # Install Cyrus SASL.
-        - curl https://pastebin.com/raw/k8JuNHRY -o cyrussasl.rb
-        - cat ./cyrussasl.rb
-        - brew install -s ./cyrussasl.rb --with-ntlm
-        # Set alias for localhost.
-        - sudo sed -i.bak "/^127.0.0.1/ s/$/ bonsai.test/" /etc/hosts
-        - ping -c 2 bonsai.test
-        - sudo pfctl -e
-        # Settings for OpenLDAP.
-        - rm /usr/local/etc/openldap/slapd.conf
-        - cp ./.ci/openldap/slapd.conf /usr/local/etc/openldap/
-        - mkdir /usr/local/var/openldap-data
-        - ./.ci/openldap/configure_ldap.sh
-        - mkdir /tmp/bonsai
-        # Start services.
-        - sudo nohup python3 ./.ci/delay.py &
-        - sudo /usr/local/opt/openldap/libexec/slapd -h "ldap:// ldaps:// ldapi://%2Ftmp%2Fbonsai%2Fldapi"
-        # Waiting for slapd to start.
-        - sleep 4
-        # Check that slapd is working.
-        - ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U admin -w p@ssword
-        - ldapsearch -Y DIGEST-MD5 -U admin -w p@ssword -h bonsai.test -b "" -s base 'objectclass=*' -LLL +
-        - /usr/local/opt/openldap/bin/ldapsearch -VV
-        # Set library and include path.
-        - printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
-      before_script:
-        - export KRB5_CONFIG="$TRAVIS_BUILD_DIR/.ci/krb5/krb5.conf"
-        - export SASL_PATH=/usr/local/opt/cyrussasl/lib/sasl2/
-        - INSTALL_PATH=`pipenv run python -c "import bonsai; print(bonsai.__file__[:-12])"`
-        - echo $INSTALL_PATH
-      after_success:
-        - sed -i.bak 's|'$INSTALL_PATH'|'$TRAVIS_BUILD_DIR/src/bonsai'|g' .coverage
-        - pipenv run codecov
-        - unset CFLAGS
-        - rm -rf ./dist/*
-        - pipenv run python setup.py clean
-        - pipenv run python setup.py build -f
-        - pipenv run python setup.py bdist_wheel
-        - pipenv run delocate-wheel -v ./dist/bonsai-*.whl
-        - curl -L https://github.com/timvisee/ffsend/releases/download/v0.2.44/ffsend-v0.2.44-macos -o ffsend && chmod +x ./ffsend
-        - ./ffsend upload ./dist/bonsai-*.whl
-        - sleep 2
 
 before_install:
   - sudo apt-get update
