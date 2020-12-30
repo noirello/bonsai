@@ -9,6 +9,9 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
+    env:
+      PYTHON: ${{ matrix.python-version }}
+      OS: ubuntu
 
     steps:
     - uses: actions/checkout@v2
@@ -60,12 +63,22 @@ jobs:
         export BONSAI_INSTALL_PATH=`pipenv run python -c "import bonsai; print(bonsai.__file__[:-12])"`
         echo $BONSAI_INSTALL_PATH
         pipenv run py.test -v --cov-config .coveragerc --cov-report= --cov=$BONSAI_INSTALL_PATH
+    - name: Upload coverage
+      uses: codecov/codecov-action@v1
+      with:
+        directory: "."
+        env_vars: OS,PYTHON
+        fail_ci_if_error: true
+
   macos:
     runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
+    env:
+      PYTHON: ${{ matrix.python-version }}
+      OS: macos
 
     steps:
     - uses: actions/checkout@v2
@@ -114,3 +127,9 @@ jobs:
         export BONSAI_INSTALL_PATH=`python -c "import bonsai; print(bonsai.__file__[:-12])"`
         echo $BONSAI_INSTALL_PATH
         py.test -v --cov-config .coveragerc --cov-report= --cov=$BONSAI_INSTALL_PATH
+    - name: Upload coverage
+      uses: codecov/codecov-action@v1
+      with:
+        directory: "."
+        env_vars: OS,PYTHON
+        fail_ci_if_error: true
