@@ -5,6 +5,10 @@ Bonsai
     :target: https://pypi.python.org/pypi/bonsai/
     :alt: PyPI Version
 
+.. image:: https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fnoirello%2Fbonsai%2Fbadge%3Fref%3Ddev&style=flat-square
+    :target: https://actions-badge.atrox.dev/noirello/bonsai/goto?ref=dev
+    :alt: GitHub Action Build Status
+
 .. image:: https://img.shields.io/travis/noirello/bonsai/dev.svg?style=flat-square
     :target: https://travis-ci.org/noirello/bonsai
     :alt: Travis CI Build Status
