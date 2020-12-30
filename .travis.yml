@@ -8,7 +8,7 @@ sudo: true
 matrix:
   include:
     - language: python
-      python: "3.8"
+      python: "3.9"
       services:
         - docker
     - language: python
@@ -25,6 +25,7 @@ before_install:
   - pip install pipenv
   - export PIP_NO_BINARY=gevent  # Fix issues with gevent 1.3.5/greenlet 0.4.13 on Python 3.7
   - pipenv install --dev --skip-lock
+  - pipenv install cffi
   - pipenv graph
   - mkdir /tmp/bonsai
   - sudo chown 2001:2000 /tmp/bonsai  # uid:gid for ldap group and user in container
