@@ -55,7 +55,7 @@ jobs:
         printf "\n\n[options]\nzip_safe = False" >> setup.cfg
         export CFLAGS="-coverage"
         pipenv run python setup.py install
-    - name: Run test
+    - name: Run tests
       run: |
         export BONSAI_DOCKER_IP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' server`
         sed -i.bak "s/127.0.0.1/$BONSAI_DOCKER_IP/g" ./tests/test.ini
@@ -121,7 +121,7 @@ jobs:
         printf "\n\n[options]\nzip_safe = False" >> setup.cfg
         export CFLAGS="-coverage"
         python setup.py install
-    - name: Run test
+    - name: Run tests
       run: |
         export KRB5_CONFIG="`pwd`/.ci/krb5/krb5.conf"
         export BONSAI_INSTALL_PATH=`python -c "import bonsai; print(bonsai.__file__[:-12])"`
@@ -133,3 +133,15 @@ jobs:
         directory: "."
         env_vars: OS,PYTHON
         fail_ci_if_error: true
+    - name: Create wheel
+      run: |
+        python setup.py clean
+        python setup.py build -f
+        python setup.py bdist_wheel
+        delocate-wheel -v ./dist/bonsai-*.whl
+    - name: Upload wheel
+      uses: actions/upload-artifact@v2
+      with:
+        name: wheel
+        path: ./dist/bonsai-*.whl
+        retention-days: 5
