@@ -163,17 +163,22 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         sort_order: Optional[List[str]] = None,
         page_size: int = 1,
     ) -> Any:
-        return self.__base_search(
-            base,
-            scope,
-            filter_exp,
-            attrlist,
-            timeout,
-            sizelimit,
-            attrsonly,
-            sort_order,
-            page_size,
-        )
+        chase_referrals = self.__client.server_chase_referrals
+        try:
+            self.__client.set_server_chase_referrals(False)
+            return self.__base_search(
+                base,
+                scope,
+                filter_exp,
+                attrlist,
+                timeout,
+                sizelimit,
+                attrsonly,
+                sort_order,
+                page_size,
+            )
+        finally:
+            self.__client.set_server_chase_referrals(chase_referrals)
 
     def virtual_list_search(
         self,
