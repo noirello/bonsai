@@ -1,5 +1,26 @@
 Changelog
 ==========
+[1.2.1 - 2020-12-31]
+--------------------
+
+Changed
+~~~~~~~
+
+-  Asynchronous connection process during socket initialisation is disabled
+   by default on every platform. It caused TLS errors on newer Ubuntus (18.04+).
+   Use set_connect_async explicitly to enable it.
+-  LDAPClient's server_chase_referrals is set to False automatically before
+   starting a paged_search.
+-  Using urllib.parse for LDAPURL, instead of regular expressions.
+
+Fixed
+~~~~~
+
+-  Freeing resources allocated by the LDAP structure during LDAPConnection's
+   deallocation. (Issue #45)
+-  Package name in documentation. (Thanks to @ikreb7)
+
+
 [1.2.0] - 2020-01-18
 --------------------
 
