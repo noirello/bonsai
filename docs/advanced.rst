@@ -530,6 +530,12 @@ gevent:
 
     gevent.joinall([gevent.spawn(do)])
 
+.. note::
+    Since 1.2.1, to achieve non-blocking socket connection, the `bonsai.set_connect_async(True)`
+    has to be called before connecting the server. But setting it and using TLS can cause errors
+    even on newer Ubuntu releases (18.04+), thus it has been turned off by default on every
+    platform.
+
 Create your own async class
 ---------------------------
 
