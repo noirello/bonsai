@@ -701,9 +701,8 @@ Utility functions
 
     Disable/enable asynchronous connection for the underlying socket, which means
     that the socket is set to be non-blocking when it's enabled. The default setting
-    is `True` on Linux with newer OpenLDAP library version than 2.4.43, `False` in any
-    other case. This is an OpenLDAP specific setting (see `LDAP_OPT_CONNECT_ASYNC` option
-    in the OpenLDAP documentation for further details).
+    is `False` on every platform. This is an OpenLDAP specific setting (see
+    `LDAP_OPT_CONNECT_ASYNC` option in the OpenLDAP documentation for further details).
 
     :param bool allow: Enabling/disabling async connect mode.
 
