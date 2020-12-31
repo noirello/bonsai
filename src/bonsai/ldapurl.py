@@ -42,69 +42,47 @@ class LDAPURL:
 
     def __str2url(self, strurl: str) -> None:
         """ Parsing string url to LDAPURL."""
-        # RegExp for [ldap|ldaps|ldapi]://[host]:[port]/[basedn]?[attrs]?[scope]
-        # ?[filter]?[exts]
-        valid = re.compile(
-            r"^(ldap[s|i]?)://(([^:/?]*)?([:]([1-9][0-9]{0,4}))?"
-            r"|[\[]?([^/?\]]*)([\]][:]([1-9][0-9]{0,4}))?)[/]?"
-            r"([^\]/:?]*)?[\?]?([^\]:?]*)?[\?]?([^\]:?]*)?[\?]?"
-            r"([^\]:?]*)?[\?]?([^\]:?]*)?$",
-            re.IGNORECASE,
-        )
+        # Form: [scheme]://[host]:[port]/[basedn]?[attrs]?[scope]?[filter]?[exts]
         scheme, host, port = self.__hostinfo
         binddn, attrlist, scope, filter_exp = self.__searchinfo
-        match = valid.match(strurl)
-        if match:
-            scheme = match.group(1).lower()
-            if scheme == "ldaps":
-                port = 636
-            elif scheme == "ldapi":
-                port = 0
-            # The hostname
-            if match.group(3) or match.group(6):
-                hostname = match.group(3) or match.group(6)
-                if scheme != "ldapi":
-                    if self.is_valid_hostname(hostname):
-                        host = hostname
-                        if match.group(6):
-                            self.__ipv6 = True
-                    else:
-                        raise ValueError(
-                            "'{0}' has an invalid hostname.".format(strurl)
-                        )
-                else:
-                    host = hostname
-            # The portnumber for IPv4
-            if match.group(5):
-                port = int(match.group(5))
-            # The portnumber for IPv6
-            if match.group(8):
-                port = int(match.group(8))
-            # The LDAP bind DN
-            if match.group(9):
-                binddn = LDAPDN(urllib.parse.unquote(match.group(9)))
-            # Attributes
-            if match.group(10):
-                attrlist = match.group(10).split(",")
-            # Scope (base/one/sub)
-            if match.group(11):
-                _scope = match.group(11).lower()
-                if _scope not in ("base", "one", "sub"):
-                    raise ValueError("Invalid scope type.")
-                scope = _scope
-            # Filter
-            if match.group(12):
-                filter_exp = urllib.parse.unquote(match.group(12))
-            # Extensions
-            if match.group(13):
-                self.__extensions = match.group(13).split(",")
-            self.__hostinfo = (scheme, host, port)
-            self.__searchinfo = (binddn, attrlist, scope, filter_exp)
-        else:
+        parsed_url = urllib.parse.urlparse(strurl)
+        scheme = parsed_url.scheme
+        if scheme not in ("ldap", "ldaps", "ldapi"):
             raise ValueError("'%s' is not a valid LDAP URL." % strurl)
+        if scheme == "ldaps":
+            port = 636
+        elif scheme == "ldapi":
+            port = 0
+        if parsed_url.hostname:
+            host = parsed_url.hostname
+        if parsed_url.scheme != "ldapi":
+            valid, self.__ipv6 = self.is_valid_hostname(host)
+            if not valid:
+                raise ValueError("'{0}' has an invalid hostname.".format(strurl))
+        if parsed_url.port:
+            port = parsed_url.port
+        binddn = LDAPDN(urllib.parse.unquote(parsed_url.path[1:]))
+        params = parsed_url.query.split("?")
+        # Attribute
+        if len(params) > 0 and len(params[0]) > 0:
+            attrlist = params[0].split(",")
+        # Scope (base/one/sub)
+        if len(params) > 1:
+            _scope = params[1].lower()
+            if _scope not in ("base", "one", "sub"):
+                raise ValueError("Invalid scope type.")
+            scope = _scope
+        # Filter
+        if len(params) > 2:
+            filter_exp = urllib.parse.unquote(params[2])
+        # Extensions
+        if len(params) > 3:
+            self.__extensions = params[3].split(",")
+        self.__hostinfo = (scheme, host, port)
+        self.__searchinfo = (binddn, attrlist, scope, filter_exp)
 
     @staticmethod
-    def is_valid_hostname(hostname: str) -> bool:
+    def is_valid_hostname(hostname: str) -> Tuple[bool, bool]:
         """ Validate a hostname. """
         hostname_regex = re.compile(
             r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]"
@@ -114,12 +92,12 @@ class LDAPURL:
         try:
             # Try parsing IPv6 address.
             IPv6Address(hostname)
-            return True
+            return (True, True)
         except ValueError:
             # Try IPv4 and standard hostname.
             if hostname_regex.match(hostname):
-                return True
-            return False
+                return (True, False)
+            return (False, False)
 
     @property
     def host(self) -> str:
@@ -130,10 +108,12 @@ class LDAPURL:
     def host(self, value: str) -> None:
         """ Setter for hostname. """
         # RegExp for valid hostname.
-        if not self.is_valid_hostname(value):
+        valid, ipv6 = self.is_valid_hostname(value)
+        if not valid:
             raise ValueError("'%s' is not a valid host name." % value)
         else:
             self.__hostinfo = (self.__hostinfo[0], value, self.__hostinfo[2])
+            self.__ipv6 = ipv6
 
     @property
     def port(self) -> int:
@@ -268,10 +248,10 @@ class LDAPURL:
             strexts = ",".join(self.__extensions)
         strbind = "?".join(
             (
-                str(self.__searchinfo[0]),
+                urllib.parse.quote(str(self.__searchinfo[0]), safe="=,"),
                 strattrs,
                 self.__searchinfo[2],
-                self.__searchinfo[3],
+                urllib.parse.quote(self.__searchinfo[3], safe="=,()*"),
                 strexts,
             )
         )
