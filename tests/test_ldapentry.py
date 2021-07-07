@@ -188,6 +188,19 @@ def test_special_char(client, basedn):
         assert entry.dn in [res.dn for res in result]
 
 
+def test_dn_with_space(client, basedn):
+    """ Test adding entry with DN that has a space in it. """
+    with client.connect() as conn:
+        entry = LDAPEntry("cn=test, %s" % basedn)
+        entry["objectclass"] = ["top", "inetOrgPerson"]
+        entry["sn"] = "Test with space"
+        conn.add(entry)
+        result = conn.search(basedn, 1)
+        entry.delete()
+        assert " " in str(entry.dn)
+        assert entry.dn.rdns[0][0][1] in [res.dn.rdns[0][0][1] for res in result]
+
+
 def test_unicode(client, basedn):
     """ Test adding entry with special character in its DN. """
     with client.connect() as conn:
