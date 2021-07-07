@@ -81,7 +81,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'bonsai'
-copyright = '2014-2020, noirello'
+copyright = '2014-2021, noirello'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
