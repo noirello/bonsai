@@ -13,7 +13,7 @@ class LDAPDN:
 
     __slots__ = ("__strdn",)
 
-    _attrtype = r"[A-Za-z][\w-]*|\d+(?:\.\d+)*"
+    _attrtype = r"[A-Za-z ][\w-]*|\d+(?:\.\d+)*"
     _attrvalue = r'#(?:[\dA-Fa-f]{2})+|(?:[^,=\+<>#;\\"]|\\[,=\+<>#;\\" ]' r'|\\[\dA-Fa-f]{2})*|"(?:[^\\"]|\\[,=\+<>#;\\"]|\\[\dA-Fa-f]{2})*"'
     _namecomp = r"({typ})=({val})(?:\+({typ})=({val}))*".format(
         typ=_attrtype, val=_attrvalue
@@ -38,7 +38,7 @@ class LDAPDN:
         for attr in type_value_list:
             # Get attribute type and value.
             atype, avalue = re.split(r"(?<!\\)=", attr)
-            rdn.append((atype, self.__sanitize(avalue, True)))
+            rdn.append((atype.strip(), self.__sanitize(avalue, True)))
         return tuple(rdn)
 
     @staticmethod

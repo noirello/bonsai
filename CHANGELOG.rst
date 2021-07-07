@@ -1,5 +1,14 @@
 Changelog
 ==========
+[1.2.2 - UNRELEASED]
+--------------------
+
+Changed
+~~~~~~~
+
+-  Allow space in LDAPDN's attribute type. (Issue #52)
+
+
 [1.2.1 - 2020-12-31]
 --------------------
 
