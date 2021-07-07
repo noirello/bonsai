@@ -79,3 +79,14 @@ def test_setitem():
 def test_repr(dnobj):
     """ Test representation. """
     assert "<LDAPDN" in repr(dnobj)
+
+
+def test_space_after_comma():
+    """ Test allowing space after comma for attribute type. """
+    with pytest.raises(errors.InvalidDN):
+        _ = LDAPDN("c n=user,dc=test,dc=local")
+    with pytest.raises(errors.InvalidDN):
+        _ = LDAPDN("cn=user,dc =test,dc=local")
+    dn = LDAPDN("cn=user, dc=test, dc=local")
+    assert str(dn) == "cn=user, dc=test, dc=local"
+    assert dn.rdns[1][0][0] == "dc"
