@@ -1,0 +1,86 @@
+trigger:
+  branches:
+    include:
+    - '*'
+
+stages:
+- stage: Test
+  jobs:
+  - job: Ubuntu
+    pool:
+      vmImage: "ubuntu-latest"
+    strategy:
+      matrix:
+        Python36:
+          python.version: '3.6'
+        Python37:
+          python.version: '3.7'
+        Python38:
+          python.version: '3.8'
+        Python39:
+          python.version: '3.9'
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(python.version)'
+        architecture: 'x64'
+    - script: |
+        python --version
+      displayName: Check Python path
+    - script: |
+        sudo apt-get update
+        sudo apt-get install -y libldap2-dev libsasl2-dev ldap-utils sasl2-bin
+        sudo apt-get install -y krb5-user libsasl2-modules-gssapi-mit libkrb5-dev
+        apt list --installed
+      displayName: Install OS dependencies
+    - script: |
+        python -m pip install --upgrade pip
+        python -m pip install poetry wheel
+        poetry config virtualenvs.create false
+        poetry install --no-root -E gevent -E tornado
+        python -m pip list
+      displayName: Install Python dependencies
+    - script: docker build -t bonsai -f ./.ci/docker/Dockerfile .
+      displayName: Build Docker image
+    - script: |
+        mkdir /tmp/bonsai
+        sudo chown 2001:2000 /tmp/bonsai
+        docker run --cap-add=NET_ADMIN -v /tmp/bonsai/:/home/ldap/run/:z -d -h bonsai.test --name server bonsai
+        export BONSAI_DOCKER_IP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' server`
+        sudo bash -c 'echo -e "\n'$BONSAI_DOCKER_IP'        bonsai.test" >> /etc/hosts'
+        cat /etc/hosts
+        ping -c 2 bonsai.test
+        sleep 4
+      displayName: Configure Docker container
+    - script: |
+        docker exec server ps aux
+        ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U admin -w p@ssword
+        ldapsearch -h bonsai.test -b "" -s base 'objectclass=*' -x -LLL +
+        ldapsearch -VV
+        saslpluginviewer
+      displayName: Check container and LDAP tools
+    - script: |
+        printf "\n\n[options]\nzip_safe = False" >> setup.cfg
+        export CFLAGS="-coverage"
+        python setup.py install
+      displayName: Install package
+    - script: |
+        export BONSAI_DOCKER_IP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' server`
+        sed -i.bak "s/127.0.0.1/$BONSAI_DOCKER_IP/g" ./tests/test.ini
+        export KRB5_CONFIG="`pwd`/.ci/krb5/krb5.conf"
+        export BONSAI_INSTALL_PATH=`python -c "import bonsai; print(bonsai.__file__[:-12])"`
+        echo $BONSAI_INSTALL_PATH
+        py.test -v --cov-config .coveragerc --junitxml=./test-results.xml --cov=$BONSAI_INSTALL_PATH
+      displayName: Run tests
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFiles: test-results.xml
+        testRunTitle: Tests on $(Agent.OS) with Python $(python.version)
+      condition: succeededOrFailed()
+    - script: |
+          PATH=$HOME/.local/bin:$PATH
+          codecov
+      env:
+        CODECOV_TOKEN: $(codecov)
+      displayName: Report Coverage
+      condition: succeeded()
