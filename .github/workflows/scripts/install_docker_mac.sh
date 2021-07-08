@@ -6,7 +6,10 @@
 
 # update: https://github.com/docker/for-mac/issues/2359#issuecomment-853420567
 
-brew install --cask docker
+# Use older docker for mac because over 3.3.3 this install process breaks.
+curl https://raw.githubusercontent.com/Homebrew/homebrew-cask/961b663cc4defff883089f33e0e2687bcfd8d934/Casks/docker.rb -o ./docker.rb
+
+brew install --cask ./docker.rb
 # allow the app to run without confirmation
 xattr -d -r com.apple.quarantine /Applications/Docker.app
 
