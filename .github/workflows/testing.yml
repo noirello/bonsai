@@ -90,8 +90,11 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install --no-binary gevent delocate
-        pip install coverage pytest codecov pytest-cov pytest-timeout tornado wheel
+        python -m pip install poetry
+        poetry config virtualenvs.create false
+        poetry install --no-root -E gevent -E tornado
+        python -m pip install --force-reinstall --no-binary gevent delocate
+        python -m pip list
     - name: Install Docker
       run: bash ./.github/workflows/scripts/install_docker_mac.sh
     - name: Wait on Docker
