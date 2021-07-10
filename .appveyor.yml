@@ -64,7 +64,7 @@ install:
   # Upgrade to the latest version of pip to avoid it displaying warnings
   # about it being out of date.
   - "%PYTHON%\\python.exe -m pip install --disable-pip-version-check --user --upgrade pip"
-  - "%PYTHON%\\python.exe -m pip install poetry"
+  - "%PYTHON%\\python.exe -m pip install poetry wheel"
   - "%PYTHON%\\python.exe -m poetry config virtualenvs.create false"
   - "%PYTHON%\\python.exe -m poetry install --no-root -E gevent -E tornado"
   - "%PYTHON%\\python.exe -m pip list"

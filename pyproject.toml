@@ -23,7 +23,6 @@ sphinx = "^4.0.3"
 pylint = "^2.9.3"
 mypy = "^0.910"
 black = "^21.6b0"
-wheel = "^0.36.2"
 pydivert = { version = "^2.1", markers = "sys_platform == 'win32'" }
 # The following two are delocate dependencies,
 # that need to be specified to make poetry happy.
