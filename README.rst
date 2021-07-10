@@ -13,10 +13,6 @@ Bonsai
     :target: https://dev.azure.com/noirello/bonsai/_build
     :alt: Azure Pipelines Status
 
-.. image:: https://img.shields.io/travis/noirello/bonsai/dev.svg?style=flat-square
-    :target: https://travis-ci.org/noirello/bonsai
-    :alt: Travis CI Build Status
-
 .. image:: https://img.shields.io/appveyor/ci/noirello/bonsai/dev.svg?style=flat-square
     :target: https://ci.appveyor.com/project/noirello/bonsai
     :alt: AppVeyor CI Build Status
