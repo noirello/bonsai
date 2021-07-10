@@ -9,6 +9,10 @@ Bonsai
     :target: https://actions-badge.atrox.dev/noirello/bonsai/goto?ref=dev
     :alt: GitHub Action Build Status
 
+.. image:: https://dev.azure.com/noirello/bonsai/_apis/build/status/noirello.bonsai?branchName=dev
+    :target: https://dev.azure.com/noirello/bonsai/_build
+    :alt: Azure Pipelines Status
+
 .. image:: https://img.shields.io/travis/noirello/bonsai/dev.svg?style=flat-square
     :target: https://travis-ci.org/noirello/bonsai
     :alt: Travis CI Build Status
