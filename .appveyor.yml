@@ -64,10 +64,10 @@ install:
   # Upgrade to the latest version of pip to avoid it displaying warnings
   # about it being out of date.
   - "%PYTHON%\\python.exe -m pip install --disable-pip-version-check --user --upgrade pip"
-  - "python -m pip install pipenv"
-  - "pipenv run python -m pip install -U pip"
-  - "python -m pipenv install --dev --system --skip-lock"
-  - "python -m pip list"
+  - "%PYTHON%\\python.exe -m pip install poetry"
+  - "%PYTHON%\\python.exe -m poetry config virtualenvs.create false"
+  - "%PYTHON%\\python.exe -m poetry install --no-root -E gevent -E tornado"
+  - "%PYTHON%\\python.exe -m pip list"
 
 build_script:
   # Build the compiled extension
