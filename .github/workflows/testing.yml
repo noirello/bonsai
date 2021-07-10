@@ -132,6 +132,9 @@ jobs:
         printf "\n\n[options]\nzip_safe = False" >> setup.cfg
         export CFLAGS="-coverage"
         python setup.py install
+    - name: Check linking
+      run: |
+        otool -L ./build/*/bonsai/*.so
     - name: Run tests
       run: |
         export KRB5_CONFIG="`pwd`/.ci/krb5/krb5.conf"
