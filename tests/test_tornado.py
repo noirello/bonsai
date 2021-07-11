@@ -15,9 +15,11 @@ def dummy(timeout=None):
 
     return dummy_f
 
-if sys.platform == 'win32' and sys.version_info.minor >= 8:
+
+if sys.platform == "win32" and sys.version_info.minor >= 8:
     # Enforce SelectorEventLoop as it's no longer default on Windows since Python 3.8.
     import asyncio
+
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 try:
@@ -213,17 +215,11 @@ class TornadoLDAPConnectionTest(TestCaseClass):
                 page += 1
             assert page == 3
 
-    @pytest.mark.skipif(
-        sys.version_info.minor < 5,
-        reason="No __aiter__ and __anext__ methods under 3.5.",
-    )
     @gen_test(timeout=20.0)
     def test_paged_search_with_auto_acq(self):
         """ Test paged search with auto page acquiring. """
         search_dn = "ou=nerdherd,%s" % self.basedn
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
-            # To keep compatibility with 3.4 it does not uses async for,
-            # but its while loop equivalent.
             res_iter = yield conn.paged_search(search_dn, 1, page_size=3)
             res_iter = type(res_iter).__aiter__(res_iter)
             cnt = 0

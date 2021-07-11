@@ -12,9 +12,10 @@ from bonsai.asyncio import AIOConnectionPool, AIOLDAPConnection
 from bonsai.pool import ClosedPool
 import bonsai.errors
 
-if sys.platform == 'win32' and sys.version_info.minor >= 8:
+if sys.platform == "win32" and sys.version_info.minor >= 8:
     # Enforce SelectorEventLoop as it's no longer default on Windows since Python 3.8.
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 
 def asyncio_test(func):
     @wraps(func)
@@ -190,26 +191,16 @@ async def test_paged_search(client, basedn):
         assert page == 3
 
 
-@pytest.mark.skipif(
-    sys.version_info.minor < 5, reason="No __aiter__ and __anext__ methods under 3.5."
-)
 @asyncio_test
 async def test_paged_search_with_auto_acq(client, basedn):
     """ Test paged search with auto page acquiring. """
     search_dn = "ou=nerdherd,%s" % basedn
     async with client.connect(True) as conn:
-        # To keep compatibility with 3.4 it does not uses async for,
-        # but its while loop equivalent.
-        res_iter = await conn.paged_search(search_dn, 1, page_size=3)
-        res_iter = type(res_iter).__aiter__(res_iter)
         cnt = 0
-        while True:
-            try:
-                res = await type(res_iter).__anext__(res_iter)
-                assert isinstance(res, LDAPEntry)
-                cnt += 1
-            except StopAsyncIteration:
-                break
+        result = await conn.paged_search(search_dn, 1, page_size=3)
+        async for item in result:
+            assert isinstance(item, LDAPEntry)
+            cnt += 1
         assert cnt == 6
 
 
