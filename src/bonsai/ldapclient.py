@@ -5,24 +5,13 @@
 
 """
 import socket
-import sys
 from typing import Any, Union, List, Tuple, Optional, Dict, TypeVar
 
 from .ldapurl import LDAPURL
 from .ldapconnection import BaseLDAPConnection, LDAPConnection
 from .ldapconnection import LDAPSearchScope
 from .ldapentry import LDAPEntry
-
-# XXX: The following Python 3.4 guard should be removed in next release.
-if sys.version_info >= (3, 5):
-    from .asyncio import AIOLDAPConnection
-else:
-    import warnings
-    warnings.warn(
-        "Python 3.4 (and earlier) is unsupported, asyncio based AIOLDAPConnection cannot be used.",
-        DeprecationWarning
-    )
-    AIOLDAPConnection = None
+from .asyncio import AIOLDAPConnection
 
 CT = TypeVar("CT", bound=BaseLDAPConnection)
 
