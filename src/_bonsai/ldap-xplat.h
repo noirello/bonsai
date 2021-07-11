@@ -86,10 +86,12 @@ typedef struct ldap_thread_data_s {
 
 #define LDAP_SERVER_EXTENDED_DN_OID "1.2.840.113556.1.4.529"
 #define LDAP_SERVER_TREE_DELETE_OID "1.2.840.113556.1.4.805"
+#define LDAP_SERVER_SD_FLAGS_OID "1.2.840.113556.1.4.801"
 
 int _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, LDAP **ld);
 int _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, int *msgid);
 int _ldap_create_extended_dn_control(LDAP *ld, int format, LDAPControl **edn_ctrl);
+int _ldap_create_sd_flags_control(LDAP *ld, int flags, LDAPControl **edn_ctrl);
 void _ldap_control_free(LDAPControl *ctrl);
 
 int create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread);

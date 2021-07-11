@@ -824,9 +824,34 @@ int _ldap_create_extended_dn_control(LDAP *ld, int format, LDAPControl **edn_ctr
     ber_printf(ber, "{i}", format);
     rc = ber_flatten(ber, &value);
     ber_free(ber, 1);
-    if (rc != 0) return rc; 
+    if (rc != 0) return rc;
 
     rc = ldap_control_create(LDAP_SERVER_EXTENDED_DN_OID, 0, value, 1, &ctrl);
+    ber_bvfree(value);
+
+    if (rc != LDAP_SUCCESS) return rc;
+
+    *edn_ctrl = ctrl;
+    return LDAP_SUCCESS;
+}
+
+/* Create an LDAP_SERVER_SD_FLAGS control. */
+int _ldap_create_sd_flags_control(LDAP *ld, int flags, LDAPControl **edn_ctrl) {
+    int rc = -1;
+    BerElement *ber = NULL;
+    struct berval *value = NULL;
+    LDAPControl *ctrl = NULL;
+
+    ber = ber_alloc_t(LBER_USE_DER);
+    if (ber == NULL) return LDAP_NO_MEMORY;
+    
+    /* Transcode the data into a berval struct. */
+    ber_printf(ber, "{i}", flags);
+    rc = ber_flatten(ber, &value);
+    ber_free(ber, 1);
+    if (rc != 0) return rc;
+
+    rc = ldap_control_create(LDAP_SERVER_SD_FLAGS_OID, 0, value, 1, &ctrl);
     ber_bvfree(value);
 
     if (rc != LDAP_SUCCESS) return rc;

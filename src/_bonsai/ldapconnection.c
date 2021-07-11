@@ -355,6 +355,7 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
     int rc;
     int msgid = -1;
     int extdn_format = -1;
+    int sd_flags = -1;
     unsigned short num_of_ctrls = 0;
     ldapsearchparams *params = NULL;
     LDAPControl *page_ctrl = NULL;
@@ -372,13 +373,23 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
 
     DEBUG("LDAPConnection_Searching (self:%p, params_in:%p, iterator:%p)",
             self, params_in, iterator);
-    /* Get extended dn format attribute form LDAPClient. */
+    /* Get extended dn format attribute from LDAPClient. */
     value = PyObject_GetAttrString(self->client, "extended_dn_format");
     if (value == NULL) return -1;
     if (value == Py_None) {
         extdn_format = -1;
     }  else {
         extdn_format = PyLong_AsLong(value);
+    }
+    Py_DECREF(value);
+
+    /* Get sd flags attribute from LDAPClient. */
+    value = PyObject_GetAttrString(self->client, "sd_flags");
+    if (value == NULL) return -1;
+    if (value == Py_None) {
+        sd_flags = -1;
+    }  else {
+        sd_flags = PyLong_AsLong(value);
     }
     Py_DECREF(value);
 
@@ -392,6 +403,7 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
 
     /* Check the number of server controls and allocate it. */
     if (extdn_format != -1) num_of_ctrls++;
+    if (sd_flags != -1) num_of_ctrls++;
     if (self->managedsait == 1) num_of_ctrls++;
     if (params->sort_list != NULL) num_of_ctrls++;
     if (search_iter != NULL && search_iter->page_size > 0) num_of_ctrls++;
@@ -448,6 +460,18 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
         if (extdn_format != -1) {
             /* Create extended dn control. */
             rc = _ldap_create_extended_dn_control(self->ld, extdn_format, &edn_ctrl);
+            if (rc != LDAP_SUCCESS) {
+                PyErr_BadInternalCall();
+                msgid = -1;
+                goto end;
+            }
+            server_ctrls[num_of_ctrls++] = edn_ctrl;
+            server_ctrls[num_of_ctrls] = NULL;
+        }
+
+        if (sd_flags != -1) {
+            /* Create sd flags control. */
+            rc = _ldap_create_sd_flags_control(self->ld, sd_flags, &edn_ctrl);
             if (rc != LDAP_SUCCESS) {
                 PyErr_BadInternalCall();
                 msgid = -1;

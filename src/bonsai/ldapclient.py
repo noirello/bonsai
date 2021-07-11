@@ -41,6 +41,7 @@ class LDAPClient:
         self.__async_conn = AIOLDAPConnection
         self.__ppolicy_ctrl = False
         self.__ext_dn = None  # type: Optional[int]
+        self.__sd_flags = None  # type: Optional[int]
         self.__auto_acquire = True
         self.__chase_referrals = False
         self.__ignore_referrals = True
@@ -323,6 +324,11 @@ class LDAPClient:
             raise ValueError("Parameter must be 0, 1 or None.")
         self.__ext_dn = extdn_format
 
+    def set_sd_flags(self, flags: Optional[int]) -> None:
+        if flags is not None and not isinstance(flags, int):
+            raise TypeError("Parameter's type must be int or None.")
+        self.__sd_flags = flags
+
     def set_auto_page_acquire(self, val: bool) -> None:
         """
         Turn on or off the automatic page acquiring during a paged
@@ -508,6 +514,14 @@ class LDAPClient:
     @extended_dn_format.setter
     def extended_dn_format(self, value: Optional[int]) -> None:
         self.set_extended_dn(value)
+
+    @property
+    def sd_flags(self) -> Optional[int]:
+        return self.__sd_flags
+
+    @sd_flags.setter
+    def sd_flags(self, value: Optional[int]) -> None:
+        self.set_sd_flags(value)
 
     @property
     def auto_page_acquire(self) -> bool:
