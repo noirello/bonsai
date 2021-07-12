@@ -177,3 +177,47 @@ stages:
       inputs:
         pathtoPublish: '$(Build.ArtifactStagingDirectory)'
         artifactName: wheels
+  - job: Docker
+    pool:
+      vmImage: "ubuntu-latest"
+    steps:
+    - script: docker build -t bonsai -f ./.ci/docker/Dockerfile .
+      displayName: Build Docker image (server)
+    - script: docker build -t client -f ./.ci/docker/Dockerfile-client .
+      displayName: Build Docker image (client)
+    - script: |
+        mkdir /tmp/bonsai
+        sudo chown 2001:2000 /tmp/bonsai
+        docker network create test
+        docker run --cap-add=NET_ADMIN -v /tmp/bonsai/:/home/ldap/run/:z -d -h bonsai.test --network test --name bonsai bonsai
+        sleep 4
+        export BONSAI_DOCKER_IP=`docker inspect --format '{{ .NetworkSettings.Networks.test.IPAddress }}' bonsai`
+        echo $BONSAI_DOCKER_IP
+        docker run \
+          -e BONSAI_DOCKER_IP=$BONSAI_DOCKER_IP \
+          -e KRB5_CONFIG=/opt/bonsai/.ci/krb5/krb5.conf \
+          -v /tmp/bonsai/:/tmp/bonsai/ \
+          -v `pwd`:/opt/bonsai/ -d -h client.test --network test --name client client
+      displayName: Start Docker containers
+    - script: |
+        docker exec bonsai ps aux
+        docker exec client ping -c 2 bonsai.test
+        docker exec client ldapsearch -VV
+        docker exec client ldapwhoami -Y DIGEST-MD5 -H ldap://bonsai.test -U admin -w p@ssword
+        docker exec client ldapsearch -H ldap://bonsai.test -b "" -s base 'objectclass=*' -x -LLL +
+      displayName: Check container and LDAP tools
+    - script: |
+        docker exec client poetry config virtualenvs.create false
+        docker exec client poetry install --no-root -E gevent -E tornado
+        docker exec client python3 -m pip list
+      displayName: Install Python dependencies
+    - script: |
+        docker exec client apt-get remove -y libldap-2.4-2
+        docker exec client python3 setup.py install
+      displayName: Install package
+    - script: |
+        docker exec client printenv
+        docker exec client bash -c 'sed -i.bak "s/127.0.0.1/$BONSAI_DOCKER_IP/g" ./tests/test.ini'
+        docker exec client cat ./tests/test.ini
+        docker exec client py.test -vs
+      displayName: Run tests
