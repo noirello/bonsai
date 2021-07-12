@@ -1,0 +1,17 @@
+FROM debian:buster-slim
+ARG OPENLDAP_VERSION=2.5.5
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libssl-dev make curl \
+    groff groff-base gdb python3-dev python3-pip libsasl2-dev krb5-user iputils-ping \
+    libsasl2-modules-gssapi-mit libkrb5-dev
+RUN curl -sL https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-${OPENLDAP_VERSION}.tgz | tar xzf -
+
+WORKDIR openldap-${OPENLDAP_VERSION}/
+RUN ./configure --with-tls=openssl --disable-slapd --enable-backends=no
+RUN make depend && make && make install
+
+WORKDIR /
+RUN python3 -m pip install -U pip poetry
+
+CMD tail -f /dev/null
+WORKDIR /opt/bonsai
