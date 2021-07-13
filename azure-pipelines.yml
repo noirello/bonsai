@@ -180,10 +180,25 @@ stages:
   - job: Docker
     pool:
       vmImage: "ubuntu-latest"
+    strategy:
+      matrix:
+        newestOpenLDAP:
+          openldap.version: '2.5.5'
+          python.version: '3.7-slim-buster'
+        betaPython:
+          openldap.version: '2.4.49'
+          python.version: '3.10.0b4-slim-buster'
     steps:
     - script: docker build -t bonsai -f ./.ci/docker/Dockerfile .
       displayName: Build Docker image (server)
-    - script: docker build -t client -f ./.ci/docker/Dockerfile-client .
+    - script: |
+        docker build -t client \
+          --build-arg=PYTHON_VERSION=$PY_VER \
+          --build-arg=OPENLDAP_VERSION=$OL_VER \
+          -f ./.ci/docker/Dockerfile-client .
+      env:
+        PY_VER: $(python.version)
+        OL_VER: $(openldap.version)
       displayName: Build Docker image (client)
     - script: |
         mkdir /tmp/bonsai
@@ -212,7 +227,6 @@ stages:
         docker exec client python3 -m pip list
       displayName: Install Python dependencies
     - script: |
-        docker exec client apt-get remove -y libldap-2.4-2
         docker exec client python3 setup.py install
       displayName: Install package
     - script: |
