@@ -2,7 +2,7 @@ ARG PYTHON_VERSION=3.7-slim-buster
 FROM python:${PYTHON_VERSION}
 ARG OPENLDAP_VERSION=2.5.5
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libssl-dev make curl \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libssl-dev libffi-dev make curl \
     groff groff-base gdb libsasl2-dev krb5-user iputils-ping libsasl2-modules-gssapi-mit libkrb5-dev
 RUN curl -sL https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-${OPENLDAP_VERSION}.tgz | tar xzf -
 
