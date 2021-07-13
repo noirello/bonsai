@@ -230,8 +230,6 @@ stages:
         docker exec client python3 setup.py install
       displayName: Install package
     - script: |
-        docker exec client printenv
         docker exec client bash -c 'sed -i.bak "s/127.0.0.1/$BONSAI_DOCKER_IP/g" ./tests/test.ini'
-        docker exec client cat ./tests/test.ini
         docker exec client py.test -vs
       displayName: Run tests
