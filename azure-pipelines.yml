@@ -68,6 +68,7 @@ stages:
         export KRB5_CONFIG="`pwd`/.ci/krb5/krb5.conf"
         export BONSAI_INSTALL_PATH=`python -c "import bonsai; print(bonsai.__file__[:-12])"`
         echo $BONSAI_INSTALL_PATH
+        python -c 'import bonsai;print(bonsai.get_vendor_info(), bonsai.get_tls_impl_name())'
         py.test -v --cov-config .coveragerc --junitxml=./test-results.xml --cov=$BONSAI_INSTALL_PATH
       displayName: Run tests
     - task: PublishTestResults@2
@@ -148,6 +149,7 @@ stages:
         export KRB5_CONFIG="`pwd`/.ci/krb5/krb5.conf"
         export BONSAI_INSTALL_PATH=`python -c "import bonsai; print(bonsai.__file__[:-12])"`
         echo $BONSAI_INSTALL_PATH
+        python -c 'import bonsai;print(bonsai.get_vendor_info(), bonsai.get_tls_impl_name())'
         py.test -v --cov-config .coveragerc --junitxml=./test-results.xml --cov=$BONSAI_INSTALL_PATH
       displayName: Run tests
     - task: PublishTestResults@2
@@ -231,5 +233,6 @@ stages:
       displayName: Install package
     - script: |
         docker exec client bash -c 'sed -i.bak "s/127.0.0.1/$BONSAI_DOCKER_IP/g" ./tests/test.ini'
+        docker exec client python -c 'import bonsai;print(bonsai.get_vendor_info(), bonsai.get_tls_impl_name())'
         docker exec client py.test -vs
       displayName: Run tests
