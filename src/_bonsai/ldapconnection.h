@@ -17,6 +17,7 @@ typedef struct {
     char async;
     char ppolicy;
     char managedsait;
+    char ignore_referrals;
     SOCKET csock;
     PyObject *socketpair;
 } LDAPConnection;

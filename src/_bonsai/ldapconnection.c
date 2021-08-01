@@ -94,6 +94,12 @@ ldapconnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     self->managedsait = (char)PyObject_IsTrue(tmp);
     Py_DECREF(tmp);
 
+    /* Set ignore_referrals option. */
+    tmp = PyObject_GetAttrString(client, "ignore_referrals");
+    if (tmp == NULL) return -1;
+    self->ignore_referrals = (char)PyObject_IsTrue(tmp);
+    Py_DECREF(tmp);
+
     /* Set client object to LDAPConnection. */
     tmp = self->client;
     Py_INCREF(client);
@@ -847,7 +853,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, PyObject *obj) {
 
     ldap_get_option(self->ld, LDAP_OPT_REFERRALS, &ref_opt);
 
-    if (ref_opt == 0) {
+    if (ref_opt == 0 && self->ignore_referrals == 0) {
         /* Iterate over the received referrals. */
         for (entry = ldap_first_reference(self->ld, res); entry != NULL;
             entry = ldap_next_reference(self->ld, entry)) {
