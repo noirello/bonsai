@@ -43,6 +43,7 @@ class LDAPClient:
         self.__ext_dn = None  # type: Optional[int]
         self.__auto_acquire = True
         self.__chase_referrals = False
+        self.__ignore_referrals = True
         self.__managedsait_ctrl = False
 
     @staticmethod
@@ -336,11 +337,28 @@ class LDAPClient:
             raise TypeError("Parameter's type must be bool.")
         self.__auto_acquire = val
 
+    def set_ignore_referrals(self, val: bool) -> None:
+        """
+        Turn on or off ignoring LDAP referrals in search result. When
+        enabled (default), then possible LDAP referrals won't be
+        represented in the search result. When disabled and
+        :attr:`LDAPClient.server_chase_referrals` is also disabled, than
+        search result can contain :class:`LDAPReference` objects along with
+        :class:`LDAPEntry` objects.
+
+        :param bool val: enabling/disabling LDAP referrals in search result.
+        :raises TypeError: If the parameter is not a bool type.
+        """
+        if not isinstance(val, bool):
+            raise TypeError("Parameter's type must be bool.")
+        self.__ignore_referrals = val
+
     def set_server_chase_referrals(self, val: bool) -> None:
         """
-        Turn on or off chasing LDAP referrals by the server. By turning
-        off server-side referral chasing search result can contain
-        :class:`LDAPReference` objects along with :class:`LDAPEntry`
+        Turn on or off chasing LDAP referrals by the server. By
+        turning off server-side referral chasing along with
+        :attr:`LDAPClient.ignore_referrals`, search result can contain
+        :class:`LDAPReference` objects mixed with :class:`LDAPEntry`
         objects.
 
         :param bool val: enabling/disabling LDAP referrals chasing.
@@ -499,6 +517,15 @@ class LDAPClient:
     @auto_page_acquire.setter
     def auto_page_acquire(self, value: bool) -> None:
         self.set_auto_page_acquire(value)
+
+    @property
+    def ignore_referrals(self) -> bool:
+        """ The status of ignoring referrals in search results. """
+        return self.__ignore_referrals
+
+    @ignore_referrals.setter
+    def ignore_referrals(self, value: bool) -> None:
+        self.set_ignore_referrals(value)
 
     @property
     def server_chase_referrals(self) -> bool:
