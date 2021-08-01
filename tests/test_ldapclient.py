@@ -186,9 +186,18 @@ def test_server_chase_referrals(client):
     """ Test server_chase_referrals property. """
     with pytest.raises(TypeError):
         client.set_server_chase_referrals(2)
+    assert client.server_chase_referrals == False
+    client.server_chase_referrals = True
     assert client.server_chase_referrals
-    client.server_chase_referrals = False
-    assert not client.server_chase_referrals
+
+
+def test_ignore_referrals(client):
+    """ Test ignore_referrals property. """
+    with pytest.raises(TypeError):
+        client.set_ignore_referrals("A")
+    assert client.ignore_referrals
+    client.ignore_referrals = False
+    assert not client.ignore_referrals
 
 
 def test_managedsait(client):
