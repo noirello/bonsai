@@ -42,7 +42,7 @@ class LDAPClient:
         self.__ppolicy_ctrl = False
         self.__ext_dn = None  # type: Optional[int]
         self.__auto_acquire = True
-        self.__chase_referrals = True
+        self.__chase_referrals = False
         self.__managedsait_ctrl = False
 
     @staticmethod
