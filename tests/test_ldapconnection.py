@@ -782,6 +782,7 @@ def test_search_with_managedsait_ctrl(ipaddr):
     """ Test searching with manageDsaIT control. """
     refdn = LDAPDN("o=admin,ou=nerdherd-refs,dc=bonsai,dc=test")
     cli = LDAPClient("ldap://%s" % ipaddr)
+    cli.set_server_chase_referrals(True)
     with cli.connect() as conn:
         res = conn.search(refdn, LDAPSearchScope.BASE, attrlist=["ref"])[0]
         assert str(res.dn) == "cn=admin,dc=bonsai,dc=test"
