@@ -113,13 +113,6 @@ stages:
         bash ./.github/workflows/scripts/wait_docker_mac.sh
         sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.Kerberos.kdc.plist
       displayName: Wait on Docker
-    - script: |
-        curl https://raw.githubusercontent.com/Homebrew/homebrew-core/e390fb205b653681386ce80a8ab24d2c44b81d13/Formula/openldap.rb -o ./openldap.rb
-        brew uninstall --ignore-dependencies php
-        brew uninstall --ignore-dependencies curl
-        brew uninstall --ignore-dependencies openldap
-        brew install ./openldap.rb
-      displayName: Downgrade OpenLDAP to 2.4.58
     - script: docker build -t bonsai -f ./.ci/docker/Dockerfile .
       displayName: Build Docker image
     - script: |
