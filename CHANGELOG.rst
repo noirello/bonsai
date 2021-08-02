@@ -7,6 +7,13 @@ Changed
 ~~~~~~~
 
 -  Allow space in LDAPDN's attribute type. (Issue #52)
+-  LDAPClient.server_chase_referrals is set to False by default.
+
+Added
+~~~~~
+
+-  New ignore_referrals attribute for LDAPClient to be able to simply skip
+   LDAP referrals in search results.
 
 
 [1.2.1 - 2020-12-31]
