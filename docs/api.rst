@@ -64,6 +64,8 @@ bonsai
 .. note:: If the extended dn control is not supported the LDAPEntry's extended_dn attribute
    will be None. The LDAP_SERVER_EXTENDED_DN_OID is defined as '1.2.840.113556.1.4.529'.
 
+.. automethod:: LDAPClient.set_ignore_referrals(val)
+
 .. automethod:: LDAPClient.set_managedsait(val)
 
 .. automethod:: LDAPClient.set_password_policy(ppolicy)
@@ -106,11 +108,15 @@ bonsai
 .. autoattribute:: LDAPClient.client_key
 .. autoattribute:: LDAPClient.credentials
 .. autoattribute:: LDAPClient.extended_dn_format
+.. autoattribute:: LDAPClient.ignore_referrals
 .. autoattribute:: LDAPClient.managedsait
 .. autoattribute:: LDAPClient.mechanism
 .. autoattribute:: LDAPClient.password_policy
 .. autoattribute:: LDAPClient.raw_attributes
 .. autoattribute:: LDAPClient.server_chase_referrals
+
+    *Changed in version 1.2.2:* Default value from *True* to *False*.
+
 .. autoattribute:: LDAPClient.tls
 .. autoattribute:: LDAPClient.url
 
