@@ -5,6 +5,7 @@ bonsai
 ======
 
 .. automodule:: bonsai
+    :noindex:
 
 :class:`LDAPClient`
 -------------------
