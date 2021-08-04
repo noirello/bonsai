@@ -511,7 +511,10 @@ class LDAPClient:
 
     @property
     def auto_page_acquire(self) -> bool:
-        """ The status of automatic page acquiring. """
+        """
+        The status of automatic page acquiring.
+         `True` by default.
+        """
         return self.__auto_acquire
 
     @auto_page_acquire.setter
@@ -520,7 +523,10 @@ class LDAPClient:
 
     @property
     def ignore_referrals(self) -> bool:
-        """ The status of ignoring referrals in search results. """
+        """
+        The status of ignoring referrals in search results.
+        `True` by default.
+        """
         return self.__ignore_referrals
 
     @ignore_referrals.setter
@@ -529,7 +535,9 @@ class LDAPClient:
 
     @property
     def server_chase_referrals(self) -> bool:
-        """ The status of chasing referrals by the server. """
+        """
+        The status of chasing referrals by the server. `False` by default.
+        """
         return self.__chase_referrals
 
     @server_chase_referrals.setter
