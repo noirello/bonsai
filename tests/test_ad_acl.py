@@ -1,4 +1,5 @@
 import os
+import uuid
 
 import pytest
 
@@ -20,8 +21,8 @@ def test_ace_from_binary():
     assert ace.size == len(input_data)
     assert ace.flags == 10
     assert str(ace.trustee_sid) == "S-1-5-21-1263317781-1938881490-3107577794-1116"
-    assert ace.object_type == b"\x01\xc9u\xc9\xealoK\x83\x19\xd6\x7fED\x95\x06"
-    assert ace.inherited_object_type == b"\x14\xcc(H7\x14\xbcE\x9b\x07\xado\x01^_("
+    assert ace.object_type == uuid.UUID('01c975c9-ea6c-6f4b-8319-d67f45449506')
+    assert ace.inherited_object_type == uuid.UUID('14cc2848-3714-bc45-9b07-ad6f015e5f28')
     assert ace.application_data is None
 
 
@@ -46,7 +47,7 @@ def test_acl_from_binary():
         assert acl.aces[0].type == ACEType.ACCESS_ALLOWED_OBJECT
         assert (
             acl.aces[0].inherited_object_type
-            == b"\x14\xcc(H7\x14\xbcE\x9b\x07\xado\x01^_("
+            == uuid.UUID('14cc2848-3714-bc45-9b07-ad6f015e5f28')
         )
         assert acl.aces[-1].type == ACEType.ACCESS_ALLOWED
         assert (

@@ -1,4 +1,5 @@
 import struct
+import uuid
 
 from enum import IntEnum
 from typing import List, Optional
@@ -42,8 +43,8 @@ class ACE:
         size: int,
         mask: bytes,
         trustee_sid: SID,
-        object_type: Optional[bytes],
-        inherited_object_type: Optional[bytes],
+        object_type: Optional[uuid.UUID],
+        inherited_object_type: Optional[uuid.UUID],
         application_data: Optional[bytes],
     ) -> None:
         self.__type = ace_type
@@ -78,10 +79,10 @@ class ACE:
                 obj_flag = struct.unpack("<I", data[pos:12])[0]
                 pos += 4
                 if obj_flag & 0x00000001:
-                    object_type = data[pos : pos + 16]
+                    object_type = uuid.UUID(bytes=data[pos : pos + 16])
                     pos += 16
                 if obj_flag & 0x00000002:
-                    inherited_object_type = data[pos : pos + 16]
+                    inherited_object_type =  uuid.UUID(bytes=data[pos : pos + 16])
                     pos += 16
             trustee_sid = SID.from_binary(data[pos:])
             pos += 8 + len(trustee_sid.subauthorities) * 4
@@ -124,11 +125,11 @@ class ACE:
         return self.__mask
 
     @property
-    def object_type(self) -> Optional[bytes]:
+    def object_type(self) -> Optional[uuid.UUID]:
         return self.__object_type
 
     @property
-    def inherited_object_type(self) -> Optional[bytes]:
+    def inherited_object_type(self) -> Optional[uuid.UUID]:
         return self.__inherited_object_type
 
     @property
