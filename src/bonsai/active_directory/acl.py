@@ -40,6 +40,29 @@ class ACEType(IntEnum):
     SYSTEM_SCOPED_POLICY_ID = 19
 
 
+class ACERight(IntEnum):
+    GENERIC_READ = 0x80000000
+    GENERIC_WRITE = 0x4000000
+    GENERIC_EXECUTE = 0x20000000
+    GENERIC_ALL = 0x10000000
+    MAXIMUM_ALLOWED = 0x02000000
+    ACCESS_SYSTEM_SECURITY = 0x01000000
+    SYNCHRONIZE = 0x00100000
+    WRITE_OWNER = 0x00080000
+    WRITE_DACL = 0x00040000
+    READ_CONTROL = 0x00020000
+    DELETE = 0x00010000
+    DS_CONTROL_ACCESS = 0x00000100
+    DS_CREATE_CHILD = 0x00000001
+    DS_DELETE_CHILD = 0x00000002
+    ACTRL_DS_LIST = 0x00000004
+    DS_SELF = 0x00000008
+    DS_READ_PROP = 0x00000010
+    DS_WRITE_PROP = 0x00000020
+    DS_DELETE_TREE = 0x00000040
+    DS_LIST_OBJECT = 0x00000080
+
+
 class ACLRevision(IntEnum):
     ACL_REVISION = 0x02
     ACL_REVISION_DS = 0x04
@@ -51,7 +74,7 @@ class ACE:
         ace_type: ACEType,
         flags: Set[ACEFlag],
         size: int,
-        mask: bytes,
+        mask: int,
         trustee_sid: SID,
         object_type: Optional[uuid.UUID],
         inherited_object_type: Optional[uuid.UUID],
@@ -74,8 +97,9 @@ class ACE:
             object_type = None
             inherited_object_type = None
             application_data = None
+            ace_type, flags, size = struct.unpack("<BBH", data[:4])
+            mask = struct.unpack(">L", data[4:8])[0]
             pos = 8
-            ace_type, flags, size, *mask = struct.unpack("<BBH4c", data[:pos])
             if ACEType(ace_type) in (
                 ACEType.ACCESS_ALLOWED_OBJECT,
                 ACEType.ACCESS_DENIED_OBJECT,
@@ -86,7 +110,7 @@ class ACE:
                 ACEType.SYSTEM_AUDIT_CALLBACK_OBJECT,
                 ACEType.SYSTEM_ALARM_CALLBACK_OBJECT,
             ):
-                obj_flag = struct.unpack("<I", data[pos:12])[0]
+                obj_flag = struct.unpack("<I", data[8:12])[0]
                 pos += 4
                 if obj_flag & 0x00000001:
                     object_type = uuid.UUID(bytes_le=data[pos : pos + 16])
@@ -109,7 +133,7 @@ class ACE:
                 ACEType(ace_type),
                 {flg for flg in ACEFlag if flags & flg},
                 size,
-                b"".join(mask),
+                mask,
                 trustee_sid,
                 object_type,
                 inherited_object_type,
@@ -131,8 +155,12 @@ class ACE:
         return self.__size
 
     @property
-    def mask(self) -> bytes:
+    def mask(self) -> int:
         return self.__mask
+
+    @property
+    def rights(self) -> Set[ACERight]:
+        return {rgt for rgt in ACERight if self.mask & rgt}
 
     @property
     def object_type(self) -> Optional[uuid.UUID]:
