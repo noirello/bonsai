@@ -2,9 +2,19 @@ import struct
 import uuid
 
 from enum import IntEnum
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from .sid import SID
+
+
+class ACEFlag(IntEnum):
+    OBJECT_INHERIT = 0x01
+    CONTAINER_INHERIT = 0x02
+    NO_PROPAGATE_INHERIT = 0x04
+    INHERIT_ONLY = 0x08
+    INHERITED = 0x10
+    SUCCESSFUL_ACCESS = 0x40
+    FAILED_ACCESS = 0x80
 
 
 class ACEType(IntEnum):
@@ -39,7 +49,7 @@ class ACE:
     def __init__(
         self,
         ace_type: ACEType,
-        flags: int,
+        flags: Set[ACEFlag],
         size: int,
         mask: bytes,
         trustee_sid: SID,
@@ -97,7 +107,7 @@ class ACE:
                 application_data = data[pos:size]
             return cls(
                 ACEType(ace_type),
-                flags,
+                {flg for flg in ACEFlag if flags & flg},
                 size,
                 b"".join(mask),
                 trustee_sid,
@@ -113,7 +123,7 @@ class ACE:
         return self.__type
 
     @property
-    def flags(self) -> int:
+    def flags(self) -> Set[ACEFlag]:
         return self.__flags
 
     @property

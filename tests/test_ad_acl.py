@@ -4,7 +4,7 @@ import uuid
 import pytest
 
 from bonsai.active_directory import ACL
-from bonsai.active_directory.acl import ACE, ACEType, ACLRevision
+from bonsai.active_directory.acl import ACE, ACEFlag, ACEType, ACLRevision
 
 
 def test_ace_from_binary():
@@ -19,7 +19,8 @@ def test_ace_from_binary():
     assert ace.type == ACEType.ACCESS_ALLOWED_OBJECT
     assert ace.mask == b"\x07\x00\x00\x00"
     assert ace.size == len(input_data)
-    assert ace.flags == 10
+    assert ace.flags == {ACEFlag.INHERIT_ONLY, ACEFlag.CONTAINER_INHERIT}
+    assert sum(ace.flags) == 10
     assert ace.trustee_sid == "S-1-5-21-1263317781-1938881490-3107577794-1116"
     assert ace.object_type == uuid.UUID("c975c901-6cea-4b6f-8319-d67f45449506")
     assert ace.inherited_object_type == uuid.UUID(
