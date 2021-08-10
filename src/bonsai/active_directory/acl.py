@@ -79,10 +79,10 @@ class ACE:
                 obj_flag = struct.unpack("<I", data[pos:12])[0]
                 pos += 4
                 if obj_flag & 0x00000001:
-                    object_type = uuid.UUID(bytes=data[pos : pos + 16])
+                    object_type = uuid.UUID(bytes_le=data[pos : pos + 16])
                     pos += 16
                 if obj_flag & 0x00000002:
-                    inherited_object_type =  uuid.UUID(bytes=data[pos : pos + 16])
+                    inherited_object_type = uuid.UUID(bytes_le=data[pos : pos + 16])
                     pos += 16
             trustee_sid = SID.from_binary(data[pos:])
             pos += 8 + len(trustee_sid.subauthorities) * 4

@@ -21,8 +21,10 @@ def test_ace_from_binary():
     assert ace.size == len(input_data)
     assert ace.flags == 10
     assert str(ace.trustee_sid) == "S-1-5-21-1263317781-1938881490-3107577794-1116"
-    assert ace.object_type == uuid.UUID('01c975c9-ea6c-6f4b-8319-d67f45449506')
-    assert ace.inherited_object_type == uuid.UUID('14cc2848-3714-bc45-9b07-ad6f015e5f28')
+    assert ace.object_type == uuid.UUID("c975c901-6cea-4b6f-8319-d67f45449506")
+    assert ace.inherited_object_type == uuid.UUID(
+        "4828cc14-1437-45bc-9b07-ad6f015e5f28"
+    )
     assert ace.application_data is None
 
 
@@ -32,7 +34,9 @@ def test_acl_from_binary():
     with pytest.raises(TypeError):
         _ = ACL.from_binary("INVALID")
     with pytest.raises(ValueError):
-        _ = ACL.from_binary(b"\x05\nH\x00\x07\x00\x00\x00\x03\x00\x00\x00\x01\xc9u\xc9\xealoK\x83\x19\xd6\x7fED\x95\x06\x14\xcc(H7\x14\xbcE\x9b\x07\xado\x01^_(")
+        _ = ACL.from_binary(
+            b"\x05\nH\x00\x07\x00\x00\x00\x03\x00\x00\x00\x01\xc9u\xc9\xealoK\x83\x19\xd6\x7fED\x95\x06\x14\xcc(H7\x14\xbcE\x9b\x07\xado\x01^_("
+        )
     curdir = os.path.abspath(os.path.dirname(__file__))
     with open(os.path.join(curdir, "testenv", "acl-sample.bin"), "rb") as data:
         input_data = data.read()
@@ -45,9 +49,8 @@ def test_acl_from_binary():
         assert len(acl.aces) == acl.count
         assert all(isinstance(ace, ACE) for ace in acl.aces)
         assert acl.aces[0].type == ACEType.ACCESS_ALLOWED_OBJECT
-        assert (
-            acl.aces[0].inherited_object_type
-            == uuid.UUID('14cc2848-3714-bc45-9b07-ad6f015e5f28')
+        assert acl.aces[0].inherited_object_type == uuid.UUID(
+            "4828cc14-1437-45bc-9b07-ad6f015e5f28"
         )
         assert acl.aces[-1].type == ACEType.ACCESS_ALLOWED
         assert (
