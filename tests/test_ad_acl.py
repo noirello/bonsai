@@ -20,7 +20,7 @@ def test_ace_from_binary():
     assert ace.mask == b"\x07\x00\x00\x00"
     assert ace.size == len(input_data)
     assert ace.flags == 10
-    assert str(ace.trustee_sid) == "S-1-5-21-1263317781-1938881490-3107577794-1116"
+    assert ace.trustee_sid == "S-1-5-21-1263317781-1938881490-3107577794-1116"
     assert ace.object_type == uuid.UUID("c975c901-6cea-4b6f-8319-d67f45449506")
     assert ace.inherited_object_type == uuid.UUID(
         "4828cc14-1437-45bc-9b07-ad6f015e5f28"
@@ -54,7 +54,6 @@ def test_acl_from_binary():
         )
         assert acl.aces[-1].type == ACEType.ACCESS_ALLOWED
         assert (
-            str(acl.aces[0].trustee_sid)
-            == "S-1-5-21-1263317781-1938881490-3107577794-1116"
+            acl.aces[0].trustee_sid == "S-1-5-21-1263317781-1938881490-3107577794-1116"
         )
-        assert str(acl.aces[-1].trustee_sid) == "S-1-5-18"
+        assert acl.aces[-1].trustee_sid == "S-1-5-18"

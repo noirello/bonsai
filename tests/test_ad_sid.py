@@ -1,6 +1,6 @@
 import pytest
 
-from bonsai.active_directory import SID
+from bonsai.active_directory import SID, sid
 
 
 def test_from_binary():
@@ -20,7 +20,7 @@ def test_from_binary():
     assert sid.revision == 1
     assert sid.identifier_authority == 5
     assert sid.subauthorities == (21, 1004336348, 1177238915, 682003330, 512)
-    assert str(sid) == expected_sid
+    assert sid == expected_sid
 
 
 def test_from_string():
@@ -59,3 +59,10 @@ def test_repr():
     assert SID.__name__ in repr(sid)
     assert "S-1-1-0" in repr(sid)
 
+
+def test_eq():
+    sid0 = SID.from_string("S-1-1-0")
+    sid1 = SID.from_string("S-1-1-0")
+    assert sid0 == sid1
+    assert sid0 != True
+    assert sid0 == "S-1-1-0"

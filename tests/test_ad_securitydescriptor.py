@@ -16,12 +16,8 @@ def test_from_binary():
         input_data = data.read()
         sec_desc = SecurityDescriptor.from_binary(input_data)
         assert sec_desc.revision == 1
-        assert (
-            str(sec_desc.group_sid) == "S-1-5-21-3526669579-2242266465-3136906013-512"
-        )
-        assert (
-            str(sec_desc.owner_sid) == "S-1-5-21-3526669579-2242266465-3136906013-512"
-        )
+        assert sec_desc.group_sid == "S-1-5-21-3526669579-2242266465-3136906013-512"
+        assert sec_desc.owner_sid == "S-1-5-21-3526669579-2242266465-3136906013-512"
         assert sec_desc.sbz1 == 0
         assert sec_desc.control["dacl_present"]
         assert len(sec_desc.dacl.aces) == 24
@@ -33,18 +29,14 @@ def test_from_binary():
         input_data = data.read()
         sec_desc = SecurityDescriptor.from_binary(input_data)
         assert sec_desc.revision == 1
-        assert (
-            str(sec_desc.group_sid) == "S-1-5-21-3526669579-2242266465-3136906013-512"
-        )
-        assert (
-            str(sec_desc.owner_sid) == "S-1-5-21-3526669579-2242266465-3136906013-512"
-        )
+        assert sec_desc.group_sid == "S-1-5-21-3526669579-2242266465-3136906013-512"
+        assert sec_desc.owner_sid == "S-1-5-21-3526669579-2242266465-3136906013-512"
         assert sec_desc.sbz1 == 0
         assert sec_desc.control["dacl_present"]
         assert len(sec_desc.dacl.aces) == 24
         assert sec_desc.dacl.aces[0].type == 5
-        assert str(sec_desc.dacl.aces[0].trustee_sid) == "S-1-5-32-554"
+        assert sec_desc.dacl.aces[0].trustee_sid == "S-1-5-32-554"
         assert sec_desc.control["sacl_present"]
         assert len(sec_desc.sacl.aces) == 3
         assert sec_desc.sacl.aces[0].type == 2
-        assert str(sec_desc.sacl.aces[0].trustee_sid) == "S-1-1-0"
+        assert sec_desc.sacl.aces[0].trustee_sid == "S-1-1-0"

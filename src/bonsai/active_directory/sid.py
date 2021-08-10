@@ -1,6 +1,7 @@
 import struct
 
-from typing import List
+from typing import List, Any
+
 
 class SID:
     def __init__(
@@ -56,6 +57,18 @@ class SID:
 
     def __repr__(self) -> str:
         return "<{0}: {1}>".format(self.__class__.__name__, str(self))
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, SID):
+            return (
+                self.revision == other.revision
+                and self.identifier_authority == other.identifier_authority
+                and self.subauthorities == other.subauthorities
+            )
+        elif isinstance(other, str):
+            return str(self) == other
+        else:
+            return False
 
     @property
     def revision(self) -> int:
