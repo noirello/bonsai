@@ -118,7 +118,7 @@ class ACE:
                 if obj_flag & 0x00000002:
                     inherited_object_type = uuid.UUID(bytes_le=data[pos : pos + 16])
                     pos += 16
-            trustee_sid = SID.from_binary(data[pos:])
+            trustee_sid = SID(bytes_le=data[pos:])
             pos += 8 + len(trustee_sid.subauthorities) * 4
             if ACEType(ace_type) in (
                 ACEType.ACCESS_ALLOWED_CALLBACK,

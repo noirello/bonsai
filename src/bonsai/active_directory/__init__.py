@@ -64,8 +64,8 @@ class SecurityDescriptor:
                 offset_dacl,
             ) = struct.unpack("<BBHIIII", data[:20])
             ctrl = cls.__convert_ctrl(ctrl)
-            owner_sid = SID.from_binary(data[offset_owner:]) if offset_owner else None
-            group_sid = SID.from_binary(data[offset_group:]) if offset_group else None
+            owner_sid = SID(bytes_le=data[offset_owner:]) if offset_owner else None
+            group_sid = SID(bytes_le=data[offset_group:]) if offset_group else None
             if ctrl["sacl_present"] and offset_sacl != 0:
                 sacl = ACL.from_binary(data[offset_sacl:])
             if ctrl["dacl_present"] and offset_dacl != 0:
