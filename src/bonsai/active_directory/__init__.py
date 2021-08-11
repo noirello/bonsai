@@ -9,13 +9,13 @@ from .acl import ACL
 class SecurityDescriptor:
     def __init__(
         self,
-        revision: int,
-        sbz1: int,
         control: Dict[str, bool],
         owner_sid: Optional[SID],
         group_sid: Optional[SID],
         sacl: Optional[ACL],
         dacl: Optional[ACL],
+        revision: int = 1,
+        sbz1: int = 0,
     ) -> None:
         self.__revision = revision
         self.__sbz1 = sbz1
@@ -70,7 +70,7 @@ class SecurityDescriptor:
                 sacl = ACL.from_binary(data[offset_sacl:])
             if ctrl["dacl_present"] and offset_dacl != 0:
                 dacl = ACL.from_binary(data[offset_dacl:])
-            return cls(rev, sbz1, ctrl, owner_sid, group_sid, sacl, dacl)
+            return cls(ctrl, owner_sid, group_sid, sacl, dacl, rev, sbz1)
         except struct.error as err:
             raise ValueError("Not a valid binary SecurityDescriptor, {0}".format(err))
 

@@ -73,7 +73,6 @@ class ACE:
         self,
         ace_type: ACEType,
         flags: Set[ACEFlag],
-        size: int,
         mask: int,
         trustee_sid: SID,
         object_type: Optional[uuid.UUID],
@@ -82,12 +81,12 @@ class ACE:
     ) -> None:
         self.__type = ace_type
         self.__flags = flags
-        self.__size = size
         self.__mask = mask
         self.__object_type = object_type
         self.__inherited_object_type = inherited_object_type
         self.__trustee_sid = trustee_sid
         self.__application_data = application_data
+        self.__size = 0
 
     @classmethod
     def from_binary(cls, data: bytes) -> "ACE":
@@ -129,16 +128,17 @@ class ACE:
                 ACEType.SYSTEM_AUDIT_CALLBACK,
             ):
                 application_data = data[pos:size]
-            return cls(
+            this = cls(
                 ACEType(ace_type),
                 {flg for flg in ACEFlag if flags & flg},
-                size,
                 mask,
                 trustee_sid,
                 object_type,
                 inherited_object_type,
                 application_data,
             )
+            this.__size = size
+            return this
         except struct.error as err:
             raise ValueError("Not a valid binary ACE, {0}".format(err))
 
@@ -181,20 +181,13 @@ class ACE:
 
 class ACL:
     def __init__(
-        self,
-        revision: ACLRevision,
-        sbz1: int,
-        size: int,
-        count: int,
-        sbz2: int,
-        aces: List[ACE],
+        self, revision: ACLRevision, aces: List[ACE], sbz1: int = 0, sbz2: int = 0,
     ) -> None:
         self.__revision = revision
         self.__sbz1 = sbz1
-        self.__size = size
-        self.__count = count
         self.__sbz2 = sbz2
         self.__aces = aces
+        self.__size = 0
 
     @classmethod
     def from_binary(cls, data: bytes) -> "ACL":
@@ -208,7 +201,9 @@ class ACL:
                 ace = ACE.from_binary(data[start_pos:])
                 aces.append(ace)
                 start_pos += ace.size
-            return cls(ACLRevision(rev), sbz1, size, count, sbz2, aces)
+            this = cls(ACLRevision(rev), aces, sbz1, sbz2)
+            this.__size = size
+            return this
         except struct.error as err:
             raise ValueError("Not a valid binary ACL, {0}".format(err))
 
@@ -223,10 +218,6 @@ class ACL:
     @property
     def size(self) -> int:
         return self.__size
-
-    @property
-    def count(self) -> int:
-        return self.__count
 
     @property
     def sbz2(self) -> int:

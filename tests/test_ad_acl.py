@@ -48,11 +48,10 @@ def test_acl_from_binary():
         input_data = data.read()
         acl = ACL.from_binary(input_data)
         assert acl.size == len(input_data)
-        assert acl.count == 85
         assert acl.revision == ACLRevision.ACL_REVISION_DS
         assert acl.sbz1 == 0
         assert acl.sbz2 == 0
-        assert len(acl.aces) == acl.count
+        assert len(acl.aces) == 85
         assert all(isinstance(ace, ACE) for ace in acl.aces)
         assert acl.aces[0].type == ACEType.ACCESS_ALLOWED_OBJECT
         assert acl.aces[0].inherited_object_type == uuid.UUID(
