@@ -16,6 +16,19 @@ class ACEFlag(IntEnum):
     SUCCESSFUL_ACCESS = 0x40
     FAILED_ACCESS = 0x80
 
+    @property
+    def short_name(self):
+        short_names = {
+            "OBJECT_INHERIT": "OI",
+            "CONTAINER_INHERIT": "CI",
+            "NO_PROPAGATE_INHERIT": "NP",
+            "INHERIT_ONLY": "IO",
+            "INHERITED": "ID",
+            "SUCCESSFUL_ACCESS": "SA",
+            "FAILED_ACCESS": "FA",
+        }
+        return short_names[self.name]
+
 
 class ACEType(IntEnum):
     ACCESS_ALLOWED = 0
@@ -39,6 +52,32 @@ class ACEType(IntEnum):
     SYSTEM_RESOURCE_ATTRIBUTE = 18
     SYSTEM_SCOPED_POLICY_ID = 19
 
+    @property
+    def short_name(self):
+        short_names = {
+            "ACCESS_ALLOWED": "A",
+            "ACCESS_DENIED": "D",
+            "SYSTEM_AUDIT": "AU",
+            "SYSTEM_ALARM": "AL",
+            "ACCESS_ALLOWED_COMPOUND": "",
+            "ACCESS_ALLOWED_OBJECT": "OA",
+            "ACCESS_DENIED_OBJECT": "OD",
+            "SYSTEM_AUDIT_OBJECT": "OU",
+            "SYSTEM_ALARM_OBJECT": "OL",
+            "ACCESS_ALLOWED_CALLBACK": "XA",
+            "ACCESS_DENIED_CALLBACK": "XD",
+            "ACCESS_ALLOWED_CALLBACK_OBJECT": "ZA",
+            "ACCESS_DENIED_CALLBACK_OBJECT": "ZD",
+            "SYSTEM_AUDIT_CALLBACK": "XU",
+            "SYSTEM_ALARM_CALLBACK": "XL",
+            "SYSTEM_AUDIT_CALLBACK_OBJECT": "ZU",
+            "SYSTEM_ALARM_CALLBACK_OBJECT": "ZL",
+            "SYSTEM_MANDATORY_LABEL": "ML",
+            "SYSTEM_RESOURCE_ATTRIBUTE": "RA",
+            "SYSTEM_SCOPED_POLICY_ID": "SP",
+        }
+        return short_names[self.name]
+
 
 class ACERight(IntEnum):
     GENERIC_READ = 0x80000000
@@ -61,6 +100,32 @@ class ACERight(IntEnum):
     DS_WRITE_PROP = 0x00000020
     DS_DELETE_TREE = 0x00000040
     DS_LIST_OBJECT = 0x00000080
+
+    @property
+    def short_name(self):
+        short_names = {
+            "GENERIC_READ": "GR",
+            "GENERIC_WRITE": "GW",
+            "GENERIC_EXECUTE": "GX",
+            "GENERIC_ALL": "GA",
+            "MAXIMUM_ALLOWED": "MA",
+            "ACCESS_SYSTEM_SECURITY": "AS",
+            "SYNCHRONIZE": "SY",
+            "WRITE_OWNER": "WO",
+            "WRITE_DACL": "WD",
+            "READ_CONTROL": "RC",
+            "DELETE": "SD",
+            "DS_CONTROL_ACCESS": "CR",
+            "DS_CREATE_CHILD": "CC",
+            "DS_DELETE_CHILD": "DC",
+            "ACTRL_DS_LIST": "LC",
+            "DS_SELF": "SW",
+            "DS_READ_PROP": "RP",
+            "DS_WRITE_PROP": "WP",
+            "DS_DELETE_TREE": "DT",
+            "DS_LIST_OBJECT": "LO",
+        }
+        return short_names[self.name]
 
 
 class ACLRevision(IntEnum):
@@ -141,6 +206,24 @@ class ACE:
             return this
         except struct.error as err:
             raise ValueError("Not a valid binary ACE, {0}".format(err))
+
+    def __str__(self):
+        return "({atype};{flags};{rights};{object_guid};{inherit_object_guid};{sid})".format(
+            atype=self.type.short_name,
+            flags="".join(
+                flg.short_name for flg in sorted(self.flags, key=lambda f: f.value)
+            ),
+            rights="".join(
+                rgt.short_name for rgt in sorted(self.rights, key=lambda r: r.value)
+            ),
+            object_guid=self.object_type if self.object_type else "",
+            inherit_object_guid=self.inherited_object_type
+            if self.inherited_object_type
+            else "",
+            sid=self.trustee_sid.sddl_alias
+            if self.trustee_sid.sddl_alias
+            else str(self.trustee_sid),
+        )
 
     @property
     def type(self) -> ACEType:
