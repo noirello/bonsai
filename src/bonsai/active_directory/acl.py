@@ -161,8 +161,7 @@ class ACE:
             object_type = None
             inherited_object_type = None
             application_data = None
-            ace_type, flags, size = struct.unpack("<BBH", data[:4])
-            mask = struct.unpack(">L", data[4:8])[0]
+            ace_type, flags, size, mask = struct.unpack("<BBHL", data[:8])
             pos = 8
             if ACEType(ace_type) in (
                 ACEType.ACCESS_ALLOWED_OBJECT,

@@ -17,11 +17,11 @@ def test_ace_from_binary():
         _ = ACE.from_binary(b"\x05\nH\x00\x07\x00\x00\x00")
     ace = ACE.from_binary(input_data)
     assert ace.type == ACEType.ACCESS_ALLOWED_OBJECT
-    assert ace.mask == 117440512
+    assert ace.mask == 7
     assert ace.rights == {
-        ACERight.GENERIC_WRITE,
-        ACERight.MAXIMUM_ALLOWED,
-        ACERight.ACCESS_SYSTEM_SECURITY,
+        ACERight.DS_CREATE_CHILD,
+        ACERight.DS_DELETE_CHILD,
+        ACERight.ACTRL_DS_LIST,
     }
     assert ace.size == len(input_data)
     assert ace.flags == {ACEFlag.INHERIT_ONLY, ACEFlag.CONTAINER_INHERIT}
