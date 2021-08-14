@@ -3,10 +3,38 @@ import struct
 from typing import Dict, Optional
 
 from .sid import SID
-from .acl import ACL
+from .acl import ACL, ACE, ACEFlag, ACERight, ACEType, ACLRevision
 
 
 class SecurityDescriptor:
+    """
+    The a class that defines the security attributes of an object. These
+    attributes specify who owns the object; who can access the object and
+    what they can do with it; what level of audit logging can be applied to
+    the object; and what kind of restrictions apply to the use of the
+    security descriptor. It can contain two types of :class:`ACL`:
+
+    * A discretionary access control list (DACL) is controlled by the
+      owner of an object or anyone granted WRITE_DAC access to the object.
+      It specifies the access particular users and groups can have to an
+      object. For example, the owner of a file can use a DACL to control
+      which users and groups can and cannot have access to the file.
+    * A system access control list (SACL) is similar to the DACL, except
+      that the SACL is used to audit rather than control access to an
+      object. When an audited action occurs, the operating system records
+      the event in the security log. Each ACE in a SACL has a header that
+      indicates whether auditing is triggered by success, failure, or
+      both; a SID that specifies a particular user or security group to
+      monitor; and an access mask that lists the operations to audit.
+
+    :param dict control: a dict that specifies control access bit flags.
+    :param SID|None owner_sid: the SID of the owner of the object.
+    :param SID|None group_sid: the SID of the group of the object.
+    :param ACL|None sacl: the system access control list.
+    :param ACL|None dacl: the discretionary access control list.
+    :param int revision: the revision of the security descriptor.
+    :param int sbz1: reserved value.
+    """
     def __init__(
         self,
         control: Dict[str, bool],
@@ -49,6 +77,16 @@ class SecurityDescriptor:
 
     @classmethod
     def from_binary(cls, data: bytes) -> "SecurityDescriptor":
+        """
+        Create a SecurityDescriptor object from a binary blob.
+
+        :param bytes data: a little-endian byte ordered byte input.
+        :returns: A new SecurityDescriptor instance.
+        :rtype: SecurityDescriptor
+        :raises TypeError: when the parameter is not bytes.
+        :raises ValueError: when the input cannot be parsed as a 
+            SecurityDescriptor object.
+        """
         try:
             if not isinstance(data, bytes):
                 raise TypeError("The `data` parameter must be bytes")
@@ -76,28 +114,35 @@ class SecurityDescriptor:
 
     @property
     def sbz1(self) -> int:
+        """ Reserved field in the security descriptor structure. """
         return self.__sbz1
 
     @property
     def revision(self) -> int:
+        """ The revision of the security descriptor. """
         return self.__revision
 
     @property
     def control(self) -> Dict[str, bool]:
+        """ The dict of the control access bit flags. """
         return self.__control
 
     @property
     def owner_sid(self) -> Optional[SID]:
+        """ The :class:`SID` of the owner. """
         return self.__owner_sid
 
     @property
     def group_sid(self) -> Optional[SID]:
+        """ The :class:`SID` of the group. """
         return self.__group_sid
 
     @property
     def sacl(self) -> Optional[ACL]:
+        """ The system :class:`ACL`. """
         return self.__sacl
 
     @property
     def dacl(self) -> Optional[ACL]:
+        """ The discretionary :class:`ACL`. """
         return self.__dacl

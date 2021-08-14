@@ -8,6 +8,7 @@ from bonsai.active_directory.acl import ACE, ACEFlag, ACEType, ACERight, ACLRevi
 
 
 def test_ace_from_binary():
+    """ Test ACE's from_binary method. """
     input_data = b"\x05\nH\x00\x07\x00\x00\x00\x03\x00\x00\x00\x01\xc9u\xc9\xealoK\x83\x19\xd6\x7fED\x95\x06\x14\xcc(H7\x14\xbcE\x9b\x07\xado\x01^_(\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x15\xb3LK\xd2\xfb\x90s\xc2\xdf9\xb9\\\x04\x00\x00"
     with pytest.raises(TypeError):
         _ = ACE.from_binary(0)
@@ -35,6 +36,7 @@ def test_ace_from_binary():
 
 
 def test_acl_from_binary():
+    """ Test ACL's from_binary method. """
     with pytest.raises(TypeError):
         _ = ACL.from_binary(True)
     with pytest.raises(TypeError):
@@ -49,8 +51,6 @@ def test_acl_from_binary():
         acl = ACL.from_binary(input_data)
         assert acl.size == len(input_data)
         assert acl.revision == ACLRevision.ACL_REVISION_DS
-        assert acl.sbz1 == 0
-        assert acl.sbz2 == 0
         assert len(acl.aces) == 85
         assert all(isinstance(ace, ACE) for ace in acl.aces)
         assert acl.aces[0].type == ACEType.ACCESS_ALLOWED_OBJECT
@@ -65,6 +65,7 @@ def test_acl_from_binary():
 
 
 def test_str():
+    """ Test __str__ method. """
     input_data = b"\x05\nH\x00\x07\x00\x00\x00\x03\x00\x00\x00\x01\xc9u\xc9\xealoK\x83\x19\xd6\x7fED\x95\x06\x14\xcc(H7\x14\xbcE\x9b\x07\xado\x01^_(\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x15\xb3LK\xd2\xfb\x90s\xc2\xdf9\xb9\\\x04\x00\x00"
     ace = ACE.from_binary(input_data)
     assert (

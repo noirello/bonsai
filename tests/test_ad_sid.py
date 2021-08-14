@@ -4,6 +4,7 @@ from bonsai.active_directory import SID, sid
 
 
 def test_create_from_bytes_le():
+    """ Test create SID from binary. """
     with pytest.raises(ValueError):
         _ = SID(bytes_le=b"NOT-A-SID")
     with pytest.raises(ValueError):
@@ -24,6 +25,7 @@ def test_create_from_bytes_le():
 
 
 def test_create_from_str_rep():
+    """ Test create SID from string. """
     with pytest.raises(ValueError):
         _ = SID("NOT-A-SID")
     with pytest.raises(ValueError):
@@ -48,6 +50,7 @@ def test_create_from_str_rep():
 
 
 def test_bytes_le():
+    """ Test bytes_le property. """
     expected_bytes = b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\xdc\xf4\xdc;\x83=+F\x82\x8b\xa6(\x00\x02\x00\x00"
     test_sid = SID("S-1-5-21-1004336348-1177238915-682003330-512")
     assert test_sid.bytes_le == expected_bytes
@@ -59,6 +62,7 @@ def test_bytes_le():
 
 
 def test_str():
+    """ Test __str__ method. """
     test_sid = "S-1-5-21-3623811015-3361044348-30300820-1013"
     assert str(SID(test_sid)) == test_sid
     test_sid = "S-1-1-0"
@@ -66,12 +70,14 @@ def test_str():
 
 
 def test_repr():
+    """ Test __repr__ method. """
     sid = SID("S-1-1-0")
     assert SID.__name__ in repr(sid)
     assert "S-1-1-0" in repr(sid)
 
 
 def test_eq():
+    """ Test __eq__ method. """
     sid0 = SID("S-1-1-0")
     sid1 = SID("S-1-1-0")
     assert sid0 == sid1
@@ -80,6 +86,7 @@ def test_eq():
 
 
 def test_hash():
+    """ Test __hash__ method. """
     test_sid = "S-1-5-21-3623811015-3361044348-30300820-1013"
     sid0 = SID(test_sid)
     assert hash(sid0) == hash(test_sid)
@@ -98,4 +105,5 @@ def test_hash():
     ],
 )
 def test_sddl_alias(sid, alias):
+    """ Test sddl_alias property. """
     assert sid.sddl_alias == alias

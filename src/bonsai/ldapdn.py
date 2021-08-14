@@ -104,8 +104,8 @@ class LDAPDN:
 
     def __eq__(self, other: Any) -> bool:
         """
-        Check equality of two LDAPDN by their string format or
-        their sanitized string format.
+        Check equality of two LDAPDNs by their string formats or
+        their sanitized string formats.
         """
         return (
             str(self).lower() == str(other).lower()

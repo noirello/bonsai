@@ -8,6 +8,8 @@ from .sid import SID
 
 
 class ACEFlag(IntEnum):
+    """ ACE type-specific control flags. """
+
     OBJECT_INHERIT = 0x01
     CONTAINER_INHERIT = 0x02
     NO_PROPAGATE_INHERIT = 0x04
@@ -17,7 +19,8 @@ class ACEFlag(IntEnum):
     FAILED_ACCESS = 0x80
 
     @property
-    def short_name(self):
+    def short_name(self) -> str:
+        """ The SDDL short name of the flag. """
         short_names = {
             "OBJECT_INHERIT": "OI",
             "CONTAINER_INHERIT": "CI",
@@ -31,6 +34,8 @@ class ACEFlag(IntEnum):
 
 
 class ACEType(IntEnum):
+    """ Type of the ACE. """
+
     ACCESS_ALLOWED = 0
     ACCESS_DENIED = 1
     SYSTEM_AUDIT = 2
@@ -53,7 +58,8 @@ class ACEType(IntEnum):
     SYSTEM_SCOPED_POLICY_ID = 19
 
     @property
-    def short_name(self):
+    def short_name(self) -> str:
+        """ The SDDL short name of the type. """
         short_names = {
             "ACCESS_ALLOWED": "A",
             "ACCESS_DENIED": "D",
@@ -80,6 +86,8 @@ class ACEType(IntEnum):
 
 
 class ACERight(IntEnum):
+    """ The rights of the ACE. """
+
     GENERIC_READ = 0x80000000
     GENERIC_WRITE = 0x4000000
     GENERIC_EXECUTE = 0x20000000
@@ -102,7 +110,8 @@ class ACERight(IntEnum):
     DS_LIST_OBJECT = 0x00000080
 
     @property
-    def short_name(self):
+    def short_name(self) -> str:
+        """ The SDDL short name of the access right. """
         short_names = {
             "GENERIC_READ": "GR",
             "GENERIC_WRITE": "GW",
@@ -129,11 +138,28 @@ class ACERight(IntEnum):
 
 
 class ACLRevision(IntEnum):
+    """ The ACL revision. """
+
     ACL_REVISION = 0x02
     ACL_REVISION_DS = 0x04
 
 
 class ACE:
+    """
+    A class for the acccess control entry, that encodes the user rights
+    afforded to a principal.
+
+    :param ACEType ace_type: the type of the ACE.
+    :param Set[ACEFlag] flags: the set of flags for the ACE.
+    :param int mask: the access mask to encode the user rights as an int.
+    :param SID trustee_sid: the SID of the trustee.
+    :param uuid.UUID|None object_type: a UUID that identifies a property
+        set, property, extended right, or type of child object.
+    :param uuid.UUID|None inherited_object_type: a UUID that identifies the
+        type of child object that can inherit the ACE.
+    :param bytes application_data: optional application data.
+    """
+
     def __init__(
         self,
         ace_type: ACEType,
@@ -155,6 +181,16 @@ class ACE:
 
     @classmethod
     def from_binary(cls, data: bytes) -> "ACE":
+        """
+        Create an ACE object from a binary blob.
+
+        :param bytes data: a little-endian byte ordered byte input.
+        :returns: A new ACE instance.
+        :rtype: ACE
+        :raises TypeError: when the parameter is not bytes.
+        :raises ValueError: when the input cannot be parsed as an ACE
+            object.
+        """
         try:
             if not isinstance(data, bytes):
                 raise TypeError("The `data` parameter must be bytes")
@@ -207,6 +243,7 @@ class ACE:
             raise ValueError("Not a valid binary ACE, {0}".format(err))
 
     def __str__(self):
+        """ Return the SDDL string representation of the ACE object. """
         return "({atype};{flags};{rights};{object_guid};{inherit_object_guid};{sid})".format(
             atype=self.type.short_name,
             flags="".join(
@@ -226,64 +263,89 @@ class ACE:
 
     @property
     def type(self) -> ACEType:
+        """ The type of the ACE. """
         return self.__type
 
     @property
     def flags(self) -> Set[ACEFlag]:
+        """ The flags of the ACE. """
         return self.__flags
 
     @property
     def size(self) -> int:
+        """ The binary size of ACE in bytes. """
         return self.__size
 
     @property
     def mask(self) -> int:
+        """ The acces mask """
         return self.__mask
 
     @property
     def rights(self) -> Set[ACERight]:
+        """ The set of ACERights based on the access mask."""
         return {rgt for rgt in ACERight if self.mask & rgt}
 
     @property
     def object_type(self) -> Optional[uuid.UUID]:
+        """ The uuid of the object type. """
         return self.__object_type
 
     @property
     def inherited_object_type(self) -> Optional[uuid.UUID]:
+        """ The uuid of the inherited object type. """
         return self.__inherited_object_type
 
     @property
     def trustee_sid(self) -> SID:
+        """ The sid of the trustee. """
         return self.__trustee_sid
 
     @property
     def application_data(self) -> Optional[bytes]:
+        """ The possible application data. """
         return self.__application_data
 
 
 class ACL:
-    def __init__(
-        self, revision: ACLRevision, aces: List[ACE], sbz1: int = 0, sbz2: int = 0,
-    ) -> None:
+    """
+    The access control list (ACL) is used to specify a list of individual
+    access control entries (ACEs). An ACL and an array of ACEs comprise a
+    complete access control list.
+
+    :param ACLRevision revision: the revision of the ACL.
+    :param List[ACE] aces: list of :class:`ACE`.
+    """
+
+    def __init__(self, revision: ACLRevision, aces: List[ACE]) -> None:
         self.__revision = revision
-        self.__sbz1 = sbz1
-        self.__sbz2 = sbz2
         self.__aces = aces
         self.__size = 0
 
     @classmethod
     def from_binary(cls, data: bytes) -> "ACL":
+        """
+        Create an ACL object from a binary blob.
+
+        :param bytes data: a little-endian byte ordered byte input.
+        :returns: A new ACL instance.
+        :rtype: ACL
+        :raises TypeError: when the parameter is not bytes.
+        :raises ValueError: when the input cannot be parsed as an ACL
+            object.
+        """
         try:
             if not isinstance(data, bytes):
                 raise TypeError("The `data` parameter must be bytes")
-            rev, sbz1, size, count, sbz2 = struct.unpack("<BBHHH", data[:8])
+            # Unwanted values are the reserved sbz1 and sbz2.
+            rev, _, size, count, _ = struct.unpack("<BBHHH", data[:8])
             start_pos = 8
             aces = []
             for _ in range(count):
                 ace = ACE.from_binary(data[start_pos:])
                 aces.append(ace)
                 start_pos += ace.size
-            this = cls(ACLRevision(rev), aces, sbz1, sbz2)
+            this = cls(ACLRevision(rev), aces)
             this.__size = size
             return this
         except struct.error as err:
@@ -291,20 +353,15 @@ class ACL:
 
     @property
     def revision(self) -> ACLRevision:
+        """ The revision of ACL. """
         return self.__revision
 
     @property
-    def sbz1(self) -> int:
-        return self.__sbz1
-
-    @property
     def size(self) -> int:
+        """ The binary size in bytes. """
         return self.__size
 
     @property
-    def sbz2(self) -> int:
-        return self.__sbz2
-
-    @property
     def aces(self) -> List[ACE]:
+        """ The list of :class:`ACE` objects. """
         return self.__aces

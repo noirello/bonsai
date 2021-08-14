@@ -4,6 +4,19 @@ from typing import Any, Optional, Tuple
 
 
 class SID:
+    """
+    A class for representing a Security Identifier, that identifies users,
+    groups, and computer accounts on a Microsoft Windows platform.
+
+    :param str|None str_rep: a string representation of a SID.
+    :param bytes|None bytes_le: a bytes representation of a SID in little-endian
+        byte order.
+    :raises TypeError: when the type of the parameters are invalid, or both
+        parameters are given.
+    :raises ValueError: when the given parameter cannot be parsed as a valid
+        SID.
+    """
+
     def __init__(
         self, str_rep: Optional[str] = None, bytes_le: Optional[bytes] = None
     ) -> None:
@@ -42,6 +55,7 @@ class SID:
                 raise ValueError("Not a valid binary SID, {0}".format(err))
 
     def __str__(self) -> str:
+        """ Return the string format of the SID. """
         ident_auth = (
             hex(self.__identifier_authority)
             if self.__identifier_authority > 2 ** 32
@@ -55,9 +69,15 @@ class SID:
         return "S-1-{0}-{1}".format(ident_auth, subauths)
 
     def __repr__(self) -> str:
+        """ The representation of SID class. """
         return "<{0}: {1}>".format(self.__class__.__name__, str(self))
 
     def __eq__(self, other: Any) -> bool:
+        """
+        Check equality of two SIDs by their identifier_authority and list
+        of subauthorities, or if the other objest isa string than by their
+        string formats.
+        """
         if isinstance(other, SID):
             return (
                 self.revision == other.revision
@@ -74,18 +94,28 @@ class SID:
 
     @property
     def revision(self) -> int:
+        """ The revision level of the SID. """
         return self.__revision
 
     @property
     def identifier_authority(self) -> int:
+        """
+        The indentifier that indicates the authority under which
+        the SID was created.
+        """
         return self.__identifier_authority
 
     @property
     def subauthorities(self) -> Tuple[int, ...]:
+        """
+        A tuple of subauthorities that uniquely identifies a principal
+        relative to the identifier authority.
+        """
         return self.__subauthorities
 
     @property
     def bytes_le(self) -> bytes:
+        """ The byte format of the SID in little-endian byte order. """
         subauth_count = len(self.subauthorities)
         identifier_auth = [
             item for item in struct.pack(">Q", self.identifier_authority)[2:]
@@ -100,6 +130,9 @@ class SID:
 
     @property
     def sddl_alias(self) -> str:
+        """
+        The string SDDL alias of the SID if it exists, otherwise it's None.
+        """
         aliases = {
             "S-1-1-0": "WD",
             "S-1-15-2-1": "AC",

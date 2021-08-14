@@ -468,6 +468,108 @@ Example for working with LDAPDN objects.
 .. automethod:: LDAPValueList.copy
 .. autoattribute:: LDAPValueList.status
 
+bonsai.active_directory
+=======================
+
+.. automodule:: bonsai.active_directory
+
+:class:`ACE`
+------------
+
+.. autoclass:: ACE(ace_type, flags, mask, trustee_sid,object_type, inherited_object_type, application_data)
+
+.. note::
+     For more details, see offical Microsoft docs about `ACE`_.
+
+.. automethod:: ACE.from_binary(data)
+.. automethod:: ACE.__str__()
+.. autoattribute:: ACE.application_data
+.. autoattribute:: ACE.flags
+.. autoattribute:: ACE.inherited_object_type
+.. autoattribute:: ACE.mask
+.. autoattribute:: ACE.object_type
+.. autoattribute:: ACE.size
+.. autoattribute:: ACE.trustee_sid
+
+:class:`ACEFlag`
+----------------
+
+.. autoclass:: ACEFlag
+    :members:
+    :undoc-members:
+    :member-order: bysource
+
+:class:`ACERight`
+-----------------
+
+.. autoclass:: ACERight
+    :members:
+    :undoc-members:
+    :member-order: bysource
+
+:class:`ACEType`
+----------------
+
+.. autoclass:: ACEType
+    :members:
+    :undoc-members:
+    :member-order: bysource
+
+:class:`ACL`
+------------
+
+.. autoclass:: ACL(revision, aces)
+
+.. note::
+     For more details, see offical Microsoft docs about `ACL`_.
+
+.. automethod:: ACL.from_binary(data)
+.. autoattribute:: ACL.aces
+.. autoattribute:: ACL.revision
+.. autoattribute:: ACL.size
+
+:class:`ACLRevision`
+--------------------
+
+.. autoclass:: ACLRevision
+    :members:
+    :undoc-members:
+    :member-order: bysource
+
+:class:`SecurityDescriptor`
+---------------------------
+
+.. autoclass:: SecurityDescriptor(control, owner_sid, group_sid, sacl, dacl, revision = 1, sbz1 = 0)
+
+.. note::
+    For more details, see offical Microsoft docs about `SECURITY_DESCRIPTOR`_.
+
+.. automethod:: SecurityDescriptor.from_binary(data)
+.. autoattribute:: SecurityDescriptor.control
+.. autoattribute:: SecurityDescriptor.dacl
+.. autoattribute:: SecurityDescriptor.group_sid
+.. autoattribute:: SecurityDescriptor.owner_sid
+.. autoattribute:: SecurityDescriptor.revision
+.. autoattribute:: SecurityDescriptor.sacl
+.. autoattribute:: SecurityDescriptor.sbz1
+
+:class:`SID`
+------------
+
+.. autoclass:: SID(str_rep = None, bytes_le = None)
+
+.. note::
+    For more details, see offical Microsoft docs about `SID`_.
+
+.. automethod:: SID.__eq__(other)
+.. automethod:: SID.__repr__()
+.. automethod:: SID.__str__()
+.. autoattribute:: SID.bytes_le
+.. autoattribute:: SID.identifier_authority
+.. autoattribute:: SID.revision
+.. autoattribute:: SID.sddl_alias
+.. autoattribute:: SID.subauthorities
+
 bonsai.asyncio
 ==============
 
@@ -729,3 +831,8 @@ Utility functions
     :param int level: The debug level (for OpenLDAP only).
 
 .. _dict views: https://docs.python.org/3/library/stdtypes.html#dict-views
+
+.. _ACE: https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/d06e5a81-176e-46c6-9cf7-9137aad4455e
+.. _ACL: https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/20233ed8-a6c6-4097-aafa-dd545ed24428
+.. _SECURITY_DESCRIPTOR: https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/7d4dac05-9cef-4563-a058-f108abecce1d
+.. _SID: https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/78eb9013-1c3a-4970-ad1f-2b1dad588a25
