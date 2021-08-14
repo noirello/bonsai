@@ -325,6 +325,13 @@ class LDAPClient:
         self.__ext_dn = extdn_format
 
     def set_sd_flags(self, flags: Optional[int]) -> None:
+        """
+        Set the flags for retreiving specific portion of the Windows
+        security descriptor.
+
+        :param int|None flags: the flags for the security descriptor.
+        :raises TypeError: if the parameter is not int or None.
+        """
         if flags is not None and not isinstance(flags, int):
             raise TypeError("Parameter's type must be int or None.")
         self.__sd_flags = flags
@@ -517,6 +524,7 @@ class LDAPClient:
 
     @property
     def sd_flags(self) -> Optional[int]:
+        """ The flags for the Windows security descriptor. """
         return self.__sd_flags
 
     @sd_flags.setter

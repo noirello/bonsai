@@ -98,6 +98,7 @@ bonsai
     [{'dn': <LDAPDN cn=jeff,ou=nerdherd,dc=bonsai,dc=test>, 'sn': [b'Barnes'], 'cn': [b'jeff'],
     'givenName': ['Jeff']}]
 
+.. automethod:: LDAPClient.set_sd_flags(flags)
 .. automethod:: LDAPClient.set_server_chase_referrals(val)
 .. automethod:: LDAPClient.set_url(url)
 
@@ -114,6 +115,7 @@ bonsai
 .. autoattribute:: LDAPClient.mechanism
 .. autoattribute:: LDAPClient.password_policy
 .. autoattribute:: LDAPClient.raw_attributes
+.. autoattribute:: LDAPClient.sd_flags
 .. autoattribute:: LDAPClient.server_chase_referrals
 
     *Changed in version 1.2.2:* Default value from *True* to *False*.

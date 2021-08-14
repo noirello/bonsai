@@ -382,6 +382,22 @@ removed, and modified just like entries.
 .. note::
     The OID of ManageDsaIT control is: 2.16.840.1.113730.3.4.2
 
+SD Flags
+--------
+
+The SD Flags control can be used to manage the portion of a Windows security descriptor
+to retrieve. The flag can be the combination of the following:
+
+* 0x1 - Get the owner identifier of the object.
+* 0x2 - Get the primary group identifier.
+* 0x4 . Get the discretionary access control list (DACL) of the object.
+* 0x8 - Get the system access control list (SACL) of the object.
+
+Use :meth:`LDAPClient.set_sd_flags` method to set the value of the flag.
+
+.. note::
+    The OID of SD_FLAGS control is: 1.2.840.113556.1.4.801
+
 Using connection pools
 ======================
 
@@ -622,3 +638,31 @@ This example class has the minimal functionalities only but hopefully gives you 
 the asynchronous integration works.
 
 .. _Curio: https://curio.readthedocs.io/en/latest/
+
+Utilities for Active Directory
+==============================
+
+.. module:: bonsai.active_directory
+    :noindex:
+
+Bonsai has some helper classes and functions to work with Windows-specific attributes in Active
+Directory.
+
+Security descriptor
+-------------------
+
+The Windows security descriptor is a data structure containing the security information associated
+with a securable object. It's stored in the `ntSecurityDescriptor` attribute as a binary data.
+To parse it use the :meth:`SecurityDescriptor.from_binary()` method::
+
+    >>> import bonsai
+    >>> from bonsai.active_directory import SecurityDescriptor
+    >>> client = LDAPClient("ldap://localhost")
+    >>> client.set_credentials("SIMPLE", user="cn=user,dc=bonsai,dc=test", password="secret")
+    >>> conn = client.connect()
+    >>> entry = conn.search("cn=user,dc=bonsai,dc=test", 0, attrlist=["ntSecurityDescriptor"])[0]
+    >>> sec_desc = SecurityDescriptor.from_binary(entry["ntSecurityDescriptor"][0])
+    >>> print(sec_desc.owner_sid)
+    <SID: S-1-5-21-3623811015-3361044348-30300820-1013>
+    >>> print(sec_desc.dacl)
+    <bonsai.active_directory.acl.ACL object at 0x7f388bc4d6a0>
