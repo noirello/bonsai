@@ -62,3 +62,12 @@ def test_acl_from_binary():
             acl.aces[0].trustee_sid == "S-1-5-21-1263317781-1938881490-3107577794-1116"
         )
         assert acl.aces[-1].trustee_sid == "S-1-5-18"
+
+
+def test_str():
+    input_data = b"\x05\nH\x00\x07\x00\x00\x00\x03\x00\x00\x00\x01\xc9u\xc9\xealoK\x83\x19\xd6\x7fED\x95\x06\x14\xcc(H7\x14\xbcE\x9b\x07\xado\x01^_(\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x15\xb3LK\xd2\xfb\x90s\xc2\xdf9\xb9\\\x04\x00\x00"
+    ace = ACE.from_binary(input_data)
+    assert (
+        str(ace)
+        == "(OA;CIIO;CCDCLC;c975c901-6cea-4b6f-8319-d67f45449506;4828cc14-1437-45bc-9b07-ad6f015e5f28;S-1-5-21-1263317781-1938881490-3107577794-1116)"
+    )

@@ -84,3 +84,18 @@ def test_hash():
     sid0 = SID(test_sid)
     assert hash(sid0) == hash(test_sid)
     assert set((sid0, SID(test_sid))) == {sid0}
+
+
+@pytest.mark.parametrize(
+    "sid, alias",
+    [
+        (SID("S-1-1-0"), "WD"),
+        (SID("S-1-5-32-559"), "LU"),
+        (SID("S-1-5-21-3623811015-3361044348-30300820-500"), "LA"),
+        (SID("S-1-5-21-3623811015-3361044348-30300820-520"), "PA"),
+        (SID("S-1-5-21-3623811015-3361044348-30300820-1013"), None),
+        (SID("S-1-5-34-3623811015-3361044348-30300820-500"), None),
+    ],
+)
+def test_sddl_alias(sid, alias):
+    assert sid.sddl_alias == alias
