@@ -35,6 +35,7 @@ class SecurityDescriptor:
     :param int revision: the revision of the security descriptor.
     :param int sbz1: reserved value.
     """
+
     def __init__(
         self,
         control: Dict[str, bool],
@@ -54,7 +55,7 @@ class SecurityDescriptor:
         self.__dacl = dacl
 
     @staticmethod
-    def __convert_ctrl(ctrl):
+    def __convert_ctrl(ctrl, to_int=False):
         values = {
             "self_relative": 0x8000,
             "rm_control_valid": 0x4000,
@@ -73,7 +74,10 @@ class SecurityDescriptor:
             "group_defaulted": 0x2,
             "owner_defaulted": 0x1,
         }
-        return {key: bool(ctrl & val) for key, val in values.items()}
+        if to_int:
+            return sum(values[key] for key, val in ctrl.items() if val)
+        else:
+            return {key: bool(ctrl & val) for key, val in values.items()}
 
     @classmethod
     def from_binary(cls, data: bytes) -> "SecurityDescriptor":
@@ -111,6 +115,53 @@ class SecurityDescriptor:
             return cls(ctrl, owner_sid, group_sid, sacl, dacl, rev, sbz1)
         except struct.error as err:
             raise ValueError("Not a valid binary SecurityDescriptor, {0}".format(err))
+
+    def to_binary(self) -> bytes:
+        """
+        Convert SecurityDescriptor object to binary form with little-endian byte order.
+
+        :returns: Bytes of the binary SecurityDescriptor instance
+        :rtype: bytes
+        """
+        owner = b""
+        group = b""
+        sacl = b""
+        dacl = b""
+        offset_owner = 0
+        offset_group = 0
+        offset_sacl = 0
+        offset_dacl = 0
+        ctrl = self.__convert_ctrl(self.control, True)
+        data = bytearray(20)
+        if self.owner_sid:
+            owner = self.owner_sid.bytes_le
+            offset_owner = 20
+        if self.group_sid:
+            group = self.group_sid.bytes_le
+            offset_group = 20 + len(owner)
+        if self.sacl:
+            sacl = self.sacl.to_binary()
+            offset_sacl = 20 + len(owner) + len(group)
+        if self.dacl:
+            dacl = self.dacl.to_binary()
+            offset_dacl = 20 + len(owner) + len(group) + len(sacl)
+        struct.pack_into(
+            "<BBHIIII",
+            data,
+            0,
+            self.revision,
+            self.sbz1,
+            ctrl,
+            offset_owner,
+            offset_group,
+            offset_sacl,
+            offset_dacl,
+        )
+        data.extend(owner)
+        data.extend(group)
+        data.extend(sacl)
+        data.extend(dacl)
+        return bytes(data)
 
     @property
     def sbz1(self) -> int:

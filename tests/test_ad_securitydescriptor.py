@@ -1,4 +1,5 @@
 import os
+import struct
 import sys
 
 import pytest
@@ -61,6 +62,77 @@ def test_from_binary():
         assert len(sec_desc.sacl.aces) == 3
         assert sec_desc.sacl.aces[0].type == 2
         assert sec_desc.sacl.aces[0].trustee_sid == "S-1-1-0"
+
+
+@pytest.mark.parametrize(
+    "file", ["sd-sample0.bin", "sd-sample1.bin"],
+)
+def test_to_binary(file):
+    """ Test to_binary method. """
+    curdir = os.path.abspath(os.path.dirname(__file__))
+    with open(os.path.join(curdir, "testenv", file), "rb") as data:
+        expected_data = data.read()
+        test_sec_desc = SecurityDescriptor.from_binary(expected_data)
+        test_data = test_sec_desc.to_binary()
+        (
+            expected_rev,
+            expected_sbz1,
+            expected_ctrl,
+            expected_offset_owner,
+            expected_offset_group,
+            expected_offset_sacl,
+            expected_offset_dacl,
+        ) = struct.unpack("<BBHIIII", expected_data[:20])
+        (
+            test_rev,
+            test_sbz1,
+            test_ctrl,
+            test_offset_owner,
+            test_offset_group,
+            test_offset_sacl,
+            test_offset_dacl,
+        ) = struct.unpack("<BBHIIII", test_data[:20])
+        assert len(test_data) == len(expected_data)
+        assert test_rev == expected_rev
+        assert test_sbz1 == expected_sbz1
+        assert test_ctrl == expected_ctrl
+        if expected_offset_owner:
+            assert (
+                test_data[
+                    test_offset_owner : test_offset_owner + test_sec_desc.owner_sid.size
+                ]
+                == expected_data[
+                    expected_offset_owner : expected_offset_owner
+                    + test_sec_desc.owner_sid.size
+                ]
+            )
+        if expected_offset_group:
+            assert (
+                test_data[
+                    test_offset_group : test_offset_group + test_sec_desc.group_sid.size
+                ]
+                == expected_data[
+                    expected_offset_group : expected_offset_group
+                    + test_sec_desc.group_sid.size
+                ]
+            )
+        if expected_offset_sacl:
+            assert (
+                test_data[test_offset_sacl : test_offset_sacl + test_sec_desc.sacl.size]
+                == expected_data[
+                    expected_offset_sacl : expected_offset_sacl
+                    + test_sec_desc.sacl.size
+                ]
+            )
+        if expected_offset_dacl:
+            assert (
+                test_data[test_offset_dacl : test_offset_dacl + test_sec_desc.dacl.size]
+                == expected_data[
+                    expected_offset_dacl : expected_offset_dacl
+                    + test_sec_desc.dacl.size
+                ]
+            )
+        assert SecurityDescriptor.from_binary(test_data).to_binary() == test_data
 
 
 @pytest.mark.skipif(

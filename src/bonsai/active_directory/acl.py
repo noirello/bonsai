@@ -84,6 +84,20 @@ class ACEType(IntEnum):
         }
         return short_names[self.name]
 
+    @property
+    def is_object_type(self) -> bool:
+        """ Flag for ACE types with objects. """
+        return self in (
+            ACEType.ACCESS_ALLOWED_OBJECT,
+            ACEType.ACCESS_DENIED_OBJECT,
+            ACEType.SYSTEM_AUDIT_OBJECT,
+            ACEType.SYSTEM_ALARM_OBJECT,
+            ACEType.ACCESS_ALLOWED_CALLBACK_OBJECT,
+            ACEType.ACCESS_DENIED_CALLBACK_OBJECT,
+            ACEType.SYSTEM_AUDIT_CALLBACK_OBJECT,
+            ACEType.SYSTEM_ALARM_CALLBACK_OBJECT,
+        )
+
 
 class ACERight(IntEnum):
     """ The rights of the ACE. """
@@ -168,7 +182,7 @@ class ACE:
         trustee_sid: SID,
         object_type: Optional[uuid.UUID],
         inherited_object_type: Optional[uuid.UUID],
-        application_data: Optional[bytes],
+        application_data: bytes,
     ) -> None:
         self.__type = ace_type
         self.__flags = flags
@@ -177,7 +191,6 @@ class ACE:
         self.__inherited_object_type = inherited_object_type
         self.__trustee_sid = trustee_sid
         self.__application_data = application_data
-        self.__size = 0
 
     @classmethod
     def from_binary(cls, data: bytes) -> "ACE":
@@ -199,16 +212,7 @@ class ACE:
             application_data = None
             ace_type, flags, size, mask = struct.unpack("<BBHL", data[:8])
             pos = 8
-            if ACEType(ace_type) in (
-                ACEType.ACCESS_ALLOWED_OBJECT,
-                ACEType.ACCESS_DENIED_OBJECT,
-                ACEType.SYSTEM_AUDIT_OBJECT,
-                ACEType.SYSTEM_ALARM_OBJECT,
-                ACEType.ACCESS_ALLOWED_CALLBACK_OBJECT,
-                ACEType.ACCESS_DENIED_CALLBACK_OBJECT,
-                ACEType.SYSTEM_AUDIT_CALLBACK_OBJECT,
-                ACEType.SYSTEM_ALARM_CALLBACK_OBJECT,
-            ):
+            if ACEType(ace_type).is_object_type:
                 obj_flag = struct.unpack("<I", data[8:12])[0]
                 pos += 4
                 if obj_flag & 0x00000001:
@@ -218,16 +222,8 @@ class ACE:
                     inherited_object_type = uuid.UUID(bytes_le=data[pos : pos + 16])
                     pos += 16
             trustee_sid = SID(bytes_le=data[pos:])
-            pos += 8 + len(trustee_sid.subauthorities) * 4
-            if ACEType(ace_type) in (
-                ACEType.ACCESS_ALLOWED_CALLBACK,
-                ACEType.ACCESS_DENIED_CALLBACK,
-                ACEType.ACCESS_ALLOWED_CALLBACK_OBJECT,
-                ACEType.ACCESS_DENIED_CALLBACK_OBJECT,
-                ACEType.SYSTEM_AUDIT_OBJECT,
-                ACEType.SYSTEM_AUDIT_CALLBACK,
-            ):
-                application_data = data[pos:size]
+            pos += trustee_sid.size
+            application_data = data[pos:size]
             this = cls(
                 ACEType(ace_type),
                 {flg for flg in ACEFlag if flags & flg},
@@ -237,7 +233,6 @@ class ACE:
                 inherited_object_type,
                 application_data,
             )
-            this.__size = size
             return this
         except struct.error as err:
             raise ValueError("Not a valid binary ACE, {0}".format(err))
@@ -261,6 +256,35 @@ class ACE:
             else str(self.trustee_sid),
         )
 
+    def to_binary(self) -> bytes:
+        """
+        Convert ACE object to binary form with little-endian byte order.
+
+        :returns: Bytes of the binary ACE instance
+        :rtype: bytes
+        """
+        size = self.size
+        data = bytearray(size)
+        struct.pack_into(
+            "<BBHL", data, 0, self.type.value, sum(self.flags), size, self.mask
+        )
+        pos = 8
+        if self.type.is_object_type:
+            obj_flag = 0x00000001 if self.object_type else 0
+            obj_flag |= 0x00000002 if self.inherited_object_type else 0
+            struct.pack_into("<L", data, pos, obj_flag)
+            pos += 4
+            if self.object_type:
+                data[pos : pos + 16] = self.object_type.bytes_le
+                pos += 16
+            if self.inherited_object_type:
+                data[pos : pos + 16] = self.inherited_object_type.bytes_le
+                pos += 16
+        data[pos : pos + self.trustee_sid.size] = self.trustee_sid.bytes_le
+        pos += self.trustee_sid.size
+        data[pos : pos + size] = self.application_data
+        return bytes(data)
+
     @property
     def type(self) -> ACEType:
         """ The type of the ACE. """
@@ -274,7 +298,16 @@ class ACE:
     @property
     def size(self) -> int:
         """ The binary size of ACE in bytes. """
-        return self.__size
+        size = 8
+        if self.type.is_object_type:
+            size += 4
+            if self.object_type:
+                size += 16
+            if self.inherited_object_type:
+                size += 16
+        size += self.trustee_sid.size
+        size += len(self.application_data)
+        return size
 
     @property
     def mask(self) -> int:
@@ -302,7 +335,7 @@ class ACE:
         return self.__trustee_sid
 
     @property
-    def application_data(self) -> Optional[bytes]:
+    def application_data(self) -> bytes:
         """ The possible application data. """
         return self.__application_data
 
@@ -320,7 +353,6 @@ class ACL:
     def __init__(self, revision: ACLRevision, aces: List[ACE]) -> None:
         self.__revision = revision
         self.__aces = aces
-        self.__size = 0
 
     @classmethod
     def from_binary(cls, data: bytes) -> "ACL":
@@ -337,19 +369,33 @@ class ACL:
         try:
             if not isinstance(data, bytes):
                 raise TypeError("The `data` parameter must be bytes")
-            # Unwanted values are the reserved sbz1 and sbz2.
-            rev, _, size, count, _ = struct.unpack("<BBHHH", data[:8])
-            start_pos = 8
+            # Unwanted values are the reserved sbz1, size and sbz2.
+            rev, _, _, count, _ = struct.unpack("<BBHHH", data[:8])
+            pos = 8
             aces = []
             for _ in range(count):
-                ace = ACE.from_binary(data[start_pos:])
+                ace = ACE.from_binary(data[pos:])
                 aces.append(ace)
-                start_pos += ace.size
+                pos += ace.size
             this = cls(ACLRevision(rev), aces)
-            this.__size = size
             return this
         except struct.error as err:
             raise ValueError("Not a valid binary ACL, {0}".format(err))
+
+    def to_binary(self) -> bytes:
+        """
+        Convert ACL object to binary form with little-endian byte order.
+
+        :returns: Bytes of the binary ACL instance
+        :rtype: bytes
+        """
+        size = self.size
+        data = bytearray(8)
+        struct.pack_into("<BBHHH", data, 0, self.revision, 0, size, len(self.aces), 0)
+        pos = 8
+        for ace in self.aces:
+            data.extend(ace.to_binary())
+        return bytes(data)
 
     @property
     def revision(self) -> ACLRevision:
@@ -359,7 +405,7 @@ class ACL:
     @property
     def size(self) -> int:
         """ The binary size in bytes. """
-        return self.__size
+        return 8 + sum(ace.size for ace in self.aces)
 
     @property
     def aces(self) -> List[ACE]:

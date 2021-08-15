@@ -32,8 +32,13 @@ def test_ace_from_binary():
     assert ace.inherited_object_type == uuid.UUID(
         "4828cc14-1437-45bc-9b07-ad6f015e5f28"
     )
-    assert ace.application_data is None
+    assert ace.application_data == b""
 
+
+def test_ace_to_binary():
+    """ Test ACE's from_binary method. """
+    input_data = b"\x05\nH\x00\x07\x00\x00\x00\x03\x00\x00\x00\x01\xc9u\xc9\xealoK\x83\x19\xd6\x7fED\x95\x06\x14\xcc(H7\x14\xbcE\x9b\x07\xado\x01^_(\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x15\xb3LK\xd2\xfb\x90s\xc2\xdf9\xb9\\\x04\x00\x00"
+    assert ACE.from_binary(input_data).to_binary() == input_data
 
 def test_acl_from_binary():
     """ Test ACL's from_binary method. """
@@ -63,6 +68,13 @@ def test_acl_from_binary():
         )
         assert acl.aces[-1].trustee_sid == "S-1-5-18"
 
+
+def test_acl_to_binary():
+    """ Test ACL's from_binary method. """
+    curdir = os.path.abspath(os.path.dirname(__file__))
+    with open(os.path.join(curdir, "testenv", "acl-sample.bin"), "rb") as data:
+        input_data = data.read()
+        assert ACL.from_binary(input_data).to_binary() == input_data
 
 def test_str():
     """ Test __str__ method. """

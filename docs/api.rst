@@ -478,12 +478,13 @@ bonsai.active_directory
 :class:`ACE`
 ------------
 
-.. autoclass:: ACE(ace_type, flags, mask, trustee_sid,object_type, inherited_object_type, application_data)
+.. autoclass:: ACE(ace_type, flags, mask, trustee_sid, object_type, inherited_object_type, application_data)
 
 .. note::
      For more details, see offical Microsoft docs about `ACE`_.
 
 .. automethod:: ACE.from_binary(data)
+.. automethod:: ACE.to_binary()
 .. automethod:: ACE.__str__()
 .. autoattribute:: ACE.application_data
 .. autoattribute:: ACE.flags
@@ -526,6 +527,7 @@ bonsai.active_directory
      For more details, see offical Microsoft docs about `ACL`_.
 
 .. automethod:: ACL.from_binary(data)
+.. automethod:: ACL.to_binary()
 .. autoattribute:: ACL.aces
 .. autoattribute:: ACL.revision
 .. autoattribute:: ACL.size
@@ -547,6 +549,7 @@ bonsai.active_directory
     For more details, see offical Microsoft docs about `SECURITY_DESCRIPTOR`_.
 
 .. automethod:: SecurityDescriptor.from_binary(data)
+.. automethod:: SecurityDescriptor.to_binary()
 .. autoattribute:: SecurityDescriptor.control
 .. autoattribute:: SecurityDescriptor.dacl
 .. autoattribute:: SecurityDescriptor.group_sid
