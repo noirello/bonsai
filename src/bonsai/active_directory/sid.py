@@ -75,7 +75,7 @@ class SID:
     def __eq__(self, other: Any) -> bool:
         """
         Check equality of two SIDs by their identifier_authority and list
-        of subauthorities, or if the other objest isa string than by their
+        of subauthorities, or if the other object is a string than by their
         string formats.
         """
         if isinstance(other, SID):

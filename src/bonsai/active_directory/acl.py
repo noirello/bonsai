@@ -160,7 +160,7 @@ class ACLRevision(IntEnum):
 
 class ACE:
     """
-    A class for the acccess control entry, that encodes the user rights
+    A class for the access control entry, that encodes the user rights
     afforded to a principal.
 
     :param ACEType ace_type: the type of the ACE.

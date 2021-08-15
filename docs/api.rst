@@ -576,6 +576,18 @@ bonsai.active_directory
 .. autoattribute:: SID.size
 .. autoattribute:: SID.subauthorities
 
+
+:class:`UserAccountControl`
+------------
+
+.. autoclass:: UserAccountControl(flags)
+
+.. note::
+    For more details, see offical Microsoft docs about `UserAccountControl`_.
+
+.. autoattribute:: UserAccountControl.properties
+.. autoattribute:: UserAccountControl.value
+
 bonsai.asyncio
 ==============
 
@@ -842,3 +854,4 @@ Utility functions
 .. _ACL: https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/20233ed8-a6c6-4097-aafa-dd545ed24428
 .. _SECURITY_DESCRIPTOR: https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/7d4dac05-9cef-4563-a058-f108abecce1d
 .. _SID: https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/78eb9013-1c3a-4970-ad1f-2b1dad588a25
+.. _UserAccountControl: https://docs.microsoft.com/en-us/troubleshoot/windows-server/identity/useraccountcontrol-manipulate-account-properties

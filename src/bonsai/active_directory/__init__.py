@@ -8,7 +8,7 @@ from .acl import ACL, ACE, ACEFlag, ACERight, ACEType, ACLRevision
 
 class SecurityDescriptor:
     """
-    The a class that defines the security attributes of an object. These
+    A class that defines the security attributes of an object. These
     attributes specify who owns the object; who can access the object and
     what they can do with it; what level of audit logging can be applied to
     the object; and what kind of restrictions apply to the use of the
@@ -197,3 +197,54 @@ class SecurityDescriptor:
     def dacl(self) -> Optional[ACL]:
         """ The discretionary :class:`ACL`. """
         return self.__dacl
+
+
+class UserAccountControl:
+    """
+    A class for parsing UserAccountControl field.
+
+    :param int flags: integer representing the property flags.
+    :raises TypeError: if flags parameter is not an int.
+    """
+    def __init__(self, flags: int) -> None:
+        if not isinstance(flags, int):
+            raise TypeError("The `flags` parameter must be an integer")
+        self.__flag_values = {
+            "script": 0x1,
+            "accountdisable": 0x2,
+            "homedir_required": 0x8,
+            "lockout": 0x10,
+            "passwd_notreqd": 0x20,
+            "passwd_cant_change": 0x40,
+            "encrypted_text_pwd_allowed": 0x80,
+            "temp_duplicate_account": 0x100,
+            "normal_account": 0x200,
+            "interdomain_trust_account": 0x800,
+            "workstation_trust_account": 0x1000,
+            "server_trust_account": 0x2000,
+            "dont_expire_password": 0x10000,
+            "mns_logon_account": 0x20000,
+            "smartcard_required": 0x40000,
+            "trusted_for_delegation": 0x80000,
+            "not_delegated": 0x100000,
+            "use_des_key_only": 0x200000,
+            "dont_req_preauth": 0x400000,
+            "password_expired": 0x800000,
+            "trusted_to_auth_for_delegation": 0x1000000,
+            "partial_secrets_account": 0x4000000,
+        }
+        self.__properties = {
+            key: bool(flags & val) for key, val in self.__flag_values.items()
+        }
+
+    @property
+    def properties(self) -> Dict[str, bool]:
+        """ Dictionary of the UserAccountControl properties. """
+        return self.__properties
+
+    @property
+    def value(self) -> int:
+        """ The intger value of the properties. """
+        return sum(
+            self.__flag_values[key] for key, val in self.properties.items() if val
+        )
