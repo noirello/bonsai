@@ -6,6 +6,7 @@ Changelog
 Changed
 ~~~~~~~
 
+-  Drop support for Python 3.5, the module requires at least 3.6.
 -  Allow space in LDAPDN's attribute type. (Issue #52)
 -  LDAPClient.server_chase_referrals is set to False by default.
 

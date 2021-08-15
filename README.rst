@@ -33,7 +33,7 @@ This is a module for handling LDAP operations in Python. Uses libldap2 on Unix p
 WinLDAP on Microsoft Windows. LDAP entries are mapped to a special Python case-insensitive
 dictionary, tracking the changes of the dictionary to modify the entry on the server easily.
 
-Supports only Python 3.5 or newer, and LDAPv3.
+Supports only Python 3.6 or newer, and LDAPv3.
 
 Features
 --------
@@ -48,7 +48,7 @@ Features
 Requirements for building
 -------------------------
 
--  python3.5-dev or newer
+-  python3.6-dev or newer
 -  libldap2-dev
 -  libsasl2-dev
 -  libkrb5-dev or heimdal-dev (optional)
@@ -75,7 +75,7 @@ Simple search and modify:
             res[0]['sn'] = "Carmichael"
             res[0].modify()
 
-Using with asyncio (on Python 3.5 or newer):
+Using with asyncio:
 
 .. code:: python3
 
