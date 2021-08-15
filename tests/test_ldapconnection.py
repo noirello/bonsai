@@ -127,16 +127,14 @@ def large_org():
             conn.delete(entry.dn, recursive=True)
             conn.add(entry)
         for idx in range(entry_num):
-            item = bonsai.LDAPEntry(
-                "cn=test_{idx},{base}".format(idx=idx, base=entry.dn)
-            )
+            item = bonsai.LDAPEntry(f"cn=test_{idx},{entry.dn}")
             item["objectclass"] = [
                 "top",
                 "inetOrgPerson",
                 "person",
                 "organizationalPerson",
             ]
-            item["sn"] = "test_{idx}".format(idx=idx)
+            item["sn"] = f"test_{idx}"
             conn.add(item)
         return entry
 
@@ -146,7 +144,7 @@ def large_org():
         gconn = gconn.open()
     for idx in range(gnum):
         # Delete entries one by one to avoid Administration Limit Exceeded with AD.
-        item = bonsai.LDAPEntry("cn=test_{idx},{base}".format(idx=idx, base=entry.dn))
+        item = bonsai.LDAPEntry(f"cn=test_{idx},{entry.dn}")
         gconn.delete(item.dn)
     gconn.delete(entry.dn, recursive=True)
     gconn.close()
@@ -176,13 +174,8 @@ def external_binding():
 
 
 def _generate_client(cfg):
-    url = "ldap://{host}:{port}/ou=nerdherd,{basedn}?{attr}?{scope}".format(
-        host=cfg["SERVER"]["hostip"],
-        port=cfg["SERVER"]["port"],
-        basedn=cfg["SERVER"]["basedn"],
-        attr=cfg["SERVER"]["search_attr"],
-        scope=cfg["SERVER"]["search_scope"],
-    )
+    srv = cfg["SERVER"]
+    url = f"ldap://{srv['hostip']}:{srv['port']}/ou=nerdherd,{srv['basedn']}?{srv['search_attr']}?{srv['search_scope']}"
     client = LDAPClient(url)
     client.set_credentials(
         "SIMPLE", user=cfg["SIMPLEAUTH"]["user"], password=cfg["SIMPLEAUTH"]["password"]
@@ -839,7 +832,7 @@ def test_server_sizelimit_error(conn, anonym_conn, basedn, large_org):
 
     entry_num = 1048
     page_size = 4
-    org = large_org(conn, "ou=limited,{base}".format(base=basedn), entry_num)
+    org = large_org(conn, f"ou=limited,{basedn}", entry_num)
     with pytest.raises(SizeLimitError):
         anonym_conn.search(org.dn, 1)
     paged = anonym_conn.paged_search(org.dn, 1, page_size=page_size)
@@ -870,7 +863,7 @@ def test_server_sizelimit_error(conn, anonym_conn, basedn, large_org):
 def test_paged_search_large_result(conn, anonym_conn, basedn, large_org):
     page_size = 128
     entry_num = 65535
-    org = large_org(conn, "ou=large,{base}".format(base=basedn), entry_num)
+    org = large_org(conn, f"ou=large,{basedn}", entry_num)
     collected_entry = 0
     result = anonym_conn.paged_search(org.dn, 1, page_size=page_size)
     while True:

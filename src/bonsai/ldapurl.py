@@ -48,7 +48,7 @@ class LDAPURL:
         parsed_url = urllib.parse.urlparse(strurl)
         scheme = parsed_url.scheme
         if scheme not in ("ldap", "ldaps", "ldapi"):
-            raise ValueError("'%s' is not a valid LDAP URL." % strurl)
+            raise ValueError(f"'{strurl}' is not a valid LDAP URL")
         if scheme == "ldaps":
             port = 636
         elif scheme == "ldapi":
@@ -58,7 +58,7 @@ class LDAPURL:
         if parsed_url.scheme != "ldapi":
             valid, self.__ipv6 = self.is_valid_hostname(host)
             if not valid:
-                raise ValueError("'{0}' has an invalid hostname.".format(strurl))
+                raise ValueError(f"'{strurl}' has an invalid hostname")
         if parsed_url.port:
             port = parsed_url.port
         binddn = LDAPDN(urllib.parse.unquote(parsed_url.path[1:]))
@@ -208,11 +208,13 @@ class LDAPURL:
         Return the full address of the host.
         """
         if self.scheme == "ldapi":
-            return "{0}://{1}".format(self.__hostinfo[0], self.__hostinfo[1])
+            return f"{self.__hostinfo[0]}://{self.__hostinfo[1]}"
         if self.__ipv6:
-            return "{0}://[{1}]:{2:d}".format(*self.__hostinfo)
+            return (
+                f"{self.__hostinfo[0]}://[{self.__hostinfo[1]}]:{self.__hostinfo[2]:d}"
+            )
         else:
-            return "{0}://{1}:{2:d}".format(*self.__hostinfo)
+            return f"{self.__hostinfo[0]}://{self.__hostinfo[1]}:{self.__hostinfo[2]:d}"
 
     def __eq__(self, other: Any) -> bool:
         """

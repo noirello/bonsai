@@ -20,7 +20,7 @@ def escape_attribute_value(attrval: str):
     # Order matters.
     chars_to_escape = ("\\", '"', "+", ",", ";", "<", "=", ">")
     for char in chars_to_escape:
-        attrval = attrval.replace(char, "\\{0}".format(char))
+        attrval = attrval.replace(char, f"\\{char}")
     if attrval[0] == "#" or attrval[0] == " ":
         attrval = "".join(("\\", attrval))
     if attrval[-1] == " ":

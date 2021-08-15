@@ -50,7 +50,7 @@ class LDIFReader:
         for num, line in enumerate(self.__file):
             try:
                 if len(line) > self.max_length:
-                    raise LDIFError("Line {0} is too long.".format(num + 1))
+                    raise LDIFError(f"Line {num + 1} is too long.")
                 if len(line.strip()) == 0:
                     yield buffer
                     buffer.clear()
@@ -70,7 +70,7 @@ class LDIFReader:
                 else:
                     buffer.append(line.rstrip())
             except IndexError:
-                raise LDIFError("Parser error at line: {0}.".format(num + 1))
+                raise LDIFError(f"Parser error at line: {num + 1}.")
         if buffer:
             yield buffer
 
@@ -106,7 +106,7 @@ class LDIFReader:
             scheme, _ = url.split(":", maxsplit=1)
             return self.__resource_handlers[scheme](url)
         except (KeyError, ValueError):
-            raise LDIFError("Unsupported URL format: {0}.".format(url)) from None
+            raise LDIFError(f"Unsupported URL format: {url}.") from None
 
     def __iter__(self) -> "LDIFReader":
         return self
@@ -137,9 +137,7 @@ class LDIFReader:
                         raise ValueError()
                 except ValueError:
                     raise LDIFError(
-                        "Invalid attribute value pair: '{0}' for entry #{1}.".format(
-                            attrval, self.__num_of_entries
-                        )
+                        f"Invalid attribute value pair: '{attrval}' for entry #{self.__num_of_entries}."
                     ) from None
                 if attr.lower() == "changetype":
                     change_type = val.lower()
@@ -165,18 +163,14 @@ class LDIFReader:
                         entry.change_attribute(key, LDAPModOp.DELETE, *attr_dict[key])
                 except KeyError as err:
                     raise LDIFError(
-                        "Missing attribute: '{0}' for entry #{1}.".format(
-                            err.args[0], self.__num_of_entries
-                        )
+                        f"Missing attribute: '{err.args[0]}' for entry #{self.__num_of_entries}."
                     )
             elif change_type == "add":
                 for key, vals in attr_dict.items():
                     entry[key] = vals
         if entry.dn == "":
             raise LDIFError(
-                "Missing distinguished name for entry #{0}.".format(
-                    self.__num_of_entries
-                )
+                f"Missing distinguished name for entry #{self.__num_of_entries}."
             )
         return entry
 
@@ -234,9 +228,7 @@ class LDIFWriter:
         self.output_file = output_file
         self.max_length = max_length
 
-    def _get_attr_lines(
-        self, attrname: str, attrvalue: Iterable[Any]
-    ) -> Iterator[str]:
+    def _get_attr_lines(self, attrname: str, attrvalue: Iterable[Any]) -> Iterator[str]:
         for val in attrvalue:
             if isinstance(val, (bytes, bytearray)):
                 # If it's a binary has to be base64 encoded anyway.
@@ -253,16 +245,16 @@ class LDIFWriter:
                 val = val.encode("UTF-8")
             if has_not_safe_char or has_not_safe_init_char:
                 val = base64.b64encode(val)
-                name = "{0}:".format(attrname)  # Add extra colon.
+                name = f"{attrname}:"  # Add extra colon.
             else:
                 name = attrname
-            line = "{attr}: {value}".format(attr=name, value=val.decode("UTF-8"))
+            line = f"{name}: {val.decode('UTF-8')}"
             for i in range(0, len(line), self.max_length):
                 # Split the line into self.max_length.
                 if i != 0:
-                    yield " {0}\n".format(line[i : i + self.max_length])
+                    yield f" {line[i : i + self.max_length]}\n"
                 else:
-                    yield "{0}\n".format(line[i : i + self.max_length])
+                    yield f"{line[i : i + self.max_length]}\n"
 
     def write_entry(self, entry: LDAPEntry) -> None:
         """

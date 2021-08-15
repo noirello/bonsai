@@ -46,8 +46,8 @@ def test_write_entry():
     jpegPhoto = b64decode("".join(jpeg_lines))
 
     assert all(len(line) <= 32 for line in contlines)
-    assert "dn: {0}".format(ent.dn) == contlines[0]
-    assert "cn: {0}\n".format(ent["cn"][0]) in content
+    assert f"dn: {ent.dn}" == contlines[0]
+    assert f"cn: {ent['cn'][0]}\n" in content
     assert content.count("sn:: ") == 2
     assert surnames == set(ent["sn"])
     assert content.count("jpegPhoto:: ") == 1
@@ -67,10 +67,10 @@ def test_write_entries():
         ldif.write_entries(entries, write_version=False)
         content = out.getvalue()
 
-    assert "dn: {0}".format(ent0.dn) in content
-    assert "dn: {0}".format(ent1.dn) in content
-    assert "cn: {0}".format(ent0["cn"][0]) in content
-    assert "cn: {0}".format(ent1["cn"][0]) in content
+    assert f"dn: {ent0.dn}" in content
+    assert f"dn: {ent1.dn}" in content
+    assert f"cn: {ent0['cn'][0]}" in content
+    assert f"cn: {ent1['cn'][0]}" in content
     assert "version" not in content
 
     with StringIO() as out:
@@ -78,8 +78,8 @@ def test_write_entries():
         ldif.write_entries(entries)
         content = out.getvalue()
 
-    assert "dn: {0}".format(ent0.dn) in content
-    assert "dn: {0}".format(ent1.dn) in content
+    assert f"dn: {ent0.dn}" in content
+    assert f"dn: {ent1.dn}" in content
     assert "version: 1" == content.split("\n")[0]
 
 
@@ -98,15 +98,15 @@ def test_write_changes():
         content = out.getvalue()
     lines = content.split("\n")
 
-    assert "dn: {0}".format(ent.dn) == lines.pop(0)  # First line.
+    assert f"dn: {ent.dn}" == lines.pop(0)  # First line.
     assert "changetype: modify" == lines.pop(0)  # Second line.
     assert "add: cn" in lines
-    assert "cn: {0}".format(ent["cn"][0]) == lines[lines.index("add: cn") + 1]
+    assert f"cn: {ent['cn'][0]}" == lines[lines.index("add: cn") + 1]
     assert "add: sn" in lines
     assert set(ent["sn"]) == {lin.split("sn: ")[1] for lin in lines if "sn: " in lin}
     assert "replace: givenName" in lines
     assert (
-        "givenName: {0}".format(ent["givenName"][0])
+        f"givenName: {ent['givenName'][0]}"
         == lines[lines.index("replace: givenName") + 1]
     )
     assert "delete: uidNumber" in lines

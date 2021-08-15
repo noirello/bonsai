@@ -37,7 +37,7 @@ class SID:
                 )
                 self.__subauthorities = tuple(int(sub) for sub in parts[3:])
             except (ValueError, IndexError):
-                raise ValueError("String `{0}` is not a valid SID".format(str_rep))
+                raise ValueError(f"String `{str_rep}` is not a valid SID")
         if bytes_le is not None:
             try:
                 if not isinstance(bytes_le, bytes):
@@ -46,13 +46,13 @@ class SID:
                     "<BB6B", bytes_le[:8]
                 )
                 self.__subauthorities = struct.unpack(
-                    "<{0}I".format(subauth_count), bytes_le[8 : 8 + (subauth_count * 4)]
+                    f"<{subauth_count}I", bytes_le[8 : 8 + (subauth_count * 4)]
                 )
                 self.__identifier_authority = sum(
                     num << ((5 - i) * 8) for i, num in enumerate(identifier_auth)
                 )
             except struct.error as err:
-                raise ValueError("Not a valid binary SID, {0}".format(err))
+                raise ValueError(f"Not a valid binary SID, {err}")
 
     def __str__(self) -> str:
         """ Return the string format of the SID. """
@@ -66,11 +66,11 @@ class SID:
             if self.__subauthorities
             else "0"
         )
-        return "S-1-{0}-{1}".format(ident_auth, subauths)
+        return f"S-1-{ident_auth}-{subauths}"
 
     def __repr__(self) -> str:
         """ The representation of SID class. """
-        return "<{0}: {1}>".format(self.__class__.__name__, str(self))
+        return f"<{self.__class__.__name__}: {str(self)}>"
 
     def __eq__(self, other: Any) -> bool:
         """
@@ -121,11 +121,11 @@ class SID:
             item for item in struct.pack(">Q", self.identifier_authority)[2:]
         ]
         return struct.pack(
-            "<BB6B{0}I".format(subauth_count),
+            f"<BB6B{subauth_count}I",
             self.revision,
             subauth_count,
             *identifier_auth,
-            *self.subauthorities
+            *self.subauthorities,
         )
 
     @property

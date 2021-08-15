@@ -148,9 +148,7 @@ def test_multiple_entries():
 def test_encoded_attributes():
     """ Test parsing base64 encoded attributes. """
     attr = "test"
-    text = "version: 1\ndn: cn=test\ncn:: {0}\n".format(
-        base64.b64encode(attr.encode("UTF-8")).decode("UTF-8")
-    )
+    text = f"version: 1\ndn: cn=test\ncn:: {base64.b64encode(attr.encode('UTF-8')).decode('UTF-8')}\n"
     with StringIO(text) as test:
         reader = LDIFReader(test)
         ent = next(reader)
@@ -170,9 +168,7 @@ def test_load_resource():
         with pytest.raises(LDIFError) as err:
             reader.load_resource("ftp//dummy.com")
             assert "Unsupported URL format" in str(err)
-        url = "file://{0}".format(
-            os.path.join(curdir, os.path.join("testenv", "test.jpeg"))
-        )
+        url = f"file://{os.path.join(curdir, os.path.join('testenv', 'test.jpeg'))}"
         content = reader.load_resource(url)
         assert len(content) != 0
         assert isinstance(content, bytes)

@@ -235,26 +235,26 @@ class ACE:
             )
             return this
         except struct.error as err:
-            raise ValueError("Not a valid binary ACE, {0}".format(err))
+            raise ValueError(f"Not a valid binary ACE, {err}")
 
     def __str__(self):
         """ Return the SDDL string representation of the ACE object. """
-        return "({atype};{flags};{rights};{object_guid};{inherit_object_guid};{sid})".format(
-            atype=self.type.short_name,
-            flags="".join(
-                flg.short_name for flg in sorted(self.flags, key=lambda f: f.value)
-            ),
-            rights="".join(
-                rgt.short_name for rgt in sorted(self.rights, key=lambda r: r.value)
-            ),
-            object_guid=self.object_type if self.object_type else "",
-            inherit_object_guid=self.inherited_object_type
-            if self.inherited_object_type
-            else "",
-            sid=self.trustee_sid.sddl_alias
-            if self.trustee_sid.sddl_alias
-            else str(self.trustee_sid),
+        flags = "".join(
+            flg.short_name for flg in sorted(self.flags, key=lambda f: f.value)
         )
+        rights = "".join(
+            rgt.short_name for rgt in sorted(self.rights, key=lambda r: r.value)
+        )
+        object_guid = self.object_type if self.object_type else ""
+        inherit_object_guid = (
+            self.inherited_object_type if self.inherited_object_type else ""
+        )
+        sid = (
+            self.trustee_sid.sddl_alias
+            if self.trustee_sid.sddl_alias
+            else str(self.trustee_sid)
+        )
+        return f"({self.type.short_name};{flags};{rights};{object_guid};{inherit_object_guid};{sid})"
 
     def to_binary(self) -> bytes:
         """
@@ -380,7 +380,7 @@ class ACL:
             this = cls(ACLRevision(rev), aces)
             return this
         except struct.error as err:
-            raise ValueError("Not a valid binary ACL, {0}".format(err))
+            raise ValueError(f"Not a valid binary ACL, {err}")
 
     def to_binary(self) -> bytes:
         """

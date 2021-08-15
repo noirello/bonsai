@@ -114,7 +114,7 @@ class SecurityDescriptor:
                 dacl = ACL.from_binary(data[offset_dacl:])
             return cls(ctrl, owner_sid, group_sid, sacl, dacl, rev, sbz1)
         except struct.error as err:
-            raise ValueError("Not a valid binary SecurityDescriptor, {0}".format(err))
+            raise ValueError(f"Not a valid binary SecurityDescriptor, {err}")
 
     def to_binary(self) -> bytes:
         """
@@ -206,6 +206,7 @@ class UserAccountControl:
     :param int flags: integer representing the property flags.
     :raises TypeError: if flags parameter is not an int.
     """
+
     def __init__(self, flags: int) -> None:
         if not isinstance(flags, int):
             raise TypeError("The `flags` parameter must be an integer")

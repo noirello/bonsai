@@ -15,9 +15,7 @@ from bonsai.active_directory import SecurityDescriptor
 def client():
     """ Create a client with authentication settings. """
     cfg = get_config()
-    url = "ldap://{host}:{port}".format(
-        host=cfg["SERVER"]["hostname"], port=cfg["SERVER"]["port"],
-    )
+    url = f"ldap://{cfg['SERVER']['hostname']}:{cfg['SERVER']['port']}"
     client = LDAPClient(url)
     client.set_credentials(
         "SIMPLE", user=cfg["SIMPLEAUTH"]["user"], password=cfg["SIMPLEAUTH"]["password"]
