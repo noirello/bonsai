@@ -118,7 +118,7 @@ bonsai
 .. autoattribute:: LDAPClient.sd_flags
 .. autoattribute:: LDAPClient.server_chase_referrals
 
-    *Changed in version 1.2.2:* Default value from *True* to *False*.
+    *Changed in version 1.3.0:* Default value from *True* to *False*.
 
 .. autoattribute:: LDAPClient.tls
 .. autoattribute:: LDAPClient.url

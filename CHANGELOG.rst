@@ -1,6 +1,6 @@
 Changelog
 ==========
-[1.2.2 - UNRELEASED]
+[1.3.0 - UNRELEASED]
 --------------------
 
 Changed
@@ -14,6 +14,8 @@ Added
 
 -  New ignore_referrals attribute for LDAPClient to be able to simply skip
    LDAP referrals in search results.
+-  New submodule for working with Active Directory: ACE, ACL, SecurityDescriptor
+   and UserAccountControl classes.
 
 
 [1.2.1 - 2020-12-31]

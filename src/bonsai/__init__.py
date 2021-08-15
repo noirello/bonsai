@@ -11,4 +11,4 @@ from .ldif import LDIFError, LDIFReader, LDIFWriter
 from .errors import *
 from .utils import *
 
-__version__ = "1.2.2"
+__version__ = "1.3.0"
