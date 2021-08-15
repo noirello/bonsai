@@ -643,7 +643,7 @@ uniqueness_remove(PyObject *list, PyObject *value) {
     Py_ssize_t i;
 
     for (i = 0; i < Py_SIZE(list); i++) {
-        cmp = lower_case_match(((PyListObject *)list)->ob_item[i], value);
+        cmp = lower_case_match(PyList_GET_ITEM(list, i), value);
         if (cmp > 0) {
             if (PyList_SetSlice(list, i, i+1, NULL) == 0) {
                 return 1;

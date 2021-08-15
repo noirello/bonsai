@@ -184,7 +184,7 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
     /* LDAPMod for deleted attributes. */
     for (i = 0; i < Py_SIZE(self->deleted); i++) {
         if (LDAPModList_Add(mods, LDAP_MOD_DELETE | LDAP_MOD_BVALUES,
-                ((PyListObject *)self->deleted)->ob_item[i], NULL) != 0) {
+                PyList_GET_ITEM(self->deleted, i), NULL) != 0) {
             Py_DECREF(mods);
             return NULL;
         }
