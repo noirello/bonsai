@@ -136,11 +136,6 @@ BONSAI_MODULE = Extension(
     define_macros=MACROS,
     library_dirs=LIBDIRS,
 )
-PYTHON_DEPS = []
-
-if sys.version_info.minor < 5:
-    # Typing dependecy for Python 3.4 and earlier.
-    PYTHON_DEPS.append("typing")
 
 # Get long description from the README.rst file.
 with open("README.rst") as file:
@@ -171,7 +166,7 @@ setup(
         "bonsai.tornado",
     ],
     include_package_data=True,
-    install_requires=PYTHON_DEPS,
+    install_requires=[],
     extras_require={"gevent": ["gevent>=1.4.0"], "tornado": ["tornado>=5.1.1"]},
     keywords=[
         "python3",
