@@ -570,6 +570,7 @@ bonsai.active_directory
 .. autoattribute:: SID.identifier_authority
 .. autoattribute:: SID.revision
 .. autoattribute:: SID.sddl_alias
+.. autoattribute:: SID.size
 .. autoattribute:: SID.subauthorities
 
 bonsai.asyncio

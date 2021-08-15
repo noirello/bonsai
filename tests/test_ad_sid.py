@@ -107,3 +107,16 @@ def test_hash():
 def test_sddl_alias(sid, alias):
     """ Test sddl_alias property. """
     assert sid.sddl_alias == alias
+
+
+@pytest.mark.parametrize(
+    "sid",
+    [
+        SID("S-1-1-0"),
+        SID("S-1-5-32-559"),
+        SID("S-1-5-34-3623811015-3361044348-30300820-500"),
+    ],
+)
+def test_size(sid):
+    """ Test size property. """
+    assert sid.size == len(sid.bytes_le)

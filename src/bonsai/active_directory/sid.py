@@ -203,3 +203,9 @@ class SID:
         elif self.identifier_authority == 5 and self.subauthorities[0] == 21:
             alias = domain_aliases.get(self.subauthorities[-1], None)
         return alias
+
+    @property
+    def size(self):
+        """ The binary size of the SID in bytes. """
+        return 8 + len(self.subauthorities) * 4
+
