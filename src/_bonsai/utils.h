@@ -45,7 +45,7 @@ void set_exception(LDAP *ld, int code);
 int add_to_pending_ops(PyObject *pending_ops, int msgid, PyObject *item);
 PyObject *get_from_pending_ops(PyObject *pending_ops, int msgid);
 int del_from_pending_ops(PyObject *pending_ops, int msgid);
-int get_socketpair(PyObject *client, PyObject **tup, SOCKET *csock, SOCKET *ssock);
+int get_socketpair(PyObject **tup, SOCKET *csock, SOCKET *ssock);
 void close_socketpair(PyObject *tup);
 int set_search_params(ldapsearchparams *params, char **attrs, int attrsonly,
         char *base, char *filter, int len, int scope, int sizelimit, double timeout,

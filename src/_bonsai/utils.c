@@ -462,16 +462,22 @@ del_from_pending_ops(PyObject *pending_ops, int msgid) {
     return 0;
 }
 
-/* Get a socketpair in `tup` by calling LDAPClient's _create_socketpair
-   method. The socket descriptors are set to `csock` and `ssock` parameters
-   respectively. If the function call is failed, it returns with -1. */
+/* Get a socketpair in `tup` by calling socket.socketpair(). The socket
+   descriptors are set to `csock` and `ssock` parameters respectively.
+   If the function call is failed, it returns with -1. */
 int
-get_socketpair(PyObject *client, PyObject **tup, SOCKET *csock, SOCKET *ssock) {
+get_socketpair(PyObject **tup, SOCKET *csock, SOCKET *ssock) {
     PyObject *tmp = NULL;
 
-    *tup = PyObject_CallMethod(client, "_create_socketpair", NULL);
-    if (*tup == NULL) return -1;
+    tmp = load_python_object("socket", "socketpair");
+    if (tmp == NULL) return -1;
 
+    *tup = PyObject_CallObject(tmp, NULL);
+    if (*tup == NULL) {
+        Py_DECREF(tmp);
+        return -1;
+    }
+    Py_DECREF(tmp);
     /* Sanity check. */
     if (PyTuple_Check(*tup) && PyTuple_Size(*tup) == 2) {
         tmp = PyTuple_GetItem(*tup, 0);

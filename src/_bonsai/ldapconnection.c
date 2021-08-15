@@ -154,7 +154,7 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 
     if (self->async) {
         /* Init the socketpair. */
-        rc = get_socketpair(self->client, &(self->socketpair), &(self->csock), &ssock);
+        rc = get_socketpair(&(self->socketpair), &(self->csock), &ssock);
         if (rc != 0) {
             free(mech);
             return -1;

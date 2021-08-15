@@ -4,7 +4,6 @@
    :synopsis: For managing LDAP connections.
 
 """
-import socket
 from typing import Any, Union, List, Tuple, Optional, Dict, TypeVar
 
 from .ldapurl import LDAPURL
@@ -46,41 +45,6 @@ class LDAPClient:
         self.__chase_referrals = False
         self.__ignore_referrals = True
         self.__managedsait_ctrl = False
-
-    @staticmethod
-    def _create_socketpair() -> Tuple[socket.socket, socket.socket]:
-        """
-        Create a socketpair that will be used for signaling to select() during
-        the initialisation procedure (and binding on MS Windows).
-        """
-        if hasattr(socket, "socketpair"):
-            return socket.socketpair()
-        # Backward compatibility on Windows from Python 3.5.
-        # Origin: https://gist.github.com/4325783, by Geert Jansen. Public domain.
-        def socketpair(
-            family: Any = socket.AF_INET, type: Any = socket.SOCK_STREAM, proto: int = 0
-        ) -> Tuple[socket.socket, socket.socket]:
-            import errno
-
-            # We create a connected TCP socket. Note the trick with setblocking(0)
-            # that prevents us from having to create a thread.
-            lsock = socket.socket(family, type, proto)
-            lsock.bind(("localhost", 0))
-            lsock.listen(1)
-            addr, port = lsock.getsockname()
-            csock = socket.socket(family, type, proto)
-            csock.setblocking(0)
-            try:
-                csock.connect((addr, port))
-            except socket.error as serr:
-                if serr.errno != errno.WSAEWOULDBLOCK:
-                    raise
-            ssock, addr = lsock.accept()
-            csock.setblocking(1)
-            lsock.close()
-            return (ssock, csock)
-
-        return socketpair()
 
     def set_raw_attributes(self, raw_list: List[str]) -> None:
         """
