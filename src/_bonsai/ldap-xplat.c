@@ -328,8 +328,7 @@ _pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
     rest.tv_nsec = 10000000;
 
     DEBUG("%s", "_pthread_mutex_timedlock");
-    do {
-        rc = pthread_mutex_trylock(mutex);
+    while ((rc = pthread_mutex_trylock(mutex)) == EBUSY) {
 
         gettimeofday(&timenow, NULL);
 
@@ -340,7 +339,7 @@ _pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
         }
         /* Little sleep to avoid hammering on the lock. */
         nanosleep(&rest, NULL);
-    } while (rc == EBUSY);
+    }
 
     return rc;
 }
