@@ -18,6 +18,11 @@ Added
 -  New submodule for working with Active Directory: ACE, ACL, SecurityDescriptor
    and UserAccountControl classes.
 
+Fixed
+~~~~~
+
+-  Deadlock when waiting for finishing the init thread on macOS.
+
 
 [1.2.1 - 2020-12-31]
 --------------------
