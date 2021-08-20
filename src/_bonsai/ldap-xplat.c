@@ -373,8 +373,11 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 
     DEBUG("_ldap_finish_init_thread (async:%d, thread:%lu, timeout:%d, misc:%p)",
             async, thread, *timeout, misc);
-    if (async || *timeout == -1) {
+    if (async) {
         wait_msec = 100;
+    } else if (*timeout == -1) {
+        /* When no timeout is set, then set 60 seconds for waiting on thread. */
+        wait_msec = 60000;
     } else {
         wait_msec = *timeout;
     }
@@ -400,7 +403,7 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 
     switch (rc) {
     case ETIMEDOUT:
-        if (async == 0 && *timeout != -1) {
+        if (async == 0) {
             pthread_cancel(thread);
             set_exception(NULL, LDAP_TIMEOUT);
             free(val->ld);
