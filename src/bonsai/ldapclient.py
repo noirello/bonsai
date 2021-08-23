@@ -94,7 +94,8 @@ class LDAPClient:
         :param str authz_id: the authorization ID for the user.
         :param str keytab: path to a Kerberos keytab for authentication.
         :raises TypeError: if mechanism is not string, or any of the other \
-        parameters are not string or None.
+        parameters are not string or None, or both of the password and \
+        keytab parameters are set.
         """
         if not isinstance(mechanism, str):
             raise TypeError("The mechanism must be a string.")
@@ -111,6 +112,10 @@ class LDAPClient:
             != []
         ):
             raise TypeError("Every parameter must be a string or None.")
+        if password is not None and keytab is not None:
+            raise TypeError(
+                "Either the password or the keytab should be set, but not both."
+            )
         self.__mechanism = mechanism.upper()
         self.__credentials = creds
 

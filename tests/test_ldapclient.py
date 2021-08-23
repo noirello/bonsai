@@ -65,6 +65,10 @@ def test_set_credentials(url):
         client.set_credentials(2323, user=None)
     with pytest.raises(TypeError):
         client.set_credentials("Simple", "Name", 2, None, None)
+    with pytest.raises(TypeError):
+        client.set_credentials(
+            "Simple", user="name", password="password", keytab="./keytab"
+        )
     client.set_credentials("SIMPLE", "cn=admin", "password")
     assert client.mechanism == "SIMPLE"
     assert client.credentials == {

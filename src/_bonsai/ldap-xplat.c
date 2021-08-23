@@ -222,9 +222,7 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
         store.elements[store.count].key = "ccache";
         store.elements[store.count].value = cname;
         store.count++;
-    }
-
-    if (ktname != NULL && strlen(ktname) > 0) {
+    } else if (ktname != NULL && strlen(ktname) > 0) {
         rc = krb5_kt_resolve(ctx, ktname, &keytab);
         if (rc != 0) goto end;
 
