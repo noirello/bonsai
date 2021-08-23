@@ -10,7 +10,7 @@ setKerberos () {
     kadmin.local -q "addprinc -pw p@ssword admin"
     kadmin.local -q "addprinc -pw p@ssword chuck"
     kadmin.local -q "ktadd -k /etc/krb5kdc/kadm5.keytab kadmin/admin"
-    kadmin.local -q "ktadd -k /ect/krb5kdc/kadm5.keytab kadmin/changepw"
+    kadmin.local -q "ktadd -k /etc/krb5kdc/kadm5.keytab kadmin/changepw"
     kadmin.local -q "addprinc -randkey host/bonsai.test"
     kadmin.local -q "ktadd host/bonsai.test"
     kadmin.local -q "add_principal -randkey ldap/bonsai.test"
