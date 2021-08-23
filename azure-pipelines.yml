@@ -118,8 +118,9 @@ stages:
     - script: |
         mkdir /tmp/bonsai
         sudo chown 2001:2000 /tmp/bonsai
-        docker run --cap-add=NET_ADMIN -p 389:389 -p 636:636 -p 88:88 -p 749:749 -p 8000:8000 -d -h bonsai.test --name server bonsai
+        docker run --cap-add=NET_ADMIN -p 389:389 -p 636:636 -p 88:88/udp -p 749:749 -p 8000:8000 -d -h bonsai.test --name server bonsai
         sudo bash -c 'echo -e "\n127.0.0.1        bonsai.test" >> /etc/hosts'
+        sudo scutil --set HostName bonsai.test
         cat /etc/hosts
         ping -c 2 bonsai.test
         sleep 5
