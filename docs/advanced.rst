@@ -645,8 +645,7 @@ Utilities for Active Directory
 .. module:: bonsai.active_directory
     :noindex:
 
-Bonsai has some helper classes and functions to work with Windows-specific attributes in Active
-Directory.
+Bonsai has some helper classes to work with Windows-specific attributes in Active Directory.
 
 Security descriptor
 -------------------
@@ -658,11 +657,26 @@ To parse it use the :meth:`SecurityDescriptor.from_binary()` method::
     >>> import bonsai
     >>> from bonsai.active_directory import SecurityDescriptor
     >>> client = LDAPClient("ldap://localhost")
-    >>> client.set_credentials("SIMPLE", user="cn=user,dc=bonsai,dc=test", password="secret")
+    >>> client.set_credentials("SIMPLE", user="cn=chuck,ou=nerdherd,dc=bonsai,dc=test", password="secret")
     >>> conn = client.connect()
-    >>> entry = conn.search("cn=user,dc=bonsai,dc=test", 0, attrlist=["ntSecurityDescriptor"])[0]
+    >>> entry = conn.search("cn=chuck,ou=nerdherd,dc=bonsai,dc=test", 0, attrlist=["ntSecurityDescriptor"])[0]
     >>> sec_desc = SecurityDescriptor.from_binary(entry["ntSecurityDescriptor"][0])
     >>> print(sec_desc.owner_sid)
     <SID: S-1-5-21-3623811015-3361044348-30300820-1013>
     >>> print(sec_desc.dacl)
     <bonsai.active_directory.acl.ACL object at 0x7f388bc4d6a0>
+
+UserAccountControl
+------------------
+
+The UserAccountControl attribute contains a range of flags which define some important basic
+properties of a user object like whether the account is active or locked, whether the option
+of password change at the next logon is enabled, etc. The :class:`UserAccountControl` helps
+to parse this information::
+
+    >>> from bonsai.active_directory import UserAccountControl
+    >>> uac = UserAccountControl(entry['userAccountControl'][0])
+    >>> uac
+    <bonsai.active_directory.UserAccountControl object at 0x00FC38D0>
+    >>> uac.properties
+    {'script': False, 'accountdisable': False, 'homedir_required': False, 'lockout': False, 'passwd_notreqd': False, 'passwd_cant_change': False, 'encrypted_text_pwd_allowed': False, 'temp_duplicate_account': False, 'normal_account': True, 'interdomain_trust_account': False, 'workstation_trust_account': False, 'server_trust_account': False, 'dont_expire_password': True, 'mns_logon_account': False, 'smartcard_required': False, 'trusted_for_delegation': False, 'not_delegated': False, 'use_des_key_only': False, 'dont_req_preauth': False, 'password_expired': False, 'trusted_to_auth_for_delegation': False, 'partial_secrets_account': False}

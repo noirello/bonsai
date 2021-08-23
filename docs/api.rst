@@ -578,7 +578,7 @@ bonsai.active_directory
 
 
 :class:`UserAccountControl`
-------------
+---------------------------
 
 .. autoclass:: UserAccountControl(flags)
 
