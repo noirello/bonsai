@@ -243,14 +243,18 @@ def test_bind_not_supported_auth(binding):
         _ = binding("DIGESTAUTH", "SCRAM-SHA-1")
 
 
-@pytest.mark.skipif(sys.platform != "linux", reason="Kinit only available on Linux.")
+@pytest.mark.skipif(
+    sys.platform.startswith("win"), reason="Kinit is unavailable on Windows."
+)
 def test_bind_gssapi_kinit(kinit):
     """ Test GSSAPI connection. """
     with kinit() as conn:
         assert "anonymous" != conn.whoami()
 
 
-@pytest.mark.skipif(sys.platform != "linux", reason="Kinit only available on Linux.")
+@pytest.mark.skipif(
+    sys.platform.startswith("win"), reason="Kinit is unavailable on Windows."
+)
 def test_bind_gssapi_with_authzid_kinit(kinit, cfg):
     """ Test GSSAPI connection with authorization ID. """
     authzid = cfg["GSSAPIAUTH"]["authzid"]
