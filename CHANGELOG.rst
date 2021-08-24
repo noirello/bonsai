@@ -1,6 +1,6 @@
 Changelog
 ==========
-[1.3.0 - UNRELEASED]
+[1.3.0 - 2021-08-24]
 --------------------
 
 Changed
@@ -9,7 +9,7 @@ Changed
 -  Drop support for Python 3.5, the module requires at least 3.6.
 -  Allow space in LDAPDN's attribute type. (Issue #52)
 -  LDAPClient.server_chase_referrals is set to False by default.
--  Preventing to set both password and keytab as credential.
+-  Preventing to set both password and keytab as credentials.
 
 Added
 ~~~~~
