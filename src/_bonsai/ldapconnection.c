@@ -741,7 +741,7 @@ ldapconnection_modpasswd(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     if (newpwd.bv_val != NULL && newpwd.bv_len != 0) {
         ber_printf(ber, "to", 0x82U, newpwd.bv_val, newpwd.bv_len);
     }
-    ber_printf(ber, "n}");
+    ber_printf(ber, "}");
 
     /* Load the BER value into a berval. */
     rc = ber_flatten(ber, &data);
