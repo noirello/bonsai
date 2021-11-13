@@ -793,8 +793,12 @@ Utility functions
 .. autofunction:: bonsai.utils.escape_filter_exp(filter_exp)
 
     >>> import bonsai
-    >>> bonsai.escape_filter_exp("(objectclass=*)")
-    '\\28objectclass=\\2A\\29'
+    >>> filter_exp = "(&(userID={0})(objectClass=user))"
+    >>> untrusted_input = "*)(userID=*))(|(userID=*"
+    >>> filter_exp.format(untrusted_input)
+    '(&(userID=*)(userID=*))(|(userID=*)(objectClass=user))'
+    >>> filter_exp.format(bonsai.escape_filter_exp(untrusted_input))
+    '(&(userID=\\2A\\29\\28userID=\\2A\\29\\29\\28|\\28userID=\\2A)(objectClass=user))'
 
 .. function:: bonsai.get_tls_impl_name
 
