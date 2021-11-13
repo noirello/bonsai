@@ -5,50 +5,15 @@
 # https://forums.docker.com/t/docker-for-mac-unattended-installation/27112
 
 # update: https://github.com/docker/for-mac/issues/2359#issuecomment-853420567
+# update: https://github.com/docker/for-mac/issues/2359#issuecomment-943131345
 
-# Use older docker for mac because over 3.3.3 this install process breaks.
-curl https://raw.githubusercontent.com/Homebrew/homebrew-cask/961b663cc4defff883089f33e0e2687bcfd8d934/Casks/docker.rb -o ./docker.rb
+# Docker 4.2.0,70708
+curl https://raw.githubusercontent.com/Homebrew/homebrew-cask/50e49106c339cb88c81df3dabec5e04b7a5d77e1/Casks/docker.rb -o ./docker.rb
 
 brew install --cask ./docker.rb
-# allow the app to run without confirmation
-xattr -d -r com.apple.quarantine /Applications/Docker.app
-
-# preemptively do docker.app's setup to avoid any gui prompts
-sudo /bin/cp /Applications/Docker.app/Contents/Library/LaunchServices/com.docker.vmnetd /Library/PrivilegedHelperTools
-
-# the plist we need used to be in /Applications/Docker.app/Contents/Resources, but
-# is now dynamically generated. So we dynamically generate our own
-sudo tee "/Library/LaunchDaemons/com.docker.vmnetd.plist" > /dev/null <<'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>Label</key>
-	<string>com.docker.vmnetd</string>
-	<key>Program</key>
-	<string>/Library/PrivilegedHelperTools/com.docker.vmnetd</string>
-	<key>ProgramArguments</key>
-	<array>
-		<string>/Library/PrivilegedHelperTools/com.docker.vmnetd</string>
-	</array>
-	<key>RunAtLoad</key>
-	<true/>
-	<key>Sockets</key>
-	<dict>
-		<key>Listener</key>
-		<dict>
-			<key>SockPathMode</key>
-			<integer>438</integer>
-			<key>SockPathName</key>
-			<string>/var/run/com.docker.vmnetd.sock</string>
-		</dict>
-	</dict>
-	<key>Version</key>
-	<string>59</string>
-</dict>
-</plist>
-
-EOF
+sudo /Applications/Docker.app/Contents/MacOS/Docker --unattended --install-privileged-components
+open -a /Applications/Docker.app --args --unattended --accept-license
+while ! /Applications/Docker.app/Contents/Resources/bin/docker info &>/dev/null; do sleep 1; done
 
 sudo /bin/chmod 544 /Library/PrivilegedHelperTools/com.docker.vmnetd
 sudo /bin/chmod 644 /Library/LaunchDaemons/com.docker.vmnetd.plist
