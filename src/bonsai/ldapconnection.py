@@ -388,8 +388,8 @@ class LDAPConnection(BaseLDAPConnection):
         :param float timeout: time limit in seconds for the operation.
 
         :return: if the `new_password` is not set, then the generated \
-        password, None otherwise.
-        :rtype: str|None
+        password, True otherwise.
+        :rtype: str|bool
         """
         return super().modify_password(user, new_password, old_password, timeout)
 

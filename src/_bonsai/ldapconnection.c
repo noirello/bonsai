@@ -1077,7 +1077,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, PyObject *oid) {
     /* LDAP Password Modify operation. */
     } else if (PyUnicode_CompareWithASCIIString(oid,
             "1.3.6.1.4.1.4203.1.11.1") == 0) {
-        if (data == NULL) Py_RETURN_NONE;
+        if (data == NULL) Py_RETURN_TRUE;
 
         ber = ber_init(data);
         if (ber == NULL) {
