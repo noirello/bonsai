@@ -19,6 +19,8 @@ stages:
           python.version: '3.8'
         Python39:
           python.version: '3.9'
+        Python310:
+          python.version: '3.10'
     steps:
     - task: UsePythonVersion@0
       inputs:
@@ -94,6 +96,8 @@ stages:
           python.version: '3.8'
         Python39:
           python.version: '3.9'
+        Python310:
+          python.version: '3.10'
     steps:
     - task: UsePythonVersion@0
       inputs:
@@ -181,9 +185,9 @@ stages:
         newestOpenLDAP:
           openldap.version: '2.5.5'
           python.version: '3.7-slim-buster'
-        betaPython:
+        nightlyPython:
           openldap.version: '2.4.49'
-          python.version: '3.10.0b4-slim-buster'
+          python.version: '3.11.0a4-slim-bullseye'
     steps:
     - script: docker build -t bonsai -f ./.ci/docker/Dockerfile .
       displayName: Build Docker image (server)
