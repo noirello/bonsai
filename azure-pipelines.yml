@@ -183,7 +183,7 @@ stages:
     strategy:
       matrix:
         newestOpenLDAP:
-          openldap.version: '2.5.5'
+          openldap.version: '2.6.1'
           python.version: '3.7-slim-buster'
         nightlyPython:
           openldap.version: '2.4.49'
