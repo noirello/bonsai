@@ -1,5 +1,22 @@
 Changelog
 ==========
+[1.3.1 - UNRELEASED]
+--------------------
+
+Changed
+~~~~~~~
+
+-  Last release with Python 3.6 support, the module no longer will be
+   tested with 3.6.
+
+Fixed
+~~~~~
+
+-  Password hash failure, when new password is set with
+   LDAPConnection.modify_password. (Issue #57, thanks to @morian)
+-  LDAPConnection.modify_password not returning True, when new password
+   is provided. (Issue #59, thanks to @morian)
+
 [1.3.0 - 2021-08-24]
 --------------------
 
