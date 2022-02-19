@@ -1,18 +1,13 @@
-import configparser
 import os
 import sys
 import tempfile
 
 from contextlib import contextmanager
 
-import distutils.sysconfig
-import distutils.ccompiler
 from distutils.errors import CompileError, LinkError
 
-try:
-    from setuptools import setup, Extension, Command
-except ImportError:
-    from distutils.core import setup, Extension, Command
+from setuptools.command.build_ext import build_ext
+from setuptools import setup, Extension
 
 
 @contextmanager
@@ -27,56 +22,60 @@ def silent_stderr():
         os.dup2(old, sys.stderr.fileno())
 
 
-def have_krb5(libs, libdirs=None):
-    """ Check that the target platform has KRB5 support. """
-    code = """
-    #include <krb5.h>
-    #include <gssapi/gssapi_krb5.h>
+class BuildExt(build_ext):
+    def _have_krb5(self, libs: list) -> bool:
+        code = """
+        #include <krb5.h>
+        #include <gssapi/gssapi_krb5.h>
 
-    int main(void) {
-        unsigned int ms = 0;
-        krb5_context ctx;
-        const char *cname = NULL;
-        gss_key_value_set_desc store;
+        int main(void) {
+            unsigned int ms = 0;
+            krb5_context ctx;
+            const char *cname = NULL;
+            gss_key_value_set_desc store;
 
-        store.count = 0;
-        krb5_init_context(&ctx);
-        gss_krb5_ccache_name(&ms, cname, NULL);
-        return 0;
-    }
-    """
-    curdir = os.path.abspath(os.path.dirname(__file__))
-    cfg = configparser.ConfigParser()
-    cfg.read(os.path.join(curdir, "setup.cfg"))
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        name = os.path.join(tmp_dir, "test_krb5")
-        src_name = name + ".c"
-        with open(src_name, "w") as source:
-            source.write(code)
+            store.count = 0;
+            krb5_init_context(&ctx);
+            gss_krb5_ccache_name(&ms, cname, NULL);
+            return 0;
+        }
+        """
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            name = os.path.join(tmp_dir, "test_krb5")
+            src_name = name + ".c"
+            with open(src_name, "w") as source:
+                source.write(code)
+            comp = self.compiler
+            try:
+                with silent_stderr():
+                    if "-coverage" in os.getenv("CFLAGS", ""):
+                        # If coverage flag is set.
+                        libs.append("gcov")
+                    comp.link_executable(
+                        comp.compile([src_name], output_dir=tmp_dir),
+                        name,
+                        libraries=libs,
+                        library_dirs=self.library_dirs.copy(),
+                    )
+            except (CompileError, LinkError):
+                return False
+            else:
+                return True
 
-        comp = distutils.ccompiler.new_compiler()
-        distutils.sysconfig.customize_compiler(comp)
-        for include_dir in cfg.get("build_ext", "include_dirs", fallback="").split(":"):
-            if include_dir:
-                comp.add_include_dir(include_dir)
-        for library_dir in cfg.get("build_ext", "library_dirs", fallback="").split(":"):
-            if library_dir:
-                comp.add_library_dir(library_dir)
-        try:
-            with silent_stderr():
-                if "-coverage" in os.getenv("CFLAGS", ""):
-                    # If coverage flag is set.
-                    libs.append("gcov")
-                comp.link_executable(
-                    comp.compile([src_name], output_dir=tmp_dir),
-                    name,
-                    libraries=libs,
-                    library_dirs=libdirs,
+    def build_extensions(self) -> None:
+        if sys.platform != "win32":
+            if self._have_krb5(["krb5", "gssapi"]):
+                self.libraries.extend(["krb5", "gssapi"])
+                self.define.append(("HAVE_KRB5", 1))
+            elif self._have_krb5(["krb5", "gssapi_krb5"]):
+                self.libraries.extend(["krb5", "gssapi_krb5"])
+                self.define.append(("HAVE_KRB5", 1))
+            else:
+                print(
+                    "INFO: Kerberos headers and libraries are not found."
+                    " Additional GSSAPI capabilities won't be installed."
                 )
-        except (CompileError, LinkError):
-            return False
-        else:
-            return True
+        return super().build_extensions()
 
 
 SOURCES = [
@@ -113,17 +112,6 @@ if sys.platform == "win32":
     MACROS.append(("WIN32", 1))
 else:
     LIBS = ["ldap", "lber"]
-    if have_krb5(["krb5", "gssapi"], LIBDIRS):
-        LIBS.extend(["krb5", "gssapi"])
-        MACROS.append(("HAVE_KRB5", 1))
-    elif have_krb5(["krb5", "gssapi_krb5"], LIBDIRS):
-        LIBS.extend(["krb5", "gssapi_krb5"])
-        MACROS.append(("HAVE_KRB5", 1))
-    else:
-        print(
-            "INFO: Kerberos headers and libraries are not found."
-            " Additional GSSAPI capabilities won't be installed."
-        )
 
 SOURCES = [os.path.join("src/_bonsai", x) for x in SOURCES]
 DEPENDS = [os.path.join("src/_bonsai", x) for x in DEPENDS]
@@ -157,6 +145,7 @@ setup(
     long_description=LONG_DESC,
     license="MIT",
     ext_modules=[BONSAI_MODULE],
+    cmdclass={"build_ext": BuildExt},
     package_dir={"bonsai": "src/bonsai"},
     packages=[
         "bonsai",
@@ -188,9 +177,10 @@ setup(
         "Operating System :: Unix",
         "Programming Language :: C",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: Implementation :: CPython",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: System :: Systems Administration :: Authentication/Directory :: LDAP",
