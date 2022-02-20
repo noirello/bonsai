@@ -12,7 +12,7 @@ from setuptools import setup, Extension
 
 @contextmanager
 def silent_stderr():
-    """ Shush stderr for receiving unnecessary errors during setup. """
+    """Shush stderr for receiving unnecessary errors during setup."""
     devnull = open(os.devnull, "w")
     old = os.dup(sys.stderr.fileno())
     os.dup2(devnull.fileno(), sys.stderr.fileno())
@@ -23,6 +23,8 @@ def silent_stderr():
 
 
 class BuildExt(build_ext):
+    """Custom build_ext to test Kerberose capability."""
+
     def _have_krb5(self, libs: list) -> bool:
         code = """
         #include <krb5.h>
@@ -55,7 +57,7 @@ class BuildExt(build_ext):
                         comp.compile([src_name], output_dir=tmp_dir),
                         name,
                         libraries=libs,
-                        library_dirs=self.library_dirs.copy(),
+                        library_dirs=self.library_dirs,
                     )
             except (CompileError, LinkError):
                 return False
@@ -65,11 +67,11 @@ class BuildExt(build_ext):
     def build_extensions(self) -> None:
         if sys.platform != "win32":
             if self._have_krb5(["krb5", "gssapi"]):
-                self.libraries.extend(["krb5", "gssapi"])
-                self.define.append(("HAVE_KRB5", 1))
+                self.extensions[0].libraries.extend(["krb5", "gssapi"])
+                self.extensions[0].define_macros.append(("HAVE_KRB5", 1))
             elif self._have_krb5(["krb5", "gssapi_krb5"]):
-                self.libraries.extend(["krb5", "gssapi_krb5"])
-                self.define.append(("HAVE_KRB5", 1))
+                self.extensions[0].libraries.extend(["krb5", "gssapi_krb5"])
+                self.extensions[0].define_macros.append(("HAVE_KRB5", 1))
             else:
                 print(
                     "INFO: Kerberos headers and libraries are not found."
@@ -186,4 +188,3 @@ setup(
         "Topic :: System :: Systems Administration :: Authentication/Directory :: LDAP",
     ],
 )
-
