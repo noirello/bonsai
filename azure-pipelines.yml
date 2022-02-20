@@ -187,7 +187,7 @@ stages:
           python.version: '3.7-slim-buster'
         nightlyPython:
           openldap.version: '2.4.49'
-          python.version: '3.11.0a4-slim-bullseye'
+          python.version: '3.11.0a5-slim-bullseye'
     steps:
     - script: docker build -t bonsai -f ./.ci/docker/Dockerfile .
       displayName: Build Docker image (server)

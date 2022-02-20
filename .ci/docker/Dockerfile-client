@@ -6,7 +6,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libs
     groff groff-base gdb libsasl2-dev krb5-user iputils-ping libsasl2-modules-gssapi-mit libkrb5-dev
 RUN curl -sL https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-${OPENLDAP_VERSION}.tgz | tar xzf -
 
-WORKDIR openldap-${OPENLDAP_VERSION}/
+WORKDIR /openldap-${OPENLDAP_VERSION}
 RUN ./configure --with-tls=openssl --disable-slapd --enable-backends=no
 RUN make depend && make && make install
 
