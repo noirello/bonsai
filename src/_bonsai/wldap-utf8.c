@@ -1087,6 +1087,13 @@ create_credentials(CredHandle *hcred, wchar_t *package_name, sasl_defaults_t *de
     wchar_t *wpasswd = NULL;
     wchar_t *wrealm = NULL;
 
+    if (strcmp(defs->authcid, "") == 0 && strcmp(defs->passwd, "") == 0) {
+        /* If authentication id and password are not set, then
+           use NULL SEC_WINNT_AUTH_IDENTITY for logon user credentials. */
+        return AcquireCredentialsHandleW(NULL, package_name, SECPKG_CRED_OUTBOUND,
+            NULL, NULL, NULL, NULL, hcred, NULL);
+    }
+
     memset(&wincreds, 0, sizeof(wincreds));
 
     if (rc = convert_to_wcs(defs->authcid, &wauthcid) != LDAP_SUCCESS) goto end;
