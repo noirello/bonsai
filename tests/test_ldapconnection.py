@@ -336,6 +336,22 @@ def test_bind_gssapi_keytab(cfg, ktpath):
     conn = client.connect()
     assert conn.whoami() == "dn:cn=admin,dc=bonsai,dc=test"
 
+@pytest.mark.skipif(
+    not sys.platform.startswith("win"), reason="No Windows logon credentials",
+)
+def test_bind_winlogon(cfg):
+    """ Test connection with Windows logon credentials """
+    expected_user = f"u:{os.getenv('userdomain')}\\{os.getlogin()}"
+    client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])
+    client.set_credentials("GSSAPI")
+    with client.connect() as conn:
+        assert conn.whoami() == expected_user
+    client.set_credentials("GSS-SPNEGO")
+    with client.connect() as conn:
+        assert conn.whoami() == expected_user
+    client.set_credentials("DIGEST-MD5")
+    with pytest.raises(bonsai.AuthenticationError):
+        _ = client.connect()
 
 @pytest.mark.skipif(
     not sys.platform.startswith("win"), reason="No GSS-SPNEGO mech on Ubuntu and Mac"
