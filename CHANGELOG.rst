@@ -8,6 +8,9 @@ Changed
 
 -  Last release with Python 3.6 support, the module no longer will be
    tested with 3.6.
+-  Providing empty user and password with GSSAPI/GSS-SPNGO mechanisms
+   will use the logon credentials for authentication on Windows instead
+   of an anonymous bind.
 
 Fixed
 ~~~~~
