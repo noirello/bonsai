@@ -98,6 +98,7 @@ bonsai
     [{'dn': <LDAPDN cn=jeff,ou=nerdherd,dc=bonsai,dc=test>, 'sn': [b'Barnes'], 'cn': [b'jeff'],
     'givenName': ['Jeff']}]
 
+.. automethod:: LDAPClient.set_sasl_security_properties(no_anonymous=None, no_dict=None, no_plain=None, forward_sec=None, pass_cred=None, min_ssf=None, max_ssf=None, max_bufsize=None)
 .. automethod:: LDAPClient.set_sd_flags(flags)
 .. automethod:: LDAPClient.set_server_chase_referrals(val)
 .. automethod:: LDAPClient.set_url(url)

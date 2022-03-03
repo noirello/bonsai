@@ -12,6 +12,12 @@ Changed
    will use the logon credentials for authentication on Windows instead
    of an anonymous bind.
 
+Added
+~~~~~
+
+-  LDAPClient.set_sasl_security_properties method and sasl_security_properties
+   read-only property for setting SASL security properties.
+
 Fixed
 ~~~~~
 
