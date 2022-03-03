@@ -10,7 +10,7 @@ from bonsai.ldapconnection import LDAPConnection
 
 @pytest.fixture(scope="module")
 def url():
-    """ Get the LDAPURL. """
+    """Get the LDAPURL."""
     cfg = get_config()
     url = "ldap://%s:%s" % (cfg["SERVER"]["hostip"], cfg["SERVER"]["port"])
     return bonsai.LDAPURL(url)
@@ -18,14 +18,14 @@ def url():
 
 @pytest.fixture(scope="module")
 def ldaps_url():
-    """ Get the LDAPURL for LDAP over TLS. """
+    """Get the LDAPURL for LDAP over TLS."""
     cfg = get_config()
     url = "ldaps://%s" % (cfg["SERVER"]["hostname"])
     return bonsai.LDAPURL(url)
 
 
 def test_ldapurl(url):
-    """ Test setting LDAPURL. """
+    """Test setting LDAPURL."""
     cli = LDAPClient(url)
     assert cli.url == url
     with pytest.raises(TypeError):
@@ -35,18 +35,18 @@ def test_ldapurl(url):
 
 
 def test_connect(client):
-    """ Test connect method. """
+    """Test connect method."""
     assert client.connect() is not None
 
 
 def test_rootdse(client):
-    """ Test receiving root DSE. """
+    """Test receiving root DSE."""
     root_dse = client.get_rootDSE()
     assert root_dse["supportedLDAPVersion"][0] == 3
 
 
 def test_raw_attributes(client):
-    """ Test setting raw attributes to keep in bytearray format. """
+    """Test setting raw attributes to keep in bytearray format."""
     with pytest.raises(TypeError):
         client.set_raw_attributes([5])
     with pytest.raises(ValueError):
@@ -59,7 +59,7 @@ def test_raw_attributes(client):
 
 
 def test_set_credentials(url):
-    """ Test set_credentials method, mechanism and credentials properties. """
+    """Test set_credentials method, mechanism and credentials properties."""
     client = LDAPClient(url)
     with pytest.raises(TypeError):
         client.set_credentials(2323, user=None)
@@ -83,7 +83,7 @@ def test_set_credentials(url):
 
 
 def test_vendor_info():
-    """ Test vendor information. """
+    """Test vendor information."""
     info = bonsai.get_vendor_info()
     assert len(info) == 2
     assert isinstance(info[0], str)
@@ -91,13 +91,13 @@ def test_vendor_info():
 
 
 def test_tls_impl_name():
-    """ Test TLS implementation name. """
+    """Test TLS implementation name."""
     tls_impl = bonsai.get_tls_impl_name()
     assert tls_impl in ("GnuTLS", "MozNSS", "OpenSSL", "SChannel")
 
 
 def test_debug():
-    """ Test setting debug mode. """
+    """Test setting debug mode."""
     import subprocess
 
     code = "import bonsai; bonsai.set_debug(True); bonsai.LDAPClient('ldap://a.com').connect()"
@@ -112,7 +112,7 @@ def test_debug():
 
 @pytest.mark.timeout(18)
 def test_connection_timeout(client):
-    """ Test connection timeout. """
+    """Test connection timeout."""
     with pytest.raises(TypeError):
         _ = client.connect(timeout="Wrong")
     with pytest.raises(ValueError):
@@ -125,7 +125,7 @@ def test_connection_timeout(client):
 
 
 def test_ppolicy(url):
-    """ Test password policy setting. """
+    """Test password policy setting."""
     client = LDAPClient(url)
     with pytest.raises(TypeError):
         client.set_password_policy("F")
@@ -149,7 +149,7 @@ def test_ppolicy(url):
 
 
 def test_extended_dn(url):
-    """ Test extended dn control. """
+    """Test extended dn control."""
     client = LDAPClient(url)
     with pytest.raises(TypeError):
         client.set_extended_dn("A")
@@ -168,7 +168,7 @@ def test_extended_dn(url):
 
 
 def test_readonly_attributes(client):
-    """ Test read-only attributes of LDAPClient. """
+    """Test read-only attributes of LDAPClient."""
     with pytest.raises(ValueError):
         client.mechanism = "SIMPLE"
     with pytest.raises(ValueError):
@@ -178,7 +178,7 @@ def test_readonly_attributes(client):
 
 
 def test_auto_acquire_prop(client):
-    """ Test auto_page_acquire property. """
+    """Test auto_page_acquire property."""
     with pytest.raises(TypeError):
         client.set_auto_page_acquire("A")
     assert client.auto_page_acquire
@@ -187,7 +187,7 @@ def test_auto_acquire_prop(client):
 
 
 def test_server_chase_referrals(client):
-    """ Test server_chase_referrals property. """
+    """Test server_chase_referrals property."""
     with pytest.raises(TypeError):
         client.set_server_chase_referrals(2)
     assert client.server_chase_referrals == False
@@ -196,7 +196,7 @@ def test_server_chase_referrals(client):
 
 
 def test_ignore_referrals(client):
-    """ Test ignore_referrals property. """
+    """Test ignore_referrals property."""
     with pytest.raises(TypeError):
         client.set_ignore_referrals("A")
     assert client.ignore_referrals
@@ -205,7 +205,7 @@ def test_ignore_referrals(client):
 
 
 def test_managedsait(client):
-    """ Test managedsait property. """
+    """Test managedsait property."""
     with pytest.raises(TypeError):
         client.set_managedsait("B")
     assert not client.managedsait
@@ -217,7 +217,7 @@ def test_managedsait(client):
     get_config()["SERVER"]["has_tls"] == "False", reason="TLS is not set"
 )
 def test_ldap_over_tls(ldaps_url):
-    """ Test LDAP over TLS connection. """
+    """Test LDAP over TLS connection."""
     client = LDAPClient(ldaps_url)
     client.set_cert_policy("ALLOW")
     client.set_ca_cert(None)
@@ -234,7 +234,7 @@ def test_ldap_over_tls(ldaps_url):
     get_config()["SERVER"]["has_tls"] == "False", reason="TLS is not set"
 )
 def test_starttls(url):
-    """ Test STARTTLS connection. """
+    """Test STARTTLS connection."""
     client = LDAPClient(url, True)
     client.set_cert_policy("ALLOW")
     client.set_ca_cert(None)
@@ -252,7 +252,7 @@ def test_starttls(url):
 )
 @pytest.mark.timeout(18)
 def test_tls_timeout(url):
-    """ Test TLS connection timeout. """
+    """Test TLS connection timeout."""
     client = LDAPClient(url, True)
     client.set_cert_policy("ALLOW")
     client.set_ca_cert(None)
@@ -266,6 +266,64 @@ def test_tls_timeout(url):
     sys.platform != "linux", reason="No IPC support on Windows or Mac with Docker"
 )
 def test_ldapi():
-    """ Test making connection via IPC. """
+    """Test making connection via IPC."""
     client = LDAPClient("ldapi://%2Ftmp%2Fbonsai%2Fldapi")
     assert client.connect() is not None
+
+
+def test_set_sasl_sec_properties(url):
+    client = LDAPClient(url)
+    with pytest.raises(TypeError):
+        client.set_sasl_security_properties(no_anonymous="false")
+    with pytest.raises(TypeError):
+        client.set_sasl_security_properties(no_anonymous=True, no_dict="false")
+    with pytest.raises(TypeError):
+        client.set_sasl_security_properties(no_anonymous=True, no_plain=0)
+    with pytest.raises(TypeError):
+        client.set_sasl_security_properties(
+            no_anonymous=True, no_plain=True, forward_sec=-2
+        )
+    with pytest.raises(TypeError):
+        client.set_sasl_security_properties(
+            no_anonymous=True, no_plain=True, min_ssf="aas"
+        )
+    with pytest.raises(TypeError):
+        client.set_sasl_security_properties(max_ssf="false")
+    with pytest.raises(TypeError):
+        client.set_sasl_security_properties(max_bufsize=0.5)
+    with pytest.raises(ValueError):
+        client.set_sasl_security_properties(min_ssf=-123)
+    with pytest.raises(ValueError):
+        client.set_sasl_security_properties(max_ssf=-1)
+    with pytest.raises(ValueError):
+        client.set_sasl_security_properties(max_bufsize=-1)
+    client.set_sasl_security_properties(no_anonymous=True)
+    assert client.sasl_security_properties == "noanonymous"
+    client.set_sasl_security_properties(no_anonymous=True, no_plain=True)
+    assert client.sasl_security_properties == "noanonymous,noplain"
+    client.set_sasl_security_properties(
+        no_anonymous=True, no_plain=True, forward_sec=True
+    )
+    assert client.sasl_security_properties == "noanonymous,noplain,forwardsec"
+    client.set_sasl_security_properties(no_plain=True, pass_cred=True)
+    assert client.sasl_security_properties == "noplain,passcred"
+    client.set_sasl_security_properties(max_ssf=128)
+    assert client.sasl_security_properties == "maxssf=128"
+    client.set_sasl_security_properties(no_plain=True, max_ssf=128)
+    assert client.sasl_security_properties == "noplain,maxssf=128"
+    client.set_sasl_security_properties(
+        no_anonymous=True,
+        no_dict=True,
+        no_plain=True,
+        forward_sec=True,
+        pass_cred=True,
+        min_ssf=16,
+        max_ssf=1024,
+        max_bufsize=2048,
+    )
+    assert (
+        client.sasl_security_properties
+        == "noanonymous,nodict,noplain,forwardsec,passcred,minssf=16,maxssf=1024,maxbufsize=2048"
+    )
+    with client.connect() as conn:
+        assert conn is not None
