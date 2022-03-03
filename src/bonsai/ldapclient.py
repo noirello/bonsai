@@ -26,7 +26,7 @@ class LDAPClient:
     """
 
     def __init__(self, url: Union[LDAPURL, str] = "ldap://", tls: bool = False) -> None:
-        """ init method. """
+        """Init method."""
         self.__tls = tls
         self.set_url(url)
         self.__credentials = None  # type: Optional[Dict[str, Optional[str]]]
@@ -45,6 +45,7 @@ class LDAPClient:
         self.__chase_referrals = False
         self.__ignore_referrals = True
         self.__managedsait_ctrl = False
+        self.__sasl_sec_props = None
 
     def set_raw_attributes(self, raw_list: List[str]) -> None:
         """
@@ -380,9 +381,87 @@ class LDAPClient:
         else:
             self.__tls = False
 
+    def set_sasl_security_properties(
+        self,
+        no_anonymous: Optional[bool] = None,
+        no_dict: Optional[bool] = None,
+        no_plain: Optional[bool] = None,
+        forward_sec: Optional[bool] = None,
+        pass_cred: Optional[bool] = None,
+        min_ssf: Optional[int] = None,
+        max_ssf: Optional[int] = None,
+        max_bufsize: Optional[int] = None,
+    ) -> None:
+        """
+        Set security properties for SASL mechanism.
+
+        :param bool no_anonymous: Flag for forbiding anonymous logins.
+        :param bool no_dict: Flag for making the mechanism not susceptable \
+        to passive dictionary attack.
+        :param bool no_plain: Flag for making mechanism not susceptable to \
+        simple passive (eavesdropping) attack.
+        :param bool forward_sec: Flag for setting forward secrecy between \
+        sessions.
+        :param bool pass_cred: Flag for requiring mechanisms which pass \
+        client credentials.
+        :param int min_ssf: The minimum security strength factor.
+        :param int max_ssf: The maximum security strength factor.
+        :param int max_bufsize: The maximum buffer size.
+        :raises TypeError: If the flag parameters are not bool types or \
+        the min_ssf, max_ssf and max_bufsize parameters are not int.
+        :raises ValueError: If the min_ssf, max_ssf and max_bufsize \
+        parameters are less than 0.
+        """
+        sasl_sec_props = {}
+        if any(
+            not isinstance(param, bool) and param is not None
+            for param in (no_anonymous, no_dict, no_plain, forward_sec, pass_cred)
+        ):
+            raise TypeError(
+                "Any set flag parameter (no_anonymous, no_dict, no_plain,"
+                " forward_sec, pass_cred) must be bool."
+            )
+        if min_ssf is not None and not isinstance(min_ssf, int):
+            raise TypeError("The min_ssf parameter must be int.")
+        if max_ssf is not None and not isinstance(max_ssf, int):
+            raise TypeError("The max_ssf parameter must be int.")
+        if max_bufsize is not None and not isinstance(max_bufsize, int):
+            raise TypeError("The max_bufsize parameter must be int.")
+        if no_anonymous is True:
+            sasl_sec_props["noanonymous"] = True
+        if no_dict is True:
+            sasl_sec_props["nodict"] = True
+        if no_plain is True:
+            sasl_sec_props["noplain"] = True
+        if forward_sec is True:
+            sasl_sec_props["forwardsec"] = True
+        if pass_cred is True:
+            sasl_sec_props["passcred"] = True
+        if min_ssf is not None:
+            if min_ssf >= 0:
+                sasl_sec_props["minssf"] = min_ssf
+            else:
+                raise ValueError("The min_ssf parameter must be greater or equal to 0.")
+        if max_ssf is not None:
+            if max_ssf >= 0:
+                sasl_sec_props["maxssf"] = max_ssf
+            else:
+                raise ValueError("The max_ssf parameter must be greater or equal to 0.")
+        if max_bufsize is not None:
+            if max_bufsize >= 0:
+                sasl_sec_props["maxbufsize"] = max_bufsize
+            else:
+                raise ValueError(
+                    "The max_bufsize parameter must be greater or equal to 0."
+                )
+        self.__sasl_sec_props = ",".join(
+            key if val is True else "{0}={1}".format(key, val)
+            for key, val in sasl_sec_props.items()
+        )
+
     @property
     def url(self) -> LDAPURL:
-        """ The URL of the directory server. """
+        """The URL of the directory server."""
         return self.__url
 
     @url.setter
@@ -391,7 +470,7 @@ class LDAPClient:
 
     @property
     def mechanism(self) -> str:
-        """ The chosen mechanism for authentication. It cannot be set. """
+        """The chosen mechanism for authentication. It cannot be set."""
         return self.__mechanism
 
     @mechanism.setter
@@ -400,7 +479,7 @@ class LDAPClient:
 
     @property
     def credentials(self) -> Optional[Dict[str, Optional[str]]]:
-        """ A dict with the credential information. It cannot be set. """
+        """A dict with the credential information. It cannot be set."""
         return self.__credentials
 
     @credentials.setter
@@ -409,7 +488,7 @@ class LDAPClient:
 
     @property
     def tls(self) -> bool:
-        """ A bool about TLS connection is required. It cannot be set."""
+        """A bool about TLS connection is required. It cannot be set."""
         return self.__tls
 
     @tls.setter
@@ -418,7 +497,7 @@ class LDAPClient:
 
     @property
     def cert_policy(self) -> int:
-        """ The certification policy. """
+        """The certification policy."""
         return self.__cert_policy
 
     @cert_policy.setter
@@ -427,7 +506,7 @@ class LDAPClient:
 
     @property
     def ca_cert(self) -> Optional[str]:
-        """ The name of the CA certificate. """
+        """The name of the CA certificate."""
         return self.__ca_cert
 
     @ca_cert.setter
@@ -436,7 +515,7 @@ class LDAPClient:
 
     @property
     def ca_cert_dir(self) -> Optional[str]:
-        """ The path to the CA certificate. """
+        """The path to the CA certificate."""
         return self.__ca_cert_dir
 
     @ca_cert_dir.setter
@@ -445,7 +524,7 @@ class LDAPClient:
 
     @property
     def client_cert(self) -> Optional[str]:
-        """ The name of the client certificate. """
+        """The name of the client certificate."""
         return self.__client_cert
 
     @client_cert.setter
@@ -454,7 +533,7 @@ class LDAPClient:
 
     @property
     def client_key(self) -> Optional[str]:
-        """ The key file to the client's certificate. """
+        """The key file to the client's certificate."""
         return self.__client_key
 
     @client_key.setter
@@ -463,7 +542,7 @@ class LDAPClient:
 
     @property
     def raw_attributes(self) -> List[str]:
-        """ A list of attributes that should be kept in byte format. """
+        """A list of attributes that should be kept in byte format."""
         return self.__raw_list
 
     @raw_attributes.setter
@@ -472,7 +551,7 @@ class LDAPClient:
 
     @property
     def password_policy(self) -> bool:
-        """ The status of using password policy. """
+        """The status of using password policy."""
         return self.__ppolicy_ctrl
 
     @password_policy.setter
@@ -493,7 +572,7 @@ class LDAPClient:
 
     @property
     def sd_flags(self) -> Optional[int]:
-        """ The flags for the Windows security descriptor. """
+        """The flags for the Windows security descriptor."""
         return self.__sd_flags
 
     @sd_flags.setter
@@ -537,12 +616,17 @@ class LDAPClient:
 
     @property
     def managedsait(self) -> bool:
-        """ The status of using ManageDsaIT control. """
+        """The status of using ManageDsaIT control."""
         return self.__managedsait_ctrl
 
     @managedsait.setter
     def managedsait(self, value: bool) -> None:
         self.set_managedsait(value)
+
+    @property
+    def sasl_security_properties(self) -> Optional[str]:
+        """The SASL security properties."""
+        return self.__sasl_sec_props
 
     def get_rootDSE(self) -> Optional[LDAPEntry]:
         """
@@ -601,4 +685,3 @@ class LDAPClient:
             return self.__async_conn(self, **kwargs).open(timeout)
         else:
             return LDAPConnection(self).open(timeout)
-

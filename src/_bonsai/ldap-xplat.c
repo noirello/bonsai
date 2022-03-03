@@ -101,6 +101,7 @@ end:
     /* Clean up the mess. */
     CloseHandle(thread);
     free(val->url);
+    free(val->sasl_sec_props);
     free(val);
     return retval;
 }
@@ -469,6 +470,7 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
 end:
     /* Clean-up. */
     free(val->url);
+    free(val->sasl_sec_props);
     pthread_mutex_destroy(val->mux);
     free(val->mux);
     free(val);
@@ -721,6 +723,17 @@ ldap_init_thread_func(void *params) {
     if (data->cert_policy != -1) {
         set_cert_policy(data->ld, data->cert_policy);
     }
+#ifndef WIN32
+    /* SASL security poperties settings on available on Unix. */
+    if (data->sasl_sec_props != NULL) {
+        DEBUG("set sasl sec properties: %s", data->sasl_sec_props);
+        rc = ldap_set_option(data->ld, LDAP_OPT_X_SASL_SECPROPS, (void *)data->sasl_sec_props);
+        if (rc != LDAP_SUCCESS) {
+            data->retval = rc;
+            goto end;
+        }
+    }
+#endif
 
 #if !defined(WIN32) && LDAP_VENDOR_VERSION > 20443
     /* The asynchronous connection build only works on unix systems from

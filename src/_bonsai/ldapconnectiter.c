@@ -484,12 +484,23 @@ create_init_thread_data(PyObject *client, SOCKET sock) {
     data->referrals = PyObject_IsTrue(tmp);
     Py_DECREF(tmp);
 
+     /* Set sasl sec properties from LDAPClient. */
+    tmp = PyObject_GetAttrString(client, "sasl_security_properties");
+    if (tmp == NULL) goto error;
+    if (tmp != Py_None) {
+        data->sasl_sec_props = PyObject2char(tmp);
+    } else {
+        data->sasl_sec_props = NULL;
+    }
+    Py_DECREF(tmp);
+
     data->ld = NULL;
     data->sock = sock;
     data->retval = 0;
     return data;
 error:
     free(data->url);
+    free(data->sasl_sec_props);
     free(data);
     PyErr_BadInternalCall();
     return NULL;

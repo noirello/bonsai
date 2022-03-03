@@ -71,6 +71,7 @@ typedef struct ldap_conndata_s {
 typedef struct ldap_thread_data_s {
     LDAP *ld;
     char *url;
+    char *sasl_sec_props;
     int referrals;
     int cert_policy;
     int retval;
