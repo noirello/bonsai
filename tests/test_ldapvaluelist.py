@@ -120,9 +120,9 @@ def test_clear():
 def test_readonly_attrs():
     """ Test modifying read-only attributes. """
     lvl = LDAPValueList((1, 2, 3))
-    with pytest.raises(ValueError):
+    with pytest.raises(AttributeError):
         lvl.added = [1, 2, 3]
-    with pytest.raises(ValueError):
+    with pytest.raises(AttributeError):
         lvl.deleted = [1, 2, 3]
-    with pytest.raises(TypeError):
+    with pytest.raises(AttributeError):
         lvl._status_dict = {"status": 2}

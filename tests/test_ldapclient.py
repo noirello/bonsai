@@ -169,11 +169,11 @@ def test_extended_dn(url):
 
 def test_readonly_attributes(client):
     """Test read-only attributes of LDAPClient."""
-    with pytest.raises(ValueError):
+    with pytest.raises(AttributeError):
         client.mechanism = "SIMPLE"
-    with pytest.raises(ValueError):
+    with pytest.raises(AttributeError):
         client.credentials = {"user": "test", "password": "test"}
-    with pytest.raises(ValueError):
+    with pytest.raises(AttributeError):
         client.tls = False
 
 

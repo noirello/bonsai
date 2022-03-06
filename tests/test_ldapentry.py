@@ -392,7 +392,7 @@ def test_password_modify(client):
 def test_extended_dn_attr():
     """ Test that extended dn attribute is read only. """
     entry = LDAPEntry("cn=test")
-    with pytest.raises(ValueError):
+    with pytest.raises(AttributeError):
         entry.extended_dn = "cn=test2"
 
 

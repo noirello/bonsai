@@ -49,7 +49,7 @@ def test_references_prop(host_url):
     reflist = [LDAPURL("ldap://localhost"), host_url]
     ref = LDAPReference(client, reflist)
     assert ref.references == reflist
-    with pytest.raises(ValueError):
+    with pytest.raises(AttributeError):
         ref.references = None
 
 

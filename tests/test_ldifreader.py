@@ -116,7 +116,7 @@ def test_resource_handlers():
     ldif = LDIFReader(inp)
     assert isinstance(ldif.resource_handlers, dict)
     assert "file" in ldif.resource_handlers.keys()
-    with pytest.raises(ValueError):
+    with pytest.raises(AttributeError):
         ldif.resource_handlers = {"New": "dict"}
     ldif.resource_handlers["http"] = lambda x: x
     assert "http" in ldif.resource_handlers.keys()
