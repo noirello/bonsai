@@ -44,7 +44,3 @@ class LDAPReference:
     def references(self) -> List[LDAPURL]:
         """ The list of LDAPURLs of the references. """
         return self.__refs
-
-    @references.setter
-    def references(self, value: Any) -> None:
-        raise ValueError("The references attribute cannot be set.")

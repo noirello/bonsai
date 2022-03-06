@@ -205,10 +205,6 @@ class LDIFReader:
         """
         return self.__resource_handlers
 
-    @resource_handlers.setter
-    def resource_handlers(self, value: Any):
-        raise ValueError("The resource_handlers attribute cannot be set.")
-
 
 class LDIFWriter:
     """

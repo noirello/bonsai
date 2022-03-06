@@ -206,10 +206,6 @@ class LDAPEntry(ldapentry):
         """
         return self.__extended_dn
 
-    @extended_dn.setter
-    def extended_dn(self, value: Any) -> None:
-        raise ValueError("Extended_dn attribute cannot be set.")
-
     def change_attribute(self, name: str, optype: int, *values: Tuple) -> None:
         """
         Change an attribute of the entry with explicit LDAP modification type

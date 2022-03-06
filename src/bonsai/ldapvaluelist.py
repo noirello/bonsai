@@ -55,10 +55,6 @@ class LDAPValueList(list):
             "@deleted": self.__deleted.copy(),
         }
 
-    @_status_dict.setter
-    def _status_dict(self, value: Any) -> None:
-        raise TypeError("Can not change _status_dict")
-
     def __contains__(self, item: Any) -> bool:
         return bonsai.utils._unique_contains(self, item)[0]
 
@@ -201,18 +197,10 @@ class LDAPValueList(list):
         """ List of the added values. """
         return self.__added
 
-    @added.setter
-    def added(self, value: Any) -> None:
-        raise ValueError("Added attribute cannot be changed.")
-
     @property
     def deleted(self) -> List:
         """ List of the deleted values. """
         return self.__deleted
-
-    @deleted.setter
-    def deleted(self, value: Any) -> None:
-        raise ValueError("Deleted attribute cannot be changed.")
 
     @property
     def status(self) -> int:

@@ -473,27 +473,15 @@ class LDAPClient:
         """The chosen mechanism for authentication. It cannot be set."""
         return self.__mechanism
 
-    @mechanism.setter
-    def mechanism(self, value: Any = None) -> None:
-        raise ValueError("Mechanism attribute cannot be set.")
-
     @property
     def credentials(self) -> Optional[Dict[str, Optional[str]]]:
         """A dict with the credential information. It cannot be set."""
         return self.__credentials
 
-    @credentials.setter
-    def credentials(self, value: Any = None) -> None:
-        raise ValueError("Credentials attribute cannot be set.")
-
     @property
     def tls(self) -> bool:
         """A bool about TLS connection is required. It cannot be set."""
         return self.__tls
-
-    @tls.setter
-    def tls(self, value: Any = None) -> None:
-        raise ValueError("TlS attribute cannot be set.")
 
     @property
     def cert_policy(self) -> int:
