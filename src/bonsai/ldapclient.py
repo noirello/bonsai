@@ -4,7 +4,7 @@
    :synopsis: For managing LDAP connections.
 
 """
-from typing import Any, Union, List, Tuple, Optional, Dict, TypeVar
+from typing import Any, Union, List, Optional, Dict, TypeVar
 
 from .ldapurl import LDAPURL
 from .ldapconnection import BaseLDAPConnection, LDAPConnection
@@ -108,10 +108,7 @@ class LDAPClient:
             "authz_id": authz_id,
             "keytab": keytab,
         }
-        if (
-            list(filter(lambda x: not isinstance(x, (str, type(None))), creds.values()))
-            != []
-        ):
+        if list(filter(lambda x: not isinstance(x, (str, type(None))), creds.values())):
             raise TypeError("Every parameter must be a string or None.")
         if password is not None and keytab is not None:
             raise TypeError(
@@ -144,7 +141,7 @@ class LDAPClient:
             raise TypeError("Policy parameter must be string.")
         policy = policy.lower()
         if policy not in tls_options.keys():
-            raise ValueError("'%s' is an invalid policy.", policy)
+            raise ValueError("'%s' is an invalid policy." % policy)
         self.__cert_policy = tls_options[policy]
 
     def set_ca_cert(self, name: Optional[str]) -> None:
