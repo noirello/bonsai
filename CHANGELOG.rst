@@ -11,6 +11,8 @@ Changed
 -  Providing empty user and password with GSSAPI/GSS-SPNGO mechanisms
    will use the logon credentials for authentication on Windows instead
    of an anonymous bind.
+-  Remove unnecessary read-only property overrides. These properties will
+   raise AttributeError, when trying to set them. 
 
 Added
 ~~~~~
