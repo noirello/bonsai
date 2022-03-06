@@ -21,11 +21,11 @@ class AIOLDAPConnection(BaseLDAPConnection):
         super().__init__(client, is_async=True)
 
     async def __aenter__(self):
-        """ Async context manager entry point. """
+        """Async context manager entry point."""
         return await self.__open_coro
 
     async def __aexit__(self, type, value, traceback):
-        """ Async context manager exit point. """
+        """Async context manager exit point."""
         self.close()
 
     def __await__(self):
@@ -85,7 +85,7 @@ class AIOLDAPConnection(BaseLDAPConnection):
         except StopIteration:
             msgid = search_iter.acquire_next_page()
             if msgid is None:
-                raise StopAsyncIteration
+                raise StopAsyncIteration from None
             search_iter = await self._evaluate(msgid)
             return next(search_iter)
 

@@ -55,7 +55,7 @@ class SID:
                 raise ValueError(f"Not a valid binary SID, {err}")
 
     def __str__(self) -> str:
-        """ Return the string format of the SID. """
+        """Return the string format of the SID."""
         ident_auth = (
             hex(self.__identifier_authority)
             if self.__identifier_authority > 2 ** 32
@@ -69,7 +69,7 @@ class SID:
         return f"S-1-{ident_auth}-{subauths}"
 
     def __repr__(self) -> str:
-        """ The representation of SID class. """
+        """The representation of SID class."""
         return f"<{self.__class__.__name__}: {str(self)}>"
 
     def __eq__(self, other: Any) -> bool:
@@ -94,7 +94,7 @@ class SID:
 
     @property
     def revision(self) -> int:
-        """ The revision level of the SID. """
+        """The revision level of the SID."""
         return self.__revision
 
     @property
@@ -115,7 +115,7 @@ class SID:
 
     @property
     def bytes_le(self) -> bytes:
-        """ The byte format of the SID in little-endian byte order. """
+        """The byte format of the SID in little-endian byte order."""
         subauth_count = len(self.subauthorities)
         identifier_auth = [
             item for item in struct.pack(">Q", self.identifier_authority)[2:]
@@ -129,7 +129,7 @@ class SID:
         )
 
     @property
-    def sddl_alias(self) -> str:
+    def sddl_alias(self) -> Optional[str]:
         """
         The string SDDL alias of the SID if it exists, otherwise it's None.
         """
@@ -206,6 +206,5 @@ class SID:
 
     @property
     def size(self):
-        """ The binary size of the SID in bytes. """
+        """The binary size of the SID in bytes."""
         return 8 + len(self.subauthorities) * 4
-

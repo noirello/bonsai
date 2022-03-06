@@ -235,7 +235,7 @@ class ACE:
             )
             return this
         except struct.error as err:
-            raise ValueError(f"Not a valid binary ACE, {err}")
+            raise ValueError(f"Not a valid binary ACE, {err}") from None
 
     def __str__(self):
         """ Return the SDDL string representation of the ACE object. """
@@ -380,7 +380,7 @@ class ACL:
             this = cls(ACLRevision(rev), aces)
             return this
         except struct.error as err:
-            raise ValueError(f"Not a valid binary ACL, {err}")
+            raise ValueError(f"Not a valid binary ACL, {err}") from None
 
     def to_binary(self) -> bytes:
         """
@@ -392,7 +392,6 @@ class ACL:
         size = self.size
         data = bytearray(8)
         struct.pack_into("<BBHHH", data, 0, self.revision, 0, size, len(self.aces), 0)
-        pos = 8
         for ace in self.aces:
             data.extend(ace.to_binary())
         return bytes(data)

@@ -8,7 +8,7 @@ from ._bonsai import (
 )
 
 
-def escape_attribute_value(attrval: str):
+def escape_attribute_value(attrval: str) -> str:
     """
     Escapes the special character in an attribute value
     based on RFC 4514.
@@ -29,7 +29,7 @@ def escape_attribute_value(attrval: str):
     return attrval
 
 
-def escape_filter_exp(filter_exp: str):
+def escape_filter_exp(filter_exp: str) -> str:
     """
     Escapes the special characters in an LDAP filter based on RFC 4515.
 

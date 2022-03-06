@@ -35,8 +35,9 @@ class TornadoLDAPConnection(BaseLDAPConnection):
                 self._fileno = self.fileno()
                 callback = partial(self._io_callback, fut, msg_id)
                 try:
-                    self._ioloop.add_handler(self._fileno, callback,
-                                             IOLoop.WRITE | IOLoop.READ)
+                    self._ioloop.add_handler(
+                        self._fileno, callback, IOLoop.WRITE | IOLoop.READ
+                    )
                 except FileExistsError as exc:
                     if exc.errno != 17:
                         raise exc
@@ -52,12 +53,11 @@ class TornadoLDAPConnection(BaseLDAPConnection):
         callback = partial(self._io_callback, fut, msg_id)
         self._fileno = self.fileno()
         try:
-            self._ioloop.add_handler(self._fileno, callback,
-                                     IOLoop.WRITE | IOLoop.READ)
+            self._ioloop.add_handler(self._fileno, callback, IOLoop.WRITE | IOLoop.READ)
             if timeout is not None:
-                self._timeout = self._ioloop.call_later(timeout,
-                                                        self._timeout_callback,
-                                                        fut)
+                self._timeout = self._ioloop.call_later(
+                    timeout, self._timeout_callback, fut
+                )
         except FileExistsError as exc:
             # Avoid concurrency problems by registering with
             # the same fileno more than once.
@@ -72,8 +72,9 @@ class TornadoLDAPConnection(BaseLDAPConnection):
             return res
         except NotAllowedOnNonleaf as exc:
             if recursive:
-                results = yield self.search(dname, LDAPSearchScope.ONELEVEL,
-                                            attrlist=['1.1'], timeout=timeout)
+                results = yield self.search(
+                    dname, LDAPSearchScope.ONELEVEL, attrlist=["1.1"], timeout=timeout
+                )
                 for res in results:
                     yield self.delete(res.dn, timeout, True)
                 res = yield self.delete(dname, timeout, False)
@@ -88,7 +89,7 @@ class TornadoLDAPConnection(BaseLDAPConnection):
         except StopIteration:
             msgid = search_iter.acquire_next_page()
             if msgid is None:
-                raise StopAsyncIteration
+                raise StopAsyncIteration from None
             search_iter = yield self._evaluate(msgid)
             return next(search_iter)
 
@@ -96,3 +97,4 @@ class TornadoLDAPConnection(BaseLDAPConnection):
     def get_result(self, msg_id, timeout=None):
         res = yield self._evaluate(msg_id, timeout)
         return res
+

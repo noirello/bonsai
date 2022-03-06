@@ -178,7 +178,7 @@ class ConnectionPool:
 
 class ThreadedConnectionPool(ConnectionPool):
     """
-    A connection pool that can be shared between threads. It's inherited from 
+    A connection pool that can be shared between threads. It's inherited from
     :class:`bonsai.pool.ConnectionPool`.
 
     :param LDAPClient client: the :class:`bonsai.LDAPClient` that's used to create

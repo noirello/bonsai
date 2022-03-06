@@ -70,7 +70,7 @@ class LDIFReader:
                 else:
                     buffer.append(line.rstrip())
             except IndexError:
-                raise LDIFError(f"Parser error at line: {num + 1}.")
+                raise LDIFError(f"Parser error at line: {num + 1}.") from None
         if buffer:
             yield buffer
 
@@ -208,7 +208,7 @@ class LDIFReader:
 
 class LDIFWriter:
     """
-    Create an object for serialising LDAP entries in LDIF format as 
+    Create an object for serialising LDAP entries in LDIF format as
     described in RFC 2849.
 
     :param TextIO output_file: a file-like output object in text mode.
