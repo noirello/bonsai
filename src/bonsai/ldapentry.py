@@ -90,7 +90,7 @@ class LDAPEntry(ldapentry):
         :return: True, if the operation is finished.
         :rtype: bool
         """
-        if type(newdn) == LDAPDN:
+        if isinstance(newdn, LDAPDN):
             newdn = str(newdn)
         return self.connection._evaluate(super().rename(newdn, delete_old_rdn), timeout)
 

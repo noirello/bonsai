@@ -1,8 +1,7 @@
-from typing import List, Any, Union
+from typing import List, Union
 
 from .ldapclient import LDAPClient
 from .ldapurl import LDAPURL
-from .errors import LDAPError
 
 
 class LDAPReference:
@@ -17,7 +16,7 @@ class LDAPReference:
     def __init__(
         self, client: LDAPClient, references: List[Union[str, LDAPURL]]
     ) -> None:
-        if type(client) != LDAPClient:
+        if not isinstance(client, LDAPClient):
             raise TypeError("Client parameter must be an LDAPClient.")
         self.__client = client
         self.__refs = []  # type: List[LDAPURL]
@@ -31,16 +30,16 @@ class LDAPReference:
 
     @property
     def client(self) -> LDAPClient:
-        """ The LDAP client. """
+        """The LDAP client."""
         return self.__client
 
     @client.setter
     def client(self, value: LDAPClient) -> None:
-        if type(value) != LDAPClient:
+        if not isinstance(value, LDAPClient):
             raise TypeError("Client property must be an LDAPClient.")
         self.__client = value
 
     @property
     def references(self) -> List[LDAPURL]:
-        """ The list of LDAPURLs of the references. """
+        """The list of LDAPURLs of the references."""
         return self.__refs

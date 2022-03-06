@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from enum import IntEnum
-from typing import Union, Any, List, Iterator, Tuple, Optional
+from typing import Union, Any, List, Tuple, Optional
 
 from ._bonsai import ldapconnection, ldapsearchiter
 from .ldapdn import LDAPDN
@@ -45,7 +45,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         timeout: Optional[float] = None,
         recursive: bool = False,
     ) -> Any:
-        if type(dname) == LDAPDN:
+        if isinstance(dname, LDAPDN):
             dname = str(dname)
         return self._evaluate(super().delete(dname, recursive), timeout)
 
@@ -59,7 +59,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         old_password: Optional[str] = None,
         timeout: Optional[float] = None,
     ) -> Any:
-        if type(user) == LDAPDN:
+        if isinstance(user, LDAPDN):
             user = str(user)
         return self._evaluate(
             super().modify_password(user, new_password, old_password), timeout

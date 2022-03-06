@@ -60,7 +60,7 @@ class LDAPValueList(list):
 
     def __delitem__(self, idx: Union[int, slice]) -> None:
         old_value = super().__getitem__(idx)
-        if type(idx) == slice:
+        if isinstance(idx, slice):
             for item in old_value:
                 self.__balance(self.__added, self.__deleted, item)
         else:
@@ -71,21 +71,21 @@ class LDAPValueList(list):
         raise TypeError("Cannot multiple LDAPValueList.")
 
     def __add__(self, other: Iterable) -> "LDAPValueList":
-        if type(other) != list and type(other) != LDAPValueList:
+        if not isinstance(other, (list, LDAPValueList)):
             raise TypeError("Can only concatenate list and LDAPValueList.")
         new_list = self.copy()
         new_list.extend(other)
         return new_list
 
     def __iadd__(self, other: Iterable) -> "LDAPValueList":
-        if type(other) != list and type(other) != LDAPValueList:
+        if not isinstance(other, (list, LDAPValueList)):
             raise TypeError("Can only concatenate list and LDAPValueList.")
         self.extend(other)
         return self
 
     def __setitem__(self, idx: Union[int, slice], value: Any) -> None:
         old_value = self[idx]
-        if type(idx) == slice:
+        if isinstance(idx, slice):
             for item in value:
                 if item in self:
                     raise ValueError("%r is already in the list." % item)
@@ -173,7 +173,7 @@ class LDAPValueList(list):
         return value
 
     def clear(self) -> None:
-        """ Remove all items from the LDAPValueList. """
+        """Remove all items from the LDAPValueList."""
         del self[:]
 
     def copy(self) -> "LDAPValueList":
@@ -194,12 +194,12 @@ class LDAPValueList(list):
 
     @property
     def added(self) -> List:
-        """ List of the added values. """
+        """List of the added values."""
         return self.__added
 
     @property
     def deleted(self) -> List:
-        """ List of the deleted values. """
+        """List of the deleted values."""
         return self.__deleted
 
     @property
@@ -214,7 +214,7 @@ class LDAPValueList(list):
 
     @status.setter
     def status(self, value: int) -> None:
-        if type(value) != int:
+        if not isinstance(value, int):
             raise TypeError("Status must be int.")
         if value > -1 and value < 3:
             self.__status = value
