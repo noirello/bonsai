@@ -9,7 +9,7 @@ from bonsai import LDAPClient
 
 
 def get_config():
-    """ Load config parameters. """
+    """Load config parameters."""
     curdir = os.path.abspath(os.path.dirname(__file__))
     cfg = configparser.ConfigParser()
     cfg.read(os.path.join(curdir, "test.ini"))
@@ -32,7 +32,7 @@ def network_delay(delay):
 
 @pytest.fixture(scope="module")
 def client():
-    """ Get an LDAPClient with simple authentication. """
+    """Get an LDAPClient with simple authentication."""
     cfg = get_config()
     url = "ldap://%s:%s/%s??%s" % (
         cfg["SERVER"]["hostip"],
@@ -49,6 +49,12 @@ def client():
 
 @pytest.fixture(scope="module")
 def basedn():
-    """ Get base DN. """
+    """Get base DN."""
     cfg = get_config()
     return cfg["SERVER"]["basedn"]
+
+
+@pytest.fixture(scope="module")
+def cfg():
+    """Get config."""
+    return get_config()

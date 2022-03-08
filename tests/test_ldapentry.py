@@ -8,12 +8,13 @@ from bonsai import LDAPEntry
 from bonsai import LDAPModOp
 from bonsai import LDAPDN
 import bonsai.errors
-from bonsai.errors import InvalidDN
+from bonsai.errors import AuthenticationError, InvalidDN
+from bonsai.active_directory import UserAccountControl
 
 
 @pytest.fixture
 def test_entry():
-    """ Create a test LDAP entry. """
+    """Create a test LDAP entry."""
     gconn = None
     entry = None
 
@@ -44,8 +45,49 @@ def test_entry():
     gconn.close()
 
 
+@pytest.fixture
+def test_ad_user():
+    """Create a test AD user."""
+    gconn = None
+    entry = None
+
+    def _create_entry(conn, dname, password):
+        nonlocal gconn
+        nonlocal entry
+        entry = LDAPEntry(dname)
+        entry["objectclass"] = [
+            "top",
+            "inetOrgPerson",
+            "person",
+            "organizationalPerson",
+            "user",
+        ]
+        entry["sn"] = "ad_user"
+        entry["cn"] = "ad_user"
+        entry["givenName"] = "AD"
+        entry["userPrincipalName"] = "ad_user"
+        entry["displayName"] = "ad_user"
+        entry["sAMAccountName"] = "ad_user"
+        entry["userPassword"] = password
+        entry["mail"] = "ad_user@bonsai.test"
+        gconn = conn
+        try:
+            conn.add(entry)
+        except bonsai.AlreadyExists:
+            conn.delete(entry.dn)
+            conn.add(entry)
+        return entry
+
+    yield _create_entry
+
+    if gconn.closed:
+        gconn = gconn.open()
+    gconn.delete(entry.dn)
+    gconn.close()
+
+
 def test_set_get():
-    """ Test LDAPEntry's SetItem, GetItem and get methods. """
+    """Test LDAPEntry's SetItem, GetItem and get methods."""
     entry = LDAPEntry("cn=test")
     entry["sn"] = "Test"
     assert entry == {"dn": LDAPDN("cn=test"), "sn": ["Test"]}
@@ -58,7 +100,7 @@ def test_set_get():
 
 
 def test_append_extend():
-    """ Test append and extend methods of LDAPEntry's attribute. """
+    """Test append and extend methods of LDAPEntry's attribute."""
     entry = LDAPEntry("cn=test")
     entry["givenName"] = "test"
     entry["givenname"].append("test2")
@@ -69,7 +111,7 @@ def test_append_extend():
 
 
 def test_pop():
-    """ Test LDAPEntry's pop method. """
+    """Test LDAPEntry's pop method."""
     entry = LDAPEntry("cn=test")
     entry["test"] = "test"
     with pytest.raises(TypeError):
@@ -83,7 +125,7 @@ def test_pop():
 
 
 def test_popitem():
-    """ Test LDAPEntry's popitem method. """
+    """Test LDAPEntry's popitem method."""
     entry = LDAPEntry("cn=test")
     entry["test"] = "test"
     entry["test2"] = "test"
@@ -95,14 +137,14 @@ def test_popitem():
 
 
 def test_popitem_empty():
-    """ Test LDAPEntry's popitem raises KeyError if it is empty. """
+    """Test LDAPEntry's popitem raises KeyError if it is empty."""
     entry = LDAPEntry("cn=test")
     with pytest.raises(KeyError):
         _ = entry.popitem()
 
 
 def test_clear():
-    """ Test LDAPEntry's clear method. """
+    """Test LDAPEntry's clear method."""
     entry = LDAPEntry("cn=test")
     entry["sn"] = ["test1", "test2"]
     entry["gn"] = ["test3"]
@@ -112,7 +154,7 @@ def test_clear():
 
 
 def test_items():
-    """ Test LDAPEntry's items method. """
+    """Test LDAPEntry's items method."""
     entry = LDAPEntry("cn=test")
     entry["cn"] = "test"
     entry["sn"] = "Test"
@@ -127,7 +169,7 @@ def test_items():
 
 
 def test_keys():
-    """ Test LDAPEntry's keys method. """
+    """Test LDAPEntry's keys method."""
     entry = LDAPEntry("cn=test")
     entry["cn"] = "test"
     entry["sn"] = "Test"
@@ -136,7 +178,7 @@ def test_keys():
 
 
 def test_values():
-    """ Test LDAPEntry's values method. """
+    """Test LDAPEntry's values method."""
     entry = LDAPEntry("cn=test")
     entry["cn"] = "test"
     entry["sn"] = "Test"
@@ -151,7 +193,7 @@ def test_values():
 
 
 def test_update():
-    """ Test updating LDAPEntry object. """
+    """Test updating LDAPEntry object."""
     entry = LDAPEntry("cn=test")
     entry.update({"GivenName": "test2", "mail": "test@mail"})
     entry.update([("sn", "test")])
@@ -166,7 +208,7 @@ def test_update():
 
 
 def test_equal():
-    """ Test equality check. """
+    """Test equality check."""
     entry1 = LDAPEntry("cn=test")
     entry2 = LDAPEntry("cn=test")
     entry3 = LDAPEntry("cn=test1")
@@ -177,7 +219,7 @@ def test_equal():
 
 
 def test_special_char(client, basedn):
-    """ Test adding entry with special character in its DN. """
+    """Test adding entry with special character in its DN."""
     with client.connect() as conn:
         entry = LDAPEntry(r"cn=test\, *\+withspec,%s" % basedn)
         entry["objectclass"] = ["top", "inetOrgPerson"]
@@ -189,7 +231,7 @@ def test_special_char(client, basedn):
 
 
 def test_dn_with_space(client, basedn):
-    """ Test adding entry with DN that has a space in it. """
+    """Test adding entry with DN that has a space in it."""
     with client.connect() as conn:
         entry = LDAPEntry("cn=test, %s" % basedn)
         entry["objectclass"] = ["top", "inetOrgPerson"]
@@ -202,7 +244,7 @@ def test_dn_with_space(client, basedn):
 
 
 def test_unicode(client, basedn):
-    """ Test adding entry with special character in its DN. """
+    """Test adding entry with special character in its DN."""
     with client.connect() as conn:
         dname = "cn=test_µčབྷñ,%s" % basedn
         entry = LDAPEntry(dname)
@@ -215,7 +257,7 @@ def test_unicode(client, basedn):
 
 
 def test_binary(client, basedn):
-    """ Test adding binary data. """
+    """Test adding binary data."""
     curdir = os.path.abspath(os.path.dirname(__file__))
     conn = client.connect()
     dname = "cn=binary,%s" % basedn
@@ -233,7 +275,7 @@ def test_binary(client, basedn):
 
 
 def test_connection(client, basedn):
-    """ Test set and get connection object from LDAPEntry. """
+    """Test set and get connection object from LDAPEntry."""
     entry = LDAPEntry("cn=test,%s" % basedn)
     with pytest.raises(ValueError):
         _ = entry.connection
@@ -247,7 +289,7 @@ def test_connection(client, basedn):
 
 
 def test_rename(client, basedn, test_entry):
-    """ Test LDAPEntry's rename LDAP operation. """
+    """Test LDAPEntry's rename LDAP operation."""
     with client.connect() as conn:
         entry = test_entry(conn, "cn=test,%s" % basedn)
         entry.rename("cn=test2,%s" % basedn)
@@ -262,7 +304,7 @@ def test_rename(client, basedn, test_entry):
     sys.platform.startswith("win"), reason="Cannot rename entry with old RDN on Windows"
 )
 def test_rename_with_old_rdn(client, basedn, test_entry):
-    """ Test LDAPEntry's rename LDAP operation. """
+    """Test LDAPEntry's rename LDAP operation."""
     with client.connect() as conn:
         entry = test_entry(conn, "cn=test,%s" % basedn)
         entry.rename("uid=test2,%s" % basedn, delete_old_rdn=False)
@@ -276,7 +318,7 @@ def test_rename_with_old_rdn(client, basedn, test_entry):
 
 
 def test_rename_error(client, basedn, test_entry):
-    """ Test LDAPEntry's rename error handling. """
+    """Test LDAPEntry's rename error handling."""
     dname = bonsai.LDAPDN("cn=test,%s" % basedn)
     entry = LDAPEntry(dname)
     with pytest.raises(ValueError):
@@ -336,7 +378,7 @@ def test_sync_operations(client, basedn):
 
 
 def test_dn_attr(basedn):
-    """ Test LDAPEntry's DN attribute. """
+    """Test LDAPEntry's DN attribute."""
     entry = LDAPEntry("cn=test,%s" % basedn)
     entry.dn = "cn=test"
     assert str(entry.dn) == "cn=test"
@@ -347,7 +389,7 @@ def test_dn_attr(basedn):
 
 
 def test_wrong_params():
-    """ Test passing wrong params to LDAPEntry. """
+    """Test passing wrong params to LDAPEntry."""
     with pytest.raises(TypeError):
         _ = LDAPEntry("", 1)
     with pytest.raises(InvalidDN):
@@ -390,14 +432,14 @@ def test_password_modify(client):
 
 
 def test_extended_dn_attr():
-    """ Test that extended dn attribute is read only. """
+    """Test that extended dn attribute is read only."""
     entry = LDAPEntry("cn=test")
     with pytest.raises(AttributeError):
         entry.extended_dn = "cn=test2"
 
 
 def test_change_attribute(client):
-    """ Test change_attribute method. """
+    """Test change_attribute method."""
     user_dn = "cn=sam,ou=nerdherd,dc=bonsai,dc=test"
     if sys.platform == "win32":
         multiattr = "otherTelephone"
@@ -434,7 +476,7 @@ def test_change_attribute(client):
 
 
 def test_change_attribute_error(client):
-    """ Test change_attribute method's error handling. """
+    """Test change_attribute method's error handling."""
     user_dn = "cn=sam,ou=nerdherd,dc=bonsai,dc=test"
     with client.connect() as conn:
         entry = LDAPEntry(user_dn, conn)
@@ -450,7 +492,7 @@ def test_change_attribute_error(client):
 
 
 def test_clear_attribute_changes():
-    """ Test clear_attribute_changes method. """
+    """Test clear_attribute_changes method."""
     user_dn = "cn=sam,ou=nerdherd,dc=bonsai,dc=test"
     entry = LDAPEntry(user_dn)
     entry.change_attribute("uidNumber", 0, 4)
@@ -467,7 +509,7 @@ def test_clear_attribute_changes():
     sys.platform.startswith("win"), reason="Cannot use ManageDsaIT on Windows"
 )
 def test_modify_referrals(client):
-    """ Test modifying an LDAP referral with ManageDdsIT control. """
+    """Test modifying an LDAP referral with ManageDdsIT control."""
     refdn = bonsai.LDAPDN("o=invalid-ref,ou=nerdherd-refs,dc=bonsai,dc=test")
     newref = "ldap://invalid.host/cn=nobody"
     cli = LDAPClient(client.url)
@@ -482,3 +524,43 @@ def test_modify_referrals(client):
         assert newref in res["ref"]
         entry.change_attribute("ref", LDAPModOp.DELETE, newref)
         entry.modify()
+
+
+@pytest.mark.skipif(
+    not sys.platform.startswith("win"),
+    reason="Makes sense when the remote server is an Active Directory",
+)
+def test_create_ad_user(cfg, basedn, test_ad_user):
+    """Test creating and enabling an AD user ."""
+    url = "ldap://%s:%s/%s??%s" % (
+        cfg["SERVER"]["hostname"],
+        cfg["SERVER"]["port"],
+        cfg["SERVER"]["basedn"],
+        cfg["SERVER"]["search_scope"],
+    )
+    cli = LDAPClient(url, tls=True)
+    cli.set_ca_cert("./tests/testenv/certs/cacert.pem")
+    cli.set_credentials(
+        "SIMPLE", user=cfg["SIMPLEAUTH"]["user"], password=cfg["SIMPLEAUTH"]["password"]
+    )
+    ad_user_dn = "cn=ad_user,%s" % basedn
+    password = "C0mpleX_P4ssW0rd"
+    with cli.connect() as conn:
+        entry = test_ad_user(conn, ad_user_dn, password)
+        res = conn.search(entry.dn, 0)
+        assert res
+        uac = UserAccountControl(res[0]["userAccountControl"][0])
+        assert uac.value != 66048
+        assert uac.properties["accountdisable"]
+        user_cli = LDAPClient(url, tls=True)
+        user_cli.set_credentials("SIMPLE", ad_user_dn, password)
+        with pytest.raises(AuthenticationError):
+            _ = user_cli.connect()
+        entry.change_attribute("userAccountControl", LDAPModOp.REPLACE, 66048)
+        entry.modify()
+        with user_cli.connect() as uconn:
+            res = uconn.search(entry.dn, 0)
+            assert not UserAccountControl(res[0]["userAccountControl"][0]).properties[
+                "accountdisable"
+            ]
+            assert uconn.whoami() == "u:BONSAI\\ad_user"

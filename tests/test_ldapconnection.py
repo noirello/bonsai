@@ -26,21 +26,15 @@ class SimpleAsyncConn(BaseLDAPConnection):
 
 
 @pytest.fixture(scope="module")
-def cfg():
-    """ Get config. """
-    return get_config()
-
-
-@pytest.fixture(scope="module")
 def ipaddr():
-    """ Get IP address. """
+    """Get IP address."""
     cfg = get_config()
     return cfg["SERVER"]["hostip"]
 
 
 @pytest.fixture(scope="module")
 def ktpath():
-    """ Get keytab file path. """
+    """Get keytab file path."""
     cfg = get_config()
     proj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
     ktpath = os.path.abspath(os.path.join(proj_dir, cfg["GSSAPIAUTH"]["keytab"]))
@@ -49,7 +43,7 @@ def ktpath():
 
 @pytest.fixture
 def binding():
-    """ Create a binding with the server. """
+    """Create a binding with the server."""
 
     def _create_binding(auth, mech, authzid=None, realm=None):
         cfg = get_config()
@@ -107,7 +101,7 @@ def kinit():
 
 @pytest.fixture
 def large_org():
-    """ Create a heavily populated organization LDAP entry. """
+    """Create a heavily populated organization LDAP entry."""
     gconn = None
     entry = None
     gnum = None
@@ -152,7 +146,7 @@ def large_org():
 
 @pytest.fixture
 def external_binding():
-    """ Create a binding using external mechanism. """
+    """Create a binding using external mechanism."""
 
     def _create_external(authzid=None):
         tls_impl = bonsai.get_tls_impl_name()
@@ -186,7 +180,7 @@ def _generate_client(cfg):
 
 @pytest.fixture
 def conn():
-    """ Create a connection. """
+    """Create a connection."""
     cfg = get_config()
     client = _generate_client(cfg)
     return client.connect()
@@ -194,7 +188,7 @@ def conn():
 
 @pytest.fixture
 def anonym_conn():
-    """ Create a connection with anonymous user. """
+    """Create a connection with anonymous user."""
     cfg = get_config()
     client = _generate_client(cfg)
     client.set_credentials("SIMPLE")
@@ -209,7 +203,7 @@ def async_conn():
 
 
 def test_bind_digest(binding):
-    """ Test DIGEST-MD5 connection. """
+    """Test DIGEST-MD5 connection."""
     with binding("DIGESTAUTH", "DIGEST-MD5") as conn:
         assert "anonymous" != conn.whoami()
 
@@ -219,7 +213,7 @@ def test_bind_digest(binding):
     reason="Authzid is not set",
 )
 def test_bind_digest_with_authzid(binding, cfg):
-    """ Test DIGEST-MD5 connection with authorization ID. """
+    """Test DIGEST-MD5 connection with authorization ID."""
     authzid = cfg["DIGESTAUTH"]["authzid"]
     with binding("DIGESTAUTH", "DIGEST-MD5", authzid) as conn:
         assert cfg["DIGESTAUTH"]["dn"] == conn.whoami()
@@ -229,7 +223,7 @@ def test_bind_digest_with_authzid(binding, cfg):
     sys.platform.startswith("win"), reason="NTLM is not enabled on Windows."
 )
 def test_bind_ntlm(binding):
-    """ Test NTLM connection. """
+    """Test NTLM connection."""
     with binding("NTLMAUTH", "NTLM") as conn:
         assert "anonymous" != conn.whoami()
 
@@ -238,7 +232,7 @@ def test_bind_ntlm(binding):
     sys.platform == "darwin", reason="SCRAM is not supported on clients on Mac."
 )
 def test_bind_not_supported_auth(binding):
-    """ Test not supported authentication mechanism by the server. """
+    """Test not supported authentication mechanism by the server."""
     with pytest.raises(bonsai.AuthMethodNotSupported):
         _ = binding("DIGESTAUTH", "SCRAM-SHA-1")
 
@@ -247,7 +241,7 @@ def test_bind_not_supported_auth(binding):
     sys.platform.startswith("win"), reason="Kinit is unavailable on Windows."
 )
 def test_bind_gssapi_kinit(kinit):
-    """ Test GSSAPI connection. """
+    """Test GSSAPI connection."""
     with kinit() as conn:
         assert "anonymous" != conn.whoami()
 
@@ -256,7 +250,7 @@ def test_bind_gssapi_kinit(kinit):
     sys.platform.startswith("win"), reason="Kinit is unavailable on Windows."
 )
 def test_bind_gssapi_with_authzid_kinit(kinit, cfg):
-    """ Test GSSAPI connection with authorization ID. """
+    """Test GSSAPI connection with authorization ID."""
     authzid = cfg["GSSAPIAUTH"]["authzid"]
     with kinit(authzid) as conn:
         assert cfg["GSSAPIAUTH"]["dn"] == conn.whoami()
@@ -267,7 +261,7 @@ def test_bind_gssapi_with_authzid_kinit(kinit, cfg):
     reason="Module doesn't have KRB5 support.",
 )
 def test_bind_gssapi(binding, cfg):
-    """ Test GSSAPI connection with automatic TGT requesting. """
+    """Test GSSAPI connection with automatic TGT requesting."""
     with binding(
         "GSSAPIAUTH", "GSSAPI", None, cfg["GSSAPIAUTH"]["realm"].upper()
     ) as conn:
@@ -279,7 +273,7 @@ def test_bind_gssapi(binding, cfg):
     reason="Module doesn't have KRB5 support.",
 )
 def test_bind_gssapi_error(cfg):
-    """ Test automatic TGT requesting with wrong realm name. """
+    """Test automatic TGT requesting with wrong realm name."""
     client = _generate_client(cfg)
     client.set_credentials(
         "GSSAPI",
@@ -336,11 +330,13 @@ def test_bind_gssapi_keytab(cfg, ktpath):
     conn = client.connect()
     assert conn.whoami() == "dn:cn=admin,dc=bonsai,dc=test"
 
+
 @pytest.mark.skipif(
-    not sys.platform.startswith("win"), reason="No Windows logon credentials",
+    not sys.platform.startswith("win"),
+    reason="No Windows logon credentials",
 )
 def test_bind_winlogon(cfg):
-    """ Test connection with Windows logon credentials """
+    """Test connection with Windows logon credentials"""
     expected_user = f"u:{os.getenv('userdomain')}\\{os.getlogin()}"
     client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])
     client.set_credentials("GSSAPI")
@@ -353,11 +349,12 @@ def test_bind_winlogon(cfg):
     with pytest.raises(bonsai.AuthenticationError):
         _ = client.connect()
 
+
 @pytest.mark.skipif(
     not sys.platform.startswith("win"), reason="No GSS-SPNEGO mech on Ubuntu and Mac"
 )
 def test_bind_spnego(binding, cfg):
-    """ Test GSS-SPNEGO connection with automatic TGT requesting. """
+    """Test GSS-SPNEGO connection with automatic TGT requesting."""
     with binding(
         "GSSAPIAUTH", "GSS-SPNEGO", None, cfg["GSSAPIAUTH"]["realm"].upper()
     ) as conn:
@@ -365,48 +362,48 @@ def test_bind_spnego(binding, cfg):
 
 
 def test_bind_external(external_binding):
-    """ Test EXTERNAL connection. """
+    """Test EXTERNAL connection."""
     with external_binding() as conn:
         assert "anonymous" != conn.whoami()
 
 
 def test_bind_external_with_authzid(external_binding, cfg):
-    """ Test EXTERNAL connection with authorization ID. """
+    """Test EXTERNAL connection with authorization ID."""
     authzid = cfg["EXTERNALAUTH"]["authzid"]
     with external_binding(authzid) as conn:
         assert cfg["EXTERNALAUTH"]["dn"] == conn.whoami()
 
 
 def test_search(conn, basedn):
-    """ Test searching. """
+    """Test searching."""
     res = conn.search("ou=nerdherd,%s" % basedn, LDAPSearchScope.SUB)
     assert res is not None
     assert len(res) == len(conn.search())
 
 
 def test_search_ldapdn(conn, basedn):
-    """ Test searching with LDAPDN object. """
+    """Test searching with LDAPDN object."""
     ldap_dn = LDAPDN(basedn)
     obj = conn.search(ldap_dn, 1)
     assert obj is not None
 
 
 def test_search_attr(conn, basedn):
-    """ Test searching with given list of attributes. """
+    """Test searching with given list of attributes."""
     obj = conn.search(basedn, 2, "(objectclass=person)", ["cn"])[0]
     assert obj is not None
     assert "cn" in obj.keys()
 
 
 def test_search_attrsonly(conn, basedn):
-    """ Test search receiving only attributes. """
+    """Test search receiving only attributes."""
     obj = conn.search(basedn, 2, "(objectclass=person)", ["cn"], attrsonly=True)[0]
     assert obj is not None
     assert obj["cn"] == []
 
 
 def test_add_and_delete(conn, basedn):
-    """ Test adding and removing an LDAP entry. """
+    """Test adding and removing an LDAP entry."""
     entry = bonsai.LDAPEntry("cn=example,%s" % basedn)
     entry.update(
         {"objectclass": ["top", "inetorgperson"], "cn": "example", "sn": "example"}
@@ -425,7 +422,7 @@ def test_add_and_delete(conn, basedn):
 
 
 def test_recursive_delete(conn, basedn):
-    """ Test removing a subtree recursively. """
+    """Test removing a subtree recursively."""
     org1 = bonsai.LDAPEntry("ou=testusers,%s" % basedn)
     org1.update({"objectclass": ["organizationalUnit", "top"], "ou": "testusers"})
     org2 = bonsai.LDAPEntry("ou=tops,ou=testusers,%s" % basedn)
@@ -446,7 +443,7 @@ def test_recursive_delete(conn, basedn):
 
 
 def test_whoami(conn, cfg):
-    """ Test whoami. """
+    """Test whoami."""
     obj = conn.whoami()
     expected_res = [
         "dn:%s" % cfg["SIMPLEAUTH"]["user"],
@@ -456,14 +453,14 @@ def test_whoami(conn, cfg):
 
 
 def test_connection_error():
-    """ Test connection error. """
+    """Test connection error."""
     client = LDAPClient("ldap://invalid")
     with pytest.raises(bonsai.ConnectionError):
         _ = client.connect()
 
 
 def test_simple_auth_error(cfg):
-    """ Test simple authentication error. """
+    """Test simple authentication error."""
     client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])
     client.set_credentials("SIMPLE", "cn=wrong", "wronger")
     with pytest.raises(bonsai.AuthenticationError):
@@ -471,7 +468,7 @@ def test_simple_auth_error(cfg):
 
 
 def test_digest_auth_error(cfg):
-    """ Test DIGEST-MD5 authentication error. """
+    """Test DIGEST-MD5 authentication error."""
     client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])
     if cfg["DIGESTAUTH"]["realm"] == "None":
         realm = None
@@ -485,14 +482,14 @@ def test_digest_auth_error(cfg):
 
 
 def test_sort_order(conn, basedn):
-    """ Test setting sort order. """
+    """Test setting sort order."""
     obj = conn.search(basedn, 2, attrlist=["uidNumber"], sort_order=["-uidNumber"])
     sort = [o["uidNumber"][0] for o in obj if "uidNumber" in o]
     assert all(sort[i] >= sort[i + 1] for i in range(len(sort) - 1))
 
 
 def test_fileno(conn, cfg):
-    """ Test fileno method. """
+    """Test fileno method."""
     assert isinstance(conn.fileno(), int)
     try:
         import socket
@@ -508,7 +505,7 @@ def test_fileno(conn, cfg):
 
 
 def test_close(conn):
-    """ Test close method. """
+    """Test close method."""
     conn.close()
     assert conn.closed
     with pytest.raises(bonsai.ClosedConnection):
@@ -516,7 +513,7 @@ def test_close(conn):
 
 
 def test_abandon(async_conn, basedn):
-    """ Test abandon method. """
+    """Test abandon method."""
     msgid = async_conn.open()
     while async_conn.get_result(msgid) is None:
         pass
@@ -527,7 +524,7 @@ def test_abandon(async_conn, basedn):
 
 
 def test_async_close_remove_pendig_ops(async_conn, basedn):
-    """ Test remove pending operations after close. """
+    """Test remove pending operations after close."""
     msgid = async_conn.open()
     while async_conn.get_result(msgid) is None:
         pass
@@ -538,7 +535,7 @@ def test_async_close_remove_pendig_ops(async_conn, basedn):
 
 
 def test_vlv_offset(conn, basedn):
-    """ Test VLV control with offset. """
+    """Test VLV control with offset."""
     search_dn = "ou=nerdherd,%s" % basedn
     res, ctrl = conn.virtual_list_search(
         search_dn,
@@ -557,7 +554,7 @@ def test_vlv_offset(conn, basedn):
 
 
 def test_vlv_attrvalue(conn, basedn):
-    """ Test VLV control with attribute value. """
+    """Test VLV control with attribute value."""
     search_dn = "ou=nerdherd,%s" % basedn
     res, ctrl = conn.virtual_list_search(
         search_dn,
@@ -575,7 +572,7 @@ def test_vlv_attrvalue(conn, basedn):
 
 
 def test_vlv_without_sort_order(conn, basedn):
-    """ Test VLV control without sort control. """
+    """Test VLV control without sort control."""
     search_dn = "ou=nerdherd,%s" % basedn
     with pytest.raises(bonsai.UnwillingToPerform):
         _ = conn.virtual_list_search(
@@ -590,7 +587,7 @@ def test_vlv_without_sort_order(conn, basedn):
 
 
 def test_paged_search(conn, basedn):
-    """ Test paged results control. """
+    """Test paged results control."""
     search_dn = "ou=nerdherd,%s" % basedn
     res = conn.paged_search(search_dn, 1, page_size=2)
     for ent in res:
@@ -608,7 +605,7 @@ def test_paged_search(conn, basedn):
 
 
 def test_paged_search_with_auto_acq(cfg, basedn):
-    """ Test paged results control with automatic page acquiring. """
+    """Test paged results control with automatic page acquiring."""
     client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])
     conn = client.connect()
     search_dn = "ou=nerdherd,%s" % basedn
@@ -625,7 +622,7 @@ def test_paged_search_with_auto_acq(cfg, basedn):
 
 @pytest.mark.timeout(15)
 def test_search_timeout(conn, basedn):
-    """ Test search method's timeout. """
+    """Test search method's timeout."""
     search_dn = "ou=nerdherd,%s" % basedn
     with pytest.raises(TypeError):
         _ = conn.search(search_dn, 1, timeout=True)
@@ -638,7 +635,7 @@ def test_search_timeout(conn, basedn):
 
 @pytest.mark.timeout(10)
 def test_whoami_timeout(conn):
-    """ Test whoami's timeout. """
+    """Test whoami's timeout."""
     with pytest.raises(TypeError):
         _ = conn.whoami(timeout="A")
     with pytest.raises(ValueError):
@@ -651,7 +648,7 @@ def test_whoami_timeout(conn):
 
 
 def test_wrong_conn_param():
-    """ Test passing wrong parameters for LDAPConnection. """
+    """Test passing wrong parameters for LDAPConnection."""
     with pytest.raises(TypeError):
         _ = LDAPConnection("wrong")
     with pytest.raises(TypeError):
@@ -659,7 +656,7 @@ def test_wrong_conn_param():
 
 
 def test_wrong_search_param(ipaddr):
-    """ Test passing wrong parameters for search method. """
+    """Test passing wrong parameters for search method."""
     with pytest.raises(ClosedConnection):
         cli = LDAPClient("ldap://%s" % ipaddr)
         LDAPConnection(cli).search()
@@ -672,7 +669,7 @@ def test_wrong_search_param(ipaddr):
 
 
 def test_wrong_add_param(conn, ipaddr):
-    """ Test passing wrong parameter for add method. """
+    """Test passing wrong parameter for add method."""
     with pytest.raises(ClosedConnection):
         cli = LDAPClient("ldap://%s" % ipaddr)
         LDAPConnection(cli).add(bonsai.LDAPEntry("cn=dummy"))
@@ -681,7 +678,7 @@ def test_wrong_add_param(conn, ipaddr):
 
 
 def test_wrong_delete_param(conn, ipaddr):
-    """ Test passing wrong parameter for delete method. """
+    """Test passing wrong parameter for delete method."""
     with pytest.raises(ClosedConnection):
         cli = LDAPClient("ldap://%s" % ipaddr)
         LDAPConnection(cli).delete("cn=dummy")
@@ -693,7 +690,7 @@ def test_wrong_delete_param(conn, ipaddr):
     sys.platform == "win32", reason="Cannot use password policy on Windows."
 )
 def test_password_lockout(conn, ipaddr):
-    """ Test password locking with password policy. """
+    """Test password locking with password policy."""
     user_dn = "cn=jeff,ou=nerdherd,dc=bonsai,dc=test"
     cli = LDAPClient("ldap://%s" % ipaddr)
     cli.set_password_policy(True)
@@ -715,7 +712,7 @@ def test_password_lockout(conn, ipaddr):
     sys.platform.startswith("win"), reason="Cannot use password policy on Windows."
 )
 def test_password_expire(conn, ipaddr):
-    """ Test password expiring with password policy. """
+    """Test password expiring with password policy."""
     user_dn = "cn=skip,ou=nerdherd,dc=bonsai,dc=test"
     cli = LDAPClient("ldap://%s" % ipaddr)
     cli.set_password_policy(True)
@@ -752,7 +749,7 @@ def test_password_expire(conn, ipaddr):
     reason="Cannot use password modify extended operation on Windows.",
 )
 def test_password_modify_extop(conn, ipaddr):
-    """ Test Password Modify extended operation. """
+    """Test Password Modify extended operation."""
     user_dn = LDAPDN("cn=skip,ou=nerdherd,dc=bonsai,dc=test")
     cli = LDAPClient("ldap://%s" % ipaddr)
     cli.set_credentials("SIMPLE", str(user_dn), "p@ssword")
@@ -792,7 +789,7 @@ def test_password_modify_extop(conn, ipaddr):
     sys.platform.startswith("win"), reason="Cannot use ManageDsaIT on Windows"
 )
 def test_search_with_managedsait_ctrl(ipaddr):
-    """ Test searching with manageDsaIT control. """
+    """Test searching with manageDsaIT control."""
     refdn = LDAPDN("o=admin,ou=nerdherd-refs,dc=bonsai,dc=test")
     cli = LDAPClient("ldap://%s" % ipaddr)
     cli.set_server_chase_referrals(True)
@@ -810,7 +807,7 @@ def test_search_with_managedsait_ctrl(ipaddr):
     sys.platform.startswith("win"), reason="Cannot use ManageDsaIT on Windows"
 )
 def test_add_and_delete_referrals(cfg, ipaddr):
-    """ Test add and delete an LDAP referral with ManageDdsIT control. """
+    """Test add and delete an LDAP referral with ManageDdsIT control."""
     refdn = bonsai.LDAPDN("o=test-ref,ou=nerdherd,dc=bonsai,dc=test")
     ref = "ldap://test.host/cn=nobody"
     cli = LDAPClient("ldap://%s" % ipaddr)
@@ -839,7 +836,7 @@ def test_add_and_delete_referrals(cfg, ipaddr):
 
 
 def test_client_sizelimit_error(conn, basedn):
-    """ Test raising SizeLimitError when reaching client side size limit. """
+    """Test raising SizeLimitError when reaching client side size limit."""
     with pytest.raises(SizeLimitError):
         conn.search(
             "ou=nerdherd,dc=bonsai,dc=test", LDAPSearchScope.SUBTREE, sizelimit=2
@@ -847,7 +844,7 @@ def test_client_sizelimit_error(conn, basedn):
 
 
 def test_server_sizelimit_error(conn, anonym_conn, basedn, large_org):
-    """ Test raising SizeLimitError when reaching server side size limit. """
+    """Test raising SizeLimitError when reaching server side size limit."""
     import math
 
     entry_num = 1048
