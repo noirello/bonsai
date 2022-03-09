@@ -28,7 +28,7 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install poetry wheel
+        python -m pip install poetry wheel trio
         poetry config virtualenvs.create false
         poetry install --no-root -E gevent -E tornado
         python -m pip list
@@ -90,7 +90,7 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install poetry wheel
+        python -m pip install poetry wheel trio
         poetry config virtualenvs.create false
         poetry install --no-root -E gevent -E tornado
         python -m pip install --force-reinstall --no-binary gevent delocate

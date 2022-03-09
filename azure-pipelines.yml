@@ -35,7 +35,7 @@ stages:
       displayName: Install OS dependencies
     - script: |
         python -m pip install --upgrade pip
-        python -m pip install poetry wheel
+        python -m pip install poetry wheel trio
         poetry config virtualenvs.create false
         poetry install --no-root -E gevent -E tornado
         python -m pip list
@@ -106,7 +106,7 @@ stages:
     - script: python --version
     - script: |
         python -m pip install --upgrade pip
-        python -m pip install poetry wheel
+        python -m pip install poetry wheel trio
         poetry config virtualenvs.create false
         poetry install --no-root -E gevent -E tornado
         python -m pip list
