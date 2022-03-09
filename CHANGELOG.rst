@@ -1,6 +1,6 @@
 Changelog
 ==========
-[1.3.1 - UNRELEASED]
+[1.4.0 - UNRELEASED]
 --------------------
 
 Changed
@@ -12,13 +12,14 @@ Changed
    will use the logon credentials for authentication on Windows instead
    of an anonymous bind.
 -  Remove unnecessary read-only property overrides. These properties will
-   raise AttributeError, when trying to set them. 
+   raise AttributeError, when trying to set them.
 
 Added
 ~~~~~
 
 -  LDAPClient.set_sasl_security_properties method and sasl_security_properties
    read-only property for setting SASL security properties.
+-  TrioLDAPConnection class for supporting trio asynchronous module.
 
 Fixed
 ~~~~~
