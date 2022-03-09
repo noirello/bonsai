@@ -6,9 +6,8 @@ from functools import wraps
 import pytest
 from conftest import get_config, network_delay
 
-from bonsai import LDAPClient
 from bonsai import LDAPEntry
-from bonsai.asyncio import AIOConnectionPool, AIOLDAPConnection
+from bonsai.asyncio import AIOConnectionPool
 from bonsai.pool import ClosedPool
 import bonsai.errors
 
@@ -29,7 +28,7 @@ def asyncio_test(func):
 
 @asyncio_test
 async def test_connection(client):
-    """ Test opening a connection. """
+    """Test opening a connection."""
     conn = await client.connect(True)
     assert conn is not None
     assert conn.closed == False
@@ -37,7 +36,7 @@ async def test_connection(client):
 
 @asyncio_test
 async def test_search(client):
-    """ Test search. """
+    """Test search."""
     async with client.connect(True) as conn:
         res = await conn.search()
         assert res is not None
@@ -45,7 +44,7 @@ async def test_search(client):
 
 @asyncio_test
 async def test_add_and_delete(client, basedn):
-    """ Test adding and deleting an LDAP entry. """
+    """Test adding and deleting an LDAP entry."""
     async with client.connect(True) as conn:
         entry = LDAPEntry("cn=async_test,%s" % basedn)
         entry["objectclass"] = [
@@ -71,7 +70,7 @@ async def test_add_and_delete(client, basedn):
 
 @asyncio_test
 async def test_recursive_delete(client, basedn):
-    """ Test removing a subtree recursively. """
+    """Test removing a subtree recursively."""
     org1 = bonsai.LDAPEntry("ou=testusers,%s" % basedn)
     org1.update({"objectclass": ["organizationalUnit", "top"], "ou": "testusers"})
     org2 = bonsai.LDAPEntry("ou=tops,ou=testusers,%s" % basedn)
@@ -96,7 +95,7 @@ async def test_recursive_delete(client, basedn):
 
 @asyncio_test
 async def test_modify_and_rename(client, basedn):
-    """ Test modifying and renaming LDAP entry. """
+    """Test modifying and renaming LDAP entry."""
     async with client.connect(True) as conn:
         entry = LDAPEntry("cn=async_test,%s" % basedn)
         entry["objectclass"] = [
@@ -130,7 +129,7 @@ async def test_modify_and_rename(client, basedn):
 
 @asyncio_test
 async def test_obj_err(client, basedn):
-    """ Test object class violation error. """
+    """Test object class violation error."""
     entry = LDAPEntry("cn=async_test,%s" % basedn)
     entry["cn"] = ["async_test"]
     with pytest.raises(bonsai.errors.ObjectClassViolation):
@@ -140,7 +139,7 @@ async def test_obj_err(client, basedn):
 
 @asyncio_test
 async def test_whoami(client):
-    """ Test whoami. """
+    """Test whoami."""
     async with client.connect(True) as conn:
         cfg = get_config()
         obj = await conn.whoami()
@@ -154,7 +153,7 @@ async def test_whoami(client):
 @pytest.mark.timeout(18)
 @asyncio_test
 async def test_connection_timeout(client):
-    """ Test connection timeout. """
+    """Test connection timeout."""
     with network_delay(6.0):
         with pytest.raises(asyncio.TimeoutError):
             await client.connect(True, timeout=8.0)
@@ -163,7 +162,7 @@ async def test_connection_timeout(client):
 @pytest.mark.timeout(18)
 @asyncio_test
 async def test_search_timeout(client):
-    """ Test search timeout. """
+    """Test search timeout."""
     async with client.connect(True) as conn:
         with network_delay(5.1):
             with pytest.raises(asyncio.TimeoutError):
@@ -172,7 +171,7 @@ async def test_search_timeout(client):
 
 @asyncio_test
 async def test_paged_search(client, basedn):
-    """ Test paged results control. """
+    """Test paged results control."""
     client.auto_page_acquire = False
     search_dn = "ou=nerdherd,%s" % basedn
     async with client.connect(True) as conn:
@@ -193,7 +192,7 @@ async def test_paged_search(client, basedn):
 
 @asyncio_test
 async def test_paged_search_with_auto_acq(client, basedn):
-    """ Test paged search with auto page acquiring. """
+    """Test paged search with auto page acquiring."""
     search_dn = "ou=nerdherd,%s" % basedn
     async with client.connect(True) as conn:
         cnt = 0
@@ -206,7 +205,7 @@ async def test_paged_search_with_auto_acq(client, basedn):
 
 @asyncio_test
 async def test_async_with(client):
-    """ Test async with context manager (with backward compatibility). """
+    """Test async with context manager (with backward compatibility)."""
     mgr = client.connect(True)
     aexit = type(mgr).__aexit__
     aenter = type(mgr).__aenter__(mgr)
@@ -231,7 +230,7 @@ async def keep(pool, delay):
 
 @asyncio_test
 async def test_pool_get_put(client):
-    """ Test getting and putting back connection from pool. """
+    """Test getting and putting back connection from pool."""
     delay = 2
     pool = AIOConnectionPool(client, minconn=1, maxconn=1)
     with pytest.raises(ClosedPool):
@@ -257,7 +256,7 @@ async def test_pool_get_put(client):
 
 @asyncio_test
 async def test_pool_close(client):
-    """ Test closing the pool. """
+    """Test closing the pool."""
     pool = AIOConnectionPool(client, minconn=1, maxconn=1)
     await pool.open()
     assert pool.closed == False
@@ -269,7 +268,7 @@ async def test_pool_close(client):
 
 @asyncio_test
 async def test_pool_pass_param(client):
-    """ Test passing parameter to connect. """
+    """Test passing parameter to connect."""
     pool = AIOConnectionPool(client, minconn=1, maxconn=1, timeout=0)
     with pytest.raises(asyncio.TimeoutError):
         await pool.open()
@@ -278,7 +277,7 @@ async def test_pool_pass_param(client):
 
 @asyncio_test
 async def test_pool_spawn(client):
-    """ Test context manager. """
+    """Test context manager."""
     pool = AIOConnectionPool(client, minconn=1, maxconn=1)
     assert pool.idle_connection == 0
     async with pool.spawn() as conn:
