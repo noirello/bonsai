@@ -602,7 +602,7 @@ bonsai.asyncio
 
 .. note::
     The default asyncio event loop is changed with Python 3.8 on Windows to
-    `ProactorEventLoop`. Unfortunately, bonsai's asynio connection requires
+    `ProactorEventLoop`. Unfortunately, bonsai's asyncio connection requires
     the old `SelectorEventLoop`. Make sure to change it back before using
     the module:
 
@@ -730,6 +730,14 @@ bonsai.tornado
 ------------------------------
 
 .. autoclass:: bonsai.tornado.TornadoLDAPConnection
+
+bonsai.trio
+==============
+
+:class:`TrioLDAPConnection`
+------------------------------
+
+.. autoclass:: bonsai.trio.TrioLDAPConnection
 
 _bonsai
 =======

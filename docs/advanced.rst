@@ -2,6 +2,7 @@ Advanced Usage
 **************
 
 .. module:: bonsai
+    :noindex:
 
 This document covers some of the more advanced features of Bonsai.
 
@@ -482,11 +483,12 @@ Asynchronous operations
 
 Asynchronous operations are first-class citizens in the underlying C API that Bonsai is built on.
 That makes relatively easy to integrate the module with popular Python async libraries. Bonsai is
-shipped with support to some: `asyncio`_, `gevent`_, and `Tornado`_.
+shipped with support to some: `asyncio`_, `gevent`_, `Tornado`_ and `trio`_.
 
 .. _asyncio: https://docs.python.org/3/library/asyncio.html
 .. _gevent: http://www.gevent.org/
 .. _Tornado: http://www.tornadoweb.org/en/stable/
+.. _trio: https://trio.readthedocs.io/en/stable/
 
 Using async out-of-the-box
 --------------------------

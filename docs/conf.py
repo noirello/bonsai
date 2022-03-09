@@ -47,7 +47,7 @@ import src.bonsai as bonsai
 sys.modules['bonsai'] = bonsai
 sys.modules['bonsai.asyncio'] = bonsai.asyncio
 
-autodoc_mock_imports = ["gevent"]
+autodoc_mock_imports = ["gevent", "tornado", "trio"]
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the

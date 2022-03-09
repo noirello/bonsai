@@ -2,6 +2,7 @@ Quickstart
 **********
 
 .. module:: bonsai
+    :noindex:
 
 After we installed the Bonsai module, let's see the basic functions to communicate with an LDAP
 server.
