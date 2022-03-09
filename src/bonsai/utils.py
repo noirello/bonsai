@@ -1,4 +1,4 @@
-from ._bonsai import (
+from bonsai._bonsai import (
     get_tls_impl_name,
     set_connect_async,
     get_vendor_info,

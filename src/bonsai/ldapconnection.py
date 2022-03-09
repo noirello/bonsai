@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from enum import IntEnum
 from typing import Union, Any, List, Tuple, Optional
 
-from ._bonsai import ldapconnection, ldapsearchiter
+from bonsai._bonsai import ldapconnection, ldapsearchiter
 from .ldapdn import LDAPDN
 from .ldapentry import LDAPEntry
 from .errors import UnwillingToPerform, NotAllowedOnNonleaf

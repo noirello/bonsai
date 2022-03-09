@@ -12,7 +12,7 @@ from typing import (
     Iterator,
 )
 
-from ._bonsai import ldapentry
+from bonsai._bonsai import ldapentry
 from .errors import InvalidDN
 from .ldapdn import LDAPDN
 from .ldapvaluelist import LDAPValueList
