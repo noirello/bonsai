@@ -155,10 +155,15 @@ setup(
         "bonsai.asyncio",
         "bonsai.gevent",
         "bonsai.tornado",
+        "bonsai.trio",
     ],
     include_package_data=True,
     install_requires=[],
-    extras_require={"gevent": ["gevent>=1.4.0"], "tornado": ["tornado>=5.1.1"]},
+    extras_require={
+        "gevent": ["gevent>=1.4.0"],
+        "tornado": ["tornado>=5.1.1"],
+        "trio": ["trio>=0.16.0"],
+    },
     keywords=[
         "python3",
         "ldap",
@@ -169,6 +174,7 @@ setup(
         "asyncio",
         "gevent",
         "tornado",
+        "trio",
     ],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
