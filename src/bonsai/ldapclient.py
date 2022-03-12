@@ -392,6 +392,9 @@ class LDAPClient:
         """
         Set security properties for SASL mechanism.
 
+        .. note::
+           This method has no effect on MS Windows.
+
         :param bool no_anonymous: Flag for forbiding anonymous logins.
         :param bool no_dict: Flag for making the mechanism not susceptable \
         to passive dictionary attack.
