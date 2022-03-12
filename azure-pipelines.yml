@@ -11,8 +11,6 @@ stages:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
-        Python36:
-          python.version: '3.6'
         Python37:
           python.version: '3.7'
         Python38:
@@ -35,9 +33,9 @@ stages:
       displayName: Install OS dependencies
     - script: |
         python -m pip install --upgrade pip
-        python -m pip install poetry wheel trio
+        python -m pip install poetry wheel
         poetry config virtualenvs.create false
-        poetry install --no-root -E gevent -E tornado
+        poetry install --no-root -E gevent -E tornado -E trio
         python -m pip list
       displayName: Install Python dependencies
     - script: docker build -t bonsai -f ./.ci/docker/Dockerfile .
@@ -106,9 +104,9 @@ stages:
     - script: python --version
     - script: |
         python -m pip install --upgrade pip
-        python -m pip install poetry wheel trio
+        python -m pip install poetry wheel
         poetry config virtualenvs.create false
-        poetry install --no-root -E gevent -E tornado
+        poetry install --no-root -E gevent -E tornado -E trio
         python -m pip list
       displayName: Install Python dependencies
     - script: bash ./.github/workflows/scripts/install_docker_mac.sh
@@ -223,7 +221,7 @@ stages:
       displayName: Check container and LDAP tools
     - script: |
         docker exec client poetry config virtualenvs.create false
-        docker exec client poetry install --no-root -E gevent -E tornado
+        docker exec client poetry install --no-root -E gevent -E tornado -E trio
         docker exec client python3 -m pip list
       displayName: Install Python dependencies
     - script: |

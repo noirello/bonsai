@@ -11,14 +11,6 @@ environment:
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\.appveyor\\run_with_env.cmd"
 
   matrix:
-    - PYTHON: "C:\\Python37"
-      PYTHON_VERSION: "3.7.x"
-      PYTHON_ARCH: "32"
-
-    - PYTHON: "C:\\Python37-x64"
-      PYTHON_VERSION: "3.7.x"
-      PYTHON_ARCH: "64"
-
     - PYTHON: "C:\\Python38"
       PYTHON_VERSION: "3.8.x"
       PYTHON_ARCH: "32"
@@ -72,9 +64,9 @@ install:
   # Upgrade to the latest version of pip to avoid it displaying warnings
   # about it being out of date.
   - "%PYTHON%\\python.exe -m pip install --disable-pip-version-check --user --upgrade pip"
-  - "%PYTHON%\\python.exe -m pip install poetry wheel trio"
+  - "%PYTHON%\\python.exe -m pip install poetry wheel"
   - "%PYTHON%\\python.exe -m poetry config virtualenvs.create false"
-  - "%PYTHON%\\python.exe -m poetry install --no-root -E gevent -E tornado"
+  - "%PYTHON%\\python.exe -m poetry install --no-root -E gevent -E tornado -E trio"
   - "%PYTHON%\\python.exe -m pip list"
 
 build_script:
