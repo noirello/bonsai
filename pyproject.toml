@@ -36,6 +36,5 @@ delocate = { version = "^0.8", markers = "sys_platform == 'darwin'" }
 requires = [
     "setuptools >= 40.6.2",
     "wheel >= 0.30.0",
-    "poetry>=0.12",
 ]
 build-backend = "setuptools.build_meta"
