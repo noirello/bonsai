@@ -38,10 +38,11 @@ except ImportError:
 
 @pytest.mark.skipif(not MOD_INSTALLED, reason="Tornado is not installed.")
 class TornadoLDAPConnectionTest(TestCaseClass):
-    """ Test TornadoLDAPConnection object. """
+    """Test TornadoLDAPConnection object."""
 
     def setUp(self):
-        """ Set LDAP URL and open connection. """
+        """Set LDAP URL and open connection."""
+        super().setUp()
         self.cfg = get_config()
         self.url = "ldap://%s:%s/%s?%s?%s" % (
             self.cfg["SERVER"]["hostip"],
@@ -63,7 +64,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     @gen_test(timeout=20.0)
     def test_connection(self):
-        """ Test opening a connection. """
+        """Test opening a connection."""
         conn = yield self.client.connect(True, ioloop=self.io_loop)
         assert conn is not None
         assert not conn.closed
@@ -71,14 +72,14 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     @gen_test(timeout=20.0)
     def test_search(self):
-        """ Test search. """
+        """Test search."""
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             res = yield conn.search()
             assert res is not None
 
     @gen_test(timeout=20.0)
     def test_add_and_delete(self):
-        """ Test addding and deleting an LDAP entry. """
+        """Test addding and deleting an LDAP entry."""
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)
             entry["objectclass"] = [
@@ -103,7 +104,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     @gen_test(timeout=20.0)
     def test_recursive_delete(self):
-        """ Test removing a subtree recursively. """
+        """Test removing a subtree recursively."""
         org1 = bonsai.LDAPEntry("ou=testusers,%s" % self.basedn)
         org1.update({"objectclass": ["organizationalUnit", "top"], "ou": "testusers"})
         org2 = bonsai.LDAPEntry("ou=tops,ou=testusers,%s" % self.basedn)
@@ -129,7 +130,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     @gen_test(timeout=20.0)
     def test_modify_and_rename(self):
-        """ Test modifying and renaming an LDAP entry. """
+        """Test modifying and renaming an LDAP entry."""
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             entry = LDAPEntry("cn=async_test,%s" % self.basedn)
             entry["objectclass"] = [
@@ -162,7 +163,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     @gen_test(timeout=20.0)
     def test_obj_err(self):
-        """ Test object class violation error. """
+        """Test object class violation error."""
         entry = LDAPEntry("cn=async_test,%s" % self.basedn)
         entry["cn"] = ["async_test"]
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
@@ -171,7 +172,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     @gen_test(timeout=20.0)
     def test_whoami(self):
-        """ Test whoami. """
+        """Test whoami."""
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             obj = yield conn.whoami()
             expected_res = [
@@ -182,14 +183,14 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     @gen_test(timeout=12.0)
     def test_connection_timeout(self):
-        """ Test connection timeout. """
+        """Test connection timeout."""
         with network_delay(7.0):
             with pytest.raises(gen.TimeoutError):
                 yield self.client.connect(True, ioloop=self.io_loop, timeout=8.0)
 
     @gen_test(timeout=18.0)
     def test_search_timeout(self):
-        """ Test search timeout. """
+        """Test search timeout."""
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             with network_delay(7.0):
                 with pytest.raises(gen.TimeoutError):
@@ -197,7 +198,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     @gen_test(timeout=20.0)
     def test_paged_search(self):
-        """ Test paged results control. """
+        """Test paged results control."""
         self.client.auto_page_acquire = False
         search_dn = "ou=nerdherd,%s" % self.basedn
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
@@ -217,7 +218,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     @gen_test(timeout=20.0)
     def test_paged_search_with_auto_acq(self):
-        """ Test paged search with auto page acquiring. """
+        """Test paged search with auto page acquiring."""
         search_dn = "ou=nerdherd,%s" % self.basedn
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             res_iter = yield conn.paged_search(search_dn, 1, page_size=3)
