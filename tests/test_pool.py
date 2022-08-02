@@ -86,6 +86,27 @@ def test_put(client):
         pool.put(other_conn)
 
 
+def test_put_closed(client):
+    """ Test closed connections are not put back into the pool. """
+    pool = ConnectionPool(client, minconn=1, maxconn=1)
+    pool.open()
+    conn = pool.get()
+    assert pool.idle_connection == 0
+    assert pool.shared_connection == 1
+    conn.close()
+    pool.put(conn)
+    assert pool.idle_connection == 0
+    assert pool.shared_connection == 0
+
+    # The pool is below its minimum connection count, but this shouldn't cause
+    # problems and get should create a new connection.
+    conn = pool.get()
+    assert pool.idle_connection == 0
+    assert pool.shared_connection == 1
+    pool.put(conn)
+    pool.close()
+
+
 def test_max_connection():
     """ Test max_connection property. """
     cli = LDAPClient("ldap://dummy.nfo")
