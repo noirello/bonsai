@@ -427,7 +427,51 @@ the pool for other threads/tasks to use.
     # After finishing up...
     pool.put(conn)
 
+Connections in a pool are opened when the pool is created or when a connection
+is requested from the pool with :meth:`bonsai.pool.ConnectionPool.get`. They
+then remain open until the entire pool is closed.
 
+Connection timeouts
+-------------------
+
+Some LDAP servers, or some firewalls between a program and the LDAP server,
+will cut off connections if they have been idle for too long. Sometimes this is
+done silently and the only sign is that the next request will time out. You
+may therefore want to set a timeout when using connections from a pool so that
+your program doesn't wait for a TCP timeout (which can take a very long time).
+
+Bonsai does not detect that a connection has timed out or is otherwise in an
+error state and should not be used again. However, you can close the connection
+before returning it to the pool, and Bonsai will then discard it and not reuse
+it and will open a new replacement connection as needed.
+
+One possible pattern for using a connection pool with an LDAP server that may
+silently time out connections is to close connections on failure and retry one
+more time than there are idle connections in the pool. In the worst case where
+all idle connections have been timed out, each of those idle connections will
+fail and be closed and then you'll get a fresh connection that should not have
+timed out (and if that still fails, there is some deeper problem).
+
+.. code-block:: python3
+
+    def work(pool, base, scope, filter_exp, attrlist):
+        idle_count = pool.idle_connection
+        for try in range(idle_count + 1):
+            with pool.spawn() as conn:
+                try:
+                    result = conn.search(
+                        base, scope, filter_exp, attrlist, timeout=10
+                    )
+                    # Use the results somehow....
+                except bonsai.ConnectionError as e:
+                    conn.close()
+                    # If all of the idle connections have been tried and the
+                    # call still failed, there is something deeper wrong.
+                    if try == idle_count:
+                        raise
+
+When using :class:`bonsai.asyncio.AIOConnectionPool`, also catch
+:class:`asyncio.TimeoutError`, which may be raised by a connection timeout.
 
 Reading and writing LDIF files
 ==============================

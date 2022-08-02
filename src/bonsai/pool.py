@@ -92,7 +92,10 @@ class ConnectionPool:
 
     def put(self, conn) -> None:
         """
-        Put back a connection to the connection pool.
+        Put back a connection to the connection pool. The caller is allowed to
+        close the connection (if, for instance, it is in an error state), in
+        which case it's not returned to the pool and a subsequent get will
+        grow the pool if needed.
 
         :param LDAPConnection conn: the connection managed by the pool.
         :raises ClosedPool: when the method is called on a closed pool.
@@ -103,7 +106,8 @@ class ConnectionPool:
             raise ClosedPool("The pool is closed.")
         try:
             self._used.remove(conn)
-            self._idles.add(conn)
+            if not conn.closed:
+                self._idles.add(conn)
         except KeyError:
             raise PoolError("The %r is not managed by this pool." % conn) from None
 
