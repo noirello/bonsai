@@ -548,7 +548,14 @@ An example for asynchronous search and modify with `asyncio`:
 .. code-block:: python3
 
     import asyncio
+    import sys
+
     import bonsai
+
+    if sys.platform == 'win32':
+        # The current asyncio connection implementation requires
+        # the old selector event loop when running on Windows.
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     async def do():
         cli = bonsai.LDAPClient("ldap://localhost")
@@ -566,6 +573,13 @@ An example for asynchronous search and modify with `asyncio`:
 
 To work with other non-blocking I/O modules the default asynchronous class has to be set to a
 different one with :meth:`LDAPClient.set_async_connection_class`.
+
+.. note::
+    The default asyncio event loop is changed with Python 3.8 on Windows to
+    `ProactorEventLoop`. Unfortunately, bonsai's asyncio connection requires
+    the old `SelectorEventLoop`. Make sure to change it like in the example
+    before using the module. Otherwise the ``add_reader`` method will raise
+    ``NotImplementedError``.
 
 For example changing it to `GeventLDAPConnection` makes it possible to use the module with
 gevent:
