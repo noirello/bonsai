@@ -2,13 +2,13 @@ import struct
 import uuid
 
 from enum import IntEnum
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Union
 
 from .sid import SID
 
 
 class ACEFlag(IntEnum):
-    """ ACE type-specific control flags. """
+    """ACE type-specific control flags."""
 
     OBJECT_INHERIT = 0x01
     CONTAINER_INHERIT = 0x02
@@ -20,7 +20,7 @@ class ACEFlag(IntEnum):
 
     @property
     def short_name(self) -> str:
-        """ The SDDL short name of the flag. """
+        """The SDDL short name of the flag."""
         short_names = {
             "OBJECT_INHERIT": "OI",
             "CONTAINER_INHERIT": "CI",
@@ -34,7 +34,7 @@ class ACEFlag(IntEnum):
 
 
 class ACEType(IntEnum):
-    """ Type of the ACE. """
+    """Type of the ACE."""
 
     ACCESS_ALLOWED = 0
     ACCESS_DENIED = 1
@@ -59,7 +59,7 @@ class ACEType(IntEnum):
 
     @property
     def short_name(self) -> str:
-        """ The SDDL short name of the type. """
+        """The SDDL short name of the type."""
         short_names = {
             "ACCESS_ALLOWED": "A",
             "ACCESS_DENIED": "D",
@@ -86,7 +86,7 @@ class ACEType(IntEnum):
 
     @property
     def is_object_type(self) -> bool:
-        """ Flag for ACE types with objects. """
+        """Flag for ACE types with objects."""
         return self in (
             ACEType.ACCESS_ALLOWED_OBJECT,
             ACEType.ACCESS_DENIED_OBJECT,
@@ -100,7 +100,7 @@ class ACEType(IntEnum):
 
 
 class ACERight(IntEnum):
-    """ The rights of the ACE. """
+    """The rights of the ACE."""
 
     GENERIC_READ = 0x80000000
     GENERIC_WRITE = 0x4000000
@@ -125,7 +125,7 @@ class ACERight(IntEnum):
 
     @property
     def short_name(self) -> str:
-        """ The SDDL short name of the access right. """
+        """The SDDL short name of the access right."""
         short_names = {
             "GENERIC_READ": "GR",
             "GENERIC_WRITE": "GW",
@@ -152,7 +152,7 @@ class ACERight(IntEnum):
 
 
 class ACLRevision(IntEnum):
-    """ The ACL revision. """
+    """The ACL revision."""
 
     ACL_REVISION = 0x02
     ACL_REVISION_DS = 0x04
@@ -237,8 +237,8 @@ class ACE:
         except struct.error as err:
             raise ValueError(f"Not a valid binary ACE, {err}") from None
 
-    def __str__(self):
-        """ Return the SDDL string representation of the ACE object. """
+    def __str__(self) -> str:
+        """Return the SDDL string representation of the ACE object."""
         flags = "".join(
             flg.short_name for flg in sorted(self.flags, key=lambda f: f.value)
         )
@@ -285,19 +285,124 @@ class ACE:
         data[pos : pos + size] = self.application_data
         return bytes(data)
 
+    def set_access_rights(self, rights: Union[int, Set[ACERight]]) -> None:
+        """
+        Set the access rights for the ACE object. The `rights`
+        parameter can be a set of ACERight objects or an integer.
+
+        :param rights: the access rights
+        :raises TypeError: if the parameter not an int or not \
+        every item of the set is an ACERight object.
+        :raises ValueError: if the provided number is not a valid \
+        access mask.
+        """
+        if isinstance(rights, int):
+            if rights != sum({rgt for rgt in ACERight if rights & rgt}):
+                raise ValueError(
+                    f"{rights} is not a valid access rights for an ACE object."
+                )
+            self.__mask = rights
+        elif all(isinstance(rgt, ACERight) for rgt in rights):
+            self.__mask = sum(rights)
+        else:
+            raise TypeError(
+                "The rights parameter must be an int or a set of ACERight objects."
+            )
+
+    def set_application_data(self, data: bytes) -> None:
+        """
+        Set application data for the ACE object.
+
+        :param bytes data: the application data.
+        :raises TypeError: if the data is not bytes.
+        """
+        if not isinstance(data, bytes):
+            raise TypeError("Application data must be bytes.")
+        self.__application_data = data
+
+    def set_flags(self, flags: Set[ACEFlag]) -> None:
+        """
+        Set flags for the ACE object.
+
+        :param Set[ACEFlag] flags: a set of ACEFlag objects.
+        :raises TypeError: if any of the elements in the set \
+        is not an ACEFlag object.
+        """
+        if not all(isinstance(flg, ACEFlag) for flg in flags):
+            raise TypeError("All elements in the set must be an ACEFlag.")
+        self.__flags = flags
+
+    def set_object_type(self, object_type: Optional[uuid.UUID]) -> None:
+        """
+        Set the object type for the ACE object.
+
+        :param uuid.UUID|None object_type: the uuid of the object type.
+        :raises TypeError: if the parameter is neither an UUID nor None.
+        """
+        if object_type is not None and not isinstance(object_type, uuid.UUID):
+            raise TypeError("Object type must be UUID or None.")
+        self.__object_type = object_type
+
+    def set_inherited_object_type(self, object_type: Optional[uuid.UUID]) -> None:
+        """
+        Set the inherited object type for the ACE object.
+
+        :param uuid.UUID|None object_type: the uuid of the inherited \
+        object type.
+        :raises TypeError: if the parameter is neither an UUID nor None.
+        """
+        if object_type is not None and not isinstance(object_type, uuid.UUID):
+            raise TypeError("Inherited object type must be UUID or None.")
+        self.__inherited_object_type = object_type
+
+    def set_type(self, ace_type: ACEType) -> None:
+        """
+        Set type for the ACE object.
+
+        :param ACEType ace_type: the type of the ACE object.
+        :raises TypeError: if the parameter is not an ACEType.
+        """
+        if not isinstance(ace_type, ACEType):
+            raise TypeError("The type property must be an ACEType.")
+        self.__type = ace_type
+
+    def set_trustee_sid(self, sid: SID) -> None:
+        """
+        Set the trustee SID for the ACE object.
+
+        :param SID sid: the trustee SID of the ACE object.
+        :raises TypeError: if the parameter is not a SID.
+        """
+        if not isinstance(sid, SID):
+            raise TypeError("The trustee sid property must be a SID object.")
+        self.__trustee_sid = sid
+
+    @property
+    def is_inherited(self) -> bool:
+        """Return true if the ACE object is inherited."""
+        return ACEFlag.INHERITED in self.flags
+
     @property
     def type(self) -> ACEType:
-        """ The type of the ACE. """
+        """The type of the ACE."""
         return self.__type
+
+    @type.setter
+    def type(self, value: ACEType) -> None:
+        self.set_type(value)
 
     @property
     def flags(self) -> Set[ACEFlag]:
-        """ The flags of the ACE. """
+        """The flags of the ACE."""
         return self.__flags
+
+    @flags.setter
+    def flags(self, value: Set[ACEFlag]) -> None:
+        self.set_flags(value)
 
     @property
     def size(self) -> int:
-        """ The binary size of ACE in bytes. """
+        """The binary size of ACE in bytes."""
         size = 8
         if self.type.is_object_type:
             size += 4
@@ -311,33 +416,57 @@ class ACE:
 
     @property
     def mask(self) -> int:
-        """ The acces mask """
+        """The access mask"""
         return self.__mask
+
+    @mask.setter
+    def mask(self, value: int) -> None:
+        self.set_access_rights(value)
 
     @property
     def rights(self) -> Set[ACERight]:
-        """ The set of ACERights based on the access mask."""
+        """The set of ACERights based on the access mask."""
         return {rgt for rgt in ACERight if self.mask & rgt}
+
+    @rights.setter
+    def rights(self, value: Set[ACERight]) -> None:
+        self.set_access_rights(value)
 
     @property
     def object_type(self) -> Optional[uuid.UUID]:
-        """ The uuid of the object type. """
+        """The uuid of the object type."""
         return self.__object_type
+
+    @object_type.setter
+    def object_type(self, value: Optional[uuid.UUID]) -> None:
+        self.set_object_type(value)
 
     @property
     def inherited_object_type(self) -> Optional[uuid.UUID]:
-        """ The uuid of the inherited object type. """
+        """The uuid of the inherited object type."""
         return self.__inherited_object_type
+
+    @inherited_object_type.setter
+    def inherited_object_type(self, value: Optional[uuid.UUID]) -> None:
+        self.set_inherited_object_type(value)
 
     @property
     def trustee_sid(self) -> SID:
-        """ The sid of the trustee. """
+        """The sid of the trustee."""
         return self.__trustee_sid
+
+    @trustee_sid.setter
+    def trustee_sid(self, value: SID) -> None:
+        self.set_trustee_sid(value)
 
     @property
     def application_data(self) -> bytes:
-        """ The possible application data. """
+        """The possible application data."""
         return self.__application_data
+
+    @application_data.setter
+    def application_data(self, value: bytes) -> None:
+        self.set_application_data(value)
 
 
 class ACL:
@@ -396,17 +525,33 @@ class ACL:
             data.extend(ace.to_binary())
         return bytes(data)
 
+    def set_aces(self, aces: List[ACE]) -> None:
+        """
+        Set a list of ACE object to the ACL.
+
+        :param List[ACE] aces: a list of ACE objects.
+        :raises TypeError: if not every element in the list is \
+        an ACE object.
+        """
+        if not all(isinstance(elem, ACE) for elem in aces):
+            raise TypeError("All elements in the list must be ACE objects.")
+        self.__aces = aces
+
     @property
     def revision(self) -> ACLRevision:
-        """ The revision of ACL. """
+        """The revision of ACL."""
         return self.__revision
 
     @property
     def size(self) -> int:
-        """ The binary size in bytes. """
+        """The binary size in bytes."""
         return 8 + sum(ace.size for ace in self.aces)
 
     @property
     def aces(self) -> List[ACE]:
-        """ The list of :class:`ACE` objects. """
+        """The list of :class:`ACE` objects."""
         return self.__aces
+
+    @aces.setter
+    def aces(self, value: List[ACE]) -> None:
+        self.set_aces(value)
