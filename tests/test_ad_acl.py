@@ -232,6 +232,20 @@ def test_acl_to_binary():
         assert ACL.from_binary(input_data).to_binary() == input_data
 
 
+def test_acl_set_aces(test_ace):
+    """Test setting ACL's aces list."""
+    test_acl = ACL(ACLRevision.ACL_REVISION, [])
+    assert test_acl.aces == []
+    with pytest.raises(TypeError):
+        test_acl.set_aces([1, 2, 3])
+    with pytest.raises(TypeError):
+        test_acl.set_aces([test_ace, 3])
+    test_acl.set_aces([test_ace])
+    assert test_acl.aces == [test_ace]
+    test_acl.aces = []
+    assert test_acl.aces == []
+
+
 def test_str():
     """Test __str__ method."""
     ace = ACE.from_binary(ACE_BINARY_TEST_DATA)
