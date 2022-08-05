@@ -237,6 +237,22 @@ class ACE:
         except struct.error as err:
             raise ValueError(f"Not a valid binary ACE, {err}") from None
 
+    def __eq__(self, other: object) -> bool:
+        """
+        Check that ACE object equals to the other object. If the `other`
+        is also an ACE object, then basically comapre their byte
+        representations.
+
+        :param object other: the other object to compare.
+        """
+        if not isinstance(other, ACE):
+            return NotImplemented
+        if self.type != other.type or self.flags != other.flags:
+            return False
+        if self.size != other.size:
+            return False
+        return self.to_binary() == other.to_binary()
+
     def __str__(self) -> str:
         """Return the SDDL string representation of the ACE object."""
         flags = "".join(

@@ -158,6 +158,43 @@ def test_ace_set_trustee_sid(test_ace: ACE):
     assert test_ace.trustee_sid == SID("S-1-5-11")
 
 
+def test_eq(test_ace: ACE):
+    """Test ACE's __eq__ method."""
+    assert not test_ace == 21
+    other_ace = ACE(
+        ACEType.ACCESS_ALLOWED,
+        {ACEFlag.INHERITED},
+        0x10000000,
+        SID("S-1-1-0"),
+        None,
+        uuid.UUID("c975c901-6cea-4b6f-8319-d67f45449506"),
+        b"",
+    )
+    assert not test_ace == other_ace
+    other_ace = ACE(
+        ACEType.ACCESS_ALLOWED,
+        {ACEFlag.INHERITED},
+        0x80000000,
+        SID("S-1-1-0"),
+        None,
+        uuid.UUID("c975c901-6cea-4b6f-8319-d67f45449506"),
+        b"\x01",
+    )
+    assert not test_ace == other_ace
+    other_ace = ACE.from_binary(ACE_BINARY_TEST_DATA)
+    assert not test_ace == other_ace
+    other_ace = ACE(
+        ACEType.ACCESS_ALLOWED,
+        {ACEFlag.INHERITED},
+        0x80000000,
+        SID("S-1-1-0"),
+        None,
+        uuid.UUID("c975c901-6cea-4b6f-8319-d67f45449506"),
+        b"",
+    )
+    assert test_ace == other_ace
+
+
 def test_acl_from_binary():
     """Test ACL's from_binary method."""
     with pytest.raises(TypeError):
