@@ -1,9 +1,9 @@
 import struct
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from .sid import SID
-from .acl import ACL, ACE, ACEFlag, ACERight, ACEType, ACLRevision
+from .acl import ACL
 
 
 class SecurityDescriptor:
@@ -88,7 +88,7 @@ class SecurityDescriptor:
         :returns: A new SecurityDescriptor instance.
         :rtype: SecurityDescriptor
         :raises TypeError: when the parameter is not bytes.
-        :raises ValueError: when the input cannot be parsed as a 
+        :raises ValueError: when the input cannot be parsed as a
             SecurityDescriptor object.
         """
         try:
@@ -163,40 +163,139 @@ class SecurityDescriptor:
         data.extend(dacl)
         return bytes(data)
 
+    def set_control(self, control: Union[Dict[str, bool], int]) -> None:
+        """
+        Set the control access bit flags for the SecurityDescriptor object.
+
+        :param dict|int control: the control flag either as an int or a dict.
+        :raises ValueError: if the provided number is not valid.
+        :raises TypeError: if the parameter neither an int nor a bool value \
+        only dict.
+        """
+        if isinstance(control, int):
+            ctrl = self.__convert_ctrl(control)
+            if control != self.__convert_ctrl(ctrl, to_int=True):
+                raise ValueError(f"{control} is not a valid controll flag.")
+            self.__control = ctrl
+        elif isinstance(control, dict) and all(
+            isinstance(val, bool) for val in control.values()
+        ):
+            self.__control = control
+        else:
+            raise TypeError(
+                "The control parameter must be an int or bool value only dictionary."
+            )
+
+    def set_owner_sid(self, owner_sid: SID) -> None:
+        """
+        Set the owner SID for the the SecurityDescriptor object.
+
+        :param SID owner_sid: the new owner SID.
+        :raises TypeError: if the parameter is not a SID object.
+        """
+        if not isinstance(owner_sid, SID):
+            raise TypeError("The owner_sid must be a SID object.")
+        self.__owner_sid = owner_sid
+
+    def set_group_sid(self, group_sid: SID) -> None:
+        """
+        Set the group SID for the the SecurityDescriptor object.
+
+        :param SID group_sid: the new group SID.
+        :raises TypeError: if the parameter is not a SID object.
+        """
+        if not isinstance(group_sid, SID):
+            raise TypeError("The group_sid must be a SID object.")
+        self.__group_sid = group_sid
+
+    def set_dacl(self, dacl: Optional[ACL]) -> None:
+        """
+        Set the discretionary ACL for the the SecurityDescriptor object.
+        It also sets the `dacl_present` in the control access bit flags
+        accordingly.
+
+        :param ACL|None dacl: the ACL object or None.
+        :raises TypeError: if the parameter is not a ACL object or None.
+        """
+        if dacl is not None and not isinstance(dacl, ACL):
+            raise TypeError("The dacl must be an ACL object or None.")
+        self.__dacl = dacl
+        if dacl is not None:
+            self.__control["dacl_present"] = True
+        else:
+            self.__control["dacl_present"] = False
+
+    def set_sacl(self, sacl: Optional[ACL]) -> None:
+        """
+        Set the system ACL for the the SecurityDescriptor object.
+        It also sets the `sacl_present` in the control access bit flags
+        accordingly.
+
+        :param ACL|None dacl: the ACL object or None.
+        :raises TypeError: if the parameter is not a ACL object or None.
+        """
+        if sacl is not None and not isinstance(sacl, ACL):
+            raise TypeError("The sacl must be an ACL object or None.")
+        self.__sacl = sacl
+        if sacl is not None:
+            self.__control["sacl_present"] = True
+        else:
+            self.__control["sacl_present"] = False
+
     @property
     def sbz1(self) -> int:
-        """ Reserved field in the security descriptor structure. """
+        """Reserved field in the security descriptor structure."""
         return self.__sbz1
 
     @property
     def revision(self) -> int:
-        """ The revision of the security descriptor. """
+        """The revision of the security descriptor."""
         return self.__revision
 
     @property
     def control(self) -> Dict[str, bool]:
-        """ The dict of the control access bit flags. """
+        """The dict of the control access bit flags."""
         return self.__control
+
+    @control.setter
+    def control(self, value: Union[Dict[str, bool], int]) -> None:
+        self.set_control(value)
 
     @property
     def owner_sid(self) -> Optional[SID]:
-        """ The :class:`SID` of the owner. """
+        """The :class:`SID` of the owner."""
         return self.__owner_sid
+
+    @owner_sid.setter
+    def owner_sid(self, value: SID) -> None:
+        self.set_owner_sid(value)
 
     @property
     def group_sid(self) -> Optional[SID]:
-        """ The :class:`SID` of the group. """
+        """The :class:`SID` of the group."""
         return self.__group_sid
+
+    @group_sid.setter
+    def group_sid(self, value: SID) -> None:
+        self.set_group_sid(value)
 
     @property
     def sacl(self) -> Optional[ACL]:
-        """ The system :class:`ACL`. """
+        """The system :class:`ACL`."""
         return self.__sacl
+
+    @sacl.setter
+    def sacl(self, value: Optional[ACL]) -> None:
+        self.set_sacl(value)
 
     @property
     def dacl(self) -> Optional[ACL]:
-        """ The discretionary :class:`ACL`. """
+        """The discretionary :class:`ACL`."""
         return self.__dacl
+
+    @dacl.setter
+    def dacl(self, value: Optional[ACL]) -> None:
+        self.set_dacl(value)
 
 
 class UserAccountControl:
@@ -240,12 +339,12 @@ class UserAccountControl:
 
     @property
     def properties(self) -> Dict[str, bool]:
-        """ Dictionary of the UserAccountControl properties. """
+        """Dictionary of the UserAccountControl properties."""
         return self.__properties
 
     @property
     def value(self) -> int:
-        """ The intger value of the properties. """
+        """The intger value of the properties."""
         return sum(
             self.__flag_values[key] for key, val in self.properties.items() if val
         )
