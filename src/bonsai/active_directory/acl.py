@@ -98,6 +98,27 @@ class ACEType(IntEnum):
             ACEType.SYSTEM_ALARM_CALLBACK_OBJECT,
         )
 
+    @property
+    def is_access_allowed(self) -> bool:
+        """Flag for ACE types that allow access."""
+        return self in (
+            ACEType.ACCESS_ALLOWED,
+            ACEType.ACCESS_ALLOWED_COMPOUND,
+            ACEType.ACCESS_ALLOWED_OBJECT,
+            ACEType.ACCESS_ALLOWED_CALLBACK,
+            ACEType.ACCESS_ALLOWED_CALLBACK_OBJECT,
+        )
+
+    @property
+    def is_access_denied(self) -> bool:
+        """Flag for ACE types that deny access."""
+        return self in (
+            ACEType.ACCESS_DENIED,
+            ACEType.ACCESS_DENIED_OBJECT,
+            ACEType.ACCESS_DENIED_CALLBACK,
+            ACEType.ACCESS_DENIED_CALLBACK_OBJECT,
+        )
+
 
 class ACERight(IntEnum):
     """The rights of the ACE."""

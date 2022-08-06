@@ -33,6 +33,9 @@ def test_ace_from_binary():
         _ = ACE.from_binary(b"\x05\nH\x00\x07\x00\x00\x00")
     ace = ACE.from_binary(ACE_BINARY_TEST_DATA)
     assert ace.type == ACEType.ACCESS_ALLOWED_OBJECT
+    assert ace.type.is_object_type
+    assert ace.type.is_access_allowed
+    assert not ace.type.is_access_denied
     assert ace.mask == 7
     assert ace.rights == {
         ACERight.DS_CREATE_CHILD,
@@ -135,14 +138,17 @@ def test_ace_set_inherited_object_type(test_ace: ACE):
 def test_ace_set_type(test_ace: ACE):
     """Test setting ACE's type."""
     assert test_ace.type == ACEType.ACCESS_ALLOWED
+    assert test_ace.type.is_access_allowed
     with pytest.raises(TypeError):
         test_ace.set_type("string")
     with pytest.raises(TypeError):
         test_ace.set_type(42)
     test_ace.set_type(ACEType.ACCESS_DENIED)
     assert test_ace.type == ACEType.ACCESS_DENIED
+    assert test_ace.type.is_access_denied
     test_ace.type = ACEType.ACCESS_DENIED_CALLBACK
     assert test_ace.type == ACEType.ACCESS_DENIED_CALLBACK
+    assert test_ace.type.is_access_denied
 
 
 def test_ace_set_trustee_sid(test_ace: ACE):
