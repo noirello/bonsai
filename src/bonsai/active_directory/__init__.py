@@ -3,7 +3,7 @@ import struct
 from typing import Dict, Optional, Union
 
 from .sid import SID
-from .acl import ACL
+from .acl import ACL, ACLRevision, ACE, ACEFlag, ACERight, ACEType
 
 
 class SecurityDescriptor:
@@ -344,7 +344,7 @@ class UserAccountControl:
 
     @property
     def value(self) -> int:
-        """The intger value of the properties."""
+        """The integer value of the properties."""
         return sum(
             self.__flag_values[key] for key, val in self.properties.items() if val
         )

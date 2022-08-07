@@ -486,9 +486,18 @@ bonsai.active_directory
 
 .. automethod:: ACE.from_binary(data)
 .. automethod:: ACE.to_binary()
+.. automethod:: ACE.__eq__(other)
 .. automethod:: ACE.__str__()
+.. automethod:: ACE.set_access_rights(rights)
+.. automethod:: ACE.set_application_data(data)
+.. automethod:: ACE.set_flags(flags)
+.. automethod:: ACE.set_object_type(object_type)
+.. automethod:: ACE.set_inherited_object_type(object_type)
+.. automethod:: ACE.set_type(ace_type)
+.. automethod:: ACE.set_trustee_sid(sid)
 .. autoattribute:: ACE.application_data
 .. autoattribute:: ACE.flags
+.. autoattribute:: ACE.is_inherited
 .. autoattribute:: ACE.inherited_object_type
 .. autoattribute:: ACE.mask
 .. autoattribute:: ACE.object_type
@@ -529,6 +538,7 @@ bonsai.active_directory
 
 .. automethod:: ACL.from_binary(data)
 .. automethod:: ACL.to_binary()
+.. automethod:: ACL.set_aces(aces)
 .. autoattribute:: ACL.aces
 .. autoattribute:: ACL.revision
 .. autoattribute:: ACL.size
@@ -551,6 +561,11 @@ bonsai.active_directory
 
 .. automethod:: SecurityDescriptor.from_binary(data)
 .. automethod:: SecurityDescriptor.to_binary()
+.. automethod:: SecurityDescriptor.set_control(control)
+.. automethod:: SecurityDescriptor.set_owner_sid(owner_sid)
+.. automethod:: SecurityDescriptor.set_group_sid(group_sid)
+.. automethod:: SecurityDescriptor.set_dacl(dacl)
+.. automethod:: SecurityDescriptor.set_sacl(sacl)
 .. autoattribute:: SecurityDescriptor.control
 .. autoattribute:: SecurityDescriptor.dacl
 .. autoattribute:: SecurityDescriptor.group_sid

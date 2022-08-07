@@ -327,7 +327,7 @@ class ACE:
         Set the access rights for the ACE object. The `rights`
         parameter can be a set of ACERight objects or an integer.
 
-        :param rights: the access rights
+        :param int|Set[ACERight] rights: the access rights
         :raises TypeError: if the parameter not an int or not \
         every item of the set is an ACERight object.
         :raises ValueError: if the provided number is not a valid \
