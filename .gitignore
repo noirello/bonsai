@@ -6,11 +6,7 @@ build
 .cache/*
 .coverage
 dist
-tests/__pycache__
-src/bonsai/__pycache__
-src/bonsai/asyncio/__pycache__
-src/bonsai/gevent/__pycache__
-src/bonsai/tornado/__pycache__
+**/__pycache__
 docs/_build
 docs/_static
 docs/_templates
@@ -33,3 +29,4 @@ vc140.pdb
 .pytest_cache/
 Pipfile.lock
 pip-wheel-metadata
+.DS_Store
