@@ -6,21 +6,9 @@ import pytest
 from bonsai.active_directory import ACL, SID
 from bonsai.active_directory.acl import ACE, ACEFlag, ACEType, ACERight, ACLRevision
 
+from conftest import test_ace
+
 ACE_BINARY_TEST_DATA = b"\x05\nH\x00\x07\x00\x00\x00\x03\x00\x00\x00\x01\xc9u\xc9\xealoK\x83\x19\xd6\x7fED\x95\x06\x14\xcc(H7\x14\xbcE\x9b\x07\xado\x01^_(\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x15\xb3LK\xd2\xfb\x90s\xc2\xdf9\xb9\\\x04\x00\x00"
-
-
-@pytest.fixture
-def test_ace() -> ACE:
-    """Test ACE object"""
-    return ACE(
-        ACEType.ACCESS_ALLOWED,
-        {ACEFlag.INHERITED},
-        0x80000000,
-        SID("S-1-1-0"),
-        None,
-        uuid.UUID("c975c901-6cea-4b6f-8319-d67f45449506"),
-        b"",
-    )
 
 
 def test_ace_from_binary():

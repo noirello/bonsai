@@ -1,11 +1,14 @@
 import configparser
 import os
 import time
+import uuid
 from contextlib import contextmanager
 
 import pytest
 
 from bonsai import LDAPClient
+from bonsai.active_directory.acl import ACE, ACEFlag, ACEType
+from bonsai.active_directory.sid import SID
 
 
 def get_config():
@@ -58,3 +61,17 @@ def basedn():
 def cfg():
     """Get config."""
     return get_config()
+
+
+@pytest.fixture
+def test_ace() -> ACE:
+    """Test ACE object"""
+    return ACE(
+        ACEType.ACCESS_ALLOWED,
+        {ACEFlag.INHERITED},
+        0x80000000,
+        SID("S-1-1-0"),
+        None,
+        uuid.UUID("c975c901-6cea-4b6f-8319-d67f45449506"),
+        b"",
+    )

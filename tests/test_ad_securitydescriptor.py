@@ -3,17 +3,17 @@ import struct
 import sys
 
 import pytest
-from bonsai.active_directory.acl import ACL
-from bonsai.active_directory.sid import SID
-from conftest import get_config
+from conftest import get_config, test_ace
 
 from bonsai import LDAPClient
+from bonsai.active_directory.acl import ACE, ACL, ACLRevision
+from bonsai.active_directory.sid import SID
 from bonsai.active_directory import SecurityDescriptor
 
 
 @pytest.fixture
 def client():
-    """ Create a client with authentication settings. """
+    """Create a client with authentication settings."""
     cfg = get_config()
     url = f"ldap://{cfg['SERVER']['hostname']}:{cfg['SERVER']['port']}"
     client = LDAPClient(url)
@@ -23,8 +23,36 @@ def client():
     return client
 
 
+@pytest.fixture
+def test_sd():
+    return SecurityDescriptor(
+        {
+            "self_relative": False,
+            "rm_control_valid": False,
+            "sacl_protected": False,
+            "dacl_protected": False,
+            "sacl_auto_inherited": False,
+            "dacl_auto_inherited": False,
+            "sacl_computed_inheritance_required": False,
+            "dacl_computed_inheritance_required": False,
+            "server_security": False,
+            "dacl_trusted": True,
+            "sacl_defaulted": False,
+            "sacl_present": False,
+            "dacl_defaulted": False,
+            "dacl_present": False,
+            "group_defaulted": True,
+            "owner_defaulted": True,
+        },
+        SID("S-1-1-0"),
+        SID("S-1-1-0"),
+        None,
+        None,
+    )
+
+
 def test_from_binary():
-    """ Test from_binary method. """
+    """Test from_binary method."""
     with pytest.raises(TypeError):
         _ = SecurityDescriptor.from_binary(0)
     with pytest.raises(TypeError):
@@ -63,10 +91,11 @@ def test_from_binary():
 
 
 @pytest.mark.parametrize(
-    "file", ["sd-sample0.bin", "sd-sample1.bin"],
+    "file",
+    ["sd-sample0.bin", "sd-sample1.bin"],
 )
 def test_to_binary(file):
-    """ Test to_binary method. """
+    """Test to_binary method."""
     curdir = os.path.abspath(os.path.dirname(__file__))
     with open(os.path.join(curdir, "testenv", file), "rb") as data:
         expected_data = data.read()
@@ -150,7 +179,7 @@ def test_to_binary(file):
     ids=["only-owner", "only-group", "owner-group", "only-dacl", "only-sacl", "all"],
 )
 def test_sd_flags(client, sd_flags, owner_sid, group_sid, dacl, sacl):
-    """ Test LDAP_SERVER_SD_FLAGS_OID control """
+    """Test LDAP_SERVER_SD_FLAGS_OID control"""
     client.sd_flags = sd_flags
     with client.connect() as conn:
         res = conn.search(
@@ -180,3 +209,102 @@ def test_sd_flags(client, sd_flags, owner_sid, group_sid, dacl, sacl):
             assert isinstance(sec_desc.sacl, ACL)
         else:
             assert sec_desc.sacl is None
+
+
+def test_sd_set_control(test_sd: SecurityDescriptor):
+    """Test setting controls for SecurityDescriptor."""
+    with pytest.raises(TypeError):
+        test_sd.set_control("string")
+    with pytest.raises(TypeError):
+        test_sd.set_control({"a": "b", "c": True})
+    with pytest.raises(ValueError):
+        test_sd.set_control(-2)
+    test_sd.set_control(0)
+    assert all(val is False for val in test_sd.control.values())
+    test_sd.control = {"sacl_protected": True}
+    assert test_sd.control["sacl_protected"]
+    assert all(
+        val is False for key, val in test_sd.control.items() if key != "sacl_protected"
+    )
+    test_sd.control = 0x8 + 0x20
+    assert test_sd.control["dacl_defaulted"]
+    assert test_sd.control["sacl_defaulted"]
+    assert all(
+        val is False
+        for key, val in test_sd.control.items()
+        if key not in ("dacl_defaulted", "sacl_defaulted")
+    )
+
+
+def test_sd_set_owner_sid(test_sd: SecurityDescriptor):
+    """Test setting owner SID for SecurityDescriptor."""
+    assert test_sd.owner_sid == SID("S-1-1-0")
+    with pytest.raises(TypeError):
+        test_sd.set_owner_sid("string")
+    with pytest.raises(TypeError):
+        test_sd.set_owner_sid(0)
+    with pytest.raises(TypeError):
+        test_sd.owner_sid = True
+    test_sd.set_owner_sid(SID("S-1-5-10"))
+    assert test_sd.owner_sid == SID("S-1-5-10")
+    test_sd.owner_sid = SID("S-1-5-20")
+    assert test_sd.owner_sid == SID("S-1-5-20")
+
+
+def test_sd_set_group_sid(test_sd: SecurityDescriptor):
+    """Test setting group SID for SecurityDescriptor."""
+    assert test_sd.group_sid == SID("S-1-1-0")
+    with pytest.raises(TypeError):
+        test_sd.set_group_sid("string")
+    with pytest.raises(TypeError):
+        test_sd.set_group_sid(0)
+    with pytest.raises(TypeError):
+        test_sd.group_sid = True
+    test_sd.set_group_sid(SID("S-1-5-10"))
+    assert test_sd.group_sid == SID("S-1-5-10")
+    test_sd.group_sid = SID("S-1-5-20")
+    assert test_sd.group_sid == SID("S-1-5-20")
+
+
+def test_sd_set_dacl(test_sd: SecurityDescriptor, test_ace: ACE):
+    """Test setting dacl for SecurityDescriptor."""
+    assert test_sd.dacl is None
+    with pytest.raises(TypeError):
+        test_sd.set_dacl("string")
+    with pytest.raises(TypeError):
+        test_sd.set_dacl(0)
+    with pytest.raises(TypeError):
+        test_sd.dacl = True
+    with pytest.raises(TypeError):
+        test_sd.set_dacl(["A", "b"])
+    test_sd.set_dacl(ACL(ACLRevision.ACL_REVISION, []))
+    assert test_sd.dacl is not None
+    assert test_sd.control["dacl_present"]
+    test_sd.dacl = ACL(ACLRevision.ACL_REVISION, [test_ace])
+    assert test_sd.dacl is not None
+    assert test_sd.dacl.aces[0] == test_ace
+    test_sd.dacl = None
+    assert test_sd.dacl is None
+    assert test_sd.control["dacl_present"] is False
+
+
+def test_sd_set_sacl(test_sd: SecurityDescriptor, test_ace: ACE):
+    """Test setting sacl for SecurityDescriptor."""
+    assert test_sd.sacl is None
+    with pytest.raises(TypeError):
+        test_sd.set_sacl("string")
+    with pytest.raises(TypeError):
+        test_sd.set_sacl(0)
+    with pytest.raises(TypeError):
+        test_sd.sacl = True
+    with pytest.raises(TypeError):
+        test_sd.set_sacl(["A", "b"])
+    test_sd.set_sacl(ACL(ACLRevision.ACL_REVISION, []))
+    assert test_sd.sacl is not None
+    assert test_sd.control["sacl_present"]
+    test_sd.sacl = ACL(ACLRevision.ACL_REVISION, [test_ace])
+    assert test_sd.sacl is not None
+    assert test_sd.sacl.aces[0] == test_ace
+    test_sd.sacl = None
+    assert test_sd.sacl is None
+    assert test_sd.control["sacl_present"] is False
