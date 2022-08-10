@@ -153,3 +153,25 @@ jobs:
         name: wheel
         path: ./dist/bonsai-*.whl
         retention-days: 5
+
+  build_manylinux_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    needs: ubuntu
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.8.1
+        env:
+          CIBW_BEFORE_ALL: ./.ci/build-dependencies.sh
+          CIBW_BUILD_VERBOSITY: 3
+          CIBW_ARCHS: x86_64
+          CIBW_BUILD: "*-manylinux_*"
+          CIBW_SKIP: "cp36-*"
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./wheelhouse/*.whl
