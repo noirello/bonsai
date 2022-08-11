@@ -7,6 +7,8 @@ OPENLDAP_VERSION="2.6.3"
 MIT_KRB5_VERSION="1.20"
 CYRUS_SASL_VERSION="2.1.28"
 
+SOURCE_DIR=$( cd "$(dirname "${BASH_SOURCE[0]}")"/.. ; pwd -P )
+
 mkdir build-deps
 cd build-deps/
 
@@ -37,3 +39,5 @@ cd openldap-${OPENLDAP_VERSION}/
 make depend
 make
 make install
+
+printf "[build_ext]\ninclude_dirs=/usr/local/include\nlibrary_dirs=/usr/local/lib" > ${SOURCE_DIR}/setup.cfg
