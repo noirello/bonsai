@@ -101,10 +101,8 @@ DEPENDS = [
     "utils.h",
 ]
 
-LIBDIRS = []
 MACROS = []
 if sys.platform == "darwin":
-    LIBDIRS.append("/usr/local/lib")
     MACROS.append(("MACOSX", 1))
 
 if sys.platform == "win32":
@@ -124,7 +122,6 @@ BONSAI_MODULE = Extension(
     sources=SOURCES,
     depends=DEPENDS,
     define_macros=MACROS,
-    library_dirs=LIBDIRS,
 )
 
 # Get long description from the README.rst file.
