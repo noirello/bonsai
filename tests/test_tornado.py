@@ -42,6 +42,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
 
     def setUp(self):
         """ Set LDAP URL and open connection. """
+        super().setUp()
         self.cfg = get_config()
         self.url = "ldap://%s:%s/%s?%s?%s" % (
             self.cfg["SERVER"]["hostip"],
