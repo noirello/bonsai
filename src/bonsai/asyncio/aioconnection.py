@@ -16,7 +16,7 @@ class AIOLDAPConnection(BaseLDAPConnection):
     """
 
     def __init__(self, client, loop=None):
-        self._loop = loop or asyncio.get_event_loop()
+        self._loop = loop or asyncio.get_running_loop()
         self.__open_coro = None
         super().__init__(client, is_async=True)
 
