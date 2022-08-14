@@ -232,7 +232,7 @@ stages:
     - script: |
         set -e
         docker exec client poetry config virtualenvs.create false
-        docker exec client poetry install --no-root -E gevent -E tornado -E trio
+        docker exec client poetry install --no-root
         docker exec client python3 -m pip list
       displayName: Install Python dependencies
     - script: |
