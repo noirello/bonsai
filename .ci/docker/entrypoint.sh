@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Check if the setup is already made. 
+# Check if the setup is already made.
 [ -f /root/.setup ] && exit 0
 
 # Set Kerberos database.
@@ -21,6 +21,9 @@ setKerberos () {
     chown -Rf ldap:ldap /var/lib/krb5kdc/
     setcap 'cap_net_bind_service=+ep' /usr/sbin/krb5kdc # Allow to open port
     setcap 'cap_net_bind_service=+ep' /usr/sbin/kadmind
+    # Set default keytab in krb5 conf to the ldap's one.
+    # KRB5_KTNAME env var is ignored during slapd start on bullseye. :/
+    sed -i '/default_realm = BONSAI.TEST/a default_keytab_name = FILE:/etc/ldap/ldap.keytab' /etc/krb5.conf
 }
 
 # Load the LDIF files and some schema into the server.
