@@ -1,4 +1,4 @@
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 LABEL maintainer="noirello@gmail.com"
 
 # Create group and user
@@ -37,7 +37,7 @@ RUN openssl genrsa -out /etc/ldap/certs/server.key 2048 && \
     openssl x509 -req -days 500 -in /home/ldap/server.csr -CA /etc/ldap/certs/cacert.pem \
     -CAkey /home/ldap/cacert.key -CAcreateserial -out /etc/ldap/certs/server.pem -sha256
 
-# Copy the basic LDIF files  and test.jpeg into the container.
+# Copy the basic LDIF files and test.jpeg into the container.
 COPY ./tests/testenv/ldifs/base.ldif \
      ./tests/testenv/ldifs/users.ldif \
      ./tests/testenv/ldifs/settings.ldif \
@@ -55,7 +55,7 @@ VOLUME /home/ldap/run
 
 USER root
 
-# Set ownership and access righta for certs.
+# Set ownership and access rights for certs.
 RUN chown -R ldap:ldap /etc/ldap/certs/ && chmod 644 /etc/ldap/certs/*
 
 # Open LDAP, LDAPS, Kerberos and delay script ports.
