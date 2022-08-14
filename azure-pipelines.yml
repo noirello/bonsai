@@ -190,11 +190,11 @@ stages:
     strategy:
       matrix:
         newestOpenLDAP:
-          openldap.version: '2.6.1'
-          python.version: '3.7-slim-buster'
+          openldap.version: '2.6.3'
+          python.version: '3.8-slim-bullseye'
         nightlyPython:
-          openldap.version: '2.4.49'
-          python.version: '3.11.0a5-slim-bullseye'
+          openldap.version: '2.4.57'
+          python.version: '3.11.0rc1-slim-bullseye'
     steps:
     - script: docker build -t bonsai -f ./.ci/docker/Dockerfile .
       displayName: Build Docker image (server)
