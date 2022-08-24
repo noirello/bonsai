@@ -1,6 +1,8 @@
 #ifndef LDAP_XPLAT_H_
 #define LDAP_XPLAT_H_
 
+#define PY_SSIZE_T_CLEAN
+
 #include <Python.h>
 
 #ifdef WIN32
