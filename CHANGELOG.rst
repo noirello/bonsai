@@ -1,5 +1,31 @@
 Changelog
 ==========
+[1.5.0 - 2022-08-24]
+
+Changed
+~~~~~~~
+
+-  Closed connections are not put back to the connection pool. (Issue #64,
+   thanks to @rra)
+-  Removed poetry as a build requirement. It's not used for the build,
+   only for the development environment.
+-  Using asynccontextmanager for AIOConnectionPool that's been introduced
+   in Python 3.7.
+
+Added
+~~~~~
+
+-  Setter methods for ACE, ACL and SecurityDescriptor properties.
+-  ACE.__eq__ method to check ACE objects' equality.
+-  New is_access_allowed and is_access_denied flags for ACEType.
+
+Fixed
+~~~~~
+
+-  Unnecessary library directories setting in setup.py.
+-  SetUp method of the Tornado tests for Tornado 6.2.
+
+
 [1.4.0 - 2022-03-12]
 --------------------
 
@@ -28,6 +54,7 @@ Fixed
    LDAPConnection.modify_password. (Issue #57, thanks to @morian)
 -  LDAPConnection.modify_password not returning True, when new password
    is provided. (Issue #59, thanks to @morian)
+
 
 [1.3.0 - 2021-08-24]
 --------------------
