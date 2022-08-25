@@ -142,6 +142,7 @@ setup(
     author_email="noirello@gmail.com",
     url="https://github.com/noirello/bonsai",
     long_description=LONG_DESC,
+    long_description_content_type="text/x-rst",
     license="MIT",
     ext_modules=[BONSAI_MODULE],
     cmdclass={"build_ext": BuildExt},

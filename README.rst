@@ -91,8 +91,7 @@ Using with asyncio:
                 who = await conn.whoami()
                 print(who)
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(do())
+        asyncio.run(do())
 
 Changelog
 ---------
@@ -107,4 +106,4 @@ the `GitHub page`_.
 
 .. _online: http://bonsai.readthedocs.org/en/latest/
 .. _here: https://github.com/noirello/bonsai/blob/master/CHANGELOG.rst
-.. _GitHub page: https://github.com/Noirello/bonsai/issues
+.. _GitHub page: https://github.com/noirello/bonsai/issues

@@ -568,8 +568,7 @@ An example for asynchronous search and modify with `asyncio`:
             entry['mail'] = "chuck@nerdherd.com"
             await entry.modify()
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(do())
+    asyncio.run(do())
 
 To work with other non-blocking I/O modules the default asynchronous class has to be set to a
 different one with :meth:`LDAPClient.set_async_connection_class`.
