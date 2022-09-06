@@ -84,10 +84,12 @@ class AIOConnectionPool(ConnectionPool):
 
     @asynccontextmanager
     async def spawn(self, *args, **kwargs):
+        conn = None
         try:
             if self._closed:
                 await self.open()
             conn = await self.get(*args, **kwargs)
             yield conn
         finally:
-            await self.put(conn)
+            if conn:
+                await self.put(conn)
