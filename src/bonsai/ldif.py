@@ -12,7 +12,7 @@ from .errors import LDAPError
 
 
 class LDIFError(LDAPError):
-    """ General exception that is raised during reading or writing an LDIF file. """
+    """General exception that is raised during reading or writing an LDIF file."""
 
     code = -300
 
@@ -33,7 +33,7 @@ class LDIFReader:
     def __init__(
         self, input_file: TextIO, autoload: bool = True, max_length: int = 76
     ) -> None:
-        """ Init method. """
+        """Init method."""
         if not isinstance(max_length, int):
             raise TypeError("The max_length must be int.")
         self.input_file = input_file
@@ -128,17 +128,27 @@ class LDIFReader:
                         attr, val = attrval.split(":: ")
                         val = base64.b64decode(val)
                     elif ": " in attrval:
-                        attr, val = attrval.split(": ")
+                        attr, val = attrval.split(": ", maxsplit=1)
+                        if ord(val[0]) > 127 or val[0] in (
+                            "\0",
+                            "\n",
+                            "\r",
+                            " ",
+                            ":",
+                            "<",
+                        ):
+                            raise ValueError("Not a safe first character in value.")
                     elif ":< " in attrval:
                         attr, val = attrval.split(":< ")
                         if self.__autoload:
                             val = self.load_resource(val)
                     else:
-                        raise ValueError()
-                except ValueError:
+                        raise ValueError("Missing valid attribute value separator.")
+                except ValueError as err:
                     raise LDIFError(
-                        f"Invalid attribute value pair: '{attrval}' for entry #{self.__num_of_entries}."
-                    ) from None
+                        f"Invalid attribute value pair: '{attrval}'"
+                        f" for entry #{self.__num_of_entries}."
+                    ) from err
                 if attr.lower() == "changetype":
                     change_type = val.lower()
                 elif attr.lower() == "dn":
@@ -176,7 +186,7 @@ class LDIFReader:
 
     @property
     def input_file(self):
-        """ The file-like object of an LDIF file. """
+        """The file-like object of an LDIF file."""
         return self.__file
 
     @input_file.setter
@@ -187,7 +197,7 @@ class LDIFReader:
 
     @property
     def autoload(self):
-        """ Enable/disable autoloading resources in LDIF files. """
+        """Enable/disable autoloading resources in LDIF files."""
         return self.__autoload
 
     @autoload.setter
@@ -218,7 +228,7 @@ class LDIFWriter:
     """
 
     def __init__(self, output_file: TextIO, max_length: int = 76) -> None:
-        """ Init method. """
+        """Init method."""
         if not isinstance(max_length, int):
             raise TypeError("The max_length must be int.")
         self.output_file = output_file
@@ -314,7 +324,7 @@ class LDIFWriter:
 
     @property
     def output_file(self):
-        """ The file-like object for an LDIF file. """
+        """The file-like object for an LDIF file."""
         return self.__file
 
     @output_file.setter
