@@ -7,7 +7,7 @@ from bonsai import LDIFReader, LDIFError
 
 
 def test_init_params():
-    """ Test constructor parameters for LDIFReader. """
+    """Test constructor parameters for LDIFReader."""
     with pytest.raises(TypeError):
         _ = LDIFReader("wrong")
     with pytest.raises(TypeError):
@@ -21,7 +21,7 @@ def test_init_params():
 
 
 def test_version():
-    """ Test setting version attribute from LDIF. """
+    """Test setting version attribute from LDIF."""
     text = "version: 1\ndn: cn=test\ncn: test\n"
     with StringIO(text) as ldif:
         reader = LDIFReader(ldif)
@@ -31,7 +31,7 @@ def test_version():
 
 
 def test_missing_dn():
-    """ Test missing distinguished name in LDIF entry. """
+    """Test missing distinguished name in LDIF entry."""
     text = "changetype: add\nsn: test\ncn: test\n"
     with StringIO(text) as ldif:
         reader = LDIFReader(ldif)
@@ -42,13 +42,14 @@ def test_missing_dn():
 
 
 def test_invalid_file():
-    """ Test invalid and too long line. """
+    """Test invalid lines."""
     text = " invalid\n"
     with StringIO(text) as ldif:
         reader = LDIFReader(ldif)
         with pytest.raises(LDIFError) as excinfo:
             _ = next(reader)
         assert "Parser error" in str(excinfo.value)
+        assert isinstance(excinfo.value.__context__, IndexError)
     text = "dn: cn=test\nnotvalid attribute\n"
     with StringIO(text) as ldif:
         reader = LDIFReader(ldif)
@@ -56,6 +57,39 @@ def test_invalid_file():
             _ = next(reader)
         assert "Invalid attribute value pair:" in str(excinfo.value)
         assert "entry #1" in str(excinfo.value)
+        assert "value separator" in str(excinfo.value.__context__)
+    text = "dn: :cn=test notvalid attribute\n"
+    with StringIO(text) as ldif:
+        reader = LDIFReader(ldif)
+        with pytest.raises(LDIFError) as excinfo:
+            _ = next(reader)
+        assert "Invalid attribute value pair:" in str(excinfo.value)
+        assert "entry #1" in str(excinfo.value)
+        assert "safe first character" in str(excinfo.value.__context__)
+
+
+def test_invalid_base64():
+    """Test LDIF line with invalid base64 data."""
+    text = "dn:: cn=test notvalid: attribute\n"
+    with StringIO(text) as ldif:
+        reader = LDIFReader(ldif)
+        with pytest.raises(LDIFError) as excinfo:
+            _ = next(reader)
+        assert "Invalid attribute value pair:" in str(excinfo.value)
+        assert "entry #1" in str(excinfo.value)
+        assert "Incorrect padding" in str(excinfo.value.__context__)
+    text = "cn:: dGV4dCx2YWx1ZSxkYXRhNNO"
+    with StringIO(text) as ldif:
+        reader = LDIFReader(ldif)
+        with pytest.raises(LDIFError) as excinfo:
+            _ = next(reader)
+        assert "Invalid attribute value pair:" in str(excinfo.value)
+        assert "entry #1" in str(excinfo.value)
+        assert "Incorrect padding" in str(excinfo.value.__context__)
+
+
+def test_too_long_line():
+    """Test LDIF input with too long line."""
     text = "dn: cn=toolong\n"
     with StringIO(text) as ldif:
         reader = LDIFReader(ldif, max_length=12)
@@ -63,17 +97,10 @@ def test_invalid_file():
             _ = next(reader)
         assert "too long" in str(excinfo.value)
         assert "Line 1" in str(excinfo.value)
-    text = "dn: cn=test notvalid: attribute\n"
-    with StringIO(text) as ldif:
-        reader = LDIFReader(ldif)
-        with pytest.raises(LDIFError) as excinfo:
-            _ = next(reader)
-        assert "Invalid attribute value pair:" in str(excinfo.value)
-        assert "entry #1" in str(excinfo.value)
 
 
 def test_comment():
-    """ Test parsing comment lines in LDIF files. """
+    """Test parsing comment lines in LDIF files."""
     ldif = "# DN: cn=test\ndn: cn=test\n#Other comment line.\ncn: test\n"
     with StringIO(ldif) as test:
         reader = LDIFReader(test)
@@ -88,7 +115,7 @@ def test_comment():
 
 
 def test_input_file():
-    """ Test input_file property. """
+    """Test input_file property."""
     inp = StringIO()
     ldif = LDIFReader(inp)
     assert ldif.input_file == inp
@@ -100,7 +127,7 @@ def test_input_file():
 
 
 def test_autoload():
-    """ Test autoload property. """
+    """Test autoload property."""
     inp = StringIO()
     ldif = LDIFReader(inp)
     assert ldif.autoload == True
@@ -111,7 +138,7 @@ def test_autoload():
 
 
 def test_resource_handlers():
-    """ Test resource_handlers property. """
+    """Test resource_handlers property."""
     inp = StringIO()
     ldif = LDIFReader(inp)
     assert isinstance(ldif.resource_handlers, dict)
@@ -123,7 +150,7 @@ def test_resource_handlers():
 
 
 def test_multiline_attribute():
-    """ Test parsing multiline attributes in LDIF. """
+    """Test parsing multiline attributes in LDIF."""
     text = "dn: cn=unimaginably+sn=very,ou=very,dc=very,dc=long,\n dc=line\ncn: unimaginably\nsn: very\nsn: long\n"
     with StringIO(text) as test:
         reader = LDIFReader(test)
@@ -135,7 +162,7 @@ def test_multiline_attribute():
 
 
 def test_multiple_entries():
-    """ Test parsing multiple entries in one LDIF. """
+    """Test parsing multiple entries in one LDIF."""
     text = "dn: cn=test1\ncn: test1\n\ndn: cn=test2\ncn: test2\n"
     with StringIO(text) as test:
         reader = LDIFReader(test)
@@ -146,7 +173,7 @@ def test_multiple_entries():
 
 
 def test_encoded_attributes():
-    """ Test parsing base64 encoded attributes. """
+    """Test parsing base64 encoded attributes."""
     attr = "test"
     text = f"version: 1\ndn: cn=test\ncn:: {base64.b64encode(attr.encode('UTF-8')).decode('UTF-8')}\n"
     with StringIO(text) as test:
@@ -157,7 +184,7 @@ def test_encoded_attributes():
 
 
 def test_load_resource():
-    """ Test load_resource method. """
+    """Test load_resource method."""
     curdir = os.path.abspath(os.path.dirname(__file__))
     with StringIO() as test:
         test.name = "dummy"
@@ -175,7 +202,7 @@ def test_load_resource():
 
 
 def test_url_attribute():
-    """ Test URL attribute in LDIF file. """
+    """Test URL attribute in LDIF file."""
     text = "dn: cn=test\ncn: test1\njpegPhoto:< file://./testenv/test.jpeg\n"
     with StringIO(text) as test:
         test.name = __file__
@@ -187,7 +214,7 @@ def test_url_attribute():
 
 
 def test_changetype():
-    """ Test changetype attribute in LDIF file. """
+    """Test changetype attribute in LDIF file."""
     text = "dn: cn=test\nchangetype: add\ncn: test\n"
     with StringIO(text) as test:
         reader = LDIFReader(test)
@@ -198,7 +225,7 @@ def test_changetype():
 
 
 def test_missing_attribute():
-    """ Test missing attribute in LDIF-CHANGE. """
+    """Test missing attribute in LDIF-CHANGE."""
     text = "dn: cn=test\nchangetype: modify\nadd: sn\ncn: test\n"
     with StringIO(text) as test:
         reader = LDIFReader(test)
@@ -206,8 +233,20 @@ def test_missing_attribute():
             _ = next(reader)
 
 
+def test_value_with_colon():
+    """Test attribute value with containing colon."""
+    text = "dn: cn=test\npostaladdress: p.o. box: 1234\ncn: test\n"
+    with StringIO(text) as test:
+        test.name = __file__
+        reader = LDIFReader(test)
+        ent = next(reader)
+    assert ent.dn == "cn=test"
+    assert ent["postaladdress"][0] == "p.o. box: 1234"
+    assert ent["cn"][0] == "test"
+
+
 def test_modify_change():
-    """ Test loading modified attributes from LDIF-CHANGE. """
+    """Test loading modified attributes from LDIF-CHANGE."""
     text = """dn: cn=test
 changetype: modify
 add: sn
