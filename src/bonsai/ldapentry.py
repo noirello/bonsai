@@ -26,7 +26,7 @@ CT = TypeVar("CT", bound="BaseLDAPConnection")
 
 
 class LDAPModOp(IntEnum):
-    """ Enumeration for LDAP modification operations. """
+    """Enumeration for LDAP modification operations."""
 
     ADD = 0  #: For adding new values to the attribute.
     DELETE = 1  #: For deleting existing values from the attribute list.
@@ -116,7 +116,7 @@ class LDAPEntry(ldapentry):
                 self.__setitem__(key, value)
 
     def clear(self) -> None:
-        """ Remove all items from the dictionary. """
+        """Remove all items from the dictionary."""
         keys = list(self.keys())
         for key in keys:
             try:
@@ -175,7 +175,7 @@ class LDAPEntry(ldapentry):
         except IndexError:
             raise KeyError("popitem(): LDAPEntry is empty")
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         """
         Two LDAPEntry objects are considered equals, if their DN is the same.
 
@@ -297,4 +297,3 @@ class LDAPEntry(ldapentry):
             return (item for item in super().values() if item is not self.dn)
         else:
             return super().values()
-

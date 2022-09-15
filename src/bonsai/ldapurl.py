@@ -22,7 +22,7 @@ class LDAPURL:
     __slots__ = ("__hostinfo", "__searchinfo", "__extensions", "__ipv6")
 
     def __init__(self, strurl: Optional[str] = None) -> None:
-        """ Init method. """
+        """Init method."""
         self.__hostinfo = ("ldap", "localhost", 389)  # type: Tuple[str, str, int]
         # Default values to the search parameters.
         self.__searchinfo = (
@@ -37,11 +37,11 @@ class LDAPURL:
             self.__str2url(strurl)
 
     def __delattr__(self, attr: str) -> None:
-        """ None of the attributes can be deleted. """
+        """None of the attributes can be deleted."""
         raise AttributeError("%s cannot be deleted." % attr)
 
     def __str2url(self, strurl: str) -> None:
-        """ Parsing string url to LDAPURL."""
+        """Parsing string url to LDAPURL."""
         # Form: [scheme]://[host]:[port]/[basedn]?[attrs]?[scope]?[filter]?[exts]
         scheme, host, port = self.__hostinfo
         binddn, attrlist, scope, filter_exp = self.__searchinfo
@@ -83,7 +83,7 @@ class LDAPURL:
 
     @staticmethod
     def is_valid_hostname(hostname: str) -> Tuple[bool, bool]:
-        """ Validate a hostname. """
+        """Validate a hostname."""
         hostname_regex = re.compile(
             r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]"
             r"*[a-zA-Z0-9])\.)*([A-Za-z0-9]|"
@@ -101,12 +101,12 @@ class LDAPURL:
 
     @property
     def host(self) -> str:
-        """ The hostname. """
+        """The hostname."""
         return self.__hostinfo[1]
 
     @host.setter
     def host(self, value: str) -> None:
-        """ Setter for hostname. """
+        """Setter for hostname."""
         # RegExp for valid hostname.
         valid, ipv6 = self.is_valid_hostname(value)
         if not valid:
@@ -117,12 +117,12 @@ class LDAPURL:
 
     @property
     def port(self) -> int:
-        """ The portnumber. """
+        """The portnumber."""
         return self.__hostinfo[2]
 
     @port.setter
     def port(self, value: int) -> None:
-        """ Setter for portnumber. """
+        """Setter for portnumber."""
         if isinstance(value, int) and (value > 0 and value < 65535):
             self.__hostinfo = (self.__hostinfo[0], self.__hostinfo[1], value)
         else:
@@ -130,12 +130,12 @@ class LDAPURL:
 
     @property
     def scheme(self) -> str:
-        """ The URL scheme."""
+        """The URL scheme."""
         return self.__hostinfo[0]
 
     @scheme.setter
     def scheme(self, value: str) -> None:
-        """ Setter for URL scheme."""
+        """Setter for URL scheme."""
         # It must be ldap, ldaps or ldapi
         if isinstance(value, str) and value.lower() in ("ldap", "ldaps", "ldapi"):
             self.__hostinfo = (value.lower(), self.__hostinfo[1], self.__hostinfo[2])
@@ -144,12 +144,12 @@ class LDAPURL:
 
     @property
     def basedn(self) -> LDAPDN:
-        """ The LDAP distinguished name for binding. """
+        """The LDAP distinguished name for binding."""
         return self.__searchinfo[0]
 
     @basedn.setter
     def basedn(self, value: Union[LDAPDN, str]) -> None:
-        """ Setter for LDAP distinguished name for binding. """
+        """Setter for LDAP distinguished name for binding."""
         self.__searchinfo = (
             LDAPDN(str(value)),
             self.__searchinfo[1],
@@ -159,17 +159,17 @@ class LDAPURL:
 
     @property
     def attributes(self) -> List[str]:
-        """ The searching attributes. """
+        """The searching attributes."""
         return self.__searchinfo[1]
 
     @property
     def scope(self) -> str:
-        """ The searching scope. """
+        """The searching scope."""
         return self.__searchinfo[2]
 
     @scope.setter
     def scope(self, value: str) -> None:
-        """ Setter for searching scope. """
+        """Setter for searching scope."""
         if isinstance(value, str):
             if value.lower() in ("base", "one", "sub"):
                 self.__searchinfo = (
@@ -188,7 +188,7 @@ class LDAPURL:
 
     @property
     def scope_num(self) -> int:
-        """ Return the searching scope number. """
+        """Return the searching scope number."""
         if self.scope == "base":
             return 0
         if self.scope == "one":
@@ -200,7 +200,7 @@ class LDAPURL:
 
     @property
     def filter_exp(self) -> str:
-        """ The searching filter expression. """
+        """The searching filter expression."""
         return self.__searchinfo[3]
 
     def get_address(self) -> str:
@@ -216,7 +216,7 @@ class LDAPURL:
         else:
             return f"{self.__hostinfo[0]}://{self.__hostinfo[1]}:{self.__hostinfo[2]:d}"
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         """
         Check equality of two LDAPURL or an LDAPURL and a string.
         """
@@ -237,10 +237,10 @@ class LDAPURL:
                 return False
             return self == other
         else:
-            return False
+            return NotImplemented
 
     def __str__(self) -> str:
-        """ Returns the full format of LDAP URL. """
+        """Returns the full format of LDAP URL."""
         strurl = self.get_address()
         strattrs = ""
         strexts = ""
@@ -267,5 +267,5 @@ class LDAPURL:
         return strurl
 
     def __repr__(self) -> str:
-        """ The LDAPURL representation. """
+        """The LDAPURL representation."""
         return "<LDAPURL %s>" % str(self)

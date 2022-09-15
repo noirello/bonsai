@@ -58,7 +58,7 @@ class SID:
         """Return the string format of the SID."""
         ident_auth = (
             hex(self.__identifier_authority)
-            if self.__identifier_authority > 2 ** 32
+            if self.__identifier_authority > 2**32
             else self.__identifier_authority
         )
         subauths = (
@@ -72,7 +72,7 @@ class SID:
         """The representation of SID class."""
         return f"<{self.__class__.__name__}: {str(self)}>"
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         """
         Check equality of two SIDs by their identifier_authority and list
         of subauthorities, or if the other object is a string than by their
@@ -205,6 +205,6 @@ class SID:
         return alias
 
     @property
-    def size(self):
+    def size(self) -> int:
         """The binary size of the SID in bytes."""
         return 8 + len(self.subauthorities) * 4

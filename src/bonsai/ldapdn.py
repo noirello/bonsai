@@ -14,7 +14,10 @@ class LDAPDN:
     __slots__ = ("__strdn",)
 
     _attrtype = r"[A-Za-z ][\w-]*|\d+(?:\.\d+)*"
-    _attrvalue = r'#(?:[\dA-Fa-f]{2})+|(?:[^,=\+<>#;\\"]|\\[,=\+<>#;\\" ]' r'|\\[\dA-Fa-f]{2})*|"(?:[^\\"]|\\[,=\+<>#;\\"]|\\[\dA-Fa-f]{2})*"'
+    _attrvalue = (
+        r'#(?:[\dA-Fa-f]{2})+|(?:[^,=\+<>#;\\"]|\\[,=\+<>#;\\" ]'
+        r'|\\[\dA-Fa-f]{2})*|"(?:[^\\"]|\\[,=\+<>#;\\"]|\\[\dA-Fa-f]{2})*"'
+    )
     _namecomp = r"({typ})=({val})(?:\+({typ})=({val}))*".format(
         typ=_attrtype, val=_attrvalue
     )
@@ -43,7 +46,7 @@ class LDAPDN:
 
     @staticmethod
     def __sanitize(strdn: str, reverse: bool = False) -> str:
-        """ Sanitizing special characters."""
+        """Sanitizing special characters."""
         char_list = [
             (r"\\", "\\5C"),
             (r"\,", "\\2C"),
@@ -102,7 +105,7 @@ class LDAPDN:
         rdns[idx] = re.split(r"(?<!\\),", value)
         self.__strdn = ",".join(rdns)
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         """
         Check equality of two LDAPDNs by their string formats or
         their sanitized string formats.
@@ -113,20 +116,20 @@ class LDAPDN:
         )
 
     def __str__(self) -> str:
-        """ Return the full string format of the distinguished name. """
+        """Return the full string format of the distinguished name."""
         return self.__strdn
 
     def __len__(self) -> int:
-        """ Return the number of RDNs of the distinguished name. """
+        """Return the number of RDNs of the distinguished name."""
         return len(re.split(r"(?<!\\),", self.__strdn))
 
     def __repr__(self) -> str:
-        """ The representation of LDAPDN class. """
+        """The representation of LDAPDN class."""
         return "<LDAPDN %s>" % str(self)
 
     @property
     def rdns(self) -> Tuple[Tuple[Tuple[str, str], ...], ...]:
-        """ The tuple of relative distinguished name."""
+        """The tuple of relative distinguished name."""
         return tuple(
             self.__str_rdn_to_tuple(rdn)
             for rdn in re.split(r"(?<!\\),", self.__sanitize(self.__strdn))
@@ -134,5 +137,5 @@ class LDAPDN:
 
     @rdns.setter
     def rdns(self, value: Any = None) -> None:
-        """ The tuple of relative distinguished names."""
+        """The tuple of relative distinguished names."""
         raise ValueError("RDNs attribute cannot be set.")
