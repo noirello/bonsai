@@ -20,8 +20,7 @@ def asyncio_test(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         future = func(*args, **kwargs)
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(future)
+        asyncio.run(future)
 
     return wrapper
 
