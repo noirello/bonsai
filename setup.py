@@ -157,7 +157,9 @@ setup(
         "bonsai.trio",
     ],
     include_package_data=True,
-    install_requires=[],
+    install_requires=[
+        'typing-extensions >= 4.0.0 ; python_version < "3.8"',
+    ],
     extras_require={
         "gevent": ["gevent>=1.4.0"],
         "tornado": ["tornado>=5.1.1"],

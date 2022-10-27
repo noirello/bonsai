@@ -1,5 +1,10 @@
 from typing import Any, List, Union, Iterable, Optional
 
+try:
+    from typing import SupportsIndex
+except ImportError:
+    from typing_extensions import SupportsIndex
+
 import bonsai
 
 
@@ -58,7 +63,7 @@ class LDAPValueList(list):
     def __contains__(self, item: Any) -> bool:
         return bonsai.utils._unique_contains(self, item)[0]
 
-    def __delitem__(self, idx: Union[int, slice]) -> None:
+    def __delitem__(self, idx: Union[SupportsIndex, slice]) -> None:
         old_value = super().__getitem__(idx)
         if isinstance(idx, slice):
             for item in old_value:
@@ -83,7 +88,7 @@ class LDAPValueList(list):
         self.extend(other)
         return self
 
-    def __setitem__(self, idx: Union[int, slice], value: Any) -> None:
+    def __setitem__(self, idx: Union[SupportsIndex, slice], value: Any) -> None:
         old_value = self[idx]
         if isinstance(idx, slice):
             for item in value:
@@ -131,7 +136,7 @@ class LDAPValueList(list):
         self.__status = 1
         super().extend(items)
 
-    def insert(self, idx: int, value: Any) -> None:
+    def insert(self, idx: SupportsIndex, value: Any) -> None:
         """
         Insert a unique item at a given position.
 
@@ -159,7 +164,7 @@ class LDAPValueList(list):
         self.__status = 1
         self.__balance(self.__added, self.__deleted, obj)
 
-    def pop(self, idx: int = -1) -> Any:
+    def pop(self, idx: SupportsIndex = -1) -> Any:
         """
         Remove the item at the given position in the LDAPValueList, and
         return it. If no index is specified, pop() removes and returns the
@@ -193,12 +198,12 @@ class LDAPValueList(list):
         return new_list
 
     @property
-    def added(self) -> List:
+    def added(self) -> List[str]:
         """List of the added values."""
         return self.__added
 
     @property
-    def deleted(self) -> List:
+    def deleted(self) -> List[str]:
         """List of the deleted values."""
         return self.__deleted
 
