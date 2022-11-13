@@ -1,6 +1,8 @@
 import threading
 from contextlib import contextmanager
-from typing import Optional, Any
+from typing import Optional, Any, Set, Generic, TypeVar, Generator
+
+from .ldapconnection import BaseLDAPConnection, LDAPConnection
 
 MYPY = False
 
@@ -9,24 +11,27 @@ if MYPY:
 
 
 class PoolError(Exception):
-    """ Connection pool related errors. """
+    """Connection pool related errors."""
 
     pass
 
 
 class ClosedPool(PoolError):
-    """ Raised, when the connection pool is closed. """
+    """Raised, when the connection pool is closed."""
 
     pass
 
 
 class EmptyPool(PoolError):
-    """ Raised, when the connection pool is empty. """
+    """Raised, when the connection pool is empty."""
 
     pass
 
 
-class ConnectionPool:
+T = TypeVar("T", bound=BaseLDAPConnection)
+
+
+class ConnectionPool(Generic[T]):
     """
     A connection pool object for managing multiple open connections.
 
@@ -42,13 +47,9 @@ class ConnectionPool:
     """
 
     def __init__(
-        self,
-        client: "LDAPClient",
-        minconn: int = 1,
-        maxconn: int = 10,
-        **kwargs: Any
+        self, client: "LDAPClient", minconn: int = 1, maxconn: int = 10, **kwargs: Any
     ) -> None:
-        """ Init method. """
+        """Init method."""
         if minconn < 0:
             raise ValueError("The minconn must be positive.")
         if minconn > maxconn:
@@ -58,8 +59,8 @@ class ConnectionPool:
         self._client = client
         self._kwargs = kwargs
         self._closed = True
-        self._idles = set()
-        self._used = set()
+        self._idles: Set[T] = set()
+        self._used: Set[T] = set()
 
     def open(self) -> None:
         """
@@ -70,7 +71,7 @@ class ConnectionPool:
             self._idles.add(self._client.connect(**self._kwargs))
         self._closed = False
 
-    def get(self):
+    def get(self) -> T:
         """
         Get a connection from the connection pool.
 
@@ -90,7 +91,7 @@ class ConnectionPool:
         self._used.add(conn)
         return conn
 
-    def put(self, conn) -> None:
+    def put(self, conn: T) -> None:
         """
         Put back a connection to the connection pool. The caller is allowed to
         close the connection (if, for instance, it is in an error state), in
@@ -112,7 +113,7 @@ class ConnectionPool:
             raise PoolError("The %r is not managed by this pool." % conn) from None
 
     def close(self) -> None:
-        """ Close the pool and all of its managed connections. """
+        """Close the pool and all of its managed connections."""
         for conn in self._idles:
             conn.close()
         for conn in self._used:
@@ -122,7 +123,7 @@ class ConnectionPool:
         self._used = set()
 
     @contextmanager
-    def spawn(self, *args, **kwargs):
+    def spawn(self, *args: Any, **kwargs: Any) -> Generator[T, None, None]:
         """
         Context manager method that acquires a connection from the pool
         and returns it on exit. It also opens the pool if it hasn't been
@@ -159,28 +160,28 @@ class ConnectionPool:
 
     @property
     def shared_connection(self) -> int:
-        """ The number of shared connections. """
+        """The number of shared connections."""
         return len(self._used)
 
     @property
     def idle_connection(self) -> int:
-        """ the number of idle connection. """
+        """the number of idle connection."""
         return len(self._idles)
 
     @property
     def max_connection(self) -> int:
-        """ The maximal number of connections that the pool can have. """
+        """The maximal number of connections that the pool can have."""
         return self._maxconn
 
     @max_connection.setter
-    def max_connection(self, val) -> None:
-        """ The maximal number of connections that the pool can have. """
+    def max_connection(self, val: int) -> None:
+        """The maximal number of connections that the pool can have."""
         if val < self._minconn:
             raise ValueError("The maxconn must be greater than minconn.")
         self._maxconn = val
 
 
-class ThreadedConnectionPool(ConnectionPool):
+class ThreadedConnectionPool(ConnectionPool[LDAPConnection]):
     """
     A connection pool that can be shared between threads. It's inherited from
     :class:`bonsai.pool.ConnectionPool`.
@@ -206,12 +207,12 @@ class ThreadedConnectionPool(ConnectionPool):
         block: bool = True,
         **kwargs: Any
     ) -> None:
-        """ Init method. """
+        """Init method."""
         super().__init__(client, minconn, maxconn, **kwargs)
         self._block = block
         self._lock = threading.Condition()
 
-    def get(self, timeout: Optional[float] = None):
+    def get(self, timeout: Optional[float] = None) -> LDAPConnection:
         """
         Get a connection from the connection pool.
 
@@ -227,7 +228,7 @@ class ThreadedConnectionPool(ConnectionPool):
             self._lock.notify()
             return conn
 
-    def put(self, conn) -> None:
+    def put(self, conn: LDAPConnection) -> None:
         with self._lock:
             super().put(conn)
             self._lock.notify()

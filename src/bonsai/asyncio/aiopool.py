@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
+from typing import Any, AsyncGenerator, Optional
 
 from ..pool import ConnectionPool, ClosedPool, EmptyPool
 
@@ -10,7 +11,8 @@ MYPY = False
 if MYPY:
     from ..ldapclient import LDAPClient
 
-class AIOConnectionPool(ConnectionPool):
+
+class AIOConnectionPool(ConnectionPool[AIOLDAPConnection]):
     """
     A connection pool that can be used with asnycio tasks. It's inherited from
     :class:`bonsai.pool.ConnectionPool`.
@@ -31,8 +33,8 @@ class AIOConnectionPool(ConnectionPool):
         client: "LDAPClient",
         minconn: int = 1,
         maxconn: int = 10,
-        loop=None,
-        **kwargs
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+        **kwargs: Any
     ):
         super().__init__(client, minconn, maxconn, **kwargs)
         self._loop = loop
@@ -83,7 +85,9 @@ class AIOConnectionPool(ConnectionPool):
             self._lock.notify_all()
 
     @asynccontextmanager
-    async def spawn(self, *args, **kwargs):
+    async def spawn(
+        self, *args: Any, **kwargs: Any
+    ) -> AsyncGenerator[AIOLDAPConnection, None]:
         conn = None
         try:
             if self._closed:
