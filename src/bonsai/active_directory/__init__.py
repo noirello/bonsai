@@ -348,3 +348,16 @@ class UserAccountControl:
         return sum(
             self.__flag_values[key] for key, val in self.properties.items() if val
         )
+
+
+__all__ = [
+    "ACE",
+    "ACEFlag",
+    "ACERight",
+    "ACEType",
+    "ACL",
+    "ACLRevision",
+    "SecurityDescriptor",
+    "SID",
+    "UserAccountControl",
+]
