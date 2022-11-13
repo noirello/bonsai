@@ -134,13 +134,15 @@ class ConnectionPool(Generic[T]):
         :params \\*\\*kwargs: the keyword arguments passed to
                 :meth:`bonsai.pool.ConnectionPool.get`.
         """
+        conn = None
         try:
             if self._closed:
                 self.open()
             conn = self.get(*args, **kwargs)
             yield conn
         finally:
-            self.put(conn)
+            if conn:
+                self.put(conn)
 
     @property
     def empty(self) -> bool:
