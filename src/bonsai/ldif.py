@@ -3,7 +3,19 @@ import io
 import os
 from collections import defaultdict
 from itertools import groupby
-from typing import TextIO, Iterable, Iterator, Any, Optional, List, Union
+from typing import (
+    Dict,
+    TextIO,
+    Iterable,
+    Iterator,
+    Any,
+    Optional,
+    List,
+    Union,
+    Mapping,
+    Callable,
+    KeysView
+)
 
 from .ldapentry import LDAPEntry, LDAPModOp
 from .ldapvaluelist import LDAPValueList
@@ -36,16 +48,17 @@ class LDIFReader:
         """Init method."""
         if not isinstance(max_length, int):
             raise TypeError("The max_length must be int.")
+        self.__file: TextIO
         self.input_file = input_file
         self.autoload = autoload
         self.max_length = max_length
-        self.version = None  # type: Optional[int]
+        self.version: Optional[int] = None
         self.__entries = self.__read_attributes()
         self.__num_of_entries = 0
         self.__resource_handlers = {"file": self.__load_file}
 
     def __read_attributes(self) -> Iterator[List[str]]:
-        buffer = []  # type: List[str]
+        buffer: List[str] = []
         comment = False
         for num, line in enumerate(self.__file):
             try:
@@ -77,16 +90,16 @@ class LDIFReader:
     @staticmethod
     def __convert(val: Union[str, bytes]) -> Union[str, bytes, int]:
         try:
-            val = int(val)
+            return int(val)
         except ValueError:
             try:
-                val = val.decode("UTF-8")
+                return val.decode("UTF-8")
             except (ValueError, AttributeError):
                 pass
         return val
 
     @staticmethod
-    def __find_key(searched_key: str, keylist: List[str]) -> Optional[str]:
+    def __find_key(searched_key: str, keylist: KeysView[str]) -> Optional[str]:
         for key in keylist:
             if key.lower() == searched_key.lower():
                 return key
@@ -101,7 +114,7 @@ class LDIFReader:
         with open(abs_filepath, "rb") as resource:
             return resource.read()
 
-    def load_resource(self, url: str) -> Union[str, bytes]:
+    def load_resource(self, url: str) -> bytes:
         try:
             scheme, _ = url.split(":", maxsplit=1)
             return self.__resource_handlers[scheme](url)
@@ -121,7 +134,7 @@ class LDIFReader:
         ]
         self.__num_of_entries += 1
         for block in attr_blocks:
-            attr_dict = defaultdict(LDAPValueList)
+            attr_dict: Dict[str, LDAPValueList] = defaultdict(LDAPValueList)
             for attrval in block:
                 try:
                     if ":: " in attrval:
@@ -185,29 +198,29 @@ class LDIFReader:
         return entry
 
     @property
-    def input_file(self):
+    def input_file(self) -> TextIO:
         """The file-like object of an LDIF file."""
         return self.__file
 
     @input_file.setter
-    def input_file(self, value: io.TextIOBase):
+    def input_file(self, value: TextIO) -> None:
         if not isinstance(value, io.TextIOBase):
             raise TypeError("The input_file must be file-like object in text mode.")
         self.__file = value
 
     @property
-    def autoload(self):
+    def autoload(self) -> bool:
         """Enable/disable autoloading resources in LDIF files."""
         return self.__autoload
 
     @autoload.setter
-    def autoload(self, value: bool):
+    def autoload(self, value: bool) -> None:
         if not isinstance(value, bool):
             raise TypeError("The autoload property must be bool.")
         self.__autoload = value
 
     @property
-    def resource_handlers(self):
+    def resource_handlers(self) -> Mapping[str, Callable[[str], bytes]]:
         """
         A dictionary of supported resource types. The keys are the schemes,
         while the values are functions that expect the full URL parameters
@@ -231,6 +244,7 @@ class LDIFWriter:
         """Init method."""
         if not isinstance(max_length, int):
             raise TypeError("The max_length must be int.")
+        self.__file: TextIO
         self.output_file = output_file
         self.max_length = max_length
 
@@ -323,12 +337,12 @@ class LDIFWriter:
         self.__file.write("\n")
 
     @property
-    def output_file(self):
+    def output_file(self) -> TextIO:
         """The file-like object for an LDIF file."""
         return self.__file
 
     @output_file.setter
-    def output_file(self, value: io.TextIOBase):
+    def output_file(self, value: TextIO) -> None:
         if not isinstance(value, io.TextIOBase):
             raise TypeError("The output_file must be file-like object in text mode.")
         self.__file = value
