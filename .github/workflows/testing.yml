@@ -47,8 +47,8 @@ jobs:
     - name: Check container and LDAP tools
       run: |
         docker exec server ps aux
-        ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U admin -w p@ssword
-        ldapsearch -h bonsai.test -b "" -s base 'objectclass=*' -x -LLL +
+        ldapwhoami -Y DIGEST-MD5 -H ldap://bonsai.test -U admin -w p@ssword
+        ldapsearch -H ldap://bonsai.test -b "" -s base 'objectclass=*' -x -LLL +
         ldapsearch -VV
         saslpluginviewer
     - name: Check Python sysconfig
@@ -119,8 +119,8 @@ jobs:
     - name: Check container and LDAP tools
       run: |
         docker exec server ps aux
-        /usr/local/opt/openldap/bin/ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U admin -w p@ssword
-        /usr/local/opt/openldap/bin/ldapsearch -x -h bonsai.test -b "" -s base 'objectclass=*' -LLL +
+        /usr/local/opt/openldap/bin/ldapwhoami -Y DIGEST-MD5 -H ldap://bonsai.test -U admin -w p@ssword
+        /usr/local/opt/openldap/bin/ldapsearch -x -H ldap://bonsai.test -b "" -s base 'objectclass=*' -LLL +
         /usr/local/opt/openldap/bin/ldapsearch -VV
     - name: Check Python sysconfig
       run: python -m sysconfig
