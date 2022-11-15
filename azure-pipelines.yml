@@ -62,6 +62,8 @@ stages:
         ldapsearch -VV
         saslpluginviewer
       displayName: Check container and LDAP tools
+    - script: python -m sysconfig
+      displayName: Check Python sysconfig
     - script: |
         set -e
         printf "\n\n[options]\nzip_safe = False" >> setup.cfg
@@ -144,6 +146,8 @@ stages:
         /usr/local/opt/openldap/bin/ldapsearch -x -h bonsai.test -b "" -s base 'objectclass=*' -LLL +
         /usr/local/opt/openldap/bin/ldapsearch -VV
       displayName: Check container and LDAP tools
+    - script: python -m sysconfig
+      displayName: Check Python sysconfig
     - script: |
         set -e
         printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg

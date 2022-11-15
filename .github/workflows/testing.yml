@@ -51,6 +51,8 @@ jobs:
         ldapsearch -h bonsai.test -b "" -s base 'objectclass=*' -x -LLL +
         ldapsearch -VV
         saslpluginviewer
+    - name: Check Python sysconfig
+      run: python -m sysconfig
     - name: Install package
       run: |
         printf "\n\n[options]\nzip_safe = False" >> setup.cfg
@@ -120,6 +122,8 @@ jobs:
         /usr/local/opt/openldap/bin/ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U admin -w p@ssword
         /usr/local/opt/openldap/bin/ldapsearch -x -h bonsai.test -b "" -s base 'objectclass=*' -LLL +
         /usr/local/opt/openldap/bin/ldapsearch -VV
+    - name: Check Python sysconfig
+      run: python -m sysconfig
     - name: Install package
       run: |
         printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
