@@ -140,9 +140,9 @@ stages:
       displayName: Configure Docker container
     - script: |
         docker exec server ps aux
-        ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U admin -w p@ssword
-        ldapsearch -x -h bonsai.test -b "" -s base 'objectclass=*' -LLL +
-        ldapsearch -VV
+        /usr/local/opt/openldap/bin/ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U admin -w p@ssword
+        /usr/local/opt/openldap/bin/ldapsearch -x -h bonsai.test -b "" -s base 'objectclass=*' -LLL +
+        /usr/local/opt/openldap/bin/ldapsearch -VV
       displayName: Check container and LDAP tools
     - script: |
         set -e

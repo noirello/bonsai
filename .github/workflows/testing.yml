@@ -117,9 +117,9 @@ jobs:
     - name: Check container and LDAP tools
       run: |
         docker exec server ps aux
-        ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U admin -w p@ssword
-        ldapsearch -x -h bonsai.test -b "" -s base 'objectclass=*' -LLL +
-        ldapsearch -VV
+        /usr/local/opt/openldap/bin/ldapwhoami -Y DIGEST-MD5 -h bonsai.test -U admin -w p@ssword
+        /usr/local/opt/openldap/bin/ldapsearch -x -h bonsai.test -b "" -s base 'objectclass=*' -LLL +
+        /usr/local/opt/openldap/bin/ldapsearch -VV
     - name: Install package
       run: |
         printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
