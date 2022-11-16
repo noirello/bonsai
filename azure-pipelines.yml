@@ -68,7 +68,7 @@ stages:
         set -e
         printf "\n\n[options]\nzip_safe = False" >> setup.cfg
         export CFLAGS="-coverage"
-        python setup.py install
+        python -m pip install -v .
       displayName: Install package
     - script: |
         export BONSAI_DOCKER_IP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' server`
@@ -153,7 +153,7 @@ stages:
         printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
         printf "\n\n[options]\nzip_safe = False" >> setup.cfg
         export CFLAGS="-coverage"
-        python setup.py install
+        python -m pip install -v .
       displayName: Install package
     - script: otool -L ./build/*/bonsai/*.so
       displayName: Check linking
@@ -244,7 +244,7 @@ stages:
         docker exec client python3 -m pip list
       displayName: Install Python dependencies
     - script: |
-        docker exec client python3 setup.py install
+        docker exec client python3 -m pip install -v .
       displayName: Install package
     - script: |
         docker exec client bash -c 'sed -i.bak "s/127.0.0.1/$BONSAI_DOCKER_IP/g" ./tests/test.ini'

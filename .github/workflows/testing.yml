@@ -57,7 +57,7 @@ jobs:
       run: |
         printf "\n\n[options]\nzip_safe = False" >> setup.cfg
         export CFLAGS="-coverage"
-        python setup.py install
+        python -m pip install -v .
     - name: Run tests
       run: |
         export BONSAI_DOCKER_IP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' server`
@@ -129,7 +129,7 @@ jobs:
         printf "[build_ext]\ninclude_dirs=/usr/local/opt/openldap/include\nlibrary_dirs=/usr/local/opt/openldap/lib" > ./setup.cfg
         printf "\n\n[options]\nzip_safe = False" >> setup.cfg
         export CFLAGS="-coverage"
-        python setup.py install
+        python -m pip install -v .
     - name: Check linking
       run: |
         otool -L ./build/*/bonsai/*.so
