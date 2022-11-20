@@ -1,7 +1,7 @@
 Changelog
 ==========
 
-[1.5.0 - 2022-08-24]
+[1.5.0] - 2022-08-24
 --------------------
 
 Changed
@@ -28,7 +28,7 @@ Fixed
 -  SetUp method of the Tornado tests for Tornado 6.2.
 
 
-[1.4.0 - 2022-03-12]
+[1.4.0] - 2022-03-12
 --------------------
 
 Changed
@@ -58,7 +58,7 @@ Fixed
    is provided. (Issue #59, thanks to @morian)
 
 
-[1.3.0 - 2021-08-24]
+[1.3.0] - 2021-08-24
 --------------------
 
 Changed
@@ -83,7 +83,7 @@ Fixed
 -  Deadlock when waiting for finishing the init thread on macOS.
 
 
-[1.2.1 - 2020-12-31]
+[1.2.1] - 2020-12-31
 --------------------
 
 Changed
