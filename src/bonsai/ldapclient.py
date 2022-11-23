@@ -4,15 +4,13 @@
    :synopsis: For managing LDAP connections.
 
 """
-from typing import Any, Union, List, Optional, Dict, TypeVar
+from typing import Any, Union, List, Optional, Dict, Type
 
 from .ldapurl import LDAPURL
 from .ldapconnection import BaseLDAPConnection, LDAPConnection
 from .ldapconnection import LDAPSearchScope
 from .ldapentry import LDAPEntry
 from .asyncio import AIOLDAPConnection
-
-CT = TypeVar("CT", bound=BaseLDAPConnection)
 
 
 class LDAPClient:
@@ -29,23 +27,23 @@ class LDAPClient:
         """Init method."""
         self.__tls = tls
         self.set_url(url)
-        self.__credentials = None  # type: Optional[Dict[str, Optional[str]]]
-        self.__raw_list = []  # type: List[str]
+        self.__credentials: Optional[Dict[str, Optional[str]]] = None
+        self.__raw_list: List[str] = []
         self.__mechanism = "SIMPLE"
         self.__cert_policy = -1
-        self.__ca_cert = ""  # type: Optional[str]
-        self.__ca_cert_dir = ""  # type: Optional[str]
-        self.__client_cert = ""  # type: Optional[str]
-        self.__client_key = ""  # type: Optional[str]
-        self.__async_conn = AIOLDAPConnection
+        self.__ca_cert: Optional[str] = ""
+        self.__ca_cert_dir: Optional[str] = ""
+        self.__client_cert: Optional[str] = ""
+        self.__client_key: Optional[str] = ""
+        self.__async_conn: Type[BaseLDAPConnection] = AIOLDAPConnection
         self.__ppolicy_ctrl = False
-        self.__ext_dn = None  # type: Optional[int]
-        self.__sd_flags = None  # type: Optional[int]
+        self.__ext_dn: Optional[int] = None
+        self.__sd_flags: Optional[int] = None
         self.__auto_acquire = True
         self.__chase_referrals = False
         self.__ignore_referrals = True
         self.__managedsait_ctrl = False
-        self.__sasl_sec_props = None
+        self.__sasl_sec_props: Optional[str] = None
 
     def set_raw_attributes(self, raw_list: List[str]) -> None:
         """
@@ -653,11 +651,8 @@ class LDAPClient:
                 return None
 
     def connect(
-        self,
-        is_async: bool = False,
-        timeout: Optional[float] = None,
-        **kwargs: Dict[str, Any]
-    ) -> CT:
+        self, is_async: bool = False, timeout: Optional[float] = None, **kwargs: Any
+    ) -> BaseLDAPConnection:
         """
         Open a connection to the LDAP server.
 

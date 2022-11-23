@@ -49,7 +49,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
             dname = str(dname)
         return self._evaluate(super().delete(dname, recursive), timeout)
 
-    def open(self, timeout: Optional[float] = None) -> Any:
+    def open(self, timeout: Optional[float] = None) -> "BaseLDAPConnection":
         return self._evaluate(super().open(), timeout)
 
     def modify_password(
