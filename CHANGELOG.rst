@@ -1,6 +1,31 @@
 Changelog
 ==========
 
+[1.5.1] - 2022-12-03
+--------------------
+
+Changed
+~~~~~~~
+
+-  Improved type annotations, set __all__ attributes for the modules.
+
+Added
+~~~~~
+
+-  py.typed file for type checking. (Issue #74)
+-  Python 3.11 to the CI pipeline.
+
+Fixed
+~~~~~
+
+-  UnboundLocalError in AIOConnectionPool.spawn (PR #77, thanks to @rra)
+   and in ConnectionPool.spawn.
+-  Parsing LDIF values containing colon as a non-first character
+   in LDIFReader. (Issue #72)
+-  Passing keyword arguments to the connect method while opening
+   connections in ConnectionPool.
+
+
 [1.5.0] - 2022-08-24
 --------------------
 

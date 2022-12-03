@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bonsai"
-version = "1.5.0"
+version = "1.5.1"
 description = "Python 3 module for accessing LDAP directory servers."
 authors = ["noirello <noirello@gmail.com>"]
 license = "MIT"
