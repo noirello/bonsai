@@ -71,6 +71,7 @@ jobs:
       with:
         directory: "."
         env_vars: OS,PYTHON
+        gcov: true
         fail_ci_if_error: true
 
   macos:
@@ -144,6 +145,7 @@ jobs:
       with:
         directory: "."
         env_vars: OS,PYTHON
+        gcov: true
         fail_ci_if_error: true
     - name: Create wheel
       run: |
