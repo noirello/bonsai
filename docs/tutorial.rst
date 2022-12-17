@@ -30,6 +30,13 @@ Or set the `tls` parameter to True for the LDAPClient:
     but it's ill-advise to use both. If both present the client will set the tls attribute
     to False to avoid connection error.
 
+.. note::
+    When you encounter "unknown error code"-errors thrown by the exception
+    :class:`ConnectionError` when setting up SSL/TLS-connections with OpenLDAP, use the
+    bonsai-Debug-function :func:`bonsai.set_debug`. Set the first parameter to True and the
+    second to -1. Then you will see the calls (and probably errormessages) of the underlying
+    OpenLDAP-Library in the output.
+
 If we want to use a filesocket connection point the URL to `ldapi://`:
 
     >>> client = LDAPClient("ldapi://%2Frun%2Fslapd%2Fldapi")
