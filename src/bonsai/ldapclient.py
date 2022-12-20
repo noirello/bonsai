@@ -225,7 +225,7 @@ class LDAPClient:
             raise TypeError("Name parameter must be string or None.")
         self.__client_key = name
 
-    def set_async_connection_class(self, conn: BaseLDAPConnection) -> None:
+    def set_async_connection_class(self, conn: Type[BaseLDAPConnection]) -> None:
         """
         Set the LDAP connection class for asynchronous connection. The \
         default connection class is :class:`bonsai.asyncio.AIOLDAPConnection`
