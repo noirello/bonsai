@@ -75,7 +75,7 @@ directory:
  include_dirs=/usr/local/opt/openldap/include
  library_dirs=/usr/local/opt/openldap/lib
 
-MAC with arm cpu:
+MAC with arm cpu::
 
     [build_ext]
     library_dirs = /opt/homebrew/opt/openldap/lib
