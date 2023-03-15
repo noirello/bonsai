@@ -76,10 +76,9 @@ directory:
  library_dirs=/usr/local/opt/openldap/lib
 
 MAC with arm cpu:
-
- [build_ext]
- library_dirs = /opt/homebrew/opt/openldap/lib
- include_dirs = /usr/include/sasl:/opt/homebrew/opt/openldap/include
+    [build_ext]
+    library_dirs = /opt/homebrew/opt/openldap/lib
+    include_dirs = /usr/include/sasl:/opt/homebrew/opt/openldap/include
 
 
 and then you can follow the standard build commands::
