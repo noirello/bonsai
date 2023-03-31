@@ -17,8 +17,8 @@ Bonsai
     :target: https://ci.appveyor.com/project/noirello/bonsai
     :alt: AppVeyor CI Build Status
 
-.. image:: https://img.shields.io/codecov/c/github/noirello/bonsai/dev.svg?style=flat-square
-    :target: https://codecov.io/github/noirello/bonsai?branch=dev
+.. image:: https://codecov.io/gh/noirello/bonsai/branch/dev/graph/badge.svg?token=gPAMdWATgj
+    :target: https://app.codecov.io/gh/noirello/bonsai/tree/dev/src
     :alt: Coverage Status
 
 .. image:: https://readthedocs.org/projects/bonsai/badge/?version=latest&style=flat-square
