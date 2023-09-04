@@ -147,15 +147,21 @@ jobs:
         env_vars: OS,PYTHON
         gcov: true
         fail_ci_if_error: true
-    - name: Create wheel
+    - name: Install cibuildwheel dependencies
       run: |
-        python setup.py clean
-        python setup.py build -f
-        python setup.py bdist_wheel
-        delocate-wheel -v ./dist/bonsai-*.whl
+        set -o errexit
+        python -m pip install --upgrade pip
+        python -m pip install cibuildwheel==2.15.0
+    - name: Create wheel
+      run: python -m cibuildwheel --output-dir wheelhouse
+      env:
+        CIBW_BUILD_VERBOSITY: 3
+        CMAKE_OSX_ARCHITECTURES: 'x86_64;arm64'
+        CIBW_ARCHS_MACOS: universal2
+        CIBW_SKIP: "cp36-*"
     - name: Upload wheel
       uses: actions/upload-artifact@v3
       with:
         name: wheel
-        path: ./dist/bonsai-*.whl
+        path: ./wheelhouse/bonsai-*.whl
         retention-days: 5
