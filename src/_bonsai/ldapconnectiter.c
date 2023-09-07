@@ -159,7 +159,7 @@ binding(LDAPConnectIter *self) {
         /* First call of bind. */
         rc = _ldap_bind(self->conn->ld, self->info, self->conn->ppolicy,
                 NULL, &(self->message_id));
-        if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
+        if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS && rc != LDAP_X_CONNECTING) {
             close_socketpair(self->conn->socketpair);
             set_exception(self->conn->ld, rc);
             return NULL;
