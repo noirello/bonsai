@@ -160,11 +160,11 @@ jobs:
         python setup.py build -f
         python setup.py bdist_wheel
         delocate-wheel -v ./dist/bonsai-*.whl
-      if: env.python_final_release
+      if: ${{ env.python_final_release == 'true' }}
     - name: Upload wheel
       uses: actions/upload-artifact@v3
       with:
         name: wheel
         path: ./dist/bonsai-*.whl
         retention-days: 5
-      if: env.python_final_release
+      if: ${{ env.python_final_release == 'true' }}
