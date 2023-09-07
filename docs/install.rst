@@ -55,10 +55,10 @@ unpackaged the sources, you can run::
 .. note::  
    Compiling the package with MinGW is no longer recommended.
 
-Install from source on Mac OS X
--------------------------------
+Install from source on macOS
+----------------------------
 
-Because Mac OS X is shipped with an older version of libldap which lacks of
+Because macOS is shipped with an older version of libldap which lacks of
 several features that Bonsai relies on, a newer library needs to be installed
 before compiling the module.
 
@@ -75,11 +75,13 @@ directory:
  include_dirs=/usr/local/opt/openldap/include
  library_dirs=/usr/local/opt/openldap/lib
 
-MAC with arm cpu::
+Or with Apple Silicon:
 
-    [build_ext]
-    library_dirs = /opt/homebrew/opt/openldap/lib
-    include_dirs = /usr/include/sasl:/opt/homebrew/opt/openldap/include
+.. code-block:: ini
+
+ [build_ext]
+ library_dirs = /opt/homebrew/opt/openldap/lib
+ include_dirs = /usr/include/sasl:/opt/homebrew/opt/openldap/include
 
 
 and then you can follow the standard build commands::
