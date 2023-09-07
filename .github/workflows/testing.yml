@@ -98,6 +98,7 @@ jobs:
         allow-prereleases: true
     - name: Install Python dependencies
       run: |
+        echo "python_final_release=$(python -c 'import sys;print(str(sys.version_info.releaselevel == "final").lower())')" >> $GITHUB_ENV
         python -m pip install --upgrade pip
         python -m pip install poetry wheel
         poetry config virtualenvs.create false
@@ -159,9 +160,11 @@ jobs:
         python setup.py build -f
         python setup.py bdist_wheel
         delocate-wheel -v ./dist/bonsai-*.whl
+      if: env.python_final_release
     - name: Upload wheel
       uses: actions/upload-artifact@v3
       with:
         name: wheel
         path: ./dist/bonsai-*.whl
         retention-days: 5
+      if: env.python_final_release
