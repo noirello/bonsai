@@ -11,14 +11,6 @@ environment:
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\.appveyor\\run_with_env.cmd"
 
   matrix:
-    - PYTHON: "C:\\Python38"
-      PYTHON_VERSION: "3.8.x"
-      PYTHON_ARCH: "32"
-
-    - PYTHON: "C:\\Python38-x64"
-      PYTHON_VERSION: "3.8.x"
-      PYTHON_ARCH: "64"
-
     - PYTHON: "C:\\Python39"
       PYTHON_VERSION: "3.9.x"
       PYTHON_ARCH: "32"
@@ -41,6 +33,14 @@ environment:
 
     - PYTHON: "C:\\Python311-x64"
       PYTHON_VERSION: "3.11.x"
+      PYTHON_ARCH: "64"
+
+    - PYTHON: "C:\\Python312"
+      PYTHON_VERSION: "3.12.x"
+      PYTHON_ARCH: "32"
+
+    - PYTHON: "C:\\Python312-x64"
+      PYTHON_VERSION: "3.12.x"
       PYTHON_ARCH: "64"
 
 install:
