@@ -90,7 +90,7 @@ test_script:
   # Set install path for coverage.py.
   - for /f "tokens=*" %%i in ('python -c "import bonsai; print(bonsai.__file__[:-12])"') do set INSTALL_PATH="%%i"
   # Run the tests.
-  - "%CMD_IN_ENV% python -m pytest -v --cov-config .coveragerc --cov-report="
+  - "%CMD_IN_ENV% python -m pytest -v --junitxml=.\\test-results.xml --cov-config .coveragerc --cov-report="
 
 after_test:
   # Change path of the Python source files in .coverage.
@@ -98,6 +98,9 @@ after_test:
         $project_path = $env:APPVEYOR_BUILD_FOLDER.Replace('\', '\\') + "\\src\\bonsai"; `
         (Get-Content .\\.coverage) -replace $install_path, $project_path | Set-Content '.\\.coverage'
   - codecov
+  # Upload test results.
+  - ps: $wc = New-Object 'System.Net.WebClient'; `
+        $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\\test-results.xml))
   # If tests are successful, create binary packages for the project.
   - "%CMD_IN_ENV% python setup.py bdist_wheel"
   - ps: "ls dist"
@@ -106,5 +109,7 @@ artifacts:
   # Archive the generated packages in the ci.appveyor.com build report.
   - path: dist\*
 
-on_failure:
-  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+# For debugging
+#on_failure:
+#  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+#
