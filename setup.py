@@ -1,5 +1,6 @@
 import os
 import sys
+import pathlib
 import tempfile
 
 from contextlib import contextmanager
@@ -124,12 +125,15 @@ BONSAI_MODULE = Extension(
     define_macros=MACROS,
 )
 
+# Get the absolute path to the directory of setup.py.
+CURRDIR = pathlib.Path(__file__).resolve().parent
+
 # Get long description from the README.rst file.
-with open("README.rst") as file:
+with open(CURRDIR / "README.rst") as file:
     LONG_DESC = file.read()
 
 # Get version number from the module's __init__.py file.
-with open("./src/bonsai/__init__.py") as src:
+with open(CURRDIR / "src" / "bonsai" / "__init__.py") as src:
     VER = [
         line.split('"')[1] for line in src.readlines() if line.startswith("__version__")
     ][0]
