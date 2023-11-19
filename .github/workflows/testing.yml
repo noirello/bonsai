@@ -156,6 +156,7 @@ jobs:
         fail_ci_if_error: true
     - name: Create wheel
       run: |
+        rm -rf ./build
         python -m build -w
         delocate-wheel -v ./dist/bonsai-*.whl
       if: ${{ env.python_final_release == 'true' }}
