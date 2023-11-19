@@ -72,14 +72,14 @@ install:
   # Upgrade to the latest version of pip to avoid it displaying warnings
   # about it being out of date.
   - "%PYTHON%\\python.exe -m pip install --disable-pip-version-check --user --upgrade pip"
-  - "%PYTHON%\\python.exe -m pip install poetry wheel"
+  - "%PYTHON%\\python.exe -m pip install poetry wheel build"
   - "%PYTHON%\\python.exe -m poetry config virtualenvs.create false"
   - "%PYTHON%\\python.exe -m poetry install --no-root -E gevent -E tornado -E trio"
   - "%PYTHON%\\python.exe -m pip list"
 
 build_script:
   # Build the compiled extension
-  - "%CMD_IN_ENV% python setup.py install"
+  - "%CMD_IN_ENV% python -m pip install -vvv --user ."
 
 before_test:
   - ps: "Start-Process python -ArgumentList .\\.ci\\delay.py -Verb runas"
@@ -102,7 +102,7 @@ after_test:
   - ps: $wc = New-Object 'System.Net.WebClient'; `
         $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\\test-results.xml))
   # If tests are successful, create binary packages for the project.
-  - "%CMD_IN_ENV% python setup.py bdist_wheel"
+  - "%CMD_IN_ENV% python -m build -w"
   - ps: "ls dist"
 
 artifacts:

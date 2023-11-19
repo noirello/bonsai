@@ -100,7 +100,7 @@ jobs:
       run: |
         echo "python_final_release=$(python -c 'import sys;print(str(sys.version_info.releaselevel == "final").lower())')" >> $GITHUB_ENV
         python -m pip install --upgrade pip
-        python -m pip install poetry wheel
+        python -m pip install poetry wheel 
         poetry config virtualenvs.create false
         poetry install --no-root -E gevent -E tornado -E trio
         python -m pip install --force-reinstall --no-binary gevent delocate
@@ -156,9 +156,7 @@ jobs:
         fail_ci_if_error: true
     - name: Create wheel
       run: |
-        python setup.py clean
-        python setup.py build -f
-        python setup.py bdist_wheel
+        python -m build -w
         delocate-wheel -v ./dist/bonsai-*.whl
       if: ${{ env.python_final_release == 'true' }}
     - name: Upload wheel

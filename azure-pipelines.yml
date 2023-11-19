@@ -111,7 +111,7 @@ stages:
     - script: |
         set -e
         python -m pip install --upgrade pip
-        python -m pip install poetry wheel
+        python -m pip install poetry wheel build
         poetry config virtualenvs.create false
         poetry install --no-root -E gevent -E tornado -E trio
         python -m pip list
@@ -174,9 +174,7 @@ stages:
       condition: succeeded()
     - script: |
         set -e
-        python setup.py clean
-        python setup.py build -f
-        python setup.py bdist_wheel
+        python -m build -w
         delocate-wheel -v ./dist/bonsai-*.whl
       displayName: Create wheel
     - task: CopyFiles@2
