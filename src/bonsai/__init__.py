@@ -11,7 +11,7 @@ from .ldif import LDIFError, LDIFReader, LDIFWriter
 from .errors import *
 from .utils import *
 
-__version__ = "1.5.1"
+__version__ = "1.5.2"
 
 __all__ = [
     "LDAPClient",

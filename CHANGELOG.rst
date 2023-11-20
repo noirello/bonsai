@@ -1,6 +1,32 @@
 Changelog
 ==========
 
+[1.5.2] - 2023-11-20
+--------------------
+
+Changed
+~~~~~~~
+
+-  The module is no longer tested with 3.7.
+-  LDAP_X_CONNECTING is an accepted return status during binding
+   while using asynchronous connection.
+
+Added
+~~~~~
+
+-  Debug hint about SSL/TLS errors to the documentation (PR #76,
+   thanks to @senfomat)
+-  Python 3.12 to the CI pipeline.
+
+Fixed
+~~~~~
+
+-  Type annotation for set_async_connection_class. (PR #77, thanks
+   to @Yanonix)
+-  Documentation about setup.cfg for Apple Silicon (PR #81, thanks
+   to @chefkoch-de42)
+
+
 [1.5.1] - 2022-12-03
 --------------------
 
@@ -18,7 +44,7 @@ Added
 Fixed
 ~~~~~
 
--  UnboundLocalError in AIOConnectionPool.spawn (PR #77, thanks to @rra)
+-  UnboundLocalError in AIOConnectionPool.spawn (PR #71, thanks to @rra)
    and in ConnectionPool.spawn.
 -  Parsing LDIF values containing colon as a non-first character
    in LDIFReader. (Issue #72)
@@ -409,7 +435,7 @@ Fixed
 Changed
 ~~~~~~~
 
--  Renamed LDAPConnection’s cancel method to abandon.
+-  Renamed LDAPConnection's cancel method to abandon.
 
 Added
 ~~~~~
