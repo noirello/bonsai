@@ -173,6 +173,7 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
     const char *cctype = NULL;
     char *cname = NULL;
     krb5_ccache defcc = NULL;
+    int credsInitialized = 0;
     krb5_creds creds;
     krb5_principal princ = NULL;
     krb5_keytab keytab = NULL;
@@ -213,6 +214,7 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
         rc = krb5_get_init_creds_password(ctx, &creds, princ, password,
                                           0, NULL, 0, NULL, NULL);
         if (rc != 0) goto end;
+        credsInitialized = 1;
 
         rc = krb5_cc_store_cred(ctx, *ccache, &creds);
         if (rc != 0) goto end;
@@ -229,6 +231,7 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
 
         rc = krb5_get_init_creds_keytab(ctx, &creds, princ, keytab, 0, NULL, NULL);
         if (rc != 0) goto end;
+        credsInitialized = 1;
         
         rc = krb5_cc_store_cred(ctx, *ccache, &creds);
         if (rc != 0) goto end;
@@ -262,6 +265,7 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
 end:
     if (keytab != NULL) krb5_kt_close(ctx, keytab);
     if (princ != NULL) krb5_free_principal(ctx, princ);
+    if (credsInitialized) krb5_free_cred_contents(ctx, &creds);
     if (defcc != NULL) krb5_cc_close(ctx, defcc);
     if (cname != NULL) free(cname);
     if (pr_name.value != NULL) krb5_free_unparsed_name(ctx, pr_name.value);
