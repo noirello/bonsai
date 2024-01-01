@@ -193,47 +193,60 @@ ldapconnection_open(LDAPConnection *self) {
 
 /*  Close the LDAP connection. */
 static PyObject *
-ldapconnection_close(LDAPConnection *self) {
+ldapconnection_close(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     int rc;
     int msgid;
-    PyObject *keys = PyDict_Keys(self->pending_ops);
-    PyObject *iter, *key;
+    char abandon = 0;
+    PyObject *iter, *key, *keys = NULL;
+    PyObject *abandon_obj = NULL;
+    static char *kwlist[] = {"abandon_requests", NULL};
 
     DEBUG("ldapconnection_close (self:%p)", self);
-    if (keys == NULL) return NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O!", kwlist, &PyBool_Type,
+            &abandon_obj)) {
+        return -1;
+    }
+
+    if (abandon_obj != NULL) {
+        abandon = (char)PyObject_IsTrue(abandon_obj);
+    }
 
     if (self->closed == 1) {
         /* Connection is already close, nothing to do. */
-        Py_DECREF(keys);
         Py_RETURN_NONE;
     }
 
-    iter = PyObject_GetIter(keys);
-    Py_DECREF(keys);
-    if (iter == NULL) return NULL;
+    if (abandon == 1) {
+        keys = PyDict_Keys(self->pending_ops);
+        if (keys == NULL) return NULL;
 
-    for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
-        msgid = (int)PyLong_AsLong(key);
-        /* Remove item from the dict. */
-        if (PyDict_DelItem(self->pending_ops, key) != 0) {
-            Py_DECREF(iter);
+        iter = PyObject_GetIter(keys);
+        Py_DECREF(keys);
+        if (iter == NULL) return NULL;
+
+        for (key = PyIter_Next(iter); key != NULL; key = PyIter_Next(iter)) {
+            msgid = (int)PyLong_AsLong(key);
+            /* Remove item from the dict. */
+            if (PyDict_DelItem(self->pending_ops, key) != 0) {
+                Py_DECREF(iter);
+                Py_DECREF(key);
+                PyErr_BadInternalCall();
+                return NULL;
+            }
             Py_DECREF(key);
-            PyErr_BadInternalCall();
-            return NULL;
-        }
-        Py_DECREF(key);
 
-        /* Skip negatives, cause assertion error. */
-        if (msgid <= 0) continue;
-        /* Abandon the pending operations from the server. */
-        rc = ldap_abandon_ext(self->ld, msgid, NULL, NULL);
-        if (rc != LDAP_SUCCESS) {
-            Py_DECREF(iter);
-            set_exception(self->ld, rc);
-            return NULL;
+            /* Skip negatives, cause assertion error. */
+            if (msgid <= 0) continue;
+            /* Abandon the pending operations from the server. */
+            rc = ldap_abandon_ext(self->ld, msgid, NULL, NULL);
+            if (rc != LDAP_SUCCESS) {
+                Py_DECREF(iter);
+                set_exception(self->ld, rc);
+                return NULL;
+            }
         }
+        Py_DECREF(iter);
     }
-    Py_DECREF(iter);
 
     rc = ldap_unbind_ext(self->ld, NULL, NULL);
     if (rc != LDAP_SUCCESS) {
@@ -1397,7 +1410,7 @@ static PyMethodDef ldapconnection_methods[] = {
             "Abandon ongoing operation associated with the given message id." },
     {"add", (PyCFunction)ldapconnection_add, METH_VARARGS,
             "Add new LDAPEntry to the LDAP server."},
-    {"close", (PyCFunction)ldapconnection_close, METH_NOARGS,
+    {"close", (PyCFunction)ldapconnection_close, METH_VARARGS | METH_KEYWORDS,
             "Close connection with the LDAP Server."},
     {"delete", (PyCFunction)ldapconnection_delentry, METH_VARARGS,
             "Delete an LDAPEntry with the given distinguished name."},
