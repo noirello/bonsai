@@ -512,6 +512,16 @@ def test_close(conn):
         _ = conn.whoami()
 
 
+def test_close_with_abandon(async_conn, basedn):
+    """Test close method with abandon requests option."""
+    msgid = async_conn.open()
+    while async_conn.get_result(msgid) is None:
+        pass
+    msgid = async_conn.search(basedn, 2)
+    async_conn.close(abandon_requests=True)
+    assert async_conn.closed
+
+
 def test_abandon(async_conn, basedn):
     """Test abandon method."""
     msgid = async_conn.open()
