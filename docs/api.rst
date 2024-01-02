@@ -139,10 +139,13 @@ bonsai
 
 .. automethod:: LDAPConnection.add(entry, timeout=None)
 
-.. method:: LDAPConnection.close()
+.. method:: LDAPConnection.close(abandon_requests=False)
 
     Close LDAP connection.
-    
+
+    When `abandon_requests` parameter is set to `true`, then abandon operation will be called on
+    every unfinished request.
+
 .. automethod:: LDAPConnection.delete(dname, timeout=None, recursive=False)
 
 .. method:: LDAPConnection.fileno()
