@@ -510,6 +510,9 @@ def test_close(conn):
     assert conn.closed
     with pytest.raises(bonsai.ClosedConnection):
         _ = conn.whoami()
+    # Can call close multiple times.
+    conn.close()
+    assert conn.closed
 
 
 def test_close_with_abandon(async_conn, basedn):
