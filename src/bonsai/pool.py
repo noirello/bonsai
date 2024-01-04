@@ -1,3 +1,4 @@
+import logging
 import threading
 from contextlib import contextmanager
 from typing import Optional, Any, Set, Generic, TypeVar, Generator
@@ -8,6 +9,9 @@ MYPY = False
 
 if MYPY:
     from .ldapclient import LDAPClient
+
+
+logger = logging.getLogger("bonsai.pool")
 
 
 class PoolError(Exception):
@@ -115,9 +119,19 @@ class ConnectionPool(Generic[T]):
     def close(self) -> None:
         """Close the pool and all of its managed connections."""
         for conn in self._idles:
-            conn.close()
+            try:
+                conn.close()
+            except Exception as exc:
+                logger.warning(
+                    f"Exception is raised during closing idle connection: {exc}"
+                )
         for conn in self._used:
-            conn.close()
+            try:
+                conn.close()
+            except Exception as exc:
+                logger.warning(
+                    f"Exception is raised during closing used connection: {exc}"
+                )
         self._closed = True
         self._idles = set()
         self._used = set()
@@ -207,7 +221,7 @@ class ThreadedConnectionPool(ConnectionPool[LDAPConnection]):
         minconn: int = 1,
         maxconn: int = 10,
         block: bool = True,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         """Init method."""
         super().__init__(client, minconn, maxconn, **kwargs)
