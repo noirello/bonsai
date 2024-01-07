@@ -204,7 +204,7 @@ ldapconnection_close(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     DEBUG("ldapconnection_close (self:%p)", self);
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O!", kwlist, &PyBool_Type,
             &abandon_obj)) {
-        return -1;
+        return NULL;
     }
 
     if (abandon_obj != NULL) {
