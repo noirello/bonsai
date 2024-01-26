@@ -163,7 +163,7 @@ jobs:
     - name: Upload wheel
       uses: actions/upload-artifact@v4
       with:
-        name: wheel
+        name: wheel-${{ matrix.python-version }}
         path: ./dist/bonsai-*.whl
         retention-days: 5
       if: ${{ env.python_final_release == 'true' }}
