@@ -80,7 +80,7 @@ jobs:
         fail_ci_if_error: true
 
   macos:
-    runs-on: macos-14
+    runs-on: macos-13
     strategy:
       fail-fast: false
       matrix:
@@ -163,7 +163,41 @@ jobs:
     - name: Upload wheel
       uses: actions/upload-artifact@v4
       with:
-        name: wheel-${{ matrix.python-version }}
+        name: wheel-amd64-${{ matrix.python-version }}
         path: ./dist/bonsai-*.whl
         retention-days: 5
       if: ${{ env.python_final_release == 'true' }}
+
+  macos-wheels:
+    needs: macos
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    env:
+      PYTHON: ${{ matrix.python-version }}
+      OS: macos
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Python build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install delocate build wheel
+        python -m pip list
+    - name: Create wheel
+      run: |
+        printf "[build_ext]\ninclude_dirs=/usr/include/sasl:/opt/homebrew/opt/openldap/include\nlibrary_dirs=/opt/homebrew/opt/openldap/lib" > ./setup.cfg
+        printf "\n\n[options]\nzip_safe = False" >> setup.cfg
+        python -m build -w
+        delocate-wheel -v ./dist/bonsai-*.whl
+    - name: Upload wheel
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheel-arm64-${{ matrix.python-version }}
+        path: ./dist/bonsai-*.whl
+        retention-days: 5
