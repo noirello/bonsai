@@ -157,7 +157,7 @@ jobs:
     - name: Create wheel
       run: |
         rm -rf ./build
-        python -m build -w
+        ARCHFLAGS='-arch x86_64' _PYTHON_HOST_PLATFORM=$(python -c "import sysconfig;print(f\"{'-'.join(sysconfig.get_platform().split('-')[:-1])}-x86_64\")") python -m build -w
         delocate-wheel -v ./dist/bonsai-*.whl
       if: ${{ env.python_final_release == 'true' }}
     - name: Upload wheel
@@ -193,8 +193,8 @@ jobs:
       run: |
         printf "[build_ext]\ninclude_dirs=/usr/include/sasl:/opt/homebrew/opt/openldap/include\nlibrary_dirs=/opt/homebrew/opt/openldap/lib" > ./setup.cfg
         printf "\n\n[options]\nzip_safe = False" >> setup.cfg
-        python -m build -w
-        delocate-wheel -v ./dist/bonsai-*.whl
+        ARCHFLAGS='-arch arm64' _PYTHON_HOST_PLATFORM=$(python -c "import sysconfig;print(f\"{'-'.join(sysconfig.get_platform().split('-')[:-1])}-arm64\")") python -m build -w
+        delocate-wheel --require-archs arm64 -v ./dist/bonsai-*.whl
     - name: Upload wheel
       uses: actions/upload-artifact@v4
       with:
