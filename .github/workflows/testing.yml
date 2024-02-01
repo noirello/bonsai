@@ -168,7 +168,7 @@ jobs:
         retention-days: 5
       if: ${{ env.python_final_release == 'true' }}
 
-  macos-wheels:
+  macos-arm64-wheels:
     needs: macos
     runs-on: macos-14
     strategy:
@@ -189,6 +189,8 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install delocate build wheel
         python -m pip list
+    - name: Check Python sysconfig
+      run: python -m sysconfig
     - name: Create wheel
       run: |
         printf "[build_ext]\ninclude_dirs=/usr/include/sasl:/opt/homebrew/opt/openldap/include\nlibrary_dirs=/opt/homebrew/opt/openldap/lib" > ./setup.cfg
