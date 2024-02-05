@@ -72,12 +72,12 @@ jobs:
         echo $BONSAI_INSTALL_PATH
         python -m pytest -v --cov-config .coveragerc --cov-report= --cov=$BONSAI_INSTALL_PATH
     - name: Upload coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         directory: "."
         env_vars: OS,PYTHON
-        gcov: true
         fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   macos:
     runs-on: macos-13
@@ -148,12 +148,12 @@ jobs:
         echo $BONSAI_INSTALL_PATH
         py.test -v --cov-config .coveragerc --cov-report= --cov=$BONSAI_INSTALL_PATH
     - name: Upload coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         directory: "."
         env_vars: OS,PYTHON
-        gcov: true
         fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
     - name: Create wheel
       run: |
         rm -rf ./build
