@@ -1,6 +1,32 @@
 Changelog
 ==========
 
+[1.5.3 - 2024-04-28]
+--------------------
+
+Changed
+~~~~~~~
+
+-  Any exception that rasied during closing a connection pool is 
+   catched and a warning message will be logged.
+-  LDAPconnection.close method is no longer try to abandon on-going
+   requests by default.
+
+Added
+~~~~~
+
+-  New `abandon_requests` parameter for LDAPconnection.close method
+   to call abandon operations on on-going requests during connection
+   close.
+-  Arm64 wheels for macOS.
+
+Fixed
+~~~~~
+
+-  Memory leak during Kerberos credential creation. (PR #84, thanks
+   to @dafanasiev)
+
+
 [1.5.2] - 2023-11-20
 --------------------
 
