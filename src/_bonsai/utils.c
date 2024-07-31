@@ -91,7 +91,7 @@ berval2PyObject(struct berval *bval, int keepbytes) {
     TRUE or FALSE C strings.
 */
 int
-PyObject2char_withlength(PyObject *obj, char **output, long int *len) {
+PyObject2char_withlength(PyObject *obj, char **output, Py_ssize_t *len) {
     int rc = 0;
     long int size = 0;
     char *tmp = NULL;
@@ -162,7 +162,7 @@ PyObject2char(PyObject *obj) {
 struct berval **
 PyList2BervalList(PyObject *list) {
     int i = 0, rc = 0;
-    long int len = 0;
+    Py_ssize_t len = 0;
     char *strvalue;
     struct berval **berval_arr = NULL;
     PyObject *iter;
