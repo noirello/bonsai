@@ -23,16 +23,16 @@ Fixed
 Changed
 ~~~~~~~
 
--  Any exception that rasied during closing a connection pool is 
-   catched and a warning message will be logged.
--  LDAPconnection.close method is no longer try to abandon on-going
+-  Any exception that raised during closing a connection pool is 
+   caught, and a warning message will be logged.
+-  LDAPconnection.close method is no longer try to abandon ongoing
    requests by default.
 
 Added
 ~~~~~
 
 -  New `abandon_requests` parameter for LDAPconnection.close method
-   to call abandon operations on on-going requests during connection
+   to call abandon operations on ongoing requests during connection
    close.
 -  Arm64 wheels for macOS.
 
