@@ -1,6 +1,22 @@
 Changelog
 ==========
 
+[1.5.4 - UNRELEASED]
+--------------------
+
+Changed
+~~~~~~~
+
+Added
+~~~~~
+
+Fixed
+~~~~~
+
+-  Type of length variable and function parameter in converting function
+   for i386 compatibility. (PR #91, thanks to @a-detiste)
+
+
 [1.5.3 - 2024-04-28]
 --------------------
 
