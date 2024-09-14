@@ -184,8 +184,10 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+        allow-prereleases: true
     - name: Install Python build dependencies
       run: |
+        echo "python_final_release=$(python -c 'import sys;print(str(sys.version_info.releaselevel == "final").lower())')" >> $GITHUB_ENV
         python -m pip install --upgrade pip
         python -m pip install delocate build wheel
         python -m pip list
@@ -203,3 +205,4 @@ jobs:
         name: wheel-arm64-${{ matrix.python-version }}
         path: ./dist/bonsai-*.whl
         retention-days: 5
+      if: ${{ env.python_final_release == 'true' }}
