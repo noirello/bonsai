@@ -7,7 +7,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-gevent = { version = "^23.9.0", optional = true }
+gevent = { version = "^24.2.1", optional = true }
 tornado = { version = "^6.2", optional = true }
 trio = { version = "<1.0", optional = true }
 typing-extensions = { version = ">=4.0.0", python = "<3.8" }
@@ -18,21 +18,17 @@ tornado = ["tornado"]
 trio = ["trio"]
 
 [tool.poetry.dev-dependencies]
-pytest = "^7.2.0"
-pytest-cov = "^4.0.0"
-pytest-timeout = "^2.1.0"
+pytest = "^8.3.0"
+pytest-cov = "^5.0.0"
+pytest-timeout = "^2.3.0"
 codecov = "2.1.13"
 sphinx = "^7.1.2"
-furo = "2023.8.19"
-pylint = "^2.14.5"
-mypy = "^1.1.1"
-black = "23.7.0"
+furo = "2024.8.6"
+pylint = "^3.2.7"
+mypy = "^1.11.2"
+black = "24.8.0"
 pydivert = { version = "^2.1", markers = "sys_platform == 'win32'" }
-# The following two are delocate dependencies,
-# that need to be specified to make poetry happy.
-machomachomangler = { version = "0.0.1", markers = "sys_platform == 'darwin'" }
-bindepend = { version = "^0.1", markers = "sys_platform == 'darwin'" }
-delocate = { version = "^0.10", markers = "sys_platform == 'darwin'" }
+delocate = { version = "^0.12", markers = "sys_platform == 'darwin'" }
 
 [build-system]
 requires = [
