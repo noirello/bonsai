@@ -154,6 +154,7 @@ jobs:
         env_vars: OS,PYTHON
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
+      if: ${{ github.event_name != 'schedule' }}
     - name: Create wheel
       run: |
         rm -rf ./build
