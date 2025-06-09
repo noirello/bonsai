@@ -1,6 +1,39 @@
 from typing import Optional, Type
 
 
+__all__ = [
+    "AccountLocked",
+    "AffectsMultipleDSA",
+    "AlreadyExists",
+    "AuthenticationError",
+    "AuthMethodNotSupported",
+    "ChangeAfterReset",
+    "ClosedConnection",
+    "ConnectionError",
+    "InsufficientAccess",
+    "InsufficientPasswordQuality",
+    "InvalidDN",
+    "InvalidMessageID",
+    "LDAPError",
+    "MustSupplyOldPassword",
+    "NoSuchAttribute",
+    "NoSuchObjectError",
+    "NotAllowedOnNonleaf",
+    "ObjectClassViolation",
+    "PasswordExpired",
+    "PasswordInHistory",
+    "PasswordModNotAllowed",
+    "PasswordPolicyError",
+    "PasswordTooShort",
+    "PasswordTooYoung",
+    "ProtocolError",
+    "SizeLimitError",
+    "TimeoutError",
+    "TypeOrValueExists",
+    "UnwillingToPerform",
+]
+
+
 class LDAPError(Exception):
     """General LDAP error."""
 
@@ -8,13 +41,13 @@ class LDAPError(Exception):
 
     @classmethod
     def create(cls, code: int) -> Type["LDAPError"]:
-        """ Create a new LDAPError type with `code` error code. """
+        """Create a new LDAPError type with `code` error code."""
         cls.code = code
         return cls
 
     @property
     def hexcode(self) -> int:
-        """ Error code in 16 bit length hexadecimal format. """
+        """Error code in 16 bit length hexadecimal format."""
         return (self.code + (1 << 16)) % (1 << 16)
 
     def __str__(self) -> str:
@@ -42,7 +75,7 @@ class AuthenticationError(LDAPError):
 
 
 class AuthMethodNotSupported(LDAPError):
-    """Raised, when the chosen authentication method is not supported. """
+    """Raised, when the chosen authentication method is not supported."""
 
     code = 0x07
 
@@ -56,7 +89,7 @@ class ObjectClassViolation(LDAPError):
 
 class AlreadyExists(LDAPError):
     """Raised, when try to add an entry and it already exists in the
-    dictionary. """
+    dictionary."""
 
     code = 0x44
 
@@ -81,7 +114,7 @@ class InsufficientAccess(LDAPError):
 
 
 class TimeoutError(LDAPError):
-    """Raised, when the specified timeout is exceeded. """
+    """Raised, when the specified timeout is exceeded."""
 
     code = -5
 
@@ -108,7 +141,7 @@ class NoSuchObjectError(LDAPError):
 
 
 class AffectsMultipleDSA(LDAPError):
-    """Raised, when multiple directory server agents are affected. """
+    """Raised, when multiple directory server agents are affected."""
 
     code = 0x47
 
@@ -144,7 +177,7 @@ class TypeOrValueExists(LDAPError):
 
 
 class PasswordPolicyError(LDAPError):
-    """ General exception for password policy errors. """
+    """General exception for password policy errors."""
 
     _dflt_args = ("Password policy error.",)
 
@@ -245,7 +278,7 @@ class PasswordInHistory(PasswordPolicyError):
 
 
 def _get_error(code: int) -> type:
-    """ Return an error by code number. """
+    """Return an error by code number."""
     if code == -1 or code == 0x51 or code == -11:
         # WinLDAP returns 0x51 for Server Down.
         # OpenLDAP returns -11 for Connection error.
