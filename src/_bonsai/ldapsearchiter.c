@@ -18,7 +18,13 @@ ldapsearchiter_dealloc(LDAPSearchIter* self) {
         }
         free(self->vlv_info);
     }
-    free(self->cookie);
+    if (self->cookie != NULL) {
+        if (self->cookie->bv_val != NULL) {
+            ber_bvfree(self->cookie);
+        } else {
+            free(self->cookie);
+        }
+    }
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
