@@ -6,8 +6,8 @@ authors = ["noirello <noirello@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.8"
-gevent = { version = "^24.2.1", optional = true }
+python = "^3.9"
+gevent = { version = "^25.5.1", optional = true }
 tornado = { version = "^6.2", optional = true }
 trio = { version = "<1.0", optional = true }
 typing-extensions = { version = ">=4.0.0", python = "<3.8" }
