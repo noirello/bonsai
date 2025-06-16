@@ -14,6 +14,7 @@
 
 #define XTHREAD HANDLE
 #define FINDCTRL LDAPControl**
+#define FREE_BVCOOKIE ldap_memfreeA // Just for the cookie from paged search result, and explicitly ANSI version.
 
 int _ldap_parse_passwordpolicy_control(LDAP *ld, LDAPControl **ctrls,
     ber_int_t *expire, ber_int_t *grace, unsigned int *error);
@@ -36,6 +37,7 @@ int _ldap_parse_passwordpolicy_control(LDAP *ld, LDAPControl **ctrls,
 #define SOCKET int
 #define XTHREAD pthread_t
 #define FINDCTRL LDAPControl*
+#define FREE_BVCOOKIE ldap_memfree // Just for the cookie from paged search result.
 
 int sasl_interact(LDAP *ld, unsigned flags, void *defaults, void *in);
 char *_ldap_get_opt_errormsg(LDAP *ld);

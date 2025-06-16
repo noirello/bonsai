@@ -962,10 +962,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, PyObject *obj) {
         if (search_iter->page_size > 0) {
             ctrl = ldap_control_find(LDAP_CONTROL_PAGEDRESULTS, returned_ctrls, NULL);
             if (search_iter->cookie->bv_val != NULL) {
-#ifndef WIN32
-                /* ber_memfree is unavailable for WinLDAP, simple free causes segfault on Windows. */
-                ber_memfree(search_iter->cookie->bv_val);
-#endif
+                FREE_BVCOOKIE(search_iter->cookie->bv_val);
                 search_iter->cookie->bv_len = 0;
                 search_iter->cookie->bv_val = NULL;
             }

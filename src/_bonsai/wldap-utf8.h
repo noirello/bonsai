@@ -100,7 +100,9 @@
 #define ldap_parse_result ldap_parse_resultU
 #define ldap_err2string ldap_err2stringU
 /* Simple free is sufficed, because no WinLDAP dependent allocation
-   should be kept outside of the scope of the new functions. */
+   should be kept outside of the scope of the new functions.
+   Except for the cookie from the paged search result, which is
+   handle separately. */
 #define ldap_memfree free
 #define ldap_start_tls ldap_start_tlsU
 #define ldap_start_tls_s ldap_start_tls_sU
