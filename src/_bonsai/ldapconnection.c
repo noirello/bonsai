@@ -634,13 +634,15 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
         memcpy(search_iter->params, &params, sizeof(ldapsearchparams));
 
-        /* Create cookie for the page result. */
-        search_iter->cookie = (struct berval *)malloc(sizeof(struct berval));
-        if (search_iter->cookie == NULL) return PyErr_NoMemory();
+        if (page_size > 0) {
+            /* Create cookie for the page result. */
+            search_iter->cookie = (struct berval *)malloc(sizeof(struct berval));
+            if (search_iter->cookie == NULL) return PyErr_NoMemory();
 
-        search_iter->cookie->bv_len = 0;
-        search_iter->cookie->bv_val = NULL;
-        search_iter->page_size = page_size;
+            search_iter->cookie->bv_len = 0;
+            search_iter->cookie->bv_val = NULL;
+            search_iter->page_size = page_size;
+        }
 
         if (offset != 0 || attrvalue_obj != NULL) {
             search_iter->vlv_info = (LDAPVLVInfo *)malloc(sizeof(LDAPVLVInfo));
