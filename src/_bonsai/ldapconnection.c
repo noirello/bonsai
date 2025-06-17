@@ -1238,11 +1238,6 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
     case LDAP_RES_MODRDN:
         /* Rename an LDAP entry. */
         rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL, NULL, 1);
-        /* Remove operations from pending_ops. */
-        if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
-            return NULL;
-        }
-
         if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
            set_exception(self->ld, err);
            return NULL;
@@ -1256,16 +1251,15 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         } else {
             return NULL;
         }
+        /* Remove operations from pending_ops. */
+        if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
+            return NULL;
+        }
 
         Py_RETURN_TRUE;
     default:
         rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
                 &returned_ctrls, 1);
-
-        /* Remove operations from pending_ops. */
-        if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
-            return NULL;
-        }
 
         ppres = create_ppolicy_control(self->ld, returned_ctrls, &ctrl_obj, &pperr);
         if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
@@ -1284,6 +1278,10 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             if (ppres == 1 && pperr != 65535) set_ppolicy_err(pperr, ctrl_obj);
             else set_exception(self->ld, err);
 
+            return NULL;
+        }
+        /* Remove operations from pending_ops. */
+        if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
             return NULL;
         }
 
