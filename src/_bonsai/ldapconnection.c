@@ -1145,12 +1145,10 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         /* The function is called on a initialising and binding procedure. */
         /* Check, that we get the right object. */
         if (!PyObject_IsInstance(obj, (PyObject *)&LDAPConnectIterType)) {
-            Py_DECREF(obj);
             PyErr_BadInternalCall();
             return NULL;
         }
         retval = LDAPConnectIter_Next((LDAPConnectIter *)obj, millisec);
-        Py_DECREF(obj);
         if (retval == Py_None) {
             Py_DECREF(retval);
             Py_RETURN_NONE;
@@ -1208,10 +1206,8 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
                 /* LDAP add or modify operation is failed,
                    then rollback the changes. */
                 if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0) {
-                    Py_DECREF(obj);
                     return NULL;
                 }
-                Py_DECREF(obj);
             }
             /* Remove operations from pending_ops. */
             del_from_pending_ops(self->pending_ops, msgid);
@@ -1225,7 +1221,6 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         break;
     case LDAP_RES_SEARCH_RESULT:
         retval = parse_search_result(self, res, obj);
-        Py_DECREF(obj);
         if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
             Py_XDECREF(retval);
             return NULL;
@@ -1233,7 +1228,6 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         return retval;
     case LDAP_RES_EXTENDED:
         retval = parse_extended_result(self, res, obj);
-        Py_DECREF(obj);
         if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
             Py_XDECREF(retval);
             return NULL;
@@ -1246,28 +1240,22 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL, NULL, 1);
         /* Remove operations from pending_ops. */
         if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
-            Py_DECREF(obj);
             return NULL;
         }
 
         if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
            set_exception(self->ld, err);
-           Py_DECREF(obj);
            return NULL;
         }
 
         if (PyArg_ParseTuple(obj, "OO", &entry, &newdn)) {
             /* Validate and set new LDAP DN. */
             if (LDAPEntry_SetDN(entry, newdn) != 0) {
-                Py_DECREF(obj);
                 return NULL;
             }
-            Py_DECREF(obj);
         } else {
-            Py_DECREF(obj);
             return NULL;
         }
-        Py_DECREF(obj);
 
         Py_RETURN_TRUE;
     default:
@@ -1276,14 +1264,12 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
 
         /* Remove operations from pending_ops. */
         if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
-            Py_DECREF(obj);
             return NULL;
         }
 
         ppres = create_ppolicy_control(self->ld, returned_ctrls, &ctrl_obj, &pperr);
         if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
         if (ppres == -1) {
-            Py_DECREF(obj);
             return NULL;
         }
 
@@ -1292,10 +1278,8 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             /* LDAP add or modify operation is failed,
                then rollback the changes. */
             if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0) {
-                Py_DECREF(obj);
                 return NULL;
             }
-            Py_DECREF(obj);
             /* Set Python error. */
             if (ppres == 1 && pperr != 65535) set_ppolicy_err(pperr, ctrl_obj);
             else set_exception(self->ld, err);
@@ -1303,7 +1287,6 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             return NULL;
         }
 
-        Py_DECREF(obj);
         Py_RETURN_TRUE;
     }
     Py_RETURN_NONE;

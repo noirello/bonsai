@@ -427,7 +427,7 @@ add_to_pending_ops(PyObject *pending_ops, int msgid, PyObject *item) {
 
 /* Get a pending LDAP operations from a dictionary. The key is the
  * corresponding message id, the return value depends on the type
- * of operation. */
+ * of operation. It returns borrowed reference. */
 PyObject *
 get_from_pending_ops(PyObject *pending_ops, int msgid) {
     PyObject *key = NULL;
@@ -439,7 +439,6 @@ get_from_pending_ops(PyObject *pending_ops, int msgid) {
     item = PyDict_GetItem(pending_ops, key);
     Py_DECREF(key);
 
-    Py_XINCREF(item);
     return item;
 }
 
