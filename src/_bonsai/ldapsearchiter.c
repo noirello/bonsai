@@ -5,6 +5,7 @@
 static void
 ldapsearchiter_dealloc(LDAPSearchIter* self) {
     DEBUG("ldapsearchiter_dealloc (self:%p)", self);
+    PyObject_GC_UnTrack(self);
     Py_XDECREF(self->buffer);
     Py_XDECREF(self->conn);
 
@@ -28,20 +29,38 @@ ldapsearchiter_dealloc(LDAPSearchIter* self) {
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
+static int
+ldapsearchiter_traverse(LDAPSearchIter *self, visitproc visit, void *arg) {
+    DEBUG("ldapsearchiter_traverse (self:%p)", self);
+    Py_VISIT(self->buffer);
+    Py_VISIT(self->conn);
+    return 0;
+}
+
+static int
+ldapsearchiter_clear(LDAPSearchIter *self) {
+    DEBUG("ldapsearchiter_clear (self:%p)", self);
+    Py_CLEAR(self->buffer);
+    Py_CLEAR(self->conn);
+    return 0;
+}
+
 /*  Create a new LDAPSearchIter object. */
 static PyObject *
 ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     LDAPSearchIter *self = NULL;
 
-    self = (LDAPSearchIter *)type->tp_alloc(type, 0);
+    self = (LDAPSearchIter *)PyObject_GC_New(LDAPSearchIter, type);
 
     if (self != NULL) {
+        self->conn = NULL;
         self->buffer = NULL;
         self->cookie = NULL;
         self->page_size = 0;
         self->params = NULL;
         self->vlv_info = NULL;
         self->auto_acquire = 0;
+        PyObject_GC_Track(self);
     }
 
     DEBUG("ldapsearchiter_new [self:%p]", self);
@@ -209,10 +228,11 @@ PyTypeObject LDAPSearchIterType = {
     0,                         /* tp_setattro */
     0,                         /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT |
-        Py_TPFLAGS_BASETYPE,   /* tp_flags */
+        Py_TPFLAGS_BASETYPE |
+        Py_TPFLAGS_HAVE_GC,    /* tp_flags */
     "ldapsearchiter object",   /* tp_doc */
-    0,                         /* tp_traverse */
-    0,                         /* tp_clear */
+    (traverseproc)ldapsearchiter_traverse, /* tp_traverse */
+    (inquiry)ldapsearchiter_clear, /* tp_clear */
     0,                         /* tp_richcompare */
     0,                         /* tp_weaklistoffset */
     (getiterfunc)ldapsearchiter_getiter,  /* tp_iter */
