@@ -28,6 +28,7 @@ ldapentry_dealloc(LDAPEntry *self) {
 
 static int
 ldapentry_traverse(LDAPEntry *self, visitproc visit, void *arg) {
+    DEBUG("ldapentry_traverse (self:%p)", self);
     Py_VISIT(self->dn);
     Py_VISIT(self->deleted);
     Py_VISIT(self->conn);
