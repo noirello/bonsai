@@ -7,6 +7,7 @@
 static void
 ldapconnection_dealloc(LDAPConnection* self) {
     DEBUG("ldapconnection_dealloc (self:%p)", self);
+    PyObject_GC_UnTrack(self);
     if (self->ld != NULL) {
         /* Unbind connection and free resources allocated by the LDAP structure. */
         ldap_unbind_ext(self->ld, NULL, NULL);
@@ -18,21 +19,26 @@ ldapconnection_dealloc(LDAPConnection* self) {
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
+static int
+ldapconnection_traverse(LDAPConnection *self, visitproc visit, void *arg) {
+    DEBUG("ldapconnection_traverse (self:%p)", self);
+    Py_VISIT(self->pending_ops);
+    return 0;
+}
+
+static int
+ldapconnection_clear(LDAPConnection *self) {
+    DEBUG("ldapconnection_clear (self:%p)", self);
+    Py_CLEAR(self->pending_ops);
+    return 0;
+}
+
 /*  Create a new LDAPConnection object. */
 static PyObject *
 ldapconnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     LDAPConnection *self = NULL;
-    PyObject *ts_empty_tuple = PyTuple_New(0);
-    PyObject *ts_empty_dict = PyDict_New();
 
-    if (ts_empty_tuple == NULL || ts_empty_dict == NULL) {
-        Py_XDECREF(ts_empty_tuple);
-        Py_XDECREF(ts_empty_dict);
-        return NULL;
-    }
-
-    self = (LDAPConnection *)PyBaseObject_Type.tp_new(type, ts_empty_tuple,
-                                                      ts_empty_dict);
+    self = (LDAPConnection *)PyObject_GC_New(LDAPConnection, type);
     if (self != NULL) {
         self->client = NULL;
         self->pending_ops = NULL;
@@ -43,10 +49,9 @@ ldapconnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->ppolicy = 0;
         self->csock = -1;
         self->socketpair = NULL;
+        PyObject_GC_Track(self);
     }
 
-    Py_DECREF(ts_empty_tuple);
-    Py_DECREF(ts_empty_dict);
     DEBUG("ldapconnection_new [self:%p]", self);
     return (PyObject *)self;
 }
@@ -1430,10 +1435,11 @@ PyTypeObject LDAPConnectionType = {
     0,                         /* tp_setattro */
     0,                         /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT |
-        Py_TPFLAGS_BASETYPE,   /* tp_flags */
+        Py_TPFLAGS_BASETYPE |
+        Py_TPFLAGS_HAVE_GC,   /* tp_flags */
     "ldapconnection object, implemented in C.",   /* tp_doc */
-    0,                         /* tp_traverse */
-    0,                         /* tp_clear */
+    (traverseproc)ldapconnection_traverse, /* tp_traverse */
+    (inquiry)ldapconnection_clear, /* tp_clear */
     0,                         /* tp_richcompare */
     0,                         /* tp_weaklistoffset */
     0,                         /* tp_iter */
