@@ -37,8 +37,15 @@ ldapconnection_clear(LDAPConnection *self) {
 static PyObject *
 ldapconnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     LDAPConnection *self = NULL;
-
-    self = (LDAPConnection *)PyObject_GC_New(LDAPConnection, type);
+    PyObject *ts_empty_tuple = PyTuple_New(0);
+    if (ts_empty_tuple == NULL) {
+        Py_XDECREF(ts_empty_tuple);
+        return NULL;
+    }
+    /* According to docs for cyclic gc support this should be PyObject_GC_New,
+       and with PyObject_GC_Track called after, but that fails with 3.10-3.11.
+    */
+    self = (LDAPConnection *)PyBaseObject_Type.tp_new(type, ts_empty_tuple, NULL);
     if (self != NULL) {
         self->client = NULL;
         self->pending_ops = NULL;
@@ -49,9 +56,9 @@ ldapconnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->ppolicy = 0;
         self->csock = -1;
         self->socketpair = NULL;
-        PyObject_GC_Track(self);
     }
 
+    Py_DECREF(ts_empty_tuple);
     DEBUG("ldapconnection_new [self:%p]", self);
     return (PyObject *)self;
 }
