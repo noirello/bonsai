@@ -128,10 +128,6 @@ BONSAI_MODULE = Extension(
 # Get the absolute path to the directory of setup.py.
 CURRDIR = pathlib.Path(__file__).resolve().parent
 
-# Get long description from the README.rst file.
-with open(CURRDIR / "README.rst") as file:
-    LONG_DESC = file.read()
-
 # Get version number from the module's __init__.py file.
 with open(CURRDIR / "src" / "bonsai" / "__init__.py") as src:
     VER = [
@@ -144,10 +140,6 @@ setup(
     description="Python 3 module for accessing LDAP directory servers.",
     author="noirello",
     author_email="noirello@gmail.com",
-    url="https://github.com/noirello/bonsai",
-    long_description=LONG_DESC,
-    long_description_content_type="text/x-rst",
-    license="MIT",
     ext_modules=[BONSAI_MODULE],
     cmdclass={"build_ext": BuildExt},
     package_dir={"bonsai": "src/bonsai"},
@@ -161,43 +153,4 @@ setup(
         "bonsai.trio",
     ],
     include_package_data=True,
-    install_requires=[
-        'typing-extensions >= 4.0.0 ; python_version < "3.8"',
-    ],
-    extras_require={
-        "gevent": ["gevent>=1.4.0"],
-        "tornado": ["tornado>=5.1.1"],
-        "trio": ["trio>=0.16.0"],
-    },
-    keywords=[
-        "python3",
-        "ldap",
-        "ldap3",
-        "python-ldap",
-        "libldap",
-        "winldap",
-        "asyncio",
-        "gevent",
-        "tornado",
-        "trio",
-    ],
-    classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "Intended Audience :: Developers",
-        "Intended Audience :: System Administrators",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: Microsoft :: Windows",
-        "Operating System :: Unix",
-        "Programming Language :: C",
-        "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
-        "Programming Language :: Python :: Implementation :: CPython",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        "Topic :: System :: Systems Administration :: Authentication/Directory :: LDAP",
-    ],
 )

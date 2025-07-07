@@ -1,23 +1,64 @@
-[tool.poetry]
+[build-system]
+requires = [
+    "setuptools >= 61.0.0",
+    "wheel >= 0.30.0",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
 name = "bonsai"
-version = "1.5.3"
 description = "Python 3 module for accessing LDAP directory servers."
-authors = ["noirello <noirello@gmail.com>"]
 license = "MIT"
+license-files = ["LICENSE"] 
+dynamic = ["version"]
+authors = [{name = "noirello", email = "noirello@gmail.com"}]
+requires-python = '>=3.9,<4.0'
+dependencies = ['typing-extensions (>=4.0.0) ; python_version < "3.8"']
+readme = "README.rst"
+keywords = [
+    "python3",
+    "ldap",
+    "ldap3",
+    "python-ldap",
+    "libldap",
+    "winldap",
+    "asyncio",
+    "gevent",
+    "tornado",
+    "trio"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: Unix",
+    "Programming Language :: C",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Systems Administration :: Authentication/Directory :: LDAP",
+]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-gevent = { version = "^25.5.1", optional = true }
-tornado = { version = "^6.2", optional = true }
-trio = { version = "<1.0", optional = true }
-typing-extensions = { version = ">=4.0.0", python = "<3.8" }
+[project.urls]
+Homepage = "https://github.com/noirello/bonsai"
+Repository = "https://github.com/noirello/bonsai.git"
+Documentation = "https://bonsai.readthedocs.io"
 
-[tool.poetry.extras]
-gevent = ["gevent"]
-tornado = ["tornado"]
-trio = ["trio"]
+[project.optional-dependencies]
+gevent = ['gevent (>=1.4.0)']
+tornado = ['tornado (>=5.1.1)']
+trio = ['trio (>=0.16.0)']
 
-[tool.poetry.dev-dependencies]
+[tool.poetry]
+requires-poetry = '>=2.0'
+
+[poetry.group.dev.dependencies]
 pytest = "^8.3.0"
 pytest-cov = "^5.0.0"
 pytest-timeout = "^2.3.0"
@@ -29,10 +70,3 @@ mypy = "^1.11.2"
 black = "24.8.0"
 pydivert = { version = "^2.1", markers = "sys_platform == 'win32'" }
 delocate = { version = "^0.12", markers = "sys_platform == 'darwin'" }
-
-[build-system]
-requires = [
-    "setuptools >= 40.6.2",
-    "wheel >= 0.30.0",
-]
-build-backend = "setuptools.build_meta"
