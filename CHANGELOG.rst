@@ -7,14 +7,21 @@ Changelog
 Changed
 ~~~~~~~
 
+-  The module is no longer tested with Python 3.8.
+
 Added
 ~~~~~
+
+-  Python 3.13 to the CI pipeline.
+-  Cyclic GC support for ldapconnection and ldapsearchiter classes.
 
 Fixed
 ~~~~~
 
 -  Type of length variable and function parameter in converting function
    for i386 compatibility. (PR #91, thanks to @a-detiste)
+-  Exposing type related classes while importing bonsai. (PR #98)
+-  Possible memory leak with ldapsearchiter (due to missing cyclic GC support)
 
 
 [1.5.3 - 2024-04-28]
@@ -25,13 +32,13 @@ Changed
 
 -  Any exception that raised during closing a connection pool is 
    caught, and a warning message will be logged.
--  LDAPconnection.close method is no longer try to abandon ongoing
+-  LDAPConnection.close method is no longer try to abandon ongoing
    requests by default.
 
 Added
 ~~~~~
 
--  New `abandon_requests` parameter for LDAPconnection.close method
+-  New `abandon_requests` parameter for LDAPConnection.close method
    to call abandon operations on ongoing requests during connection
    close.
 -  Arm64 wheels for macOS.
