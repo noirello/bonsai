@@ -61,13 +61,13 @@ version = '1.5.3'
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"
-pytest-cov = "^5.0.0"
+pytest-cov = "^6.0.0"
 pytest-timeout = "^2.3.0"
 codecov = "2.1.13"
 sphinx = "^7.1.2"
 furo = "2024.8.6"
 pylint = "^3.2.7"
 mypy = "^1.11.2"
-black = "24.8.0"
+black = "25.1.0"
 pydivert = { version = "^2.1", markers = "sys_platform == 'win32'" }
 delocate = { version = "^0.12", markers = "sys_platform == 'darwin'" }
