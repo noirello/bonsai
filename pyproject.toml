@@ -57,6 +57,7 @@ trio = ['trio (>=0.16.0)']
 
 [tool.poetry]
 requires-poetry = '>=2.0'
+version = '1.5.3'
 
 [poetry.group.dev.dependencies]
 pytest = "^8.3.0"
