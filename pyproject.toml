@@ -59,7 +59,7 @@ trio = ['trio (>=0.16.0)']
 requires-poetry = '>=2.0'
 version = '1.5.3'
 
-[poetry.group.dev.dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"
 pytest-cov = "^5.0.0"
 pytest-timeout = "^2.3.0"
