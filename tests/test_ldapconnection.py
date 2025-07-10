@@ -617,6 +617,25 @@ def test_paged_search(conn, basedn):
     assert page == 3
 
 
+def test_paged_search_list(cfg, basedn):
+    """Test aquiring a single page via page search then convert to list."""
+
+    def paged_search_fun(client, search_dn):
+        with client.connect() as conn:
+            response = conn.paged_search(
+                base=search_dn,
+                attrlist=["cn"],
+                page_size=2,
+            )
+            return response
+
+    cli = _generate_client(cfg)
+    results = list(paged_search_fun(cli, f"ou=nerdherd,{basedn}"))
+    assert len(results) == 2
+    assert all(isinstance(ent, bonsai.LDAPEntry) for ent in results)
+    assert isinstance(results[1]["cn"][0], str)
+
+
 def test_paged_search_with_auto_acq(cfg, basedn):
     """Test paged results control with automatic page acquiring."""
     client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])
