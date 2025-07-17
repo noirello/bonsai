@@ -636,6 +636,19 @@ def test_paged_search_list(cfg, basedn):
     assert isinstance(results[1]["cn"][0], str)
 
 
+def test_paged_search_closed_conn(cfg, basedn):
+    """Test raising error when tryingto aquire a new page with closed connection."""
+    cli = _generate_client(cfg)
+    with cli.connect() as conn:
+        res = conn.paged_search(
+            base=f"ou=nerdherd,{basedn}",
+            attrlist=["cn"],
+            page_size=2,
+        )
+        assert len(res) == 2
+    with pytest.raises(bonsai.ClosedConnection):
+        _ = res.acquire_next_page()
+
 def test_paged_search_with_auto_acq(cfg, basedn):
     """Test paged results control with automatic page acquiring."""
     client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])
