@@ -1,13 +1,15 @@
 Changelog
 ==========
 
-[1.5.4 - UNRELEASED]
+[1.5.4 - 2025-07-20]
 --------------------
 
 Changed
 ~~~~~~~
 
 -  The module is no longer tested with Python 3.8.
+-  Moved metadata and dependencies to pyproject.yaml from setup.py
+   to make the module more PEP 621 friendlier.
 
 Added
 ~~~~~

@@ -57,7 +57,7 @@ trio = ['trio (>=0.16.0)']
 
 [tool.poetry]
 requires-poetry = '>=2.0'
-version = '1.5.3'
+version = '1.5.4'
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"
@@ -71,3 +71,4 @@ mypy = "^1.11.2"
 black = "25.1.0"
 pydivert = { version = "^2.1", markers = "sys_platform == 'win32'" }
 delocate = { version = "^0.12", markers = "sys_platform == 'darwin'" }
+
