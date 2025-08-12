@@ -193,6 +193,9 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
+    - name: Install OpenLDAP
+      run: |
+        brew install openldap
     - name: Check OpenLDAP in brew
       run: |
         brew info openldap --verbose
