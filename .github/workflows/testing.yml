@@ -96,6 +96,9 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
+    - name: Check OpenLDAP in brew
+      run: |
+        brew info openldap --verbose
     - name: Install Python dependencies
       run: |
         echo "python_final_release=$(python -c 'import sys;print(str(sys.version_info.releaselevel == "final").lower())')" >> $GITHUB_ENV
@@ -161,6 +164,10 @@ jobs:
         ARCHFLAGS='-arch x86_64' _PYTHON_HOST_PLATFORM=$(python -c "import sysconfig;print(f\"{'-'.join(sysconfig.get_platform().split('-')[:-1])}-x86_64\")") python -m build -w
         delocate-wheel -v ./dist/bonsai-*.whl
       if: ${{ env.python_final_release == 'true' }}
+    - name: Check wheel
+      run: |
+        unzip -l ./dist/bonsai-*.whl | grep libldap
+      if: ${{ env.python_final_release == 'true' }}
     - name: Upload wheel
       uses: actions/upload-artifact@v4
       with:
@@ -186,6 +193,9 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
+    - name: Check OpenLDAP in brew
+      run: |
+        brew info openldap --verbose
     - name: Install Python build dependencies
       run: |
         echo "python_final_release=$(python -c 'import sys;print(str(sys.version_info.releaselevel == "final").lower())')" >> $GITHUB_ENV
@@ -200,6 +210,9 @@ jobs:
         printf "\n\n[options]\nzip_safe = False" >> setup.cfg
         ARCHFLAGS='-arch arm64' _PYTHON_HOST_PLATFORM=$(python -c "import sysconfig;print(f\"{'-'.join(sysconfig.get_platform().split('-')[:-1])}-arm64\")") python -m build -w
         delocate-wheel --require-archs arm64 -v ./dist/bonsai-*.whl
+    - name: Check wheel
+      run: |
+        unzip -l ./dist/bonsai-*.whl | grep libldap
     - name: Upload wheel
       uses: actions/upload-artifact@v4
       with:
