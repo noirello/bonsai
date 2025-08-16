@@ -216,6 +216,8 @@ jobs:
     - name: Check wheel
       run: |
         unzip -l ./dist/bonsai-*.whl | grep libldap
+        python -m pip install ./dist/bonsai-*.whl
+        python -c 'import bonsai;print(bonsai.__version__)'
     - name: Upload wheel
       uses: actions/upload-artifact@v4
       with:
