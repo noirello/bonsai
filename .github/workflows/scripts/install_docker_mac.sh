@@ -10,7 +10,12 @@
 # Docker 4.2.0,70708
 curl https://raw.githubusercontent.com/Homebrew/homebrew-cask/50e49106c339cb88c81df3dabec5e04b7a5d77e1/Casks/docker.rb -o ./docker.rb
 
-brew install --cask ./docker.rb
+# Create an own tap to install the above downloaded vesion of docker
+brew tap-new my-custom-docker/tap
+mkdir -p "$(brew --repo my-custom-docker/tap)/Casks"
+mv ./docker.rb "$(brew --repo my-custom-docker/tap)/Casks/"
+
+brew install --cask my-custom-docker/tap/docker
 sudo /Applications/Docker.app/Contents/MacOS/Docker --unattended --install-privileged-components
 open -a /Applications/Docker.app --args --unattended --accept-license
 while ! /Applications/Docker.app/Contents/Resources/bin/docker info &>/dev/null; do sleep 1; done
