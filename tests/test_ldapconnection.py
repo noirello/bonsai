@@ -222,7 +222,12 @@ def test_bind_digest(binding):
 def test_bind_digest_with_authzid(binding, cfg):
     """Test DIGEST-MD5 connection with authorization ID."""
     authzid = cfg["DIGESTAUTH"]["authzid"]
-    with binding("DIGESTAUTH", "DIGEST-MD5", authzid) as conn:
+    if os.getenv("BONSAI_NO_SSF", "0") == "1":
+        ssf_lvl = 0
+        print("WARNING: ssf is turned off for digest test")
+    else:
+        ssf_lvl = None
+    with binding("DIGESTAUTH", "DIGEST-MD5", authzid, max_ssf=ssf_lvl) as conn:
         assert cfg["DIGESTAUTH"]["dn"] == conn.whoami()
 
 
