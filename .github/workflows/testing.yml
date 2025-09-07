@@ -130,7 +130,7 @@ jobs:
     - name: Check container and LDAP tools
       run: |
         docker exec server ps aux
-        /usr/local/opt/openldap/bin/ldapwhoami -Y DIGEST-MD5 -O maxssf=0 -H ldap://bonsai.test -U admin -w p@ssword
+        bash ./.github/workflows/scripts/check_digest_state.sh
         /usr/local/opt/openldap/bin/ldapsearch -x -H ldap://bonsai.test -b "" -s base 'objectclass=*' -LLL +
         /usr/local/opt/openldap/bin/ldapsearch -VV
     - name: Check Python sysconfig
