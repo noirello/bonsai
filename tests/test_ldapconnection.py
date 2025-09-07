@@ -45,13 +45,15 @@ def ktpath():
 def binding():
     """Create a binding with the server."""
 
-    def _create_binding(auth, mech, authzid=None, realm=None):
+    def _create_binding(auth, mech, authzid=None, realm=None, max_ssf=None):
         cfg = get_config()
         host = "ldap://%s" % cfg["SERVER"]["hostname"]
         client = LDAPClient(host)
         client.set_credentials(
             mech, cfg[auth]["user"], cfg[auth]["password"], realm, authzid
         )
+        if max_ssf is not None:
+            client.set_sasl_security_properties(max_ssf=max_ssf)
         return client.connect()
 
     return _create_binding
@@ -204,7 +206,12 @@ def async_conn():
 
 def test_bind_digest(binding):
     """Test DIGEST-MD5 connection."""
-    with binding("DIGESTAUTH", "DIGEST-MD5") as conn:
+    if os.getenv("BONSAI_NO_SSF", "0") == "1":
+        ssf_lvl = 0
+        print("WARNING: ssf is turned off for digest test")
+    else:
+        ssf_lvl = None
+    with binding("DIGESTAUTH", "DIGEST-MD5", max_ssf=ssf_lvl) as conn:
         assert "anonymous" != conn.whoami()
 
 

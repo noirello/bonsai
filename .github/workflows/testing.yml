@@ -70,7 +70,7 @@ jobs:
         export KRB5_CONFIG="`pwd`/.ci/krb5/krb5.conf"
         export BONSAI_INSTALL_PATH=`python -c "import bonsai; print(bonsai.__file__[:-12])"`
         echo $BONSAI_INSTALL_PATH
-        python -m pytest -v --cov-config .coveragerc --cov-report= --cov=$BONSAI_INSTALL_PATH
+        python -m pytest -vs --cov-config .coveragerc --cov-report= --cov=$BONSAI_INSTALL_PATH
     - name: Upload coverage
       uses: codecov/codecov-action@v4
       with:
@@ -149,7 +149,7 @@ jobs:
         export KRB5_CONFIG="`pwd`/.ci/krb5/krb5.conf"
         export BONSAI_INSTALL_PATH=`python -c "import bonsai; print(bonsai.__file__[:-12])"`
         echo $BONSAI_INSTALL_PATH
-        py.test -v --cov-config .coveragerc --cov-report= --cov=$BONSAI_INSTALL_PATH
+        py.test -vs --cov-config .coveragerc --cov-report= --cov=$BONSAI_INSTALL_PATH
     - name: Upload coverage
       uses: codecov/codecov-action@v4
       with:
