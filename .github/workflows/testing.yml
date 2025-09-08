@@ -133,6 +133,10 @@ jobs:
         bash ./.github/workflows/scripts/check_digest_state.sh
         /usr/local/opt/openldap/bin/ldapsearch -x -H ldap://bonsai.test -b "" -s base 'objectclass=*' -LLL +
         /usr/local/opt/openldap/bin/ldapsearch -VV
+        echo "INFO: kinit version"
+        kinit --version
+        echo "INFO: list SASL2 lib"
+        ls -lah /usr/lib/sasl2
     - name: Check Python sysconfig
       run: python -m sysconfig
     - name: Install package
