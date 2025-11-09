@@ -80,7 +80,7 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
 
   macos:
-    runs-on: macos-13
+    runs-on: macos-15-intel
     strategy:
       fail-fast: false
       matrix:
@@ -109,11 +109,17 @@ jobs:
         python -m pip install --force-reinstall --no-binary gevent delocate
         python -m pip list
     - name: Install Docker
-      run: bash ./.github/workflows/scripts/install_docker_mac.sh
-    - name: Wait on Docker
+      id: setup-docker
+      uses: douglascamata/setup-docker-macos-action@v1.0.1
+      with:
+        lima: v1.2.1
+        colima: v0.9.1
+        colima-network-address: false
+    - name: Log Docker related versions
       run: |
-        bash ./.github/workflows/scripts/wait_docker_mac.sh
-        sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.Kerberos.kdc.plist
+        echo "Colima version: ${{ steps.setup-docker.outputs.colima-version }}"
+        echo "Docker client version: ${{ steps.setup-docker.outputs.docker-client-version }}"
+        echo "Docker compose version: ${{ steps.setup-docker.outputs.docker-compose-version }}"
     - name: Build Docker image
       run: |
         docker build -t bonsai -f ./.ci/docker/Dockerfile .
