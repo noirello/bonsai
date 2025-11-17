@@ -48,7 +48,8 @@ jobs:
         sudo bash -c 'echo -e "\n'$BONSAI_DOCKER_IP'        bonsai.test" >> /etc/hosts'
         cat /etc/hosts
         ping -c 2 bonsai.test
-        sleep 4
+    - name: Wait on container to be ready
+      run: bash ./.github/workflows/scripts/wait_container_ready.sh server 60
     - name: Check container and LDAP tools
       run: |
         docker exec server ps aux
@@ -132,7 +133,8 @@ jobs:
         sudo scutil --set HostName bonsai.test
         cat /etc/hosts
         ping -c 2 bonsai.test
-        sleep 5
+    - name: Wait on container to be ready
+      run: bash ./.github/workflows/scripts/wait_container_ready.sh server 60
     - name: Check container and LDAP tools
       run: |
         docker exec server ps aux
