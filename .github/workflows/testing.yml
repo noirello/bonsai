@@ -49,7 +49,7 @@ jobs:
         cat /etc/hosts
         ping -c 2 bonsai.test
     - name: Wait on container to be ready
-      run: bash ./.github/workflows/scripts/wait_container_ready.sh server 60
+      run: bash ./.github/workflows/scripts/wait_container_ready.sh server 90
     - name: Wait on LDAP server
       run: bash ./.github/workflows/scripts/wait_ldap_server.sh 90
     - name: Check container and LDAP tools
@@ -136,7 +136,7 @@ jobs:
         cat /etc/hosts
         ping -c 2 bonsai.test
     - name: Wait on container to be ready
-      run: bash ./.github/workflows/scripts/wait_container_ready.sh server 60
+      run: bash ./.github/workflows/scripts/wait_container_ready.sh server 90
     - name: Wait on LDAP server
       run: bash ./.github/workflows/scripts/wait_ldap_server.sh 180
     - name: Check container and LDAP tools

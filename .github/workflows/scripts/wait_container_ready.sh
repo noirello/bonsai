@@ -19,6 +19,8 @@ while true; do
   # Check if timeout exceeded
   if (( elapsed >= timeout )); then
     echo "Timeout reached after $timeout seconds waiting for $container_name container."
+    echo "INFO"
+    docker logs $container_name
     exit 1
   fi
   sleep 5
