@@ -50,6 +50,8 @@ jobs:
         ping -c 2 bonsai.test
     - name: Wait on container to be ready
       run: bash ./.github/workflows/scripts/wait_container_ready.sh server 60
+    - name: Wait on LDAP server
+      run: bash ./.github/workflows/scripts/wait_ldap_server.sh 90
     - name: Check container and LDAP tools
       run: |
         docker exec server ps aux
@@ -135,6 +137,8 @@ jobs:
         ping -c 2 bonsai.test
     - name: Wait on container to be ready
       run: bash ./.github/workflows/scripts/wait_container_ready.sh server 60
+    - name: Wait on LDAP server
+      run: bash ./.github/workflows/scripts/wait_ldap_server.sh 180
     - name: Check container and LDAP tools
       run: |
         docker exec server ps aux
