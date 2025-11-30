@@ -113,10 +113,10 @@ jobs:
         python -m pip list
     - name: Install Docker
       id: setup-docker
-      uses: douglascamata/setup-docker-macos-action@v1.0.1
+      uses: douglascamata/setup-docker-macos-action@v1.0.2
       with:
-        lima: v1.2.1
-        colima: v0.9.1
+        #lima: v1.2.1
+        #colima: v0.9.1
         colima-network-address: false
     - name: Log Docker related versions
       run: |
