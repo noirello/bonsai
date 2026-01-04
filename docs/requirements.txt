@@ -1,4 +1,4 @@
-sphinx==8.2.3
+sphinx==9.1.0
 sphinx-rtd-theme==3.0.2
-furo==2024.8.6
+furo==2025.12.19
 readthedocs-sphinx-search==0.3.2
