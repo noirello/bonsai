@@ -11,12 +11,12 @@ stages:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
-        Python39:
-          python.version: '3.9'
         Python310:
           python.version: '3.10'
         Python311:
           python.version: '3.11'
+        Python312:
+          python.version: '3.12'
     steps:
     - task: UsePythonVersion@0
       inputs:
@@ -92,12 +92,12 @@ stages:
       vmImage: "macos-latest"
     strategy:
       matrix:
-        Python39:
-          python.version: '3.9'
         Python310:
           python.version: '3.10'
         Python311:
           python.version: '3.11'
+        Python312:
+          python.version: '3.12'
     steps:
     - task: UsePythonVersion@0
       inputs:
@@ -190,7 +190,7 @@ stages:
       matrix:
         newestOpenLDAP:
           openldap.version: '2.6.10'
-          python.version: '3.9-slim-bullseye'
+          python.version: '3.11-slim-bullseye'
         nightlyPython:
           openldap.version: '2.4.57'
           python.version: '3.14.0b2-slim-bullseye'

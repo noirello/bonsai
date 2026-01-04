@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     env:
       PYTHON: ${{ matrix.python-version }}
       OS: ubuntu
@@ -87,7 +87,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     env:
       PYTHON: ${{ matrix.python-version }}
       OS: macos
@@ -106,7 +106,7 @@ jobs:
       run: |
         echo "python_final_release=$(python -c 'import sys;print(str(sys.version_info.releaselevel == "final").lower())')" >> $GITHUB_ENV
         python -m pip install --upgrade pip
-        python -m pip install poetry wheel 
+        python -m pip install poetry wheel
         poetry config virtualenvs.create false
         poetry install --no-root -E gevent -E tornado -E trio
         python -m pip install --force-reinstall --no-binary gevent delocate
