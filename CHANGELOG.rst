@@ -1,5 +1,23 @@
 Changelog
 ==========
+[1.5.5 - 2026-02-18]
+--------------------
+
+Changed
+~~~~~~~
+
+-  The module is no longer tested with Python 3.9.
+
+Added
+~~~~~
+
+-  Python 3.14 to the CI pipeline.
+
+Fixed
+~~~~~
+
+-  Checking LDAP library linking for macOS wheels.
+
 
 [1.5.4 - 2025-07-20]
 --------------------
@@ -32,7 +50,7 @@ Fixed
 Changed
 ~~~~~~~
 
--  Any exception that raised during closing a connection pool is 
+-  Any exception that raised during closing a connection pool is
    caught, and a warning message will be logged.
 -  LDAPConnection.close method is no longer try to abandon ongoing
    requests by default.
@@ -430,7 +448,7 @@ Changed
 ~~~~~~~
 
 -  AttributeErrors to Type- and ValueErrors for invalid function parameters.
--  LDAPConnection.delete and LDAPEntry.rename accept LDAPDN as DN parameter. 
+-  LDAPConnection.delete and LDAPEntry.rename accept LDAPDN as DN parameter.
 
 Added
 ~~~~~
