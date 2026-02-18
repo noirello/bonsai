@@ -45,7 +45,7 @@ stages:
         mkdir /tmp/bonsai
         sudo chown 2001:2000 /tmp/bonsai
         docker run --cap-add=NET_ADMIN -v /tmp/bonsai/:/home/ldap/run/:z -d -h bonsai.test --name server bonsai
-        export BONSAI_DOCKER_IP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' server`
+        export BONSAI_DOCKER_IP=`docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' server`
         sudo bash -c 'echo -e "\n'$BONSAI_DOCKER_IP'        bonsai.test" >> /etc/hosts'
         cat /etc/hosts
         ping -c 2 bonsai.test
@@ -67,7 +67,7 @@ stages:
         python -m pip install -v .
       displayName: Install package
     - script: |
-        export BONSAI_DOCKER_IP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' server`
+        export BONSAI_DOCKER_IP=`docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' server`
         sed -i.bak "s/127.0.0.1/$BONSAI_DOCKER_IP/g" ./tests/test.ini
         export KRB5_CONFIG="`pwd`/.ci/krb5/krb5.conf"
         export BONSAI_INSTALL_PATH=`python -c "import bonsai; print(bonsai.__file__[:-12])"`
