@@ -14,7 +14,7 @@ if MYPY:
 
 class AIOConnectionPool(ConnectionPool[AIOLDAPConnection]):
     """
-    A connection pool that can be used with asnycio tasks. It's inherited from
+    A connection pool that can be used with asyncio tasks. It's inherited from
     :class:`bonsai.pool.ConnectionPool`.
 
     :param LDAPClient client: the :class:`bonsai.LDAPClient` that's used to create
