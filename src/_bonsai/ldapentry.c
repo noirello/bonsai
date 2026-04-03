@@ -595,7 +595,7 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 
     /* Get rdn and parent strings. */
     newrdn = PySequence_GetItem(new_ldapdn, 0);
-    newparent = PySequence_GetSlice(new_ldapdn, 1, PyObject_Size(self->dn));
+    newparent = PySequence_GetSlice(new_ldapdn, 1, PyObject_Size(new_ldapdn));
     if (newrdn == NULL || newparent == NULL) {
         free(olddn_str);
         Py_DECREF(tmp);
