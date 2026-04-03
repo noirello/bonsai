@@ -288,15 +288,21 @@ def test_connection(client, basedn):
         del entry.connection
 
 
-def test_rename(client, basedn, test_entry):
+@pytest.mark.parametrize(
+    "old_entry, new_entry",
+    [("cn=test", "cn=test2"), ("cn=test-move", "cn=test-move,ou=nerdherd")],
+)
+def test_rename(client, basedn, test_entry, old_entry, new_entry):
     """Test LDAPEntry's rename LDAP operation."""
+    old_entry_dn = f"{old_entry},{basedn}"
+    new_entry_dn = f"{new_entry},{basedn}"
     with client.connect() as conn:
-        entry = test_entry(conn, "cn=test,%s" % basedn)
-        entry.rename("cn=test2,%s" % basedn)
-        assert str(entry.dn) == "cn=test2,%s" % basedn
-        obj = conn.search("cn=test,%s" % basedn, 0)
+        entry = test_entry(conn, old_entry_dn)
+        entry.rename(new_entry_dn)
+        assert str(entry.dn) == new_entry_dn
+        obj = conn.search(old_entry_dn, 0)
         assert obj == []
-        obj = conn.search("cn=test2,%s" % basedn, 0)[0]
+        obj = conn.search(new_entry_dn, 0)[0]
         assert entry.dn == obj.dn
 
 
