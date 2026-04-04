@@ -8,8 +8,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "bonsai"
 description = "Python 3 module for accessing LDAP directory servers."
-license = "MIT"
-license-files = ["LICENSE"]
+license = {text = "MIT"}
 dynamic = ["version"]
 authors = [{name = "noirello", email = "noirello@gmail.com"}]
 requires-python = '>=3.10,<4.0'
@@ -67,7 +66,7 @@ sphinx = "^8.0.0"
 furo = "2025.12.19"
 pylint = "^3.2.7"
 mypy = "^1.11.2"
-black = "25.12.0"
+black = "26.3.1"
 pydivert = { version = "^2.1", markers = "sys_platform == 'win32'" }
 delocate = { version = "^0.12", markers = "sys_platform == 'darwin'" }
 
