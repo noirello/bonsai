@@ -36,10 +36,21 @@ class TrioLDAPConnection(BaseLDAPConnection):
 
     async def _poll(self, msg_id, timeout=None):
         tout_sec = timeout if timeout is not None else math.inf
+
+        async def wait_readwrite():
+            """Wake on the first of read- or write-readiness."""
+            async with trio.open_nursery() as nursery:
+
+                async def wait_one(wait_fn):
+                    await wait_fn(self)
+                    nursery.cancel_scope.cancel()
+
+                nursery.start_soon(wait_one, trio.lowlevel.wait_readable)
+                nursery.start_soon(wait_one, trio.lowlevel.wait_writable)
+
         with trio.move_on_after(tout_sec):
             while True:
-                await trio.lowlevel.wait_writable(self)
-                await trio.lowlevel.wait_readable(self)
+                await wait_readwrite()
                 res = super().get_result(msg_id)
                 if res is not None:
                     return res
