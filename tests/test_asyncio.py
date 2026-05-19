@@ -168,6 +168,42 @@ async def test_search_timeout(client):
                 await conn.search(timeout=4.0)
 
 
+@pytest.fixture
+def turn_async_conn():
+    bonsai.set_connect_async(True)
+    yield None
+    bonsai.set_connect_async(False)
+
+
+@pytest.mark.timeout(15)
+@asyncio_test
+async def test_connect_with_async_connect_option(client, turn_async_conn):
+    """Open must complete when LDAP_OPT_CONNECT_ASYNC is enabled.
+
+    Regression: with set_connect_async(True), _ldap_bind returns
+    LDAP_X_CONNECTING and the bind PDU is not queued, so polling
+    ldap_result on the (undefined) bind msgid returned 0 forever and
+    open() hung indefinitely.
+    """
+    async with client.connect(True, timeout=10) as conn:
+        assert not conn.closed
+
+
+@pytest.mark.timeout(20)
+@asyncio_test
+async def test_connect_with_async_connect_option_under_delay(
+    client, turn_async_conn
+):
+    """The async-connect retry path drives the connect to completion.
+
+    With network_delay slowing the TCP handshake, the open should still
+    complete by retrying _ldap_bind on socket write-readiness.
+    """
+    with network_delay(2.0):
+        async with client.connect(True, timeout=15) as conn:
+            assert not conn.closed
+
+
 @asyncio_test
 async def test_paged_search(client, basedn):
     """Test paged results control."""

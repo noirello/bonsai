@@ -232,3 +232,40 @@ class TornadoLDAPConnectionTest(TestCaseClass):
                 except StopAsyncIteration:
                     break
             assert cnt == 6
+
+    @gen_test(timeout=15.0)
+    def test_connect_with_async_connect_option(self):
+        """Open must complete when LDAP_OPT_CONNECT_ASYNC is enabled.
+
+        Regression: with set_connect_async(True), _ldap_bind returns
+        LDAP_X_CONNECTING and the bind PDU is not queued, so polling
+        ldap_result on the (undefined) bind msgid returned 0 forever and
+        open() hung indefinitely.
+        """
+        bonsai.set_connect_async(True)
+        try:
+            conn = yield self.client.connect(
+                True, ioloop=self.io_loop, timeout=10.0
+            )
+            assert not conn.closed
+            conn.close()
+        finally:
+            bonsai.set_connect_async(False)
+
+    @gen_test(timeout=20.0)
+    def test_connect_with_async_connect_option_under_delay(self):
+        """The async-connect retry path drives the connect to completion.
+
+        With network_delay slowing the TCP handshake, the open should still
+        complete by retrying _ldap_bind on socket write-readiness.
+        """
+        bonsai.set_connect_async(True)
+        try:
+            with network_delay(2.0):
+                conn = yield self.client.connect(
+                    True, ioloop=self.io_loop, timeout=15.0
+                )
+                assert not conn.closed
+                conn.close()
+        finally:
+            bonsai.set_connect_async(False)
