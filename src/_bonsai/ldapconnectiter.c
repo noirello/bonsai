@@ -157,8 +157,10 @@ binding(LDAPConnectIter *self) {
     DEBUG("binding [state:%d]", self->state);
     if (self->state == 3) {
         /* First call of bind. */
+        Py_BEGIN_ALLOW_THREADS
         rc = _ldap_bind(self->conn->ld, self->info, self->conn->ppolicy,
                 NULL, &(self->message_id));
+        Py_END_ALLOW_THREADS
         if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS && rc != LDAP_X_CONNECTING) {
             close_socketpair(self->conn->socketpair);
             set_exception(self->conn->ld, rc);
@@ -174,14 +176,18 @@ binding(LDAPConnectIter *self) {
     } else {
         if (self->conn->async == 0) {
             /* Block until the server response. */
+            Py_BEGIN_ALLOW_THREADS
             if (self->timeout == -1) {
                 rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, NULL, &res);
             } else {
                 rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, &polltime, &res);
             }
+            Py_END_ALLOW_THREADS
         } else {
             /* Binding is already in progress, poll result from the server. */
+            Py_BEGIN_ALLOW_THREADS
             rc = ldap_result(self->conn->ld, self->message_id, LDAP_MSG_ALL, &polltime, &res);
+            Py_END_ALLOW_THREADS
         }
         switch (rc) {
         case -1:
@@ -221,8 +227,10 @@ binding(LDAPConnectIter *self) {
 
             if (strcmp(self->info->mech, "SIMPLE") != 0) {
                 /* Continue SASL binding procedure. */
+                Py_BEGIN_ALLOW_THREADS
                 rc = _ldap_bind(self->conn->ld, self->info, self->conn->ppolicy,
                         res, &(self->message_id));
+                Py_END_ALLOW_THREADS
 
                 if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
                     set_exception(self->conn->ld, rc);
@@ -354,7 +362,9 @@ check_tls_result(LDAP *ld, int msgid, int timeout, char async, SOCKET csock) {
         }
         Py_END_ALLOW_THREADS
     } else {
+        Py_BEGIN_ALLOW_THREADS
         rc = ldap_result(ld, msgid, LDAP_MSG_ALL, &polltime, &res);
+        Py_END_ALLOW_THREADS
     }
 
     switch (rc) {
@@ -390,7 +400,9 @@ check_tls_result(LDAP *ld, int msgid, int timeout, char async, SOCKET csock) {
             set_exception(ld, rc);
             return -1;
         }
+        Py_BEGIN_ALLOW_THREADS
         rc = ldap_install_tls(ld);
+        Py_END_ALLOW_THREADS
         if (rc != LDAP_SUCCESS) {
             set_exception(ld, rc);
             return -1;
