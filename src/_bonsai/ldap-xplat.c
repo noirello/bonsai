@@ -430,7 +430,9 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
         }
         /* Block until thread is finished, but if it's async already
            waited enough on releasing the lock. */
+        Py_BEGIN_ALLOW_THREADS
         rc = pthread_join(thread, NULL);
+        Py_END_ALLOW_THREADS
         /* Thread is finished. */
         if (val->retval != LDAP_SUCCESS) {
 #ifdef HAVE_KRB5

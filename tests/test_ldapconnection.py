@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 import tempfile
+import threading
 import time
 
 import pytest
@@ -711,6 +712,39 @@ def test_whoami_timeout(conn):
     with network_delay(6.1):
         with pytest.raises(bonsai.TimeoutError):
             _ = conn.whoami(timeout=3.2)
+
+
+@pytest.mark.timeout(15)
+def test_open_releases_gil(client):
+    """A blocking open() must release the GIL so other Python threads run.
+
+    Regression: bonsai held the GIL across the libldap calls in the open
+    path (TLS install, SASL/SIMPLE bind, init thread join), so a thread
+    inside open() blocked every other Python thread for the full
+    handshake duration.
+    """
+    ticks = []
+    stop = threading.Event()
+
+    def ticker():
+        while not stop.is_set():
+            ticks.append(time.monotonic())
+            time.sleep(0.005)
+
+    t = threading.Thread(target=ticker, daemon=True)
+    t.start()
+    try:
+        with network_delay(2.0):
+            conn = client.connect()
+            conn.close()
+    finally:
+        stop.set()
+        t.join()
+
+    # Without the fix, the ticker makes essentially no progress while
+    # open() is inside libldap. Use a generous floor so the test is not
+    # flaky on slow CI.
+    assert len(ticks) > 50, f"GIL appears held: only {len(ticks)} ticks"
 
 
 def test_wrong_conn_param():
