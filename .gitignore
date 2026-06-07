@@ -30,3 +30,4 @@ vc140.pdb
 Pipfile.lock
 pip-wheel-metadata
 .DS_Store
+compile_commands.json
