@@ -168,13 +168,6 @@ async def test_search_timeout(client):
                 await conn.search(timeout=4.0)
 
 
-@pytest.fixture
-def turn_async_conn():
-    bonsai.set_connect_async(True)
-    yield None
-    bonsai.set_connect_async(False)
-
-
 @pytest.mark.timeout(15)
 @asyncio_test
 async def test_connect_with_async_connect_option(client, turn_async_conn):

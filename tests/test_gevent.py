@@ -34,13 +34,6 @@ def gclient():
     return cli
 
 
-@pytest.fixture
-def turn_async_conn():
-    bonsai.set_connect_async(True)
-    yield None
-    bonsai.set_connect_async(False)
-
-
 def test_connection(gclient):
     """ Test opening a connection. """
     conn = gclient.connect(True)

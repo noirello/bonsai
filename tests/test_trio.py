@@ -166,13 +166,6 @@ async def test_whoami(tclient):
         assert obj in expected_res
 
 
-@pytest.fixture
-def turn_async_conn():
-    bonsai.set_connect_async(True)
-    yield None
-    bonsai.set_connect_async(False)
-
-
 @pytest.mark.timeout(18)
 @trio_test
 async def test_connection_timeout(tclient):

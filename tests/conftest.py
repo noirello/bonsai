@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 import pytest
 
+import bonsai
 from bonsai import LDAPClient
 from bonsai.active_directory.acl import ACE, ACEFlag, ACEType
 from bonsai.active_directory.sid import SID
@@ -75,3 +76,9 @@ def test_ace() -> ACE:
         uuid.UUID("c975c901-6cea-4b6f-8319-d67f45449506"),
         b"",
     )
+
+@pytest.fixture
+def turn_async_conn():
+    bonsai.set_connect_async(True)
+    yield None
+    bonsai.set_connect_async(False)
