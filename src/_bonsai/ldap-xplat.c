@@ -504,8 +504,11 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, i
     /* Mechanism is set, use SASL interactive bind. */
     if (strcmp(info->mech, "SIMPLE") != 0) {
         if (info->passwd == NULL) info->passwd = "";
+        /* Release the GIL: this call performs the blocking DNS + TCP connect. */
+        Py_BEGIN_ALLOW_THREADS
         rc = ldap_sasl_interactive_bind(ld, info->binddn, info->mech, server_ctrls, NULL,
                 LDAP_SASL_QUIET, sasl_interact, info, result, &(info->rmech), msgid);
+        Py_END_ALLOW_THREADS
     } else {
         if (info->passwd == NULL) {
             passwd.bv_len = 0;
@@ -513,8 +516,11 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, i
             passwd.bv_len = strlen(info->passwd);
         }
         passwd.bv_val = info->passwd;
+        /* Release the GIL: this call performs the blocking DNS + TCP connect. */
+        Py_BEGIN_ALLOW_THREADS
         rc = ldap_sasl_bind(ld, info->binddn, LDAP_SASL_SIMPLE, &passwd, server_ctrls,
                 NULL, msgid);
+        Py_END_ALLOW_THREADS
     }
 
     if (ppolicy_ctrl != NULL) ldap_control_free(ppolicy_ctrl);

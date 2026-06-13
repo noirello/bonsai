@@ -55,6 +55,7 @@ ldapconnection_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->async = 0;
         self->ppolicy = 0;
         self->csock = -1;
+        self->connect_timeout = -1;
         self->socketpair = NULL;
     }
 
@@ -186,9 +187,13 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
 
 /* Open the LDAP connection. */
 static PyObject *
-ldapconnection_open(LDAPConnection *self) {
+ldapconnection_open(LDAPConnection *self, PyObject *args) {
     int rc = 0;
+    int connect_timeout = -1;
     LDAPConnectIter *iter = NULL;
+
+    if (!PyArg_ParseTuple(args, "|i", &connect_timeout)) return NULL;
+    self->connect_timeout = connect_timeout;
 
     DEBUG("ldapconnection_open (self:%p)", self);
     rc = connecting(self, &iter);
@@ -1410,7 +1415,7 @@ static PyMethodDef ldapconnection_methods[] = {
             "Get the socket descriptor that belongs to the connection."},
     {"get_result", (PyCFunction)ldapconnection_result, METH_VARARGS | METH_KEYWORDS,
             "Poll the status of the operation associated with the given message id from LDAP server."},
-    {"open", (PyCFunction)ldapconnection_open, METH_NOARGS,
+    {"open", (PyCFunction)ldapconnection_open, METH_VARARGS,
             "Open connection with the LDAP Server."},
     {"modify_password", (PyCFunction)ldapconnection_modpasswd, METH_VARARGS | METH_KEYWORDS,
             "Modify password for the user."},

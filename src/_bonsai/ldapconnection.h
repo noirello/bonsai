@@ -19,6 +19,7 @@ typedef struct {
     char managedsait;
     char ignore_referrals;
     SOCKET csock;
+    int connect_timeout;
     PyObject *socketpair;
 } LDAPConnection;
 

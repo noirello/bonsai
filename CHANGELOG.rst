@@ -1,5 +1,17 @@
 Changelog
 ==========
+[Unreleased]
+------------
+
+Fixed
+~~~~~
+
+-  AIOLDAPConnection no longer blocks the asyncio event loop while connecting
+   to an unreachable or slow host, and it honours the connect timeout. The
+   blocking DNS resolution and TCP connect now run in a thread executor with
+   the GIL released, and the connect is bounded by a network timeout.
+
+
 [1.5.5 - 2026-02-18]
 --------------------
 

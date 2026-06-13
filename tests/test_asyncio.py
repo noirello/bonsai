@@ -284,3 +284,67 @@ async def test_pool_spawn(client):
         _ = await conn.whoami()
     assert pool.idle_connection == 1
     assert pool.shared_connection == 0
+
+
+@pytest.mark.timeout(30)
+@asyncio_test
+async def test_open_keeps_event_loop_responsive(client):
+    """Opening to a slow/unreachable host must not freeze the loop, and the
+    connect timeout must be honored (not the full network round-trip time)."""
+    max_gap = 0.0
+
+    async def heartbeat():
+        nonlocal max_gap
+        last = time.monotonic()
+        while True:
+            await asyncio.sleep(0.05)
+            now = time.monotonic()
+            max_gap = max(max_gap, now - last)
+            last = now
+
+    hb = asyncio.ensure_future(heartbeat())
+    try:
+        with network_delay(4.0):
+            start = time.time()
+            with pytest.raises(asyncio.TimeoutError):
+                await client.connect(True, timeout=2.0)
+            elapsed = time.time() - start
+        # The loop never stalled for long while the connect was in flight
+        # (a frozen connect would leave a multi-second gap between heartbeats).
+        assert max_gap < 1.0
+        # The timeout fired near 2s, not at the ~4s network delay.
+        assert elapsed < 3.5
+    finally:
+        hb.cancel()
+        try:
+            await hb
+        except asyncio.CancelledError:
+            pass
+
+
+@asyncio_test
+async def test_starttls_connection(cfg):
+    """A StartTLS connection opens through the two-phase async open."""
+    url = "ldap://%s:%s" % (cfg["SERVER"]["hostname"], cfg["SERVER"]["port"])
+    tls_client = bonsai.LDAPClient(url, tls=True)
+    tls_client.set_cert_policy("allow")
+    tls_client.set_credentials(
+        "SIMPLE", cfg["SIMPLEAUTH"]["user"], cfg["SIMPLEAUTH"]["password"]
+    )
+    async with tls_client.connect(True, timeout=10) as conn:
+        assert conn.closed is False
+        assert (await conn.whoami()) is not None
+
+
+@pytest.mark.timeout(30)
+@asyncio_test
+async def test_close_after_connect_timeout(client):
+    """Closing right after a connect timeout must be safe while the connect
+    worker thread may still be using the LDAP handle (no use-after-free)."""
+    conn = client.connect(True, timeout=2.0)
+    with network_delay(4.0):
+        with pytest.raises(asyncio.TimeoutError):
+            await conn
+        conn.close()  # unbind must be deferred, not run under the live worker
+    # Let the still-running connect worker finish so the deferred unbind runs.
+    await asyncio.sleep(4.0)

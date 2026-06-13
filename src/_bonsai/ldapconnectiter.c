@@ -578,8 +578,23 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int timeout) {
 
     /* Start building TLS Connection, if needed. */
     if (self->state == 1) {
+#ifndef WIN32
+        /* On the default (non-async-connect) path, bound the synchronous connect
+           so a timed-out connect worker releases near the deadline instead of
+           waiting out the OS-level TCP timeout. */
+        if (_g_asyncmod == 0 && self->conn->connect_timeout > 0) {
+            struct timeval tv;
+            tv.tv_sec = self->conn->connect_timeout / 1000;
+            tv.tv_usec = (self->conn->connect_timeout % 1000) * 1000;
+            ldap_set_option(self->conn->ld, LDAP_OPT_NETWORK_TIMEOUT, &tv);
+        }
+#endif
         if (self->tls == 1) {
+            /* Release the GIL: for the TLS-first path this triggers the
+               blocking DNS + TCP connect when sending the StartTLS request. */
+            Py_BEGIN_ALLOW_THREADS
             rc = ldap_start_tls(self->conn->ld, NULL, NULL, &(self->tls_id));
+            Py_END_ALLOW_THREADS
             if (rc == LDAP_SUCCESS) {
                 self->state = 2;
             } else {
