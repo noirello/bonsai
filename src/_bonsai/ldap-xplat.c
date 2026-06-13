@@ -746,8 +746,7 @@ ldap_init_thread_func(void *params) {
        version 2.4.44 */
     DEBUG("set connecting async: %d", _g_asyncmod);
     if (_g_asyncmod) {
-        struct timeval tv;
-        tv.tv_sec = 0;
+        struct timeval tv = {0, 0};
         /* Set asynchronous connect for OpenLDAP. */
         ldap_set_option(data->ld, LDAP_OPT_CONNECT_ASYNC, LDAP_OPT_ON);
         ldap_set_option(data->ld, LDAP_OPT_NETWORK_TIMEOUT, &tv);

@@ -154,7 +154,7 @@ binding(LDAPConnectIter *self) {
         polltime.tv_usec = (self->timeout % 1000) * 1000;
     }
 
-    DEBUG("binding [state:%d]", self->state);
+    DEBUG("binding [state:%d, msgid:%d]", self->state, self->message_id);
     if (self->state == 3) {
         /* First call of bind. */
         Py_BEGIN_ALLOW_THREADS
@@ -166,12 +166,34 @@ binding(LDAPConnectIter *self) {
             set_exception(self->conn->ld, rc);
             return NULL;
         }
+        if (rc == LDAP_X_CONNECTING) {
+            /* libldap deferred the connect; the bind PDU was not queued,
+               so message_id is undefined. Mark it as "not queued yet" so
+               state 4 retries the bind instead of polling a bogus msgid. */
+            self->message_id = -1;
+        }
         if (self->conn->csock != -1) {
             /* Dummy sockets are no longer needed. Dispose. */
             self->conn->csock = -1;
             close_socketpair(self->conn->socketpair);
         }
         self->state = 4;
+        Py_RETURN_NONE;
+    } else if (self->state == 4 && self->message_id == -1) {
+        /* Async connect was still in progress when we last tried _ldap_bind.
+           Per the LDAP_X_CONNECTING contract, the caller polls for socket
+           write-readiness (asyncio's add_writer does this) and retries the
+           bind. The retry queues the bind PDU once the connect completes. */
+        rc = _ldap_bind(self->conn->ld, self->info, self->conn->ppolicy,
+                NULL, &(self->message_id));
+        if (rc == LDAP_X_CONNECTING) {
+            self->message_id = -1;
+            Py_RETURN_NONE;
+        }
+        if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
+            set_exception(self->conn->ld, rc);
+            return NULL;
+        }
         Py_RETURN_NONE;
     } else {
         if (self->conn->async == 0) {
