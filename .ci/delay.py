@@ -5,6 +5,8 @@ import time
 import sys
 import multiprocessing as mp
 
+from datetime import datetime
+
 try:
     import pydivert
 except ImportError:
@@ -146,16 +148,16 @@ class WinDelayHandler:
 
     def set_delay(self, sec, duration=10.0):
         """ Set network delay, return with the call's result. """
-        print("Delay")
+        print(f"Delay {datetime.now()}")
         self.stop = mp.Event()
         self.proc = mp.Process(target=self.delay, args=(sec, self.stop, duration))
         self.proc.start()
-        print(f"Delay is set for {sec}")
+        print(f"Delay is set for {sec} {datetime.now()}")
         return True
 
     def remove_delay(self):
         """ Remove network delay, return with the call's result. """
-        print("Remove")
+        print(f"Remove {datetime.now()}, proc: {self.proc} live: {self.proc is not None and self.proc.is_alive()}")
         if self.proc is not None and self.proc.is_alive():
             self.stop.set()
             self.proc.join(timeout=2.0)
@@ -164,7 +166,7 @@ class WinDelayHandler:
                 print("Still alive")
                 self.proc.terminate()
                 self.proc.join()
-        print("Remove executed")
+        print(f"Remove executed {datetime.now()}")
         return True
 
 
