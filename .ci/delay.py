@@ -129,12 +129,16 @@ class MacDelayHandler:
 
 class WinDelayHandler:
     proc = None
+    stop = None
 
-    def delay(self, sec, duration=10.0):
+    def delay(self, sec, stop, duration=10.0):
         netfil = "tcp.DstPort == 389 or tcp.SrcPort == 389"
         start = time.time()
         with pydivert.WinDivert(netfil) as divert:
             for packet in divert:
+                if stop.is_set():
+                    divert.send(packet)
+                    break
                 time.sleep(sec)
                 divert.send(packet)
                 if time.time() - start >= duration:
@@ -142,14 +146,19 @@ class WinDelayHandler:
 
     def set_delay(self, sec, duration=10.0):
         """ Set network delay, return with the call's result. """
-        self.proc = mp.Process(target=self.delay, args=(sec, duration))
+        self.stop = mp.Event()
+        self.proc = mp.Process(target=self.delay, args=(sec, self.stop, duration))
         self.proc.start()
         return True
 
     def remove_delay(self):
         """ Remove network delay, return with the call's result. """
         if self.proc is not None and self.proc.is_alive():
-            self.proc.terminate()
+            self.stop.set()
+            self.proc.join(timeout=2.0)
+            if self.proc.is_alive():
+                self.proc.terminate()
+                self.proc.join()
         return True
 
 
