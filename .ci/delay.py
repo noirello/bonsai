@@ -146,19 +146,25 @@ class WinDelayHandler:
 
     def set_delay(self, sec, duration=10.0):
         """ Set network delay, return with the call's result. """
+        print("Delay")
         self.stop = mp.Event()
         self.proc = mp.Process(target=self.delay, args=(sec, self.stop, duration))
         self.proc.start()
+        print(f"Delay is set for {sec}")
         return True
 
     def remove_delay(self):
         """ Remove network delay, return with the call's result. """
+        print("Remove")
         if self.proc is not None and self.proc.is_alive():
             self.stop.set()
             self.proc.join(timeout=2.0)
+            print("Joined")
             if self.proc.is_alive():
+                print("Still alive")
                 self.proc.terminate()
                 self.proc.join()
+        print("Remove executed")
         return True
 
 
