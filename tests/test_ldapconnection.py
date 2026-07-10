@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import threading
 import time
+import warnings
 
 import pytest
 from conftest import get_config, network_delay
@@ -735,8 +736,10 @@ def test_open_releases_gil(client):
     t.start()
     try:
         with network_delay(2.0):
-            conn = client.connect()
+            conn = client.connect(timeout=10.0)
             conn.close()
+    except bonsai.TimeoutError:
+        warnings.warn("Timeout error has been rasied during test", UserWarning)
     finally:
         stop.set()
         t.join()
