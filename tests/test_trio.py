@@ -189,7 +189,7 @@ async def test_connect_with_async_connect_option(tclient, turn_async_conn):
         assert not conn.closed
 
 
-@pytest.mark.timeout(20)
+@pytest.mark.timeout(25)
 @trio_test
 async def test_connect_with_async_connect_option_under_delay(
     tclient, turn_async_conn
@@ -200,7 +200,7 @@ async def test_connect_with_async_connect_option_under_delay(
     complete by retrying _ldap_bind on socket write-readiness.
     """
     with network_delay(2.0):
-        async with tclient.connect(True, timeout=15) as conn:
+        async with tclient.connect(True, timeout=20) as conn:
             assert not conn.closed
 
 

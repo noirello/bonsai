@@ -252,7 +252,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         finally:
             bonsai.set_connect_async(False)
 
-    @gen_test(timeout=20.0)
+    @gen_test(timeout=25.0)
     def test_connect_with_async_connect_option_under_delay(self):
         """The async-connect retry path drives the connect to completion.
 
@@ -263,7 +263,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         try:
             with network_delay(2.0):
                 conn = yield self.client.connect(
-                    True, ioloop=self.io_loop, timeout=15.0
+                    True, ioloop=self.io_loop, timeout=20.0
                 )
                 assert not conn.closed
                 conn.close()

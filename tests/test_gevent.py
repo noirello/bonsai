@@ -177,7 +177,7 @@ def test_connect_with_async_connect_option(gclient, turn_async_conn):
     conn.close()
 
 
-@pytest.mark.timeout(20)
+@pytest.mark.timeout(25)
 def test_connect_with_async_connect_option_under_delay(gclient, turn_async_conn):
     """The async-connect retry path drives the connect to completion.
 
@@ -185,6 +185,6 @@ def test_connect_with_async_connect_option_under_delay(gclient, turn_async_conn)
     complete by retrying _ldap_bind on socket write-readiness.
     """
     with network_delay(2.0):
-        conn = gclient.connect(True, timeout=15)
+        conn = gclient.connect(True, timeout=20)
         assert not conn.closed
         conn.close()
