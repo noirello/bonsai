@@ -1,4 +1,4 @@
-FROM debian:bullseye-slim
+FROM debian:trixie-slim
 LABEL maintainer="noirello@gmail.com"
 
 # Create group and user

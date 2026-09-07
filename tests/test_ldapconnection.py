@@ -833,7 +833,7 @@ def test_password_expire(conn, ipaddr):
     test_conn.close()
     time.sleep(10)
     test_conn, ctrl = cli.connect()
-    assert ctrl["grace"] == 1
+    assert ctrl["grace"] == 0
     test_conn.close()
     with pytest.raises(bonsai.errors.PasswordExpired):
         test_conn, ctrl = cli.connect()
