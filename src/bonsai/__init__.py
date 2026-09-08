@@ -30,6 +30,7 @@ __all__ = [
     "LDAPError",
     "InvalidDN",
     "ConnectionError",
+    "ServerUnknown",
     "AuthenticationError",
     "AuthMethodNotSupported",
     "ObjectClassViolation",

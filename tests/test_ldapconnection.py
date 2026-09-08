@@ -474,11 +474,28 @@ def test_whoami(conn, cfg):
     assert obj in expected_res
 
 
-def test_connection_error():
+def test_connection_error(ipaddr):
     """Test connection error."""
-    client = LDAPClient("ldap://invalid")
+    # The test server listens on 389, 636, 88, 749 and 8000, so 10389 is refused.
+    client = LDAPClient("ldap://%s:10389" % ipaddr)
     with pytest.raises(bonsai.ConnectionError):
         _ = client.connect()
+
+
+def test_unresolvable_host_error():
+    """Test connecting to a hostname that does not resolve.
+
+    Which code the failure arrives as depends on the libldap the module is linked
+    against: OpenLDAP 2.7 reports the name separately, earlier versions fold it into the
+    general connection failure. Either way it has to stay catchable as a ConnectionError.
+    """
+    client = LDAPClient("ldap://invalid")
+    with pytest.raises(bonsai.ConnectionError) as err:
+        _ = client.connect()
+    if err.value.code == -19:
+        assert isinstance(err.value, bonsai.ServerUnknown)
+    else:
+        assert err.value.code in (-1, -11)
 
 
 def test_simple_auth_error(cfg):
