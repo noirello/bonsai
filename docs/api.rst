@@ -791,6 +791,7 @@ Errors
 .. autoclass:: bonsai.NotAllowedOnNonleaf
 .. autoclass:: bonsai.ObjectClassViolation
 .. autoclass:: bonsai.ProtocolError
+.. autoclass:: bonsai.ServerUnknown
 .. autoclass:: bonsai.SizeLimitError
 .. autoclass:: bonsai.TimeoutError
 .. autoclass:: bonsai.TypeOrValueExists

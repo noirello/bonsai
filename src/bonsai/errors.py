@@ -27,6 +27,7 @@ __all__ = [
     "PasswordTooShort",
     "PasswordTooYoung",
     "ProtocolError",
+    "ServerUnknown",
     "SizeLimitError",
     "TimeoutError",
     "TypeOrValueExists",
@@ -66,6 +67,12 @@ class ConnectionError(LDAPError):
     """Raised, when client is not able to connect to the server."""
 
     code = -1
+
+
+class ServerUnknown(ConnectionError):
+    """Raised, when the server's hostname cannot be resolved."""
+
+    code = -19
 
 
 class AuthenticationError(LDAPError):
@@ -283,6 +290,10 @@ def _get_error(code: int) -> type:
         # WinLDAP returns 0x51 for Server Down.
         # OpenLDAP returns -11 for Connection error.
         return ConnectionError.create(code)
+    elif code == -19:
+        # OpenLDAP 2.7 reports an unresolvable hostname separately, where earlier
+        # versions returned the general -1.
+        return ServerUnknown
     elif code == 0x02:
         return ProtocolError
     elif code == 0x04:

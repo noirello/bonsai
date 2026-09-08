@@ -28,13 +28,14 @@ setKerberos () {
 
 # Load the LDIF files and some schema into the server.
 setLDAP () {
+    # Created by systemd-tmpfiles on a normal boot, which never runs here.
+    mkdir -p /var/run/slapd
     chown -Rf ldap:ldap /var/run/slapd
     chmod 500 /etc/ldap/certs/server.pem
     chmod 500 /etc/ldap/certs/server.key
     /usr/sbin/slapd -u ldap -g ldap -h "ldap:// ldapi:// ldaps://"
     sleep 2
     ldapmodify -Y EXTERNAL -H ldapi:/// -f /home/ldap/settings.ldif
-    ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/ldap/schema/ppolicy.ldif
     ldapmodify -Y EXTERNAL -H ldapi:/// -f /home/ldap/schema.ldif
     # Set overlays: allow vlv, server side sort and password policy.
     ldapmodify -Y EXTERNAL -H ldapi:/// -f /home/ldap/overlays.ldif
