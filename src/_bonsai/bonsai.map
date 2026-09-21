@@ -1,0 +1,6 @@
+{
+    global:
+        PyInit__bonsai;
+    local:
+        *;
+};

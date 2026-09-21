@@ -175,5 +175,13 @@ PyInit__bonsai(void) {
     Py_INCREF(&LDAPSearchIterType);
     PyModule_AddObject(module, "ldapsearchiter", (PyObject *)&LDAPSearchIterType);
 
+    /* Read by bonsai._bundled to tell a wheel that carries its own OpenSSL, OpenLDAP,
+       Cyrus SASL and Kerberos apart from a build that links the system libraries. */
+#ifdef BONSAI_BUNDLED
+    if (PyModule_AddIntConstant(module, "BUNDLED", 1) < 0) return NULL;
+#else
+    if (PyModule_AddIntConstant(module, "BUNDLED", 0) < 0) return NULL;
+#endif
+
     return module;
 }

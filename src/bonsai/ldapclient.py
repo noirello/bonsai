@@ -6,6 +6,7 @@
 """
 from typing import Any, Union, List, Optional, Dict, Type
 
+from ._bundled import find_ca_bundle
 from .ldapurl import LDAPURL
 from .ldapconnection import BaseLDAPConnection, LDAPConnection
 from .ldapconnection import LDAPSearchScope
@@ -31,8 +32,11 @@ class LDAPClient:
         self.__raw_list: List[str] = []
         self.__mechanism = "SIMPLE"
         self.__cert_policy = -1
-        self.__ca_cert: Optional[str] = ""
-        self.__ca_cert_dir: Optional[str] = ""
+        # Empty for a source build, where the system OpenSSL already knows where the
+        # host keeps its CA store.
+        default_ca_cert, default_ca_cert_dir = find_ca_bundle()
+        self.__ca_cert: Optional[str] = default_ca_cert or ""
+        self.__ca_cert_dir: Optional[str] = default_ca_cert_dir or ""
         self.__client_cert: Optional[str] = ""
         self.__client_key: Optional[str] = ""
         self.__async_conn: Type[BaseLDAPConnection] = AIOLDAPConnection

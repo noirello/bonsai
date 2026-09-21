@@ -241,3 +241,187 @@ jobs:
         path: ./dist/bonsai-*.whl
         retention-days: 5
       if: ${{ env.python_final_release == 'true' }}
+
+  linux-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.declare.outputs.matrix }}
+      cibw: ${{ steps.declare.outputs.cibw }}
+    steps:
+    - name: Declare the interpreters the Linux wheels are built for
+      id: declare
+      # The one place the list is written. The wheel-building job needs it as cibuildwheel
+      # selectors and the two test jobs need it as a matrix, so both are derived here rather
+      # than repeated in three places that can drift apart.
+      #
+      # Only add a version once it has had a final release: unlike the macOS job, which tests
+      # against a release candidate but skips uploading a wheel for it, everything listed here
+      # is built and published.
+      run: |
+        versions='["3.10", "3.11", "3.12", "3.13", "3.14"]'
+        echo "matrix=$versions" >> "$GITHUB_OUTPUT"
+        echo "cibw=$(jq -r 'map("cp" + (sub("\\."; "")) + "-*") | join(" ")' <<< "$versions")" >> "$GITHUB_OUTPUT"
+    - name: Show what was declared
+      run: |
+        echo "matrix: ${{ steps.declare.outputs.matrix }}"
+        echo "cibw:   ${{ steps.declare.outputs.cibw }}"
+
+  linux-wheels:
+    needs: linux-versions
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Build wheels
+      # cibuildwheel cannot scope build/skip per platform, so the interpreter selection is
+      # passed here rather than set in pyproject.toml, where it would also reach macOS and
+      # Windows. Everything else comes from [tool.cibuildwheel.linux].
+      env:
+        CIBW_BUILD: ${{ needs.linux-versions.outputs.cibw }}
+      run: |
+        python -m pip install cibuildwheel==4.2.1
+        python -m cibuildwheel --platform linux --output-dir wheelhouse
+    - name: Check wheels
+      # grep fails the step if a wheel carries neither the bundled libraries nor the license
+      # inventory, which is what an unbundled build would silently produce.
+      run: |
+        ls -la ./wheelhouse/
+        for whl in ./wheelhouse/*.whl; do
+          echo "== $whl"
+          unzip -l "$whl" | grep -E "bonsai.libs|licenses/"
+        done
+    - name: Upload wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheel-linux-x86_64
+        path: ./wheelhouse/*.whl
+        retention-days: 5
+
+  linux-wheels-test:
+    needs: [linux-versions, linux-wheels]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJSON(needs.linux-versions.outputs.matrix) }}
+    env:
+      PYTHON: ${{ matrix.python-version }}
+      OS: ubuntu
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        allow-prereleases: true
+    - name: Download wheels
+      uses: actions/download-artifact@v4
+      with:
+        name: wheel-linux-x86_64
+        path: wheelhouse
+    - name: Install OS dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ldap-utils krb5-user
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install pytest pytest-timeout gevent tornado trio
+    - name: Build Docker image
+      run: docker build -t bonsai -f ./.ci/docker/Dockerfile .
+    - name: Configure Docker container
+      # The client stays on the runner rather than in the server's network namespace. The
+      # *_timeout tests apply tc to the server's external interface, which does nothing to
+      # traffic that would otherwise travel over loopback.
+      run: |
+        mkdir /tmp/bonsai
+        sudo chown 2001:2000 /tmp/bonsai
+        docker run --cap-add=NET_ADMIN -v /tmp/bonsai/:/home/ldap/run/:z -d -h bonsai.test --name server bonsai
+        export BONSAI_DOCKER_IP=`docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' server`
+        sudo bash -c 'echo -e "\n'$BONSAI_DOCKER_IP'        bonsai.test" >> /etc/hosts'
+        ping -c 2 bonsai.test
+    - name: Wait on container to be ready
+      run: bash ./.github/workflows/scripts/wait_container_ready.sh server 90
+    - name: Wait on LDAP server
+      run: bash ./.github/workflows/scripts/wait_ldap_server.sh 90
+    - name: Install the wheel
+      run: |
+        python -m pip install --no-index --find-links ./wheelhouse bonsai
+        python -m pip list
+    - name: Check the installed wheel is the bundled one
+      # pip silently falls back to an sdist if no wheel matches the interpreter, which would
+      # otherwise leave this job testing a source build against the system OpenLDAP.
+      run: |
+        python - <<'EOF'
+        import bonsai
+        from bonsai import _bundled
+        assert _bundled.is_bundled(), "not a bundled wheel"
+        assert bonsai.has_krb5_support(), "wheel has no Kerberos support"
+        print(bonsai.__file__, bonsai.get_vendor_info(), bonsai.get_tls_impl_name())
+        EOF
+        ldd $(python -c "import bonsai, pathlib; print(next(pathlib.Path(bonsai.__file__).parent.glob('_bonsai*.so')))")
+    - name: Run tests
+      run: |
+        export BONSAI_DOCKER_IP=`docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' server`
+        sed -i.bak "s/127.0.0.1/$BONSAI_DOCKER_IP/g" ./tests/test.ini
+        export KRB5_CONFIG="`pwd`/.ci/krb5/krb5.conf"
+        python -m pytest -v ./tests
+
+  musllinux-wheels-test:
+    needs: [linux-versions, linux-wheels]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ${{ fromJSON(needs.linux-versions.outputs.matrix) }}
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download wheels
+      uses: actions/download-artifact@v4
+      with:
+        name: wheel-linux-x86_64
+        path: wheelhouse
+    - name: Install OS dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ldap-utils
+    - name: Build Docker image
+      run: docker build -t bonsai -f ./.ci/docker/Dockerfile .
+    - name: Configure Docker container
+      run: |
+        mkdir /tmp/bonsai
+        sudo chown 2001:2000 /tmp/bonsai
+        docker run --cap-add=NET_ADMIN -v /tmp/bonsai/:/home/ldap/run/:z -d -h bonsai.test --name server bonsai
+        export BONSAI_DOCKER_IP=`docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' server`
+        sudo bash -c 'echo -e "\n'$BONSAI_DOCKER_IP'        bonsai.test" >> /etc/hosts'
+    - name: Wait on container to be ready
+      run: bash ./.github/workflows/scripts/wait_container_ready.sh server 90
+    - name: Wait on LDAP server
+      run: bash ./.github/workflows/scripts/wait_ldap_server.sh 90
+    - name: Run tests on Alpine
+      # The client has to be a container to be musl, but it is given the same hosts entry the
+      # runner has rather than a Docker network: GSSAPI derives its service principal from the
+      # reverse lookup of the server's address, and on a user-defined network the embedded DNS
+      # answers that with <container>.<network>, so every GSSAPI test asks the KDC for the
+      # wrong principal. It also keeps the client in its own network namespace, without which
+      # the *_timeout tests cannot fire, since the delay is applied with tc on the server's
+      # interface. The server's run directory is shared so that the ldapi socket is reachable.
+      run: |
+        export BONSAI_DOCKER_IP=`docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' server`
+        sed -i.bak "s/127.0.0.1/$BONSAI_DOCKER_IP/g" ./tests/test.ini
+        docker run --rm --add-host bonsai.test:$BONSAI_DOCKER_IP \
+          -v "$PWD:/src:ro" -v /tmp/bonsai:/tmp/bonsai \
+          -e KRB5_CONFIG=/work/.ci/krb5/krb5.conf \
+          python:${{ matrix.python-version }}-alpine sh -c '
+            set -e
+            apk add --no-cache krb5 binutils
+            cp -r /src /work && cd /work
+            pip install --no-index --find-links ./wheelhouse bonsai
+            pip install pytest pytest-timeout gevent tornado trio
+            python -c "from bonsai import _bundled; assert _bundled.is_bundled(), \"not a bundled wheel\""
+            python -m pytest -v ./tests'

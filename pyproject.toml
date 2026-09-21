@@ -53,6 +53,33 @@ gevent = ['gevent (>=1.4.0)']
 tornado = ['tornado (>=5.1.1)']
 trio = ['trio (>=0.16.0)']
 
+# Only the Linux wheels are built with cibuildwheel; macOS and Windows keep their
+# existing build. Every setting is under the linux table so nothing here can reach
+# another platform, and the interpreter selection is passed by the workflow rather
+# than set globally, because cibuildwheel does not allow build/skip to be scoped
+# per platform.
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+# The wheels bundle their own OpenLDAP, Cyrus SASL, Kerberos and OpenSSL, built
+# inside the container. Naming the prefix turns bundling on and build_ext derives
+# its include and library directories from it, so the same one option works for
+# anyone building against a prefix of their own. Passed as a build option rather
+# than written into setup.cfg so that `setup.py build_py --help` stays the
+# documentation for it.
+before-all = "bash {project}/.ci/build-dependencies.sh"
+config-settings = { "--build-option" = "build_py --bundled-deps=/opt/bonsai-deps" }
+# cibuildwheel applies this to the repair step as well as the build, which is the
+# step that needs it: auditwheel resolves DT_NEEDED through the loader search
+# path, and musl reads its path from /etc/ld-musl-<arch>.path, which auditwheel
+# does not consult.
+environment = { LD_LIBRARY_PATH = "/opt/bonsai-deps/lib" }
+repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
+test-requires = "pytest"
+# Runs inside the build container, so it covers the wheel just produced without
+# needing an LDAP server: licenses, bundled versions, exported symbols, and that
+# the stdlib ssl module still uses the interpreter's own OpenSSL.
+test-command = "python -m pytest -q {project}/tests/test_bundled.py"
+
 [tool.poetry]
 requires-poetry = '>=2.0'
 version = '1.5.5'

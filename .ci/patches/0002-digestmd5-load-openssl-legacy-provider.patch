@@ -1,0 +1,64 @@
+--- a/plugins/digestmd5.c	2026-09-07 13:54:26.996271957 -0400
++++ b/plugins/digestmd5.c	2026-09-07 13:54:27.028099610 -0400
+@@ -57,6 +57,14 @@
+ #include <fcntl.h>
+ #include <ctype.h>
+ 
++#if defined(WITH_RC4) && defined(HAVE_OPENSSL)
++# include <openssl/opensslv.h>
++# if OPENSSL_VERSION_NUMBER >= 0x30000000L
++#  include <openssl/provider.h>
++#  define DIGESTMD5_LEGACY_PROVIDER
++# endif
++#endif
++
+ /* DES support */
+ #ifdef WITH_DES
+ # ifdef WITH_SSL_DES
+@@ -3229,6 +3237,24 @@
+     }
+ };
+ 
++#ifdef DIGESTMD5_LEGACY_PROVIDER
++/* The RC4 ciphers live in OpenSSL 3's legacy provider, which no distribution activates by
++   default, so fetching them fails unless it is loaded here. Loading any provider explicitly
++   suppresses the implicit activation of the default one, which would take SHA and AES with
++   it, so default has to be named as well. Both are left loaded for the life of the
++   process. */
++static void digestmd5_load_providers(void)
++{
++    static int done = 0;
++
++    if (!done) {
++	done = 1;
++	(void) OSSL_PROVIDER_load(NULL, "legacy");
++	(void) OSSL_PROVIDER_load(NULL, "default");
++    }
++}
++#endif
++
+ int digestmd5_server_plug_init(sasl_utils_t *utils,
+ 			       int maxversion,
+ 			       int *out_version,
+@@ -3239,6 +3265,10 @@
+     const char *timeout = NULL;
+     unsigned int len;
+ 
++#ifdef DIGESTMD5_LEGACY_PROVIDER
++    digestmd5_load_providers();
++#endif
++
+     if (maxversion < SASL_SERVER_PLUG_VERSION) {
+ 	return SASL_BADVERS;
+     }
+@@ -4745,6 +4775,10 @@
+ {
+     reauth_cache_t *reauth_cache;
+ 
++#ifdef DIGESTMD5_LEGACY_PROVIDER
++    digestmd5_load_providers();
++#endif
++
+     if (maxversion < SASL_CLIENT_PLUG_VERSION)
+ 	return SASL_BADVERS;
+     

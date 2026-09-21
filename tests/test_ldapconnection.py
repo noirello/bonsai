@@ -10,6 +10,7 @@ import pytest
 from conftest import get_config, network_delay
 
 import bonsai
+from bonsai import _bundled
 from bonsai import LDAPDN
 from bonsai import LDAPClient
 from bonsai import LDAPConnection
@@ -52,7 +53,9 @@ def ktpath():
 def binding():
     """Create a binding with the server."""
 
-    def _create_binding(auth, mech, authzid=None, realm=None, max_ssf=None):
+    def _create_binding(
+        auth, mech, authzid=None, realm=None, max_ssf=None, min_ssf=None
+    ):
         cfg = get_config()
         host = "ldap://%s" % cfg["SERVER"]["hostname"]
         client = LDAPClient(host)
@@ -61,6 +64,8 @@ def binding():
         )
         if max_ssf is not None:
             client.set_sasl_security_properties(max_ssf=max_ssf)
+        if min_ssf is not None:
+            client.set_sasl_security_properties(min_ssf=min_ssf)
         return client.connect()
 
     return _create_binding
@@ -236,6 +241,23 @@ def test_bind_digest_with_authzid(binding, cfg):
         ssf_lvl = None
     with binding("DIGESTAUTH", "DIGEST-MD5", authzid, max_ssf=ssf_lvl) as conn:
         assert cfg["DIGESTAUTH"]["dn"] == conn.whoami()
+
+
+@pytest.mark.skipif(
+    not _bundled.is_bundled(),
+    reason="the cipher set is only ours to assert on wheels that bundle Cyrus SASL",
+)
+@pytest.mark.parametrize("min_ssf", [1, 56, 112, 128])
+def test_bind_digest_security_layer(binding, min_ssf):
+    """Test that DIGEST-MD5 negotiates integrity and confidentiality layers.
+
+    whoami() travels through the negotiated layer, so this covers the cipher actually
+    working rather than merely being advertised. A build whose DIGEST-MD5 has no ciphers
+    binds at min_ssf=1 and is refused above it, which is the difference between these
+    wheels and a source build against the distribution's Cyrus SASL.
+    """
+    with binding("DIGESTAUTH", "DIGEST-MD5", min_ssf=min_ssf) as conn:
+        assert "anonymous" != conn.whoami()
 
 
 @pytest.mark.skipif(
