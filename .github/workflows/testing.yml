@@ -256,6 +256,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v7
+    - name: Build Docker image
+      run: docker build -t bonsai -f ./.ci/docker/Dockerfile .
+    - name: Configure Docker container
+      run: bash ./.github/workflows/scripts/setup_docker_server.sh
+    - name: Wait on container to be ready
+      run: bash ./.github/workflows/scripts/wait_container_ready.sh server 90
+    - name: Get server IP
+      run: echo "BONSAI_DOCKER_IP=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' server)" >> $GITHUB_ENV
     - name: Build wheels
       uses: pypa/cibuildwheel@v4.3.5
       env:
