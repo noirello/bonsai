@@ -18,9 +18,9 @@ jobs:
       OS: ubuntu
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
@@ -68,7 +68,7 @@ jobs:
         echo $BONSAI_INSTALL_PATH
         python -m pytest -vs --cov-config .coveragerc --cov-report= --cov=$BONSAI_INSTALL_PATH
     - name: Upload coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v7
       with:
         directory: "."
         env_vars: OS,PYTHON
@@ -86,9 +86,9 @@ jobs:
       OS: macos
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
@@ -106,7 +106,7 @@ jobs:
         python -m pip list
     - name: Install Docker
       id: setup-docker
-      uses: douglascamata/setup-docker-macos-action@v1.0.2
+      uses: douglascamata/setup-docker-macos-action@v1
       with:
         #lima: v1.2.1
         #colima: v0.9.1
@@ -152,7 +152,7 @@ jobs:
         echo $BONSAI_INSTALL_PATH
         py.test -vs --cov-config .coveragerc --cov-report= --cov=$BONSAI_INSTALL_PATH
     - name: Upload coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v7
       with:
         directory: "."
         env_vars: OS,PYTHON
@@ -170,7 +170,7 @@ jobs:
         unzip -l ./dist/bonsai-*.whl | grep libldap
       if: ${{ env.python_final_release == 'true' }}
     - name: Upload wheel
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: wheel-amd64-${{ matrix.python-version }}
         path: ./dist/bonsai-*.whl
@@ -179,7 +179,7 @@ jobs:
 
   macos-arm64-wheels:
     needs: macos
-    runs-on: macos-14
+    runs-on: macos-15
     strategy:
       fail-fast: false
       matrix:
@@ -188,9 +188,9 @@ jobs:
       PYTHON: ${{ matrix.python-version }}
       OS: macos
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
@@ -220,7 +220,7 @@ jobs:
         python -m pip install ./dist/bonsai-*.whl
         python -c 'import bonsai;print(bonsai.__version__)'
     - name: Upload wheel
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: wheel-arm64-${{ matrix.python-version }}
         path: ./dist/bonsai-*.whl
@@ -255,9 +255,9 @@ jobs:
     needs: linux-versions
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: '3.12'
     - name: Build wheels
@@ -279,7 +279,7 @@ jobs:
           unzip -l "$whl" | grep -E "bonsai.libs|licenses/"
         done
     - name: Upload wheels
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: wheel-linux-x86_64
         path: ./wheelhouse/*.whl
@@ -297,9 +297,9 @@ jobs:
       OS: ubuntu
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
@@ -356,7 +356,7 @@ jobs:
         python-version: ${{ fromJSON(needs.linux-versions.outputs.matrix) }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Download wheels
       uses: actions/download-artifact@v4
       with:
