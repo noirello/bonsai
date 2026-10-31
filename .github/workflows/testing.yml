@@ -40,14 +40,7 @@ jobs:
     - name: Build Docker image
       run: docker build -t bonsai -f ./.ci/docker/Dockerfile .
     - name: Configure Docker container
-      run: |
-        mkdir /tmp/bonsai
-        sudo chown 2001:2000 /tmp/bonsai
-        docker run --cap-add=NET_ADMIN -v /tmp/bonsai/:/home/ldap/run/:z -d -h bonsai.test --name server bonsai
-        export BONSAI_DOCKER_IP=`docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' server`
-        sudo bash -c 'echo -e "\n'$BONSAI_DOCKER_IP'        bonsai.test" >> /etc/hosts'
-        cat /etc/hosts
-        ping -c 2 bonsai.test
+      run: bash ./.github/workflows/scripts/setup_docker_server.sh
     - name: Wait on container to be ready
       run: bash ./.github/workflows/scripts/wait_container_ready.sh server 90
     - name: Wait on LDAP server
@@ -124,17 +117,9 @@ jobs:
         echo "Docker client version: ${{ steps.setup-docker.outputs.docker-client-version }}"
         echo "Docker compose version: ${{ steps.setup-docker.outputs.docker-compose-version }}"
     - name: Build Docker image
-      run: |
-        docker build -t bonsai -f ./.ci/docker/Dockerfile .
+      run: docker build -t bonsai -f ./.ci/docker/Dockerfile .
     - name: Configure Docker container
-      run: |
-        mkdir /tmp/bonsai
-        sudo chown 2001:2000 /tmp/bonsai
-        docker run --cap-add=NET_ADMIN -p 389:389 -p 636:636 -p 88:88/udp -p 749:749 -p 8000:8000 -d -h bonsai.test --name server bonsai
-        sudo bash -c 'echo -e "\n127.0.0.1        bonsai.test" >> /etc/hosts'
-        sudo scutil --set HostName bonsai.test
-        cat /etc/hosts
-        ping -c 2 bonsai.test
+      run: bash ./.github/workflows/scripts/setup_docker_server.sh
     - name: Wait on container to be ready
       run: bash ./.github/workflows/scripts/wait_container_ready.sh server 90
     - name: Wait on LDAP server
@@ -334,16 +319,7 @@ jobs:
     - name: Build Docker image
       run: docker build -t bonsai -f ./.ci/docker/Dockerfile .
     - name: Configure Docker container
-      # The client stays on the runner rather than in the server's network namespace. The
-      # *_timeout tests apply tc to the server's external interface, which does nothing to
-      # traffic that would otherwise travel over loopback.
-      run: |
-        mkdir /tmp/bonsai
-        sudo chown 2001:2000 /tmp/bonsai
-        docker run --cap-add=NET_ADMIN -v /tmp/bonsai/:/home/ldap/run/:z -d -h bonsai.test --name server bonsai
-        export BONSAI_DOCKER_IP=`docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' server`
-        sudo bash -c 'echo -e "\n'$BONSAI_DOCKER_IP'        bonsai.test" >> /etc/hosts'
-        ping -c 2 bonsai.test
+      run: bash ./.github/workflows/scripts/setup_docker_server.sh
     - name: Wait on container to be ready
       run: bash ./.github/workflows/scripts/wait_container_ready.sh server 90
     - name: Wait on LDAP server
@@ -393,12 +369,7 @@ jobs:
     - name: Build Docker image
       run: docker build -t bonsai -f ./.ci/docker/Dockerfile .
     - name: Configure Docker container
-      run: |
-        mkdir /tmp/bonsai
-        sudo chown 2001:2000 /tmp/bonsai
-        docker run --cap-add=NET_ADMIN -v /tmp/bonsai/:/home/ldap/run/:z -d -h bonsai.test --name server bonsai
-        export BONSAI_DOCKER_IP=`docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' server`
-        sudo bash -c 'echo -e "\n'$BONSAI_DOCKER_IP'        bonsai.test" >> /etc/hosts'
+      run: bash ./.github/workflows/scripts/setup_docker_server.sh
     - name: Wait on container to be ready
       run: bash ./.github/workflows/scripts/wait_container_ready.sh server 90
     - name: Wait on LDAP server
