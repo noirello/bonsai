@@ -60,7 +60,7 @@ config-settings = { "--build-option" = "build_py --bundled-deps=/opt/bonsai-deps
 environment = { LD_LIBRARY_PATH = "/opt/bonsai-deps/lib" }
 environment-pass = ["BONSAI_DOCKER_IP"]
 container-engine = { name = "docker", create-args = ["--network=host", "-v", "/tmp/bonsai:/tmp/bonsai"] }
-test-requires = "pytest"
+test-requires = ["pytest", "pytest-timeout"]
 before-test = "yum install -y krb5-workstation || apk add --no-cache krb5"
 test-command = """
 sed -i "s/127.0.0.1/$BONSAI_DOCKER_IP/g" {project}/tests/test.ini &&
