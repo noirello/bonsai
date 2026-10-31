@@ -97,3 +97,7 @@ black = "26.5.1"
 pydivert = { version = "^2.1", markers = "sys_platform == 'win32'" }
 delocate = { version = "^0.12", markers = "sys_platform == 'darwin'" }
 
+[tool.pytest.ini_options]
+markers = [
+    "wheel_smoke: minimal validation set for the bundled wheel",
+]

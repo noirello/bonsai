@@ -216,6 +216,7 @@ def async_conn():
     return SimpleAsyncConn(client)
 
 
+@pytest.mark.wheel_smoke
 def test_bind_digest(binding):
     """Test DIGEST-MD5 connection."""
     if os.getenv("BONSAI_NO_SSF", "0") == "1":
@@ -227,6 +228,7 @@ def test_bind_digest(binding):
         assert "anonymous" != conn.whoami()
 
 
+@pytest.mark.wheel_smoke
 @pytest.mark.skipif(
     sys.platform.startswith("win") or get_config()["DIGESTAUTH"]["authzid"] == "None",
     reason="Authzid is not set",
@@ -243,6 +245,7 @@ def test_bind_digest_with_authzid(binding, cfg):
         assert cfg["DIGESTAUTH"]["dn"] == conn.whoami()
 
 
+@pytest.mark.wheel_smoke
 @pytest.mark.skipif(
     not _bundled.is_bundled(),
     reason="the cipher set is only ours to assert on wheels that bundle Cyrus SASL",
@@ -260,6 +263,7 @@ def test_bind_digest_security_layer(binding, min_ssf):
         assert "anonymous" != conn.whoami()
 
 
+@pytest.mark.wheel_smoke
 @pytest.mark.skipif(
     sys.platform.startswith("win") or IS_GHA_MACOS,
     reason="NTLM is not enabled on Windows and it fails recently on GHA's macos-13.",
@@ -279,6 +283,7 @@ def test_bind_not_supported_auth(binding):
         _ = binding("DIGESTAUTH", "SCRAM-SHA-1")
 
 
+@pytest.mark.wheel_smoke
 @pytest.mark.skipif(
     sys.platform.startswith("win") or IS_GHA_MACOS,
     reason="Kinit is unavailable on Windows and it fails recently on GHA's macos-13.",
@@ -289,6 +294,7 @@ def test_bind_gssapi_kinit(kinit):
         assert "anonymous" != conn.whoami()
 
 
+@pytest.mark.wheel_smoke
 @pytest.mark.skipif(
     sys.platform.startswith("win") or IS_GHA_MACOS,
     reason="Kinit is unavailable on Windows and it fails recently on GHA's macos-13 :/.",
@@ -300,6 +306,7 @@ def test_bind_gssapi_with_authzid_kinit(kinit, cfg):
         assert cfg["GSSAPIAUTH"]["dn"] == conn.whoami()
 
 
+@pytest.mark.wheel_smoke
 @pytest.mark.skipif(
     not bonsai.has_krb5_support() or sys.platform == "darwin",
     reason="Module doesn't have KRB5 support.",
@@ -312,6 +319,7 @@ def test_bind_gssapi(binding, cfg):
         assert "anonymous" != conn.whoami()
 
 
+@pytest.mark.wheel_smoke
 @pytest.mark.skipif(
     not bonsai.has_krb5_support() or sys.platform == "darwin",
     reason="Module doesn't have KRB5 support.",
@@ -330,6 +338,7 @@ def test_bind_gssapi_error(cfg):
         _ = client.connect()
 
 
+@pytest.mark.wheel_smoke
 @pytest.mark.skipif(
     not bonsai.has_krb5_support() or sys.platform != "linux",
     reason="Keytab-based auth only available on linux.",
@@ -354,6 +363,7 @@ def test_bind_gssapi_keytab_error(cfg, ktpath):
         _ = client.connect()
 
 
+@pytest.mark.wheel_smoke
 @pytest.mark.skipif(
     not bonsai.has_krb5_support() or sys.platform != "linux",
     reason="Keytab-based auth only available on linux.",
@@ -405,12 +415,14 @@ def test_bind_spnego(binding, cfg):
         assert "anonymous" != conn.whoami()
 
 
+@pytest.mark.wheel_smoke
 def test_bind_external(external_binding):
     """Test EXTERNAL connection."""
     with external_binding() as conn:
         assert "anonymous" != conn.whoami()
 
 
+@pytest.mark.wheel_smoke
 def test_bind_external_with_authzid(external_binding, cfg):
     """Test EXTERNAL connection with authorization ID."""
     authzid = cfg["EXTERNALAUTH"]["authzid"]
@@ -418,6 +430,7 @@ def test_bind_external_with_authzid(external_binding, cfg):
         assert cfg["EXTERNALAUTH"]["dn"] == conn.whoami()
 
 
+@pytest.mark.wheel_smoke
 def test_search(conn, basedn):
     """Test searching."""
     res = conn.search("ou=nerdherd,%s" % basedn, LDAPSearchScope.SUB)
@@ -528,6 +541,7 @@ def test_simple_auth_error(cfg):
         _ = client.connect()
 
 
+@pytest.mark.wheel_smoke
 def test_digest_auth_error(cfg):
     """Test DIGEST-MD5 authentication error."""
     client = LDAPClient("ldap://%s" % cfg["SERVER"]["hostname"])

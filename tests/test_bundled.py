@@ -10,6 +10,8 @@ import pytest
 import bonsai
 from bonsai import _bundled
 
+pytestmark = pytest.mark.wheel_smoke
+
 bundled_only = pytest.mark.skipif(
     not _bundled.is_bundled(),
     reason="only applies to wheels that bundle their own libraries",

@@ -24,6 +24,7 @@ def ldaps_url():
     return bonsai.LDAPURL(url)
 
 
+@pytest.mark.wheel_smoke
 def test_ldapurl(url):
     """Test setting LDAPURL."""
     cli = LDAPClient(url)
@@ -34,11 +35,13 @@ def test_ldapurl(url):
     assert cli.url == "ldap://localhost"
 
 
+@pytest.mark.wheel_smoke
 def test_connect(client):
     """Test connect method."""
     assert client.connect() is not None
 
 
+@pytest.mark.wheel_smoke
 def test_rootdse(client):
     """Test receiving root DSE."""
     root_dse = client.get_rootDSE()
@@ -58,6 +61,7 @@ def test_raw_attributes(client):
     assert not isinstance(result["objectClass"][0], bytes)
 
 
+@pytest.mark.wheel_smoke
 def test_set_credentials(url):
     """Test set_credentials method, mechanism and credentials properties."""
     client = LDAPClient(url)
@@ -90,6 +94,7 @@ def test_vendor_info():
     assert isinstance(info[1], int)
 
 
+@pytest.mark.wheel_smoke
 def test_tls_impl_name():
     """Test TLS implementation name."""
     tls_impl = bonsai.get_tls_impl_name()
@@ -213,6 +218,7 @@ def test_managedsait(client):
     assert client.managedsait
 
 
+@pytest.mark.wheel_smoke
 @pytest.mark.skipif(
     get_config()["SERVER"]["has_tls"] == "False", reason="TLS is not set"
 )
@@ -230,6 +236,7 @@ def test_ldap_over_tls(ldaps_url):
         pytest.fail("TLS connection is failed with: %s" % str(exc))
 
 
+@pytest.mark.wheel_smoke
 @pytest.mark.skipif(
     get_config()["SERVER"]["has_tls"] == "False", reason="TLS is not set"
 )
@@ -247,6 +254,7 @@ def test_starttls(url):
         pytest.fail("TLS connection is failed with: %s" % str(exc))
 
 
+@pytest.mark.wheel_smoke
 @pytest.mark.skipif(
     get_config()["SERVER"]["has_tls"] == "False", reason="TLS is not set"
 )
@@ -262,6 +270,7 @@ def test_tls_timeout(url):
             client.connect(timeout=5.0)
 
 
+@pytest.mark.wheel_smoke
 @pytest.mark.skipif(
     sys.platform != "linux", reason="No IPC support on Windows or Mac with Docker"
 )
@@ -271,6 +280,7 @@ def test_ldapi():
     assert client.connect() is not None
 
 
+@pytest.mark.wheel_smoke
 def test_set_sasl_sec_properties(url):
     client = LDAPClient(url)
     with pytest.raises(TypeError):
