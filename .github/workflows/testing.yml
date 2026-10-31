@@ -256,19 +256,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v7
-    - name: Set up Python
-      uses: actions/setup-python@v7
-      with:
-        python-version: '3.12'
     - name: Build wheels
-      # cibuildwheel cannot scope build/skip per platform, so the interpreter selection is
-      # passed here rather than set in pyproject.toml, where it would also reach macOS and
-      # Windows. Everything else comes from [tool.cibuildwheel.linux].
+      uses: pypa/cibuildwheel@v4.3.5
       env:
-        CIBW_BUILD: ${{ needs.linux-versions.outputs.cibw }}
-      run: |
-        python -m pip install cibuildwheel==4.2.1
-        python -m cibuildwheel --platform linux --output-dir wheelhouse
+        CIBW_BUILD_VERBOSITY: 3
+        CIBW_SKIP: cp3??t-*
+      with:
+        package-dir: .
+        output-dir: wheelhouse
     - name: Check wheels
       # grep fails the step if a wheel carries neither the bundled libraries nor the license
       # inventory, which is what an unbundled build would silently produce.
