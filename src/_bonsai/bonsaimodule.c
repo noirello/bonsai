@@ -97,6 +97,18 @@ bonsai_has_krb5_support(PyObject *self) {
 #endif
 }
 
+/* Check that the module is bundled with required libraries,
+   instead of relying on the system installed ones. */
+static PyObject *
+bonsai_is_bundled(PyObject *self) {
+#if defined(BONSAI_BUNDLED)
+    Py_RETURN_TRUE;
+#else
+    Py_RETURN_FALSE;
+#endif
+}
+
+
 /* Check that the `value` is in the `list` in a ces-insensitive manner.
    The return value is a tuple of two: first is a bool value that indicates
    whether the item is found or not, the second one is the found item. */
@@ -131,7 +143,10 @@ static PyMethodDef bonsai_methods[] = {
         "Turn on and off debug mode."},
     {"_unique_contains", (PyCFunction)bonsai_unique_contains, METH_VARARGS,
         "Check that the item is in the LDAPValueList. Returns with a tuple of"
-        "status of the search and the matched element."},
+        " status of the search and the matched element."},
+    {"is_bundled", (PyCFunction)bonsai_is_bundled, METH_NOARGS,
+        "Check that the module is bundled with required libraries, instead of"
+        " relying on the system installed ones."},
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
@@ -174,14 +189,6 @@ PyInit__bonsai(void) {
 
     Py_INCREF(&LDAPSearchIterType);
     PyModule_AddObject(module, "ldapsearchiter", (PyObject *)&LDAPSearchIterType);
-
-    /* Read by bonsai._bundled to tell a wheel that carries its own OpenSSL, OpenLDAP,
-       Cyrus SASL and Kerberos apart from a build that links the system libraries. */
-#ifdef BONSAI_BUNDLED
-    if (PyModule_AddIntConstant(module, "BUNDLED", 1) < 0) return NULL;
-#else
-    if (PyModule_AddIntConstant(module, "BUNDLED", 0) < 0) return NULL;
-#endif
 
     return module;
 }

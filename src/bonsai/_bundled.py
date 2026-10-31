@@ -10,13 +10,8 @@ Linux wheel ships its own instead, so it does not depend on the system libraries
 import os
 from typing import Optional, Tuple
 
+from bonsai._bonsai import is_bundled
 
-def is_bundled() -> bool:
-    """True when the extension is linked against libraries shipped inside the wheel."""
-    # Imported here so that importing this module does not import the extension.
-    from . import _bonsai
-
-    return bool(getattr(_bonsai, "BUNDLED", False))
 
 # Where the common distributions keep their CA bundle. A bundled OpenSSL has a single
 # compiled-in location, and no value is right everywhere: Debian and Alpine use
