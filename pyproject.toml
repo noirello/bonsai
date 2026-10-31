@@ -56,7 +56,7 @@ trio = ['trio (>=0.16.0)']
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
 before-all = "bash {project}/.ci/build-dependencies.sh"
-config-settings = { "--build-option" = "build_py --bundled-deps=/opt/bonsai-deps" }
+config-settings = { "--build-option" = "build_ext --bundled-deps=/opt/bonsai-deps" }
 environment = { LD_LIBRARY_PATH = "/opt/bonsai-deps/lib" }
 environment-pass = ["BONSAI_DOCKER_IP"]
 container-engine = { name = "docker", create-args = ["--network=host", "-v", "/tmp/bonsai:/tmp/bonsai"] }

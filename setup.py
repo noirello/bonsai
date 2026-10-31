@@ -8,7 +8,6 @@ from contextlib import contextmanager
 from distutils.errors import CompileError, LinkError
 
 from setuptools.command.build_ext import build_ext
-from setuptools.command.build_py import build_py
 from setuptools import setup, Extension
 
 
@@ -25,19 +24,37 @@ def silent_stderr():
 
 
 class BuildExt(build_ext):
-    """Custom build_ext to test Kerberose capability."""
+    """
+    Custom build_ext to test Kerberos capability and to ship the licenses of
+    the libraries when they're bundled into the wheel.
+    """
+
+    # The prefix .ci/build-dependencies.sh installed the native dependencies
+    # into for the build. Only a wheel build sets it, so BuildExt reads it back
+    # from here to decide whether to define BONSAI_BUNDLED and where to look for
+    # the headers and libraries.
+    user_options = build_ext.user_options + [
+        (
+            "bundled-deps=",
+            None,
+            "install prefix of the native dependencies to bundle into the wheel",
+        )
+    ]
+
+    def initialize_options(self) -> None:
+        super().initialize_options()
+        self.bundled_deps = None
 
     def finalize_options(self) -> None:
         super().finalize_options()
-        prefix = self.get_finalized_command("build_py").bundled_deps
-        if prefix:
+        if self.bundled_deps:
             # Prepended, so a bundled build finds its own headers and libraries
             # before the system ones the checked-in setup.cfg names. Done here
             # rather than in build_extensions() because run() copies both lists
             # onto the compiler before calling it, and a later change would
             # reach _have_krb5 but not the extension.
-            self.include_dirs.insert(0, os.path.join(prefix, "include"))
-            self.library_dirs.insert(0, os.path.join(prefix, "lib"))
+            self.include_dirs.insert(0, os.path.join(self.bundled_deps, "include"))
+            self.library_dirs.insert(0, os.path.join(self.bundled_deps, "lib"))
 
     def _have_krb5(self, libs: list) -> bool:
         code = """
@@ -118,45 +135,6 @@ class BuildExt(build_ext):
         self.extensions[0].extra_compile_args.extend(compile_args)
         self.extensions[0].extra_link_args.extend(link_args)
 
-    def build_extensions(self) -> None:
-        if sys.platform.startswith("linux"):
-            self._harden_symbols()
-        if sys.platform != "win32":
-            if self._have_krb5(["krb5", "gssapi"]):
-                self.extensions[0].libraries.extend(["krb5", "gssapi"])
-                self.extensions[0].define_macros.append(("HAVE_KRB5", 1))
-            elif self._have_krb5(["krb5", "gssapi_krb5"]):
-                self.extensions[0].libraries.extend(["krb5", "gssapi_krb5"])
-                self.extensions[0].define_macros.append(("HAVE_KRB5", 1))
-            else:
-                print(
-                    "INFO: Kerberos headers and libraries are not found."
-                    " Additional GSSAPI capabilities won't be installed."
-                )
-        if self.get_finalized_command("build_py").bundled_deps:
-            self.extensions[0].define_macros.append(("BONSAI_BUNDLED", 1))
-        return super().build_extensions()
-
-
-class BuildPy(build_py):
-    """Custom build_py to ship the licenses of the libraries bundled into the wheel."""
-
-    # The prefix .ci/build-dependencies.sh installed the native dependencies
-    # into for the build. Only a wheel build sets it, so BuildExt reads it back
-    # from here to decide whether to define BONSAI_BUNDLED and where to look for
-    # the headers and libraries.
-    user_options = build_py.user_options + [
-        (
-            "bundled-deps=",
-            None,
-            "install prefix of the native dependencies to bundle into the wheel",
-        )
-    ]
-
-    def initialize_options(self) -> None:
-        super().initialize_options()
-        self.bundled_deps = None
-
     def _copy_licenses(self, prefix: str) -> None:
         """Ship the licenses of the libraries the wheel redistributes.
 
@@ -166,13 +144,14 @@ class BuildPy(build_py):
         these libraries without their licenses does not satisfy their terms.
         """
         src_dir = os.path.join(prefix, "licenses")
-        names = sorted(
-            name for name in os.listdir(src_dir) if name.endswith(".txt")
-        ) if os.path.isdir(src_dir) else []
+        names = (
+            sorted(name for name in os.listdir(src_dir) if name.endswith(".txt"))
+            if os.path.isdir(src_dir)
+            else []
+        )
         if not names:
             raise RuntimeError(
-                f"no bundled licenses in {src_dir};"
-                " the dependency build must collect them"
+                f"no bundled licenses in {src_dir}; the dependency build must collect them"
             )
         dst_dir = os.path.join(self.build_lib, "bonsai", "licenses")
         os.makedirs(dst_dir, exist_ok=True)
@@ -198,9 +177,28 @@ class BuildPy(build_py):
         with open(os.path.join(dst_dir, "BUNDLED.txt"), "w") as dst:
             dst.write("\n".join(lines) + "\n")
 
+    def build_extensions(self) -> None:
+        if sys.platform.startswith("linux"):
+            self._harden_symbols()
+        if sys.platform != "win32":
+            if self._have_krb5(["krb5", "gssapi"]):
+                self.extensions[0].libraries.extend(["krb5", "gssapi"])
+                self.extensions[0].define_macros.append(("HAVE_KRB5", 1))
+            elif self._have_krb5(["krb5", "gssapi_krb5"]):
+                self.extensions[0].libraries.extend(["krb5", "gssapi_krb5"])
+                self.extensions[0].define_macros.append(("HAVE_KRB5", 1))
+            else:
+                print(
+                    "INFO: Kerberos headers and libraries are not found."
+                    " Additional GSSAPI capabilities won't be installed."
+                )
+        if self.bundled_deps:
+            self.extensions[0].define_macros.append(("BONSAI_BUNDLED", 1))
+        return super().build_extensions()
+
     def run(self) -> None:
         super().run()
-        if self.bundled_deps:
+        if self.bundled_deps and not self.inplace:
             self._copy_licenses(self.bundled_deps)
 
 
@@ -264,7 +262,7 @@ setup(
     author="noirello",
     author_email="noirello@gmail.com",
     ext_modules=[BONSAI_MODULE],
-    cmdclass={"build_ext": BuildExt, "build_py": BuildPy},
+    cmdclass={"build_ext": BuildExt},
     package_dir={"bonsai": "src/bonsai"},
     package_data={"bonsai": ["py.typed"]},
     packages=[
