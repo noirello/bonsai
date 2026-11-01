@@ -10,7 +10,7 @@ Linux wheel ships its own instead, so it does not depend on the system libraries
 import os
 from typing import Optional, Tuple
 
-from bonsai._bonsai import is_bundled
+from . import _bonsai
 
 
 # Where the common distributions keep their CA bundle. A bundled OpenSSL has a single
@@ -70,7 +70,7 @@ def find_ca_bundle() -> Tuple[Optional[str], Optional[str]]:
     :return: the path of a CA bundle file and of a CA directory.
     :rtype: tuple
     """
-    if not is_bundled():
+    if not _bonsai.is_bundled():
         return None, None
 
     if os.environ.get("SSL_CERT_FILE") or os.environ.get("SSL_CERT_DIR"):

@@ -8,27 +8,28 @@ import sys
 import pytest
 
 import bonsai
-from bonsai import _bundled
+from bonsai import _bonsai, _bundled
+from bonsai._bonsai import is_bundled
 
 pytestmark = pytest.mark.wheel_smoke
 
 bundled_only = pytest.mark.skipif(
-    not _bundled.is_bundled(),
+    not is_bundled(),
     reason="only applies to wheels that bundle their own libraries",
 )
 
 source_only = pytest.mark.skipif(
-    _bundled.is_bundled(),
+    is_bundled(),
     reason="only applies to builds that link against the system libraries",
 )
 
 
 @pytest.fixture
-def probe(monkeypatch, tmp_path):
+def probe(monkeypatch):
     """Drive find_ca_bundle() against a fake trust store, as if this were a wheel."""
 
     def configure(files=(), dirs=(), env=None):
-        monkeypatch.setattr(_bundled, "is_bundled", lambda: True)
+        monkeypatch.setattr(_bonsai, "is_bundled", lambda: True)
         monkeypatch.setattr(_bundled, "CA_BUNDLE_FILES", tuple(files))
         monkeypatch.setattr(_bundled, "CA_BUNDLE_DIRS", tuple(dirs))
         for name in ("SSL_CERT_FILE", "SSL_CERT_DIR"):
@@ -141,7 +142,7 @@ def test_probe_is_inert_unless_the_build_is_bundled(monkeypatch, tmp_path):
     """A source build must keep whatever the system OpenSSL already does."""
     bundle = tmp_path / "ca-bundle.crt"
     bundle.write_text("cert")
-    monkeypatch.setattr(_bundled, "is_bundled", lambda: False)
+    monkeypatch.setattr(_bonsai, "is_bundled", lambda: False)
     monkeypatch.setattr(_bundled, "CA_BUNDLE_FILES", (str(bundle),))
 
     assert _bundled.find_ca_bundle() == (None, None)
@@ -176,7 +177,7 @@ def test_explicit_ca_cert_overrides_the_probe(monkeypatch, tmp_path):
 
 def test_source_build_probe_is_inert():
     """A source build must not change the default CA paths."""
-    if _bundled.is_bundled():
+    if is_bundled():
         pytest.skip("this build bundles its own libraries")
     assert _bundled.find_ca_bundle() == (None, None)
     assert bonsai.LDAPClient().cert_policy == -1

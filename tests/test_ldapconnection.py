@@ -10,7 +10,7 @@ import pytest
 from conftest import get_config, network_delay
 
 import bonsai
-from bonsai import _bundled
+from bonsai._bonsai import is_bundled
 from bonsai import LDAPDN
 from bonsai import LDAPClient
 from bonsai import LDAPConnection
@@ -247,7 +247,7 @@ def test_bind_digest_with_authzid(binding, cfg):
 
 @pytest.mark.wheel_smoke
 @pytest.mark.skipif(
-    not _bundled.is_bundled(),
+    not is_bundled(),
     reason="the cipher set is only ours to assert on wheels that bundle Cyrus SASL",
 )
 @pytest.mark.parametrize("min_ssf", [1, 56, 112, 128])
