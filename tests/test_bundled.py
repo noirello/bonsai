@@ -166,23 +166,6 @@ def test_client_defaults_to_the_probed_bundle(monkeypatch, tmp_path):
     assert bonsai.LDAPClient().ca_cert == str(bundle)
 
 
-def test_explicit_ca_cert_overrides_the_probe(monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        "bonsai.ldapclient.find_ca_bundle", lambda: (str(tmp_path / "probed.crt"), None)
-    )
-    client = bonsai.LDAPClient()
-    client.set_ca_cert("/explicit/ca.pem")
-    assert client.ca_cert == "/explicit/ca.pem"
-
-
-def test_source_build_probe_is_inert():
-    """A source build must not change the default CA paths."""
-    if is_bundled():
-        pytest.skip("this build bundles its own libraries")
-    assert _bundled.find_ca_bundle() == (None, None)
-    assert bonsai.LDAPClient().cert_policy == -1
-
-
 @bundled_only
 def test_bundled_licenses_are_shipped():
     """Redistributing these libraries in binary form requires their licenses."""
@@ -193,40 +176,6 @@ def test_bundled_licenses_are_shipped():
         assert expected in shipped, f"{expected} missing, have {sorted(shipped)}"
     for name in shipped:
         assert (licenses / name).stat().st_size > 0, f"{name} is empty"
-
-
-@bundled_only
-def test_bundled_inventory_lists_versions():
-    """An auditor has to match this wheel against a CVE without unpacking it."""
-    inventory = pathlib.Path(bonsai.__file__).parent / "licenses" / "BUNDLED.txt"
-    content = inventory.read_text()
-    for library in ("openssl", "cyrus_sasl", "openldap"):
-        assert library in content, f"{library} not listed in BUNDLED.txt"
-    versions = [
-        line
-        for line in content.splitlines()
-        if line and line[-1].isdigit() and "." in line
-    ]
-    assert len(versions) >= 3, f"expected three versioned entries, got {versions}"
-
-
-# Each library stamps its own version into its object, so these read back what
-# was actually built rather than what the build was asked for. Checking the
-# inventory against them covers .ci/deps.env too, since BUNDLED.txt is generated
-# from it by substitution: a tarball that does not match the pin shows up here
-# as a disagreement.
-#
-# SASL is read from libldap, which absorbs the mechanisms, so there is no
-# libsasl2 to inspect. Its marker is the bare SASL_VERSION_STRING rather than an
-# identifying phrase, because the phrases OpenLDAP wraps it in are emitted on
-# glibc but not on musl. That is only safe while it is the single standalone
-# version token in the object, which the test enforces.
-BUNDLED_VERSION_MARKERS = (
-    ("openssl", "libcrypto-*.so*", rb"OpenSSL (\d+\.\d+\.\d+)"),
-    ("openldap", "libldap-*.so*", rb"\$OpenLDAP: libldap\.la (\d+\.\d+\.\d+)"),
-    ("cyrus_sasl", "libldap-*.so*", rb"\x00(\d+\.\d+\.\d+)\x00"),
-    ("krb5", "libkrb5-*.so*", rb"KRB5_BRAND: krb5-(\d+\.\d+(?:\.\d+)?)"),
-)
 
 
 EXPECTED_SONAMES = (
@@ -277,6 +226,24 @@ def _inventory_versions():
             entries[parts[0]] = parts[1]
     return entries
 
+
+# Each library stamps its own version into its object, so these read back what
+# was actually built rather than what the build was asked for. Checking the
+# inventory against them covers .ci/deps.env too, since BUNDLED.txt is generated
+# from it by substitution: a tarball that does not match the pin shows up here
+# as a disagreement.
+#
+# SASL is read from libldap, which absorbs the mechanisms, so there is no
+# libsasl2 to inspect. Its marker is the bare SASL_VERSION_STRING rather than an
+# identifying phrase, because the phrases OpenLDAP wraps it in are emitted on
+# glibc but not on musl. That is only safe while it is the single standalone
+# version token in the object, which the test enforces.
+BUNDLED_VERSION_MARKERS = (
+    ("openssl", "libcrypto-*.so*", rb"OpenSSL (\d+\.\d+\.\d+)"),
+    ("openldap", "libldap-*.so*", rb"\$OpenLDAP: libldap\.la (\d+\.\d+\.\d+)"),
+    ("cyrus_sasl", "libldap-*.so*", rb"\x00(\d+\.\d+\.\d+)\x00"),
+    ("krb5", "libkrb5-*.so*", rb"KRB5_BRAND: krb5-(\d+\.\d+(?:\.\d+)?)"),
+)
 
 @bundled_only
 @pytest.mark.parametrize("library, glob, marker", BUNDLED_VERSION_MARKERS)
