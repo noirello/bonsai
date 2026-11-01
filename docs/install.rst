@@ -1,4 +1,4 @@
-Installing 
+Installing
 ==========
 
 Using pip
@@ -88,11 +88,11 @@ from sources you will need:
 - A C compiler (The module is tested with gcc).
 
 - The Python 3 header files. They are usually installed in a package such as
-  **python3-dev**. 
+  **python3-dev**.
 
 - The libldap header files. They are usually installed in a package such as
   **libldap2-dev**.
-  
+
 - The libsasl header files. They are usually installed in a package such as
   **libsasl2-dev**.
 
@@ -103,31 +103,31 @@ from sources you will need:
 
 .. _github site: https://github.com/noirello/bonsai
 
-Once you downloaded and unpackaged the Bonsai source files, you can run the
+Once you downloaded and unpacked the Bonsai source files, you can run the
 following command to compile and install the package::
-    
+
     $ python3 setup.py build
     $ sudo python3 setup.py install
-    
+
 Install from source on Windows
 ------------------------------
 
 Bonsai uses WinLDAP on Microsoft Windows. To install it from sources you will
-need a C compiler and the Bonsai source files. After you downloaded and 
-unpackaged the sources, you can run::
-    
+need a C compiler and the Bonsai source files. After you downloaded and
+unpacked the sources, you can run::
+
     $ python setup.py build
     $ python setup.py install
 
-.. note::  
+.. note::
    Compiling the package with MinGW is no longer recommended.
 
 Install from source on macOS
 ----------------------------
 
-Because macOS is shipped with an older version of libldap which lacks of
-several features that Bonsai relies on, a newer library needs to be installed
-before compiling the module.
+Because macOS is shipped with an older version of libldap which lacks several
+features that Bonsai relies on, a newer library needs to be installed before
+compiling the module.
 
 Install `openldap` homebrew-core formula::
 
@@ -152,7 +152,7 @@ Or with Apple Silicon:
 
 
 and then you can follow the standard build commands::
-    
+
     $ python setup.py build
     $ python setup.py install
 

@@ -21,20 +21,20 @@ If we want to use a secure connection over SSL/TLS we can change the URL to `lda
     >>> client = LDAPClient("ldaps://example.org")
 
 Or set the `tls` parameter to True for the LDAPClient:
-       
+
     >>> client = LDAPClient("ldap://example.org", True)
     >>> conn = client.connect()
 
 .. note::
     Use either the `ldaps://` scheme or the tls parameter set to True for secure connection,
-    but it's ill-advise to use both. If both present the client will set the tls attribute
+    but it's ill-advised to use both. If both present the client will set the tls attribute
     to False to avoid connection error.
 
 .. note::
     When you encounter "unknown error code"-errors thrown by the exception
     :class:`ConnectionError` when setting up SSL/TLS-connections with OpenLDAP, use the
     bonsai-Debug-function :func:`bonsai.set_debug`. Set the first parameter to True and the
-    second to -1. Then you will see the calls (and probably errormessages) of the underlying
+    second to -1. Then you will see the calls (and probably error messages) of the underlying
     OpenLDAP-Library in the output.
 
 If we want to use a filesocket connection point the URL to `ldapi://`:
@@ -43,8 +43,8 @@ If we want to use a filesocket connection point the URL to `ldapi://`:
 
 (Please note that in this case the file location has to be URL-encoded.)
 
-Now, we have an anonym bind to the server, so LDAP whoami operation - which helps to get the
-identity about the authenticated user - will return with the following:
+Now, we have an anonymous bind to the server, so LDAP whoami operation - which helps to get
+the identity about the authenticated user - will return with the following:
 
     >>> conn.whoami()
     'anonymous'
@@ -56,7 +56,7 @@ To connect with a certain user to the server we have to set credentials before c
     >>> conn = client.connect()
     >>> conn.whoami()
     'cn=test,dc=bonsai,dc=test'
-    
+
 Searching
 =========
 
@@ -80,17 +80,17 @@ The result will be a list of LDAPEntry objects or an empty list, if no object is
     [{'dn': <LDAPDN cn=chuck,ou=nerdherd,dc=bonsai,dc=test>, 'sn': ['Bartowski'],
     'cn': ['chuck'], 'givenName': ['Chuck'], 'objectClass': ['inetOrgPerson',
     'organizationalPerson', 'person', 'top']}, {'dn': <LDAPDN cn=lester,ou=nerdherd,dc=bonsai,dc=test>,
-    'sn': ['Patel'], cn': ['lester'], 'givenName': ['Laster'],  'objectClass': ['inetOrgPerson',
+    'sn': ['Patel'], 'cn': ['lester'], 'givenName': ['Laster'],  'objectClass': ['inetOrgPerson',
     'organizationalPerson', 'person', 'top']}, {'dn': <LDAPDN cn=jeff,ou=nerdherd,dc=bonsai,dc=test>,
     'sn': ['Barnes'], 'cn': ['jeff'], 'givenName': ['Jeff'], 'objectClass': ['inetOrgPerson',
     'organizationalPerson', 'person', 'top']}]
     >>> conn.search("ou=nerdherd,dc=bonsai,dc=test", 0, "(objectclass=*)")
     [{'dn': <LDAPDN ou=nerdherd,dc=bonsai,dc=test>, 'objectClass': ['organizationalUnit', 'top'],
     'ou': ['nerdherd']}]
-    
+
 The other possible parameters are listed on the API page of :meth:`LDAPConnection.search`.
 
-.. note:: 
+.. note::
           As you can see every key - or LDAP attribute - in the entry has a list for clarity, even
           if only one value belongs to the attribute. As most of the attributes could have more
           than one value, it would be confusing, if some of the keys had string value and the
@@ -117,7 +117,7 @@ then call :meth:`LDAPConnection.add` to add to the server:
 
     >>> conn.add(anna)
     True
-    
+
 It's important, that we must set the schemas and every other attribute, that the schemas require.
 If we miss a required attribute, the server will not finish the operation and return with an
 :class:`bonsai.ObjectClassViolation` error.
@@ -128,12 +128,12 @@ already existing ones like we usually do with a Python dict, the only difference
 call :meth:`LDAPEntry.modify` method at the end to save our modifications on the server side.
 
     >>> anna['givenName'] = "Anna" # Set new givenName attribute.
-    >>> anna['cn'].append('wu') # Add new common name attribute without remove the already set ones.
+    >>> anna['cn'].append('wu') # Add new common name attribute without removing the already set ones.
     >>> del anna['mail'] # Remove all values of the mail attribute.
     >>> anna.modify()
     True
 
-In certain cases, an LDAP entry can have write-only attribute (e.g. password) that cannot be
+In certain cases, an LDAP entry can have write-only attributes (e.g. password) that cannot be
 represented in an LDAPEntry or we just want to change the value of an attribute without reading
 it first. The :meth:`LDAPEntry.change_attribute` method expects an attribute name, the type
 of the modification (as an integer or an :class:`LDAPModOp` enum) and the values as parameters

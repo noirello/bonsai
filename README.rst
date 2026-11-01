@@ -41,9 +41,9 @@ Features
 -  Uses LDAP libraries (OpenLDAP and WinLDAP) written in C for faster
    processing.
 -  Simple pythonic design.
--  Implements an own dictionary-like object for mapping LDAP entries
+-  Implements its own dictionary-like object for mapping LDAP entries
    that makes easier to add and modify them.
--  Works with various asynchronous library (like asyncio, gevent).
+-  Works with various asynchronous libraries (like asyncio, gevent).
 
 Requirements for building
 -------------------------

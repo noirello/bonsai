@@ -14,7 +14,7 @@ bonsai
 .. automethod:: LDAPClient.get_rootDSE()
 
     An example of getting the root DSE:
-    
+
     >>> client = bonsai.LDAPClient()
     >>> client.get_rootDSE()
     {'namingContexts': ['dc=bonsai,dc=test'], 'supportedControl': ['2.16.840.1.113730.3.4.18',
@@ -256,7 +256,7 @@ bonsai
     list that helps to the server to position the target entry.
 
     The result of the operation is a tuple of a list and a dictionary. The dictionary contains
-    the VLV server response: the target position and the real list size. Thi list contains the
+    the VLV server response: the target position and the real list size. The list contains the
     searched entries.
 
     For further details using these controls please see :ref:`ldap-controls`.
@@ -286,7 +286,7 @@ bonsai
 .. automethod:: LDAPConnection.whoami(timeout=None)
 .. seealso::
     RFC about the LDAP Who am I extended operation `RFC4532`_.
-    
+
 .. _RFC4532: https://tools.ietf.org/html/rfc4532
 
 .. attribute:: LDAPConnection.closed
@@ -301,9 +301,9 @@ bonsai
 ---------------
 
 Class for representing LDAP distinguished names.
- 
-.. seealso:: 
-    
+
+.. seealso::
+
     RFC about **LDAP: String Representation of Distinguished Names** `RFC4514`_.
 
 .. _RFC4514: https://tools.ietf.org/html/rfc4514
@@ -375,7 +375,7 @@ Example for working with LDAPDN objects.
 .. attribute:: LDAPEntry.dn
 
     The distinguished name of the entry.
-    
+
     >>> from bonsai import LDAPEntry
     >>> anna = LDAPEntry('cn=anna,ou=nerdherd,dc=bonsai,dc=test')
     >>> anna.dn
@@ -416,17 +416,17 @@ Example for working with LDAPDN objects.
 
 :class:`LDAPURL`
 ----------------
-.. seealso:: 
-    
+.. seealso::
+
     RFC about **LDAP: Uniform Resource Locator** `RFC4516`_.
 
 .. _RFC4516: http://tools.ietf.org/html/rfc4516
 
 .. autoclass:: LDAPURL(str)
 
-    An example of a valid LDAP URL with port number, base DN, list of 
+    An example of a valid LDAP URL with port number, base DN, list of
     attributes and search filter:
-    
+
     >>> from bonsai import LDAPURL
     >>> url = LDAPURL("ldap://localhost:789/ou=nerdherd,dc=bonsai,dc=test?cn,sn,gn?sub?(cn=c*)")
     >>> url
@@ -485,7 +485,7 @@ bonsai.active_directory
 .. autoclass:: ACE(ace_type, flags, mask, trustee_sid, object_type, inherited_object_type, application_data)
 
 .. note::
-     For more details, see offical Microsoft docs about `ACE`_.
+     For more details, see official Microsoft docs about `ACE`_.
 
 .. automethod:: ACE.from_binary(data)
 .. automethod:: ACE.to_binary()
@@ -537,7 +537,7 @@ bonsai.active_directory
 .. autoclass:: ACL(revision, aces)
 
 .. note::
-     For more details, see offical Microsoft docs about `ACL`_.
+     For more details, see official Microsoft docs about `ACL`_.
 
 .. automethod:: ACL.from_binary(data)
 .. automethod:: ACL.to_binary()
@@ -560,7 +560,7 @@ bonsai.active_directory
 .. autoclass:: SecurityDescriptor(control, owner_sid, group_sid, sacl, dacl, revision = 1, sbz1 = 0)
 
 .. note::
-    For more details, see offical Microsoft docs about `SECURITY_DESCRIPTOR`_.
+    For more details, see official Microsoft docs about `SECURITY_DESCRIPTOR`_.
 
 .. automethod:: SecurityDescriptor.from_binary(data)
 .. automethod:: SecurityDescriptor.to_binary()
@@ -583,7 +583,7 @@ bonsai.active_directory
 .. autoclass:: SID(str_rep = None, bytes_le = None)
 
 .. note::
-    For more details, see offical Microsoft docs about `SID`_.
+    For more details, see official Microsoft docs about `SID`_.
 
 .. automethod:: SID.__eq__(other)
 .. automethod:: SID.__repr__()
@@ -602,7 +602,7 @@ bonsai.active_directory
 .. autoclass:: UserAccountControl(flags)
 
 .. note::
-    For more details, see offical Microsoft docs about `UserAccountControl`_.
+    For more details, see official Microsoft docs about `UserAccountControl`_.
 
 .. autoattribute:: UserAccountControl.properties
 .. autoattribute:: UserAccountControl.value
@@ -712,8 +712,8 @@ bonsai.pool
    >>> pool = ConnectionPool(client, 1, 2)
    >>> pool.open()
    >>> conn = pool.get()
-   >>> conn.whomai()
-   'anonymus'
+   >>> conn.whoami()
+   'anonymous'
    >>> pool.put(conn)
    >>> pool.close()
 
@@ -838,7 +838,7 @@ Utility functions
 
     The possible return values are: `GnuTLS`, `OpenSSL`, `MozNSS` and `SChannel`.
 
-    :return: A identification of TLS implementation.
+    :return: An identification of TLS implementation.
     :rtype: str
 
 .. function:: bonsai.get_vendor_info

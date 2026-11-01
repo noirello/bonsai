@@ -86,7 +86,7 @@ acquired by the client with the help of the command-line `kinit` tool::
 
 The acquired TGT can be listed with `klist`::
 
-    [noirello@bonsai.test ~]$ klist 
+    [noirello@bonsai.test ~]$ klist
     Ticket cache: FILE:/tmp/krb5cc_1000
     Default principal: admin@BONSAI.TEST
 
@@ -94,7 +94,7 @@ The acquired TGT can be listed with `klist`::
     22/02/16 22:06:14  23/02/16 08:06:14  krbtgt/BONSAI.TEST@BONSAI.TEST
         renew until 23/02/16 22:06:12
 
-After successfully acquire a TGT, the module can used it for authenticating:
+After successfully acquiring a TGT, the module can use it for authenticating:
 
     >>> import bonsai
     >>> client = bonsai.LDAPClient("ldap://bonsai.test")
@@ -102,7 +102,7 @@ After successfully acquire a TGT, the module can used it for authenticating:
     >>> client.connect().whoami()
     'dn:cn=admin,dc=bonsai,dc=test'
 
-In normal case the passed credentials with the exception of the authorization ID are irrelevant 
+In normal case the passed credentials with the exception of the authorization ID are irrelevant
 -- at least on a Unix system, the underlying SASL library figures it out on its own. The
 module's client can only interfere with the authorization ID:
 
@@ -111,7 +111,7 @@ module's client can only interfere with the authorization ID:
     'dn:cn=chuck,ou=nerdherd,dc=bonsai,dc=test'
 
 But on a Windows system (by default) or if Bonsai is built with the optional Kerberos headers, then
-it is possible to requesting a TGT with the module's client if username, password and realm name
+it is possible to request a TGT with the module's client if username, password and realm name
 are all provided:
 
     >>> client = bonsai.LDAPClient("ldap://bonsai.test")
@@ -120,7 +120,7 @@ are all provided:
     'dn:cn=admin,dc=bonsai,dc=test'
 
 It is also possible to use Kerberos keytabs when the module is built with Kerberos support:
-    
+
     >>> client.set_credentials("GSSAPI", user="chuck", realm="BONSAI.TEST", keytab="./user.keytab")
     >>> client.connect().whoami()
     'dn:cn=chuck,ou=nerdherd,dc=bonsai,dc=test'
@@ -130,13 +130,13 @@ Please note that the Kerberos realm names are typically uppercase with few excep
 .. note::
     Automatic TGT requesting only accessible on Unix systems if the optional Kerberos headers are
     provided during the module's build.
-  
+
 EXTERNAL
 ^^^^^^^^
 
 With EXTERNAL mechanism TLS certifications are used to authenticate the user. In certain cases (e.g
 the remote server is an OpenLDAP directory) the EXTERNAL option is presented as an available SASL
-mechanism only when the client have built up a TLS connection with the server and already set a
+mechanism only when the client has built up a TLS connection with the server and already set a
 client cert.
 
     >>> client = bonsai.LDAPClient("ldap://bonsai.test", tls=True)
@@ -145,7 +145,7 @@ client cert.
     >>> client.set_client_cert("BonsaiTestUser")
     >>> client.set_client_key("./key.txt")
     >>> client.get_rootDSE()['supportedSASLMechanisms']
-    ['GSS-SPNEGO', 'GSSAPI', 'DIGEST-MD5', 'EXTERNAL', 'NTLM']   
+    ['GSS-SPNEGO', 'GSSAPI', 'DIGEST-MD5', 'EXTERNAL', 'NTLM']
     >>> client.set_credentials("EXTERNAL")
     >>> client.connect()
     <bonsai.ldapconnection.LDAPConnection object at 0x7f006ad3d888>
@@ -158,7 +158,7 @@ For EXTERNAL mechanism only the authorization ID is used in as credential inform
     'dn:cn=chuck,ou=nerdherd,dc=bonsai,dc=test'
 
 
-The proper way of setting the certifications is depend on the TLS implementation that the LDAP
+The proper way of setting the certificates depends on the TLS implementation that the LDAP
 library uses. Please for more information see :ref:`tls-settings`.
 
 .. _tls-settings:
@@ -171,7 +171,7 @@ There are two practices to use secure connection:
 * Either use the `ldaps://` scheme in the LDAP URL, then the client will use
   the LDAP over SSL protocol (similar to HTTPS).
 * Or set the tls parameter of the :class:`LDAPClient` to True, which will
-  instruct the client to preform a `StartTLS` operation after connected to the
+  instruct the client to perform a `StartTLS` operation after connected to the
   LDAP server.
 
 Both practices rely on well-set credentials with the TLS related methods --
@@ -206,7 +206,7 @@ text format.
 
 Unfortunately, none of the listed TLS modules are effective on Microsoft Windows. The WinLDAP
 library automatically searches for the corresponding certificates in the cert store. All of the
-necessary certificates have to be loaded manually before the client tries to use them. 
+necessary certificates have to be loaded manually before the client tries to use them.
 
 .. _ldap-controls:
 
@@ -215,7 +215,7 @@ LDAP controls
 
 Several LDAP controls can be used to extend and improve the basic LDAP operations. Bonsai is
 supporting the following controls. Always check (the root DSE's `supportedControls`) that the
-server also supports the selected control.  
+server also supports the selected control.
 
 Server side sort
 ----------------
@@ -242,14 +242,14 @@ Paged search result
 Paged search can be used to reduce large search result into smaller pages. Page result can be used
 with the :meth:`LDAPConnection.paged_search` method and the size of the page can be set with the
 `page_size` parameter:
-    
+
     >>> conn = client.connect()
     >>> conn.paged_search("ou=nerdherd,dc=bonsai,dc=test", 2, page_size=3)
     <_bonsai.ldapsearchiter object at 0x7f006ad455d0>
 
 Please note that the return value of :meth:`LDAPConnection.paged_search` is an :class:`ldapsearchiter`.
 This object can be iterated over the entries of the page. By default the next page of results is
-acquired automatically during the iteration. This behaviour can be changed by setting the 
+acquired automatically during the iteration. This behaviour can be changed by setting the
 :attr:`LDAPClient.auto_page_acquire` to `False` and using the :meth:`ldapsearchiter.acquire_next_page`
 method which explicitly initiates a new search request to get the next page.
 
@@ -264,7 +264,7 @@ Virtual list view
 -----------------
 
 Virtual list view (VLV) is also for reducing large search result, but with a more specific manner.
-Virtual list view mimics the scrolling view of an application: it can select a target entry of a 
+Virtual list view mimics the scrolling view of an application: it can select a target entry of a
 large list (ordered search result) with an offset or an attribute value and receiving only a
 given number of entries before and after it as a partial result of the entire search.
 
@@ -274,7 +274,7 @@ the target.
 
 Also need to set the `est_list_count` parameter: the estimated size of the entire list by the
 client. The server will adjust the position of the target entry based on the real list size,
-estimated size and the offset.  
+estimated size and the offset.
 
 Virtual list view control cannot be used without a server side sort control thus a sort order
 always has to be set.
@@ -296,7 +296,7 @@ Password policy
 
 Password policy defines a set of rules about accounts and modification of passwords. It allows
 for the system administrator to set expiration time for passwords and a maximal number of failed
-login attempts before the account become locked. Is also specifies rules about the quality of
+login attempts before the account becomes locked. Is also specifies rules about the quality of
 password.
 
 Enabling the password policy control with :meth:`LDAPClient.set_password_policy` method, the client
@@ -324,7 +324,7 @@ policies (like anonymous or administrator user) the second item in the tuple wil
     the `supportedControls` even if it is available.
 
 .. note::
-    Password policy control cannot be used on MS Windows with WinLDAP. In this case after 
+    Password policy control cannot be used on MS Windows with WinLDAP. In this case after
     opening a connection the control dictionary will always be `None`.
 
 Extended DN
@@ -356,8 +356,8 @@ Server tree delete
 ------------------
 
 Server tree delete control allows the client to remove entire subtree with a single request if
-the user has appropriate permissions to remove every corresponding entry. Setting the `recursive` 
-parameter of :meth:`LDAPConnection.delete` and :meth:`LDAPEntry.delete` to `True` will send 
+the user has appropriate permissions to remove every corresponding entry. Setting the `recursive`
+parameter of :meth:`LDAPConnection.delete` and :meth:`LDAPEntry.delete` to `True` will send
 the control with the delete request automatically, no further settings are required.
 
 .. note::
@@ -391,7 +391,7 @@ to retrieve. The flag can be the combination of the following:
 
 * 0x1 - Get the owner identifier of the object.
 * 0x2 - Get the primary group identifier.
-* 0x4 . Get the discretionary access control list (DACL) of the object.
+* 0x4 - Get the discretionary access control list (DACL) of the object.
 * 0x8 - Get the system access control list (SACL) of the object.
 
 Use :meth:`LDAPClient.set_sd_flags` method to set the value of the flag.
@@ -495,7 +495,7 @@ then the reader object can be used as an iterator to get the entries from the LD
 
 Writing LDIF files is similar. The :class:`LDIFWriter` needs an open file-object in write-mode,
 and the :meth:`LDIFWriter.write_entry` expects an :class:`LDAPEntry` object whose attributes will be
-serialised. It also possible to serialise the changes of an entry with :meth:`LDIFWriter.write_changes`.
+serialised. It's also possible to serialise the changes of an entry with :meth:`LDIFWriter.write_changes`.
 
 .. code-block:: python3
 
