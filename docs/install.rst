@@ -161,4 +161,13 @@ and then you can follow the standard build commands::
    Kerberos headers and libraries) by separating the paths with `:` in the
    `setup.cfg` file.
 
+.. note::
+   When using uv (https://docs.astral.sh/uv/) as packaging- and
+   dependency-tool, you have to define the separate libraries for
+   MAC-OS-Installation from above in a pyproject.toml-section:
+   .. code-block:: ini
+    [tool.uv]
+    extra-build-variables = { bonsai = { CFLAGS="-I/opt/homebrew/opt/openldap/include -L/opt/homebrew/opt/openldap/lib" } }
+
+
 After installing Bonsai, you can learn the basic usage in the :doc:`tutorial`.
