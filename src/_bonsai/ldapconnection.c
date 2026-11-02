@@ -132,6 +132,7 @@ LDAPConnection_IsClosed(LDAPConnection *self) {
     if (self->closed) {
         /* The connection is closed. */
         PyObject *ldaperror = get_error_by_code(-101);
+        if (ldaperror == NULL) return -1;
         PyErr_SetString(ldaperror, "The connection is closed.");
         Py_DECREF(ldaperror);
         return -1;
@@ -1147,6 +1148,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
     obj = get_from_pending_ops(self->pending_ops, msgid);
     if (obj == NULL) {
         PyObject *ldaperror = get_error_by_code(-100);
+        if (ldaperror == NULL) return NULL;
         PyErr_SetString(ldaperror, "Given message ID is invalid or the"
             " associated operation is already finished.");
         Py_DECREF(ldaperror);
