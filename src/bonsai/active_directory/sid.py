@@ -100,7 +100,7 @@ class SID:
     @property
     def identifier_authority(self) -> int:
         """
-        The indentifier that indicates the authority under which
+        The identifier that indicates the authority under which
         the SID was created.
         """
         return self.__identifier_authority

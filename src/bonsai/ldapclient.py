@@ -198,7 +198,7 @@ class LDAPClient:
         .. note::
            This method has no effect on MS Windows, because WinLDAP \
            searches for the corresponding client certificate based on \
-           the servert's CA cert in the cert store. This means that the \
+           the server's CA cert in the cert store. This means that the \
            necessary certificates have to be installed manually in to \
            the cert store.
 
@@ -218,7 +218,7 @@ class LDAPClient:
         .. note::
            This method has no effect on MS Windows, because WinLDAP \
            searches for the corresponding client certificate based on \
-           the servert's CA cert in the cert store. This means that the \
+           the server's CA cert in the cert store. This means that the \
            necessary certificates have to be installed manually in to \
            the cert store.
 
@@ -259,7 +259,7 @@ class LDAPClient:
 
         By enabling the password policy control the server can send \
         additional error messages related to the user's account and \
-        password during conneting to the server and changing entries.
+        password during connecting to the server and changing entries.
 
         :param bool ppolicy: enabling/disabling password policy control.
         :raises TypeError: If the parameter is not a bool type.
@@ -272,7 +272,7 @@ class LDAPClient:
         """
         Set the format of extended distinguished name for \
         LDAP_SERVER_EXTENDED_DN_OID control which extends the entries'
-        distingushed name with GUID and SID attributes. If the server
+        distinguished name with GUID and SID attributes. If the server
         supports the control, the LDAPEntry objects' `extended_dn` attribute
         will be set (as a string) and the `dn` attribute will be kept in
         the simple format.
@@ -295,7 +295,7 @@ class LDAPClient:
 
     def set_sd_flags(self, flags: Optional[int]) -> None:
         """
-        Set the flags for retreiving specific portion of the Windows
+        Set the flags for retrieving specific portion of the Windows
         security descriptor.
 
         :param int|None flags: the flags for the security descriptor.
@@ -397,10 +397,10 @@ class LDAPClient:
         .. note::
            This method has no effect on MS Windows.
 
-        :param bool no_anonymous: Flag for forbiding anonymous logins.
-        :param bool no_dict: Flag for making the mechanism not susceptable \
+        :param bool no_anonymous: Flag for forbidding anonymous logins.
+        :param bool no_dict: Flag for making the mechanism not susceptible \
         to passive dictionary attack.
-        :param bool no_plain: Flag for making mechanism not susceptable to \
+        :param bool no_plain: Flag for making mechanism not susceptible to \
         simple passive (eavesdropping) attack.
         :param bool forward_sec: Flag for setting forward secrecy between \
         sessions.

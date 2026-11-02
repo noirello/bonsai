@@ -8,7 +8,7 @@ from .ldapdn import LDAPDN
 
 class LDAPURL:
     """
-    LDAP URL object for handling LDAP connection informations, such as
+    LDAP URL object for handling LDAP connection information, such as
     hostname, port, LDAP bind DN, search attributes, scope (base,sub or
     one) filter, and extensions. If `strurl` is None, then the default
     url is `ldap://localhost:389`.

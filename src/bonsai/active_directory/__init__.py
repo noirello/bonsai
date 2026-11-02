@@ -175,7 +175,7 @@ class SecurityDescriptor:
         if isinstance(control, int):
             ctrl = self.__convert_ctrl(control)
             if control != self.__convert_ctrl(ctrl, to_int=True):
-                raise ValueError(f"{control} is not a valid controll flag.")
+                raise ValueError(f"{control} is not a valid control flag.")
             self.__control = ctrl
         elif isinstance(control, dict) and all(
             isinstance(val, bool) for val in control.values()

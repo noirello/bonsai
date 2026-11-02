@@ -261,7 +261,7 @@ class ACE:
     def __eq__(self, other: object) -> bool:
         """
         Check that ACE object equals to the other object. If the `other`
-        is also an ACE object, then basically comapre their byte
+        is also an ACE object, then basically compare their byte
         representations.
 
         :param object other: the other object to compare.

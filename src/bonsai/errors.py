@@ -102,8 +102,8 @@ class AlreadyExists(LDAPError):
 
 
 class InvalidMessageID(LDAPError):
-    """Raised, when try to get the result with a message ID that belongs to an
-    unpending or already finished operation."""
+    """Raised, when try to get the result with a message ID that belongs to a
+    non-pending or already finished operation."""
 
     code = -100
 

@@ -10,7 +10,7 @@ from ..errors import LDAPError, NotAllowedOnNonleaf
 
 class TornadoLDAPConnection(BaseLDAPConnection):
     """
-    Asynchronous LDAP connection object that works with Torando.
+    Asynchronous LDAP connection object that works with Tornado.
     It has the same methods and properties as :class:`bonsai.LDAPConnection`.
 
     :param LDAPClient client: a client object.
