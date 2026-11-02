@@ -493,6 +493,7 @@ create_init_thread_data(PyObject *client, SOCKET sock) {
         return NULL;
     }
     data->url = NULL;
+    data->sasl_sec_props = NULL;
 
     /* Get URL policy from LDAPClient. */
     url = PyObject_GetAttrString(client, "url");
@@ -508,7 +509,7 @@ create_init_thread_data(PyObject *client, SOCKET sock) {
 
     /* Set cert policy from LDAPClient. */
     tmp = PyObject_GetAttrString(client, "cert_policy");
-    if (tmp == NULL) return NULL;
+    if (tmp == NULL) goto error;
     data->cert_policy = (int)PyLong_AsLong(tmp);
     Py_DECREF(tmp);
 
@@ -533,8 +534,12 @@ create_init_thread_data(PyObject *client, SOCKET sock) {
     data->retval = 0;
     return data;
 error:
-    free(data->url);
-    free(data->sasl_sec_props);
+    if (data->url != NULL) {
+        free(data->url);
+    }
+    if (data->sasl_sec_props != NULL) {
+        free(data->sasl_sec_props);
+    }
     free(data);
     PyErr_BadInternalCall();
     return NULL;
