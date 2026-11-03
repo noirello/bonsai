@@ -261,6 +261,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
         if (attrobj == NULL) goto error;
         values = ldap_get_values_len(conn->ld, entrymsg, attr);
         ldap_memfree(attr);
+        attr = NULL;
 
         lvl = PyObject_CallFunctionObjArgs(LDAPValueListObj, NULL);
         if (lvl == NULL) goto error;
@@ -277,6 +278,8 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
                 /* If the attribute has more value, then append to the list. */
                 if (PyList_Append(lvl, val) != 0) {
                     Py_DECREF(lvl);
+                    Py_DECREF(val);
+                    ldap_value_free_len(values);
                     goto error;
                 }
                 Py_DECREF(val);
@@ -301,7 +304,9 @@ error:
     Py_XDECREF(attrobj);
     Py_DECREF(self);
     Py_DECREF(rawval_list);
-    ldap_memfree(attr);
+    if (attr != NULL) {
+        ldap_memfree(attr);
+    }
     if (ber != NULL) {
         ber_free(ber, 0);
     }
