@@ -236,7 +236,10 @@ binding(LDAPConnectIter *self) {
             ppres = create_ppolicy_control(self->conn->ld, returned_ctrls,
                     &ctrl_obj, &pperr);
             if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
-            if (ppres == -1) return NULL;
+            if (ppres == -1) {
+                ldap_msgfree(res);
+                return NULL;
+            }
 
             if (err != LDAP_SASL_BIND_IN_PROGRESS && err != LDAP_SUCCESS) {
                 /* Connection is failed. */
@@ -361,7 +364,6 @@ check_tls_result(LDAP *ld, int msgid, int timeout, char async, SOCKET csock) {
     int err = 0;
     char *errstr = NULL;
     LDAPMessage *res;
-    LDAPControl **ctrls = NULL;
     struct timeval polltime;
     PyObject *ldaperror = NULL, *errmsg = NULL;
 
@@ -404,11 +406,14 @@ check_tls_result(LDAP *ld, int msgid, int timeout, char async, SOCKET csock) {
         }
         return 0;
     case LDAP_RES_EXTENDED:
-        rc = ldap_parse_result(ld, res, &err, NULL, &errstr, NULL, &ctrls, 0);
+        rc = ldap_parse_result(ld, res, &err, NULL, &errstr, NULL, NULL, 0);
         if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
             ldaperror = get_error_by_code(err);
             if (ldaperror == NULL) return -1;
-            if (errstr != NULL) errmsg = PyUnicode_FromFormat("%s.", errstr);
+            if (errstr != NULL) {
+                errmsg = PyUnicode_FromFormat("%s.", errstr);
+                ldap_memfree(errstr);
+            }
             if (errmsg != NULL) {
                 PyErr_SetObject(ldaperror, errmsg);
                 Py_DECREF(errmsg);
