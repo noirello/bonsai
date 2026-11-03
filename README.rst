@@ -101,7 +101,7 @@ The changelog is available `here`_ and included in the documentation as well.
 Contribution
 ------------
 
-Any contributions and advices are welcome. Please report any issues at
+Any contributions and advice are welcome. Please report any issues at
 the `GitHub page`_.
 
 .. _online: http://bonsai.readthedocs.org/en/latest/

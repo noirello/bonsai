@@ -856,6 +856,7 @@ create_reference_object(LDAPConnection *self, char **referrals) {
 
     /* Create a new LDAPReference. */
     tmp = PyObject_CallObject(ldapreference_type, args);
+    Py_DECREF(args);
 end:
     Py_DECREF(ldapreference_type);
     Py_DECREF(list);
@@ -937,6 +938,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, PyObject *obj) {
     }
 
     if (err == LDAP_NO_SUCH_OBJECT && search_iter == NULL) {
+        if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
         /* Shortcut for normal search to return empty list. */
         return buffer;
     }
@@ -1071,19 +1073,23 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, PyObject *oid) {
         } else {
             ldaperror = get_error_by_code(err);
             if (ldaperror == NULL) return NULL;
-            if (errstr != NULL) errmsg = PyUnicode_FromFormat("%s.", errstr);
+            if (errstr != NULL) {
+                errmsg = PyUnicode_FromFormat("%s.", errstr);
+                ldap_memfree(errstr);
+            }
             if (errmsg != NULL) {
                 PyErr_SetObject(ldaperror, errmsg);
                 Py_DECREF(errmsg);
             } else PyErr_SetString(ldaperror, "");
             Py_DECREF(ldaperror);
         }
-
+        Py_XDECREF(ctrl_obj);
         return NULL;
     }
 
     rc = ldap_parse_extended_result(self->ld, res, &retoid, &data, 1);
     ldap_memfree(retoid);
+    Py_XDECREF(ctrl_obj);
 
     if (rc != LDAP_SUCCESS) {
         set_exception(self->ld, rc);
