@@ -670,6 +670,7 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
             search_iter->vlv_info->ldvlv_context = NULL;
             search_iter->vlv_info->ldvlv_version = 1;
             search_iter->vlv_info->ldvlv_count = list_count;
+            search_iter->vlv_info->ldvlv_attrvalue = NULL;
 
             if (attrvalue_obj != NULL) {
                 attrvalue = (struct berval *)malloc(sizeof(struct berval));
@@ -1214,8 +1215,8 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             if (rc != LDAP_SUCCESS) {
                 set_exception(self->ld, rc);
             }
-            
-            if (obj != Py_None && !PyUnicode_Check(obj)) {
+
+            if (PyObject_TypeCheck(obj, &LDAPModListType)) {
                 mods = (LDAPModList *)obj;
                 /* LDAP add or modify operation is failed,
                    then rollback the changes. */
@@ -1282,11 +1283,13 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         }
 
         if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
-            mods = (LDAPModList *)obj;
-            /* LDAP add or modify operation is failed,
-               then rollback the changes. */
-            if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0) {
-                return NULL;
+            if (PyObject_TypeCheck(obj, &LDAPModListType)) {
+                mods = (LDAPModList *)obj;
+                /* LDAP add or modify operation is failed,
+                   then rollback the changes. */
+                if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0) {
+                    return NULL;
+                }
             }
             /* Set Python error. */
             if (ppres == 1 && pperr != 65535) set_ppolicy_err(pperr, ctrl_obj);
