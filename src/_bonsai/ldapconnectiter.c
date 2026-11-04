@@ -142,7 +142,7 @@ binding(LDAPConnectIter *self) {
     unsigned int pperr = 0;
     struct timeval polltime;
     LDAPControl **returned_ctrls = NULL;
-    LDAPMessage *res;
+    LDAPMessage *res = NULL;
     PyObject *ctrl_obj = NULL;
     PyObject *value = NULL;
 
