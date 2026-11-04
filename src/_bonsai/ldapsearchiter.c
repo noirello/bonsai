@@ -10,6 +10,7 @@ ldapsearchiter_dealloc(LDAPSearchIter* self) {
     Py_XDECREF(self->conn);
 
     free_search_params(self->params);
+    if (self->params != NULL) free(self->params);
 
     /* Free VLVInfo struct. */
     if (self->vlv_info != NULL) {
