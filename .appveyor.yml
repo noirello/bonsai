@@ -51,6 +51,17 @@ environment:
       PYTHON_VERSION: "3.14.x"
       PYTHON_ARCH: "64"
 
+    # Python 3.15 is not preinstalled on the Visual Studio 2019 image.
+    - PYTHON: "C:\\Python315"
+      PYTHON_VERSION: "3.15.x"
+      PYTHON_ARCH: "32"
+      PYTHON_INSTALLER_VERSION: "3.15.2"
+
+    - PYTHON: "C:\\Python315-x64"
+      PYTHON_VERSION: "3.15.x"
+      PYTHON_ARCH: "64"
+      PYTHON_INSTALLER_VERSION: "3.15.2"
+
 install:
   # If there is a newer build queued for the same PR, cancel this one.
   # The AppVeyor 'rollout builds' option is supposed to serve the same
@@ -67,6 +78,49 @@ install:
   - ps: Write-Output 'Finished installing Active Directory.'
   - ps: .\\.appveyor\\ConfigAD.ps1
   - "ldifde -i -v -f .\\tests\\testenv\\ldifs\\users.ldif"
+
+  # Install Python if the image does not have it preinstalled.
+  - ps: |
+      if ($env:PYTHON_INSTALLER_VERSION) {
+        $ErrorActionPreference = 'Stop'
+        if (Test-Path (Join-Path $env:PYTHON 'python.exe')) {
+          Write-Output "Python is already installed in $env:PYTHON."
+        } else {
+          $version = $env:PYTHON_INSTALLER_VERSION
+          # The 32-bit installer has no architecture suffix in its name.
+          $archSuffix = if ($env:PYTHON_ARCH -eq "64") { "-amd64" } else { "" }
+          $installer = "python-$version$archSuffix.exe"
+          $url = "https://www.python.org/ftp/python/$version/$installer"
+          $installerPath = Join-Path $env:TEMP $installer
+
+          Write-Output "Installing Python $version ($env:PYTHON_ARCH-bit) from $url"
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          Invoke-WebRequest -Uri $url -OutFile $installerPath -UseBasicParsing
+
+          $arguments = @(
+            "/quiet",
+            "InstallAllUsers=1",
+            "TargetDir=$env:PYTHON",
+            "Include_pip=1",
+            "Include_dev=1",
+            "Include_launcher=0",
+            "Include_test=0",
+            "Include_doc=0",
+            "PrependPath=0",
+            "Shortcuts=0"
+          )
+          $process = Start-Process -FilePath $installerPath -ArgumentList $arguments -Wait -PassThru
+          # 3010 means success, but a reboot is pending.
+          if ($process.ExitCode -notin 0, 3010) {
+            throw "Python $version installer exited with code $($process.ExitCode)"
+          }
+          Remove-Item $installerPath
+          if (-not (Test-Path (Join-Path $env:PYTHON 'python.exe'))) {
+            throw "python.exe was not found in $env:PYTHON after the installation."
+          }
+        }
+      }
+
 
   # Prepend newly installed Python to the PATH of this build (this cannot be
   # done from inside the powershell script as it would require to restart
