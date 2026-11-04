@@ -795,11 +795,11 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
         }
         free(newkey);
         /* This means, the item has to be removed. */
-        if (PyList_Append(self->deleted, cikey) != 0) {
+        if (PyDict_DelItem((PyObject *)self, cikey) != 0) {
             Py_DECREF(cikey);
             return -1;
         }
-        if (PyDict_DelItem((PyObject *)self, cikey) != 0) {
+        if (PyList_Append(self->deleted, cikey) != 0) {
             Py_DECREF(cikey);
             return -1;
         }
