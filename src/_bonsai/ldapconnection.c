@@ -164,11 +164,16 @@ connecting(LDAPConnection *self, LDAPConnectIter **conniter) {
     }
     mech = PyObject2char(tmp);
     Py_DECREF(tmp);
+    if (mech == NULL) {
+        Py_DECREF(creds);
+        return -1;
+    }
 
     if (self->async) {
         /* Init the socketpair. */
         rc = get_socketpair(&(self->socketpair), &(self->csock), &ssock);
         if (rc != 0) {
+            Py_DECREF(creds);
             free(mech);
             return -1;
         }
