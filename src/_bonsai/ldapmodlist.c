@@ -9,6 +9,7 @@ ldapmodlist_dealloc(LDAPModList* self) {
     struct berval **bvals;
 
     DEBUG("ldapmodlist_dealloc (self:%p)", self);
+    PyObject_GC_UnTrack(self);
     if (self->mod_list != NULL) {
         for (i = 0; self->mod_list[i] != NULL; i++) {
             bvals = self->mod_list[i]->mod_vals.modv_bvals;
@@ -24,7 +25,22 @@ ldapmodlist_dealloc(LDAPModList* self) {
         }
         free(self->mod_list);
     }
+    Py_CLEAR(self->entry);
     Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static int
+ldapmodlist_traverse(LDAPModList *self, visitproc visit, void *arg) {
+    DEBUG("ldapmodlist_traverse (self:%p)", self);
+    Py_VISIT(self->entry);
+    return 0;
+}
+
+static int
+ldapmodlist_clear(LDAPModList *self) {
+    DEBUG("ldapmodlist_clear (self:%p)", self);
+    Py_CLEAR(self->entry);
+    return 0;
 }
 
 /*  Create a new LDAPModList object. */
@@ -53,11 +69,15 @@ LDAPModList_New(PyObject* entry, Py_ssize_t size) {
     if (self == NULL) return NULL;
     /*  Malloc a new `size` length LDAPMod list. */
     self->mod_list = (LDAPMod **)malloc(sizeof(LDAPMod *) * (size + 1));
-    if (self->mod_list == NULL) return (LDAPModList *)PyErr_NoMemory();
+    if (self->mod_list == NULL) {
+        Py_DECREF(self);
+        return (LDAPModList *)PyErr_NoMemory();
+    }
 
     self->mod_list[0] = NULL;
     self->size = size;
     self->entry = entry;
+    Py_INCREF(entry);
     return self;
 }
 
@@ -176,10 +196,11 @@ PyTypeObject LDAPModListType = {
     0,                         /* tp_setattro */
     0,                         /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT |
-        Py_TPFLAGS_BASETYPE,   /* tp_flags */
+        Py_TPFLAGS_BASETYPE  |
+        Py_TPFLAGS_HAVE_GC, /* tp_flags */
     "Wrapper around LDAPMod struct.",   /* tp_doc */
-    0,                         /* tp_traverse */
-    0,                         /* tp_clear */
+    (traverseproc)ldapmodlist_traverse, /* tp_traverse */
+    (inquiry)ldapmodlist_clear, /* tp_clear */
     0,                         /* tp_richcompare */
     0,                         /* tp_weaklistoffset */
     0,                         /* tp_iter */
