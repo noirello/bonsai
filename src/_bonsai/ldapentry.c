@@ -587,6 +587,7 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
 
     /* Save old dn string. */
     tmp = PyObject_Str(self->dn);
+    if (tmp == NULL) return NULL;
     olddn_str = PyObject2char(tmp);
     Py_DECREF(tmp);
     if (olddn_str == NULL) return NULL;
@@ -603,6 +604,8 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     newparent = PySequence_GetSlice(new_ldapdn, 1, PyObject_Size(new_ldapdn));
     if (newrdn == NULL || newparent == NULL) {
         free(olddn_str);
+        Py_XDECREF(newrdn);
+        Py_XDECREF(newparent);
         Py_DECREF(new_ldapdn);
         return NULL;
     }
