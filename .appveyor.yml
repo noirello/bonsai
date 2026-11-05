@@ -144,13 +144,13 @@ test_script:
   # Set install path for coverage.py.
   - for /f "tokens=*" %%i in ('python -c "import bonsai; print(bonsai.__file__[:-12])"') do set INSTALL_PATH="%%i"
   # Run the tests.
-  - "%CMD_IN_ENV% python -m pytest -v --junitxml=.\\test-results.xml --cov-config .coveragerc --cov-report="
+  - "%CMD_IN_ENV% python -m pytest -v --junitxml=.\\test-results.xml --cov-config .coveragerc --cov-report= --cov=%INSTALL_PATH%"
 
 after_test:
-  # Change path of the Python source files in .coverage.
-  - ps: $install_path = python -c "import bonsai; print(bonsai.__file__[:-12].replace('\\', '\\\\\\\\'))"; `
-        $project_path = $env:APPVEYOR_BUILD_FOLDER.Replace('\', '\\') + "\\src\\bonsai"; `
-        (Get-Content .\\.coverage) -replace $install_path, $project_path | Set-Content '.\\.coverage'
+  # Rename the coverage data so that "coverage combine" can remap the
+  # installed paths to the project source paths using the [paths] section.
+  - ps: "if (Test-Path .\\.coverage) { Move-Item -Force .\\.coverage .\\.coverage.appveyor }"
+  - "%CMD_IN_ENV% python -m coverage combine"
   - codecov
   # Upload test results.
   - ps: $wc = New-Object 'System.Net.WebClient'; `

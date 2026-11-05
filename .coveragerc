@@ -1,2 +1,7 @@
 [report]
 omit = */_bonsai.py
+
+[paths]
+source =
+    src/bonsai
+    */site-packages/bonsai
