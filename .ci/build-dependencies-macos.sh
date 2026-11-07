@@ -58,10 +58,12 @@ ln -s "${LDAP_KEG}/lib" "${PREFIX}/lib"
 log "Collecting third-party licenses"
 # The kegs do not reliably ship license files, so they are taken from the very source
 # tarballs Homebrew builds from, which also guarantees they match the bundled version.
+# --build-from-source is needed on both brew calls: by default `brew fetch` and
+# `brew --cache` refer to the prebuilt bottle, which has no upstream license files.
 collect_license() {
     local formula="$1" name="$2" src found=""
-    brew fetch --formula "${formula}" >/dev/null
-    src="$(brew --cache --formula "${formula}")"
+    brew fetch --formula --build-from-source "${formula}" >/dev/null
+    src="$(brew --cache --formula --build-from-source "${formula}")"
     mkdir -p "${WORK_DIR}/${name}"
     tar -xf "${src}" -C "${WORK_DIR}/${name}" --strip-components=1
     for candidate in LICENSE LICENSE.txt COPYING COPYRIGHT NOTICE; do
@@ -70,7 +72,10 @@ collect_license() {
             found="yes"
         fi
     done
-    [ -n "${found}" ] || fail "no license file found for ${name}"
+    if [ -z "${found}" ]; then
+        ls "${WORK_DIR}/${name}" >&2
+        fail "no license file found for ${name} in ${src}"
+    fi
     echo "  ${name}"
 }
 collect_license openldap openldap
