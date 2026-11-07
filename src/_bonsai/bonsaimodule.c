@@ -55,6 +55,7 @@ static PyObject *
 bonsai_get_vendor_info(PyObject *self) {
     int rc = 0;
     LDAPAPIInfo info;
+    PyObject *obj = NULL;
 
     info.ldapai_info_version = LDAP_API_INFO_VERSION;
     rc = ldap_get_option(NULL, LDAP_OPT_API_INFO, &info);
@@ -63,8 +64,18 @@ bonsai_get_vendor_info(PyObject *self) {
         return NULL;
     }
 
-    return Py_BuildValue("(s,i)", info.ldapai_vendor_name,
+    obj = Py_BuildValue("(s,i)", info.ldapai_vendor_name,
             info.ldapai_vendor_version);
+    if (info.ldapai_vendor_name != NULL) {
+        ldap_memfree(info.ldapai_vendor_name);
+    }
+    if (info.ldapai_extensions != NULL) {
+        for (int i = 0; info.ldapai_extensions[i] != NULL; i++) {
+            ldap_memfree(info.ldapai_extensions[i]);
+        }
+        ldap_memfree(info.ldapai_extensions);
+    }
+    return obj;
 }
 
 
