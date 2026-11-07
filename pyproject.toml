@@ -54,14 +54,18 @@ gevent = ['gevent (>=1.4.0)']
 tornado = ['tornado (>=5.1.1)']
 trio = ['trio (>=0.16.0)']
 
+[tool.cibuildwheel]
+test-requires = ["pytest", "pytest-timeout"]
+skip = "cp3??t-*"
+build-verbosity = 3
+
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
-before-all = "bash {project}/.ci/build-dependencies.sh"
+before-all = "bash {project}/.ci/build-dependencies-linux.sh"
 config-settings = { "--build-option" = "build_ext --bundled-deps=/opt/bonsai-deps" }
 environment = { LD_LIBRARY_PATH = "/opt/bonsai-deps/lib" }
 environment-pass = ["BONSAI_DOCKER_IP"]
 container-engine = { name = "docker", create-args = ["--network=host", "-v", "/tmp/bonsai:/tmp/bonsai"] }
-test-requires = ["pytest", "pytest-timeout"]
 before-test = "yum install -y krb5-workstation || apk add --no-cache krb5"
 test-command = """
 sed -i "s/127.0.0.1/$BONSAI_DOCKER_IP/g" {project}/tests/test.ini &&
@@ -73,7 +77,6 @@ python -m pytest -v -m wheel_smoke {project}/tests
 before-all = "bash {project}/.ci/build-dependencies-macos.sh"
 environment = { MACOSX_DEPLOYMENT_TARGET = "15.0" }
 config-settings = { "--build-option" = "build_ext --bundled-deps=/tmp/bonsai-deps" }
-test-requires = ["pytest", "pytest-timeout"]
 test-command = "python -c 'import bonsai; print(bonsai.get_vendor_info())' && python -m pytest -v {project}/tests/test_bundled.py"
 
 [tool.poetry]
