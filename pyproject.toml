@@ -70,7 +70,6 @@ python -m pytest -v -m wheel_smoke {project}/tests
 """
 
 [tool.cibuildwheel.macos]
-archs = ["arm64"]
 before-all = "bash {project}/.ci/build-dependencies-macos.sh"
 environment = { MACOSX_DEPLOYMENT_TARGET = "15.0" }
 config-settings = { "--build-option" = "build_ext --bundled-deps=/tmp/bonsai-deps" }

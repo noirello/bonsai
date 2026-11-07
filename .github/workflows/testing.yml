@@ -97,12 +97,10 @@ jobs:
         brew info openldap --verbose
     - name: Install Python dependencies
       run: |
-        echo "python_final_release=$(python -c 'import sys;print(str(sys.version_info.releaselevel == "final").lower())')" >> $GITHUB_ENV
         python -m pip install --upgrade pip
         python -m pip install poetry wheel
         poetry config virtualenvs.create false
         poetry install --no-root -E gevent -E tornado -E trio
-        python -m pip install --force-reinstall --no-binary gevent delocate
         python -m pip list
     - name: Install Docker
       id: setup-docker
@@ -159,32 +157,24 @@ jobs:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
       if: ${{ github.event_name != 'schedule' }}
-    - name: Create wheel
-      run: |
-        rm -rf ./build
-        ARCHFLAGS='-arch x86_64' _PYTHON_HOST_PLATFORM=$(python -c "import sysconfig;print(f\"{'-'.join(sysconfig.get_platform().split('-')[:-1])}-x86_64\")") python -m build -w
-        delocate-wheel -v ./dist/bonsai-*.whl
-      if: ${{ env.python_final_release == 'true' }}
-    - name: Check wheel
-      run: |
-        unzip -l ./dist/bonsai-*.whl | grep libldap
-      if: ${{ env.python_final_release == 'true' }}
-    - name: Upload wheel
-      uses: actions/upload-artifact@v7
-      with:
-        name: wheel-amd64-${{ matrix.python-version }}
-        path: ./dist/bonsai-*.whl
-        retention-days: 5
-      if: ${{ env.python_final_release == 'true' }}
 
-  macos-arm64-wheels:
+  macos-wheels:
     needs: macos
-    runs-on: macos-15
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - runner: macos-15
+          arch: arm64
+        - runner: macos-15-intel
+          arch: x86_64
     steps:
     - uses: actions/checkout@v7
     - name: Build wheels
       uses: pypa/cibuildwheel@v4.3.5
       env:
+        CIBW_ARCHS: ${{ matrix.arch }}
         CIBW_BUILD_VERBOSITY: 3
         CIBW_SKIP: cp3??t-*
       with:
@@ -201,7 +191,7 @@ jobs:
     - name: Upload wheels
       uses: actions/upload-artifact@v7
       with:
-        name: wheel-macos-arm64
+        name: wheel-macos-${{ matrix.arch }}
         path: ./wheelhouse/*.whl
         retention-days: 5
 
