@@ -69,6 +69,14 @@ KRB5_CONFIG={project}/.ci/krb5/krb5.conf \
 python -m pytest -v -m wheel_smoke {project}/tests
 """
 
+[tool.cibuildwheel.macos]
+archs = ["arm64"]
+before-all = "bash {project}/.ci/build-dependencies-macos.sh"
+environment = { MACOSX_DEPLOYMENT_TARGET = "15.0" }
+config-settings = { "--build-option" = "build_ext --bundled-deps=/tmp/bonsai-deps" }
+test-requires = ["pytest", "pytest-timeout"]
+test-command = "python -c 'import bonsai; print(bonsai.get_vendor_info())' && python -m pytest -v {project}/tests/test_bundled.py"
+
 [tool.poetry]
 requires-poetry = '>=2.0'
 version = '1.5.5'
