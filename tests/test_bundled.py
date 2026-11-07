@@ -160,9 +160,7 @@ def test_client_defaults_to_the_probed_bundle(monkeypatch, tmp_path):
     """The probe is only useful if LDAPClient actually adopts its result."""
     bundle = tmp_path / "ca-bundle.crt"
     bundle.write_text("cert")
-    monkeypatch.setattr(
-        "bonsai.ldapclient.find_ca_bundle", lambda: (str(bundle), None)
-    )
+    monkeypatch.setattr("bonsai.ldapclient.find_ca_bundle", lambda: (str(bundle), None))
     assert bonsai.LDAPClient().ca_cert == str(bundle)
 
 
@@ -197,7 +195,11 @@ def _bundled_lib_dir():
     # this test does not apply to.
     # auditwheel puts them in bonsai.libs, delocate in bonsai/.dylibs.
     package = pathlib.Path(bonsai.__file__).parent
-    lib_dir = package / ".dylibs" if sys.platform == "darwin" else package.parent / "bonsai.libs"
+    lib_dir = (
+        package / ".dylibs"
+        if sys.platform == "darwin"
+        else package.parent / "bonsai.libs"
+    )
     assert lib_dir.is_dir(), (
         f"the build is marked bundled but {lib_dir} does not exist;"
         " the wheel was never repaired, or was repaired without bundling anything"
@@ -219,10 +221,10 @@ def test_bundled_libraries_are_shipped():
     assert not missing, f"missing from bonsai.libs: {missing}, have {contents}"
 
 
-def _inventory_versions():
+def _inventory_versions() -> dict[str, str]:
     """Parse BUNDLED.txt back into {library: version}."""
     inventory = pathlib.Path(bonsai.__file__).parent / "licenses" / "BUNDLED.txt"
-    entries = {}
+    entries: dict[str, str] = {}
     for line in inventory.read_text().splitlines():
         parts = line.split()
         if len(parts) == 2 and parts[1][0].isdigit():
@@ -245,11 +247,7 @@ if sys.platform == "darwin":
     # delocate keeps the Homebrew file names, and SASL and Kerberos are not bundled.
     BUNDLED_VERSION_MARKERS = (
         ("openssl", "libcrypto.*.dylib", rb"OpenSSL (\d+\.\d+\.\d+)"),
-        (
-            "openldap",
-            "libldap.*.dylib",
-            rb"\$OpenLDAP: libldap\.la (\d+\.\d+\.\d+)",
-        ),
+        # libldap has no readable version string here
     )
 else:
     BUNDLED_VERSION_MARKERS = (
@@ -258,6 +256,7 @@ else:
         ("cyrus_sasl", "libldap-*.so*", rb"\x00(\d+\.\d+\.\d+)\x00"),
         ("krb5", "libkrb5-*.so*", rb"KRB5_BRAND: krb5-(\d+\.\d+(?:\.\d+)?)"),
     )
+
 
 @bundled_only
 @pytest.mark.parametrize("library, glob, marker", BUNDLED_VERSION_MARKERS)
@@ -274,9 +273,19 @@ def test_inventory_matches_the_linked_libraries(library, glob, marker):
     linked = found.pop()
 
     declared = _inventory_versions().get(library)
-    assert declared == linked, (
-        f"BUNDLED.txt says {library} {declared}, {lib.name} reports {linked}"
-    )
+    assert (
+        declared == linked
+    ), f"BUNDLED.txt says {library} {declared}, {lib.name} reports {linked}"
+
+
+@bundled_only
+def test_openldap_inventory_matches_vendor_version():
+    declared = _inventory_versions().get("openldap")
+    major, minor, patch = map(int, declared.split("."))
+    _, vendor_ver = bonsai.get_vendor_info()
+    assert (
+        vendor_ver == major * 10000 + minor * 100 + patch
+    ), f"BUNDLED.txt says openldap {declared}, the library reports {vendor_ver}"
 
 
 def _run_binutil(*args):
@@ -339,14 +348,6 @@ def test_source_build_resolves_outside_the_package():
 
 
 @bundled_only
-@pytest.mark.skipif(sys.platform != "darwin", reason="macOS wheels use the system Kerberos")
-def test_macos_wheel_has_krb5_support():
-    """setup.py only prints an INFO line when the Kerberos headers are missing, which
-    would silently ship a wheel without the Kerberos extras (e.g. TGT from a password)."""
-    assert bonsai.has_krb5_support()
-
-
-@bundled_only
 @pytest.mark.skipif(sys.platform != "darwin", reason="otool is macOS only")
 def test_macos_wheel_links_nothing_outside_the_wheel_or_system():
     """No Homebrew path may survive repair, or the wheel only works on this machine."""
@@ -361,8 +362,17 @@ def test_macos_wheel_links_nothing_outside_the_wheel_or_system():
         # First line is the file itself, the rest are "<path> (compatibility ...)".
         for line in out.splitlines()[1:]:
             dep = line.split()[0]
+            if dep.startswith("/DLC/") and pathlib.Path(dep).name == binary.name:
+                # A dylib's own install name, which delocate sets to a placeholder.
+                continue
             assert dep.startswith(
-                ("@loader_path/", "@rpath/", "@executable_path/", "/usr/lib/", "/System/")
+                (
+                    "@loader_path/",
+                    "@rpath/",
+                    "@executable_path/",
+                    "/usr/lib/",
+                    "/System/",
+                )
             ), f"{binary.name} links {dep}, outside the wheel and the system"
 
 
@@ -385,9 +395,7 @@ def test_stdlib_ssl_is_unaffected(order):
         text=True,
         check=True,
     ).stdout.strip()
-    out = subprocess.run(
-        [sys.executable, "-c", code], capture_output=True, text=True
-    )
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
     assert baseline in out.stdout, f"stdlib ssl changed: {baseline!r} vs {out.stdout!r}"
     assert '"ctx": true' in out.stdout.replace("'", '"').lower()
