@@ -35,18 +35,26 @@ log()  { printf '\n==> %s\n' "$*"; }
 fail() { printf 'FATAL: %s\n' "$*" >&2; exit 1; }
 
 log "Installing Homebrew dependencies"
-# openssl@3 is pulled in by openldap, but is named to make the dependency explicit.
-brew install openldap openssl@3
+brew install openldap
 
 LDAP_KEG="$(brew --prefix openldap)"
-SSL_KEG="$(brew --prefix openssl@3)"
 [ -f "${LDAP_KEG}/include/ldap.h" ] || fail "no ldap.h in ${LDAP_KEG}/include"
 ls "${LDAP_KEG}"/lib/libldap*.dylib >/dev/null || fail "no libldap in ${LDAP_KEG}/lib"
+
+# The OpenSSL bundled is whichever formula the openldap bottle was built against (it moves
+# from openssl@3 to newer ones over time), so ask Homebrew instead of naming a version.
+SSL_FORMULA="$(brew deps --1 --formula openldap | grep '^openssl' | head -n 1 || true)"
+[ -n "${SSL_FORMULA}" ] || fail "openldap does not depend on an openssl formula"
+# Guard against a license and version inventory for an OpenSSL that is not the linked one.
+LINKED_SSL="$(otool -L "${LDAP_KEG}"/lib/libldap.*.dylib | grep -o '/opt/openssl@[0-9.]*' | sort -u || true)"
+if [ -n "${LINKED_SSL}" ] && [ "${LINKED_SSL}" != "/opt/${SSL_FORMULA}" ]; then
+    fail "libldap links ${LINKED_SSL} but openldap depends on ${SSL_FORMULA}"
+fi
 
 # `brew list --versions` prints "<formula> <version>"; drop Homebrew's _revision suffix.
 version_of() { brew list --versions "$1" | awk '{print $NF}' | sed 's/_[0-9]*$//'; }
 OPENLDAP_VERSION="$(version_of openldap)"
-OPENSSL_VERSION="$(version_of openssl@3)"
+OPENSSL_VERSION="$(version_of "${SSL_FORMULA}")"
 [ -n "${OPENLDAP_VERSION}" ] && [ -n "${OPENSSL_VERSION}" ] || fail "cannot read formula versions"
 
 log "Laying out ${PREFIX}"
@@ -79,7 +87,7 @@ collect_license() {
     echo "  ${name}"
 }
 collect_license openldap openldap
-collect_license openssl@3 openssl
+collect_license "${SSL_FORMULA}" openssl
 
 cat > "${PREFIX}/bundled-versions.env" <<VERSIONS
 BONSAI_BUNDLED_OPENSSL_VERSION=${OPENSSL_VERSION}
