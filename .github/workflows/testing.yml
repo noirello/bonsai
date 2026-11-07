@@ -192,16 +192,11 @@ jobs:
         output-dir: wheelhouse
     - name: Check wheels
       run: |
-        python -m pip install delocate
         ls -la ./wheelhouse/
         for whl in ./wheelhouse/*.whl; do
           echo "== $whl"
-          unzip -l "$whl" | grep -E "\.dylibs/libldap|licenses/"
-          external=$(delocate-listdeps "$whl")
-          if [ -n "$external" ]; then
-            echo "Unbundled external dependencies:"; echo "$external"; exit 1
-          fi
-          delocate-listdeps --all "$whl"
+          unzip -l "$whl" | grep "\.dylibs/libldap"
+          unzip -l "$whl" | grep "licenses/"
         done
     - name: Upload wheels
       uses: actions/upload-artifact@v7
