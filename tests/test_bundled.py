@@ -172,19 +172,20 @@ def test_bundled_licenses_are_shipped():
     licenses = pathlib.Path(bonsai.__file__).parent / "licenses"
     assert licenses.is_dir(), f"{licenses} is missing from the wheel"
     shipped = {path.name for path in licenses.glob("*.txt")}
-    for expected in ("openssl.txt", "cyrus-sasl.txt", "openldap.txt", "BUNDLED.txt"):
+    # On macOS Cyrus SASL and Kerberos are the system's, so they are not redistributed.
+    expected_names = ["openssl.txt", "openldap.txt", "BUNDLED.txt"]
+    if sys.platform != "darwin":
+        expected_names.append("cyrus-sasl.txt")
+    for expected in expected_names:
         assert expected in shipped, f"{expected} missing, have {sorted(shipped)}"
     for name in shipped:
         assert (licenses / name).stat().st_size > 0, f"{name} is empty"
 
 
 EXPECTED_SONAMES = (
-    "libldap",
-    "liblber",
-    "libcrypto",
-    "libssl",
-    "libkrb5",
-    "libgssapi_krb5",
+    ("libldap", "liblber", "libcrypto", "libssl")
+    if sys.platform == "darwin"
+    else ("libldap", "liblber", "libcrypto", "libssl", "libkrb5", "libgssapi_krb5")
 )
 
 
@@ -194,7 +195,9 @@ def _bundled_lib_dir():
     # BONSAI_BUNDLED, so the wheel claims to carry its own libraries, and a
     # missing directory is that claim being false rather than a configuration
     # this test does not apply to.
-    lib_dir = pathlib.Path(bonsai.__file__).parent.parent / "bonsai.libs"
+    # auditwheel puts them in bonsai.libs, delocate in bonsai/.dylibs.
+    package = pathlib.Path(bonsai.__file__).parent
+    lib_dir = package / ".dylibs" if sys.platform == "darwin" else package.parent / "bonsai.libs"
     assert lib_dir.is_dir(), (
         f"the build is marked bundled but {lib_dir} does not exist;"
         " the wheel was never repaired, or was repaired without bundling anything"
@@ -238,12 +241,23 @@ def _inventory_versions():
 # identifying phrase, because the phrases OpenLDAP wraps it in are emitted on
 # glibc but not on musl. That is only safe while it is the single standalone
 # version token in the object, which the test enforces.
-BUNDLED_VERSION_MARKERS = (
-    ("openssl", "libcrypto-*.so*", rb"OpenSSL (\d+\.\d+\.\d+)"),
-    ("openldap", "libldap-*.so*", rb"\$OpenLDAP: libldap\.la (\d+\.\d+\.\d+)"),
-    ("cyrus_sasl", "libldap-*.so*", rb"\x00(\d+\.\d+\.\d+)\x00"),
-    ("krb5", "libkrb5-*.so*", rb"KRB5_BRAND: krb5-(\d+\.\d+(?:\.\d+)?)"),
-)
+if sys.platform == "darwin":
+    # delocate keeps the Homebrew file names, and SASL and Kerberos are not bundled.
+    BUNDLED_VERSION_MARKERS = (
+        ("openssl", "libcrypto.*.dylib", rb"OpenSSL (\d+\.\d+\.\d+)"),
+        (
+            "openldap",
+            "libldap.*.dylib",
+            rb"\$OpenLDAP: libldap\.la (\d+\.\d+\.\d+)",
+        ),
+    )
+else:
+    BUNDLED_VERSION_MARKERS = (
+        ("openssl", "libcrypto-*.so*", rb"OpenSSL (\d+\.\d+\.\d+)"),
+        ("openldap", "libldap-*.so*", rb"\$OpenLDAP: libldap\.la (\d+\.\d+\.\d+)"),
+        ("cyrus_sasl", "libldap-*.so*", rb"\x00(\d+\.\d+\.\d+)\x00"),
+        ("krb5", "libkrb5-*.so*", rb"KRB5_BRAND: krb5-(\d+\.\d+(?:\.\d+)?)"),
+    )
 
 @bundled_only
 @pytest.mark.parametrize("library, glob, marker", BUNDLED_VERSION_MARKERS)
@@ -322,6 +336,34 @@ def test_source_build_resolves_outside_the_package():
     assert resolved, f"the extension does not link libldap at all:\n{stdout}"
     for line in resolved:
         assert "bonsai.libs" not in line, f"resolved inside the package: {line.strip()}"
+
+
+@bundled_only
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS wheels use the system Kerberos")
+def test_macos_wheel_has_krb5_support():
+    """setup.py only prints an INFO line when the Kerberos headers are missing, which
+    would silently ship a wheel without the Kerberos extras (e.g. TGT from a password)."""
+    assert bonsai.has_krb5_support()
+
+
+@bundled_only
+@pytest.mark.skipif(sys.platform != "darwin", reason="otool is macOS only")
+def test_macos_wheel_links_nothing_outside_the_wheel_or_system():
+    """No Homebrew path may survive repair, or the wheel only works on this machine."""
+    package = pathlib.Path(bonsai.__file__).parent
+    binaries = [pathlib.Path(bonsai._bonsai.__file__)] + sorted(
+        (package / ".dylibs").glob("*.dylib")
+    )
+    for binary in binaries:
+        out = subprocess.run(
+            ["otool", "-L", str(binary)], capture_output=True, text=True, check=True
+        ).stdout
+        # First line is the file itself, the rest are "<path> (compatibility ...)".
+        for line in out.splitlines()[1:]:
+            dep = line.split()[0]
+            assert dep.startswith(
+                ("@loader_path/", "@rpath/", "@executable_path/", "/usr/lib/", "/System/")
+            ), f"{binary.name} links {dep}, outside the wheel and the system"
 
 
 @bundled_only
