@@ -93,9 +93,9 @@ berval2PyObject(struct berval *bval, int keepbytes) {
 int
 PyObject2char_withlength(PyObject *obj, char **output, Py_ssize_t *len) {
     int rc = 0;
-    long int size = 0;
     char *tmp = NULL;
     PyObject *tmpobj = NULL;
+    Py_ssize_t size = 0;
 
     if (obj == NULL) return -1;
 
@@ -108,7 +108,7 @@ PyObject2char_withlength(PyObject *obj, char **output, Py_ssize_t *len) {
 
     if (PyBytes_Check(obj)) {
         /* Get the buffer of the Python bytes. */
-        rc = PyBytes_AsStringAndSize(obj, &tmp, (Py_ssize_t *)&size);
+        rc = PyBytes_AsStringAndSize(obj, &tmp, &size);
         if (rc != 0) return -1;
         /* Copy the content of the buffer to avoid invalid freeing. */
         *output = (char *)malloc(size + 1);
@@ -527,7 +527,7 @@ close_socketpair(PyObject *tup) {
 /* Set the parameters of an ldapsearchparams struct. */
 int
 set_search_params(ldapsearchparams *params, char **attrs, int attrsonly,
-        char *base, char *filter, int len, int scope, int sizelimit, double timeout, 
+        char *base, char *filter, int len, int scope, int sizelimit, double timeout,
         LDAPSortKey **sort_list) {
 
     params->attrs = attrs;
