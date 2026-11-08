@@ -433,7 +433,7 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
         if (res_tuple == NULL) return -1;
 
         if (!PyArg_ParseTuple(res_tuple, "OiO:rollback",
-                &key, &mod_op, &values)) return -1;
+                &key, &mod_op, &values)) goto error;
 
         attr = LDAPEntry_GetItem(self, key); /* Borrowed ref. */
 
@@ -441,12 +441,12 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
             /* If the attribute is remove from the LDAPEntry and deleted
                with the previous modifications, then prepare for resending. */
             if (values == Py_None) {
-                if (PyList_Append(self->deleted, key) != 0) return -1;
+                if (PyList_Append(self->deleted, key) != 0) goto error;
             }
         } else {
             /* Get LDAPValueList's status. */
             status = get_ldapvaluelist_status(attr);
-            if (status == -1) return -1;
+            if (status == -1) goto error;
 
             /* Get LDAPValueList's __added list. */
             added = PyObject_GetAttrString(attr, "added");
