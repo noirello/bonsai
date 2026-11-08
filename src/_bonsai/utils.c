@@ -590,7 +590,10 @@ create_ppolicy_control(LDAP *ld, LDAPControl **returned_ctrls,
         LDAP_CONTROL_PASSWORDPOLICYRESPONSE, returned_ctrls, NULL),
         &expire, &grace, pperr);
     if (rc == LDAP_CONTROL_NOT_FOUND) return 0;
-    if (rc != LDAP_SUCCESS) return -1;
+    if (rc != LDAP_SUCCESS) {
+        set_exception(ld, rc);
+        return -1;
+    }
     /* Create ppolicy ctrl dict. */
     *ctrl_obj = Py_BuildValue("{s,s,s,i,s,i}",
             "oid", LDAP_CONTROL_PASSWORDPOLICYRESPONSE,
