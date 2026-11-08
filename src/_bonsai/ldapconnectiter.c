@@ -275,7 +275,10 @@ binding(LDAPConnectIter *self) {
                 self->conn->closed = 0;
                 if (self->conn->ppolicy == 1) {
                     /* If ppolicy is not available set control to None. */
-                    if (ppres != 1) ctrl_obj = Py_None;
+                    if (ppres != 1) {
+                        ctrl_obj = Py_None;
+                        Py_INCREF(ctrl_obj); /* Matters for 3.11 and earlier. */
+                    }
 
                     /* Create (result, ctrl) tuple as return value. */
                     value = Py_BuildValue("(O,O)", self->conn, ctrl_obj);
