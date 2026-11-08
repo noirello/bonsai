@@ -537,7 +537,7 @@ def test_modify_referrals(client):
     reason="Makes sense when the remote server is an Active Directory",
 )
 def test_create_ad_user(cfg, basedn, test_ad_user):
-    """Test creating and enabling an AD user ."""
+    """Test creating and enabling an AD user."""
     url = "ldap://%s:%s/%s??%s" % (
         cfg["SERVER"]["hostname"],
         cfg["SERVER"]["port"],
@@ -570,3 +570,22 @@ def test_create_ad_user(cfg, basedn, test_ad_user):
                 "accountdisable"
             ]
             assert uconn.whoami() == "u:BONSAI\\ad_user"
+
+
+def test_invalid_value_fails(client):
+    """Test if LDAPEntry has an invalid value, it still fails gracefully."""
+    user_dn = "cn=sam-invalid-attr,ou=nerdherd,dc=bonsai,dc=test"
+    with client.connect() as conn:
+        entry = LDAPEntry(user_dn, conn)
+        entry["objectClass"] = ["top", "inetOrgPerson", "person"]
+        entry["cn"] = ["sam-invalid-attr"]
+        entry["sn"] = ["test"]
+        dict.__setitem__(entry, "description", ["plain list"])  # Not an LVL.
+
+        added = entry["sn"].added
+        deleted = entry["sn"].deleted
+        before = (sys.getrefcount(added), sys.getrefcount(deleted))
+        for _ in range(5):
+            with pytest.raises(AttributeError, match="list"):
+                entry.modify()
+        assert (sys.getrefcount(added), sys.getrefcount(deleted)) == before
