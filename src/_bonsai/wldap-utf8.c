@@ -173,7 +173,7 @@ convert_ctrl(LDAPControlA *ctrl, LDAPControlW **wctrl) {
 }
 
 /* Free a converted wide LDAPControl. */
-static void 
+static void
 free_ctrl(LDAPControlW *ctrl) {
     if (ctrl != NULL) {
         free(ctrl->ldctl_oid);
@@ -307,7 +307,7 @@ ldap_get_dnU(LDAP *ld, LDAPMessage *entry) {
 int
 ldap_add_extU(LDAP *ld, char *dn, LDAPModA **attrs, LDAPControlA **sctrls, LDAPControlA **cctrls,
         int *msgidp) {
-    
+
     int rc = 0;
     wchar_t *wdn = NULL;
     LDAPModW **wattrs = NULL;
@@ -333,7 +333,7 @@ end:
 int
 ldap_modify_extU(LDAP *ld, char *dn, LDAPModA **attrs, LDAPControlA **sctrls, LDAPControlA **cctrls,
         int *msgidp) {
-    
+
     int rc = 0;
     wchar_t *wdn = NULL;
     LDAPModW **wattrs = NULL;
@@ -422,14 +422,14 @@ ldap_get_values_lenU(LDAP *ld, LDAPMessage *entry, char *target) {
 int
 ldap_renameU(LDAP *ld, char *dn, char *newrdn, char *newSuperior, int deleteoldrdn,
         LDAPControlA **sctrls, LDAPControlA **cctrls, int *msgidp) {
-    
+
     int rc = 0;
-    wchar_t *wdn = NULL; 
+    wchar_t *wdn = NULL;
     wchar_t *wnewrdn = NULL;
     wchar_t *wnewSuperior = NULL;
     LDAPControlW **wsctrls = NULL;
     LDAPControlW **wcctrls = NULL;
-    
+
     if (rc = convert_to_wcs(dn, &wdn) != LDAP_SUCCESS) goto end;
     if (rc = convert_to_wcs(newrdn, &wnewrdn) != LDAP_SUCCESS) goto end;
     if (rc = convert_to_wcs(newSuperior, &wnewSuperior) != LDAP_SUCCESS) goto end;
@@ -451,7 +451,7 @@ end:
 int
 ldap_search_extU(LDAP *ld, char *base, int scope, char *filter, char **attrs, int attrsonly,
         LDAPControlA **sctrls, LDAPControlA **cctrls, struct timeval *timeout, int sizelimit, int *msgidp) {
-    
+
     int rc = 0;
     wchar_t *wbase = NULL;
     wchar_t *wfilter = NULL;
@@ -488,7 +488,7 @@ end:
 int
 ldap_extended_operationU(LDAP *ld, char *reqoid, struct berval *reqdata, LDAPControlA **sctrls,
         LDAPControlA **cctrls, int *msgidp) {
-    
+
     int rc = 0;
     wchar_t *woid = NULL;
     LDAPControlW **wsctrls = NULL;
@@ -511,7 +511,7 @@ end:
 int
 ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct berval **retdatap,
         int freeit) {
-    
+
     int rc = 0;
     char *oid = NULL;
     wchar_t *wretoid = NULL;
@@ -527,7 +527,7 @@ ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct b
     return rc;
 }
 
-/* This function receive a list of LDAPControl instead of one LDAPControl, 
+/* This function receive a list of LDAPControl instead of one LDAPControl,
    because the corresponding WinLDAP function will search the page control
    object internally. */
 int
@@ -593,7 +593,7 @@ ldap_control_findU(char *oid, LDAPControlA **ctrls, LDAPControlA ***nextctrlp) {
 int
 ldap_parse_resultU(LDAP *ld, LDAPMessage *res, int *errcodep, char **matcheddnp, char **errmsgp,
         char ***referralsp, LDAPControlA ***sctrls, int freeit) {
-    
+
     int i = 0;
     int rc = 0;
     int size = 0;
@@ -723,7 +723,7 @@ ldap_initializeU(LDAP **ldp, char *url) {
             if (strcmp(token, "[]") == 0) {
                 /* If it's an IPv6 address the ':' needs to be cut. */
                 chunk += 1;
-            } 
+            }
             port = (int)strtol(chunk, NULL, 10);
             if (port <= 0) {
                 if (host) free(host);
@@ -821,7 +821,7 @@ ldap_get_optionU(LDAP *ld, int option, void *outvalue) {
         LDAPAPIInfo *info = (LDAPAPIInfo *)outvalue;
         if (info == NULL) return LDAP_OTHER;
 
-        info->ldapai_vendor_name = LDAP_VENDOR_NAME;
+        info->ldapai_vendor_name = strdup(LDAP_VENDOR_NAME);
         info->ldapai_vendor_version = LDAP_VENDOR_VERSION;
         info->ldapai_api_version = LDAP_API_VERSION;
         info->ldapai_protocol_version = LDAP_VERSION3;
@@ -847,7 +847,7 @@ ldap_parse_sortresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *resu
     convert_to_mbs(wattr, attribute);
     if (rc == LDAP_CONTROL_NOT_FOUND) {
         rc = LDAP_SUCCESS;
-    } 
+    }
 end:
     free_list((void **)wctrls, (void *)free_ctrl);
     ldap_memfreeW(wattr);
