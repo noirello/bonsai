@@ -99,13 +99,14 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
     int status = -1;
     Py_ssize_t i;
     char *strkey = NULL;
-    PyObject *keys = PyMapping_Keys((PyObject *)self);
+    PyObject *keys = NULL;
     PyObject *iter = NULL, *key = NULL;
     LDAPModList *mods = NULL;
     PyObject *value = NULL;
     PyObject *added = NULL, *deleted = NULL;
     PyObject *tmp = NULL;
 
+    keys = PyMapping_Keys((PyObject *)self);
     if (keys == NULL) return NULL;
     /* Create an LDAPModList for the LDAPEntry values and deleted attributes. */
     mods = LDAPModList_New((PyObject *)self, Py_SIZE(self) * 2
@@ -116,7 +117,7 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
     }
 
     iter = PyObject_GetIter(keys);
-    Py_DECREF(keys);
+    Py_CLEAR(keys);
     if (iter == NULL) goto error;
 
     DEBUG("LDAPEntry_CreateLDAPMods (self:%p)", self);
@@ -127,6 +128,7 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
         /* Skip DN key. */
         if (strcmp(strkey, "dn") == 0) {
             free(strkey);
+            Py_CLEAR(key);
             continue;
         }
         free(strkey);
@@ -180,9 +182,9 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
         if (tmp == NULL) goto error;
         Py_DECREF(tmp);
 
-        Py_DECREF(added);
-        Py_DECREF(deleted);
-        Py_DECREF(key);
+        Py_CLEAR(added);
+        Py_CLEAR(deleted);
+        Py_CLEAR(key);
     }
     Py_DECREF(iter);
 
@@ -196,8 +198,7 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
     }
 
     /* Delete the list. */
-    Py_DECREF(self->deleted);
-    self->deleted = PyList_New(0);
+    Py_SETREF(self->deleted, PyList_New(0));
 
     return mods;
 error:
@@ -217,7 +218,7 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
     char *dn;
     char *attr;
     struct berval **values;
-    BerElement *ber;
+    BerElement *ber = NULL;
     PyObject *rawval_list = NULL;
     PyObject *val = NULL, *attrobj = NULL;
     PyObject *args = NULL;
@@ -338,7 +339,6 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
 
     mods = LDAPEntry_CreateLDAPMods(self);
     if (mods == NULL) {
-        PyErr_SetString(PyExc_MemoryError, "Create LDAPModList is failed.");
         free(dnstr);
         return NULL;
     }
