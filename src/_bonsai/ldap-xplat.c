@@ -65,7 +65,6 @@ _ldap_finish_init_thread(char async, XTHREAD thread, int *timeout, void *misc, L
     case WAIT_TIMEOUT:
         if (async == 0) {
             TerminateThread(thread, -1);
-            CloseHandle(thread);
             set_exception(NULL, LDAP_TIMEOUT);
             retval = -1;
             goto end;
@@ -153,7 +152,7 @@ _ldap_parse_passwordpolicy_control(LDAP *ld, LDAPControl **ctrls, ber_int_t *exp
     return ldap_parse_passwordpolicy_control(ld, ctrls, expire, grace, error);
 }
 
-void 
+void
 _ldap_control_free(LDAPControl *ctrl) {
     free(ctrl->ldctl_value.bv_val);
     free(ctrl);
@@ -221,7 +220,7 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
 
         rc = krb5_cc_get_full_name(ctx, *ccache, &cname);
         if (rc != 0) goto end;
-        
+
         store.elements[store.count].key = "ccache";
         store.elements[store.count].value = cname;
         store.count++;
@@ -232,7 +231,7 @@ create_krb5_cred(krb5_context ctx, char *realm, char *user, char *password,
         rc = krb5_get_init_creds_keytab(ctx, &creds, princ, keytab, 0, NULL, NULL);
         if (rc != 0) goto end;
         credsInitialized = 1;
-        
+
         rc = krb5_cc_store_cred(ctx, *ccache, &creds);
         if (rc != 0) goto end;
 
@@ -335,7 +334,7 @@ _pthread_mutex_timedlock(pthread_mutex_t *mutex, struct timespec *abs_timeout) {
 
         gettimeofday(&timenow, NULL);
 
-        if (timenow.tv_sec > abs_timeout->tv_sec || 
+        if (timenow.tv_sec > abs_timeout->tv_sec ||
             (timenow.tv_sec == abs_timeout->tv_sec &&
             (timenow.tv_usec * 1000) >= abs_timeout->tv_nsec)) {
             return ETIMEDOUT;
@@ -789,7 +788,7 @@ int
 create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread) {
     int rc = 0;
     ldapInitThreadData *data = (ldapInitThreadData *)param;
-    
+
     DEBUG("create_init_thread (ld:%p, info:%p, thread:%lu)", param, info, *thread);
 #ifdef WIN32
     *thread = CreateThread(NULL, 0, ldap_init_thread_func, (void *)data, 0, NULL);
@@ -837,7 +836,7 @@ int _ldap_create_extended_dn_control(LDAP *ld, int format, LDAPControl **edn_ctr
 
     ber = ber_alloc_t(LBER_USE_DER);
     if (ber == NULL) return LDAP_NO_MEMORY;
-    
+
     /* Transcode the data into a berval struct. */
     ber_printf(ber, "{i}", format);
     rc = ber_flatten(ber, &value);
@@ -862,7 +861,7 @@ int _ldap_create_sd_flags_control(LDAP *ld, int flags, LDAPControl **edn_ctrl) {
 
     ber = ber_alloc_t(LBER_USE_DER);
     if (ber == NULL) return LDAP_NO_MEMORY;
-    
+
     /* Transcode the data into a berval struct. */
     ber_printf(ber, "{i}", flags);
     rc = ber_flatten(ber, &value);
