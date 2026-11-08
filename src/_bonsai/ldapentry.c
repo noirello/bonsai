@@ -623,6 +623,7 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     free(newparent_str);
     if (rc != LDAP_SUCCESS) {
         set_exception(self->conn->ld, rc);
+        Py_DECREF(new_ldapdn);
         return NULL;
     }
 

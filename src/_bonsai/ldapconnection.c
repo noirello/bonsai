@@ -203,6 +203,7 @@ ldapconnection_open(LDAPConnection *self) {
     /* Add binding operation to the pending_ops. */
     if (add_to_pending_ops(self->pending_ops, (int)(self->csock),
         (PyObject *)iter) != 0) {
+        Py_DECREF(iter);
         return NULL;
     }
 
@@ -700,7 +701,7 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
     msgid = LDAPConnection_Searching(self, &params, (PyObject *)search_iter);
     if (search_iter == NULL) free_search_params(&params);
-
+    else if (msgid < 0) Py_DECREF(search_iter);
     if (msgid < 0) return NULL;
 
     return PyLong_FromLong((long int)msgid);
@@ -727,6 +728,7 @@ ldapconnection_whoami(LDAPConnection *self) {
     oid = PyUnicode_FromString("1.3.6.1.4.1.4203.1.11.3");
     if (oid == NULL) return NULL;
     if (add_to_pending_ops(self->pending_ops, msgid, oid) != 0) {
+        Py_DECREF(oid);
         return NULL;
     }
 
