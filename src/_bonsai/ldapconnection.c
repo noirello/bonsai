@@ -1072,7 +1072,10 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, PyObject *oid) {
 
     ppres = create_ppolicy_control(self->ld, ctrls, &ctrl_obj, &pperr);
     if (ctrls != NULL) ldap_controls_free(ctrls);
-    if (ppres == -1) return NULL;
+    if (ppres == -1) {
+        if (res != NULL) ldap_msgfree(res);
+        return NULL;
+    }
 
     if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
         if (ppres == 1 && pperr != 65535) {
@@ -1091,6 +1094,7 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, PyObject *oid) {
             Py_DECREF(ldaperror);
         }
         Py_XDECREF(ctrl_obj);
+        if (res != NULL) ldap_msgfree(res);
         return NULL;
     }
 
@@ -1146,7 +1150,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
     int err = 0;
     int ppres = 0;
     unsigned int pperr = 0;
-    LDAPMessage *res;
+    LDAPMessage *res = NULL;
     LDAPControl **returned_ctrls = NULL;
     LDAPModList *mods = NULL;
     LDAPEntry *entry = NULL;

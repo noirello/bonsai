@@ -363,7 +363,7 @@ check_tls_result(LDAP *ld, int msgid, int timeout, char async, SOCKET csock) {
     int rc = 0;
     int err = 0;
     char *errstr = NULL;
-    LDAPMessage *res;
+    LDAPMessage *res = NULL;
     struct timeval polltime;
     PyObject *ldaperror = NULL, *errmsg = NULL;
 
@@ -394,12 +394,12 @@ check_tls_result(LDAP *ld, int msgid, int timeout, char async, SOCKET csock) {
     switch (rc) {
     case -1:
         /* Error occurred during the operation. */
-        ldap_msgfree(res);
+        if (res != NULL) ldap_msgfree(res);
         set_exception(ld, 0);
         return -1;
     case 0:
         /* Timeout exceeded.*/
-        ldap_msgfree(res);
+        if (res != NULL) ldap_msgfree(res);
         if (async == 0) {
             set_exception(ld, -5);
             return -1;
@@ -409,6 +409,7 @@ check_tls_result(LDAP *ld, int msgid, int timeout, char async, SOCKET csock) {
         rc = ldap_parse_result(ld, res, &err, NULL, &errstr, NULL, NULL, 0);
         if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
             ldaperror = get_error_by_code(err);
+            if (res != NULL) ldap_msgfree(res);
             if (ldaperror == NULL) return -1;
             if (errstr != NULL) {
                 errmsg = PyUnicode_FromFormat("%s.", errstr);
