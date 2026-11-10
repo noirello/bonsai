@@ -19,7 +19,6 @@ import bonsai.errors
 from bonsai.errors import ClosedConnection, SizeLimitError
 from bonsai.ldapconnection import BaseLDAPConnection
 
-
 IS_GHA_MACOS = os.getenv("GITHUB_ACTIONS") == "true" and sys.platform.startswith(
     "darwin"
 )
@@ -709,6 +708,23 @@ def test_paged_search_list(cfg, basedn):
     assert len(results) == 2
     assert all(isinstance(ent, bonsai.LDAPEntry) for ent in results)
     assert isinstance(results[1]["cn"][0], str)
+
+
+def test_paged_search_break_early_dealloc(cfg, basedn):
+    """Test deallocating a paged search iterator that was left unfinished."""
+    cli = _generate_client(cfg)
+    cli.auto_page_acquire = True
+    with cli.connect() as conn:
+        res = conn.paged_search(
+            f"ou=nerdherd,{basedn}", 1, attrlist=["cn"], page_size=10
+        )
+        for ent in res:
+            assert isinstance(ent, bonsai.LDAPEntry)
+            break
+        del res  # searchiter deallocation is called.
+        assert (
+            len(conn.search(f"ou=nerdherd,{basedn}", 1, attrlist=["cn"])) == 6
+        )  # connection still usable.
 
 
 def test_paged_search_closed_conn(cfg, basedn):
