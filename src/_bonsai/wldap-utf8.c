@@ -532,18 +532,31 @@ ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct b
    object internally. */
 int
 ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *count,
-        struct berval **cookie) {
+        struct berval *cookie) {
 
     int rc = 0;
     LDAPControlW **wctrls = NULL;
+    struct berval *tmp = NULL;
 
     if (rc = convert_ctrl_list(ctrls, &wctrls) != LDAP_SUCCESS) goto end;
 
-    if (*cookie != NULL && (*cookie)->bv_val != NULL) {
-        ber_bvfree(*cookie);
+    rc = ldap_parse_page_controlW(ld, wctrls, (unsigned long *)count, &tmp);
+    if (rc == LDAP_SUCCESS) {
+        cookie->bv_val = NULL;
+        cookie->bv_len = 0;
+        if (tmp != NULL) {
+            if (tmp->bv_val != NULL && tmp->bv_len > 0) {
+                cookie->bv_val = (char *)malloc(sizeof(char) * tmp->bv_len);
+                if (cookie->bv_val == NULL) {
+                    rc = LDAP_NO_MEMORY;
+                } else {
+                    memcpy(cookie->bv_val, tmp->bv_val, tmp->bv_len);
+                    cookie->bv_len = tmp->bv_len;
+                }
+            }
+            ber_bvfree(tmp);
+        }
     }
-
-    rc = ldap_parse_page_controlW(ld, wctrls, (unsigned long *)count, cookie);
 end:
     free_list((void **)wctrls, (void *)free_ctrl);
 

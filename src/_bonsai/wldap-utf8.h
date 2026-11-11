@@ -100,9 +100,7 @@
 #define ldap_parse_result ldap_parse_resultU
 #define ldap_err2string ldap_err2stringU
 /* Simple free is sufficed, because no WinLDAP dependent allocation
-   should be kept outside of the scope of the new functions.
-   Except for the cookie from the paged search result, which is
-   handle separately. */
+   should be kept outside of the scope of the new functions. */
 #define ldap_memfree free
 #define ldap_start_tls ldap_start_tlsU
 #define ldap_start_tls_s ldap_start_tls_sU
@@ -116,7 +114,7 @@
 #define ldap_parse_reference ldap_parse_referenceU
 
 /* These functions are not represented in the WinLDAP API. */
-#define ldap_parse_pageresponse_control(ld, ctrls, count, cookie) ldap_parse_pageresponse_controlU(ld, ctrls, count, &(cookie))
+#define ldap_parse_pageresponse_control ldap_parse_pageresponse_controlU
 #define ldap_control_create ldap_control_createU
 #define ldap_control_find ldap_control_findU
 #define ldap_initialize ldap_initializeU
@@ -151,7 +149,7 @@ int ldap_renameU(LDAP *ld, char *dn, char *newrdn, char *newSuperior, int delete
 int ldap_search_extU(LDAP *ld, char *base, int scope, char *filter, char **attrs, int attrsonly, LDAPControlA **sctrls, LDAPControlA **cctrls, struct timeval *timeout, int sizelimit, int *msgidp);
 int ldap_extended_operationU(LDAP *ld, char *reqoid, struct berval *reqdata, LDAPControlA **sctrls, LDAPControlA **cctrls, int *msgidp);
 int ldap_parse_extended_resultU(LDAP *ld, LDAPMessage *res, char **retoidp, struct berval **retdatap, int freeit);
-int ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *count, struct berval **cookie);
+int ldap_parse_pageresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *count, struct berval *cookie);
 int ldap_control_createU(char *requestOID, int iscritical, struct berval *value, int dupval, LDAPControlA **ctrlp);
 LDAPControlA **ldap_control_findU(char *oid, LDAPControlA **ctrls, LDAPControlA ***nextctrlp);
 int ldap_parse_sortresponse_controlU(LDAP *ld, LDAPControlA **ctrls, ber_int_t *result, char **attribute);
