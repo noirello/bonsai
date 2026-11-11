@@ -4,7 +4,9 @@
 /* Dealloc the LDAPSearchIter object. */
 static void
 ldapsearchiter_dealloc(LDAPSearchIter* self) {
-    DEBUG("ldapsearchiter_dealloc (self:%p)", self);
+    DEBUG("ldapsearchiter_dealloc (self:%p) cookie:%p", self,
+        (self != NULL) ? self->cookie : NULL
+    );
     PyObject_GC_UnTrack(self);
     Py_XDECREF(self->buffer);
     Py_XDECREF(self->conn);
@@ -20,13 +22,15 @@ ldapsearchiter_dealloc(LDAPSearchIter* self) {
         }
         free(self->vlv_info);
     }
+
     if (self->cookie != NULL) {
         if (self->cookie->bv_val != NULL) {
-            ber_bvfree(self->cookie);
-        } else {
-            free(self->cookie);
+            ldap_memfree(self->cookie->bv_val);
         }
+        free(self->cookie);
+        self->cookie = NULL;
     }
+
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -100,6 +104,7 @@ ldapsearchiter_acquirenextpage(LDAPSearchIter *self) {
     DEBUG("ldapsearchiter_acquirenextpage (self:%p) cookie:%p", self,
         (self != NULL) ? self->cookie : NULL
     );
+
     /* If paged LDAP search is in progress. */
     if (self->cookie != NULL && self->cookie->bv_val != NULL && self->cookie->bv_len > 0) {
         if (LDAPConnection_IsClosed(self->conn) != 0) return NULL;
@@ -108,8 +113,13 @@ ldapsearchiter_acquirenextpage(LDAPSearchIter *self) {
         Py_INCREF(self);
         return PyLong_FromLong((long int)msgid);
     } else {
-        ber_bvfree(self->cookie);
-        self->cookie = NULL;
+        if (self->cookie != NULL) {
+            if (self->cookie->bv_val != NULL) {
+                ldap_memfree(self->cookie->bv_val);
+            }
+            free(self->cookie);
+            self->cookie = NULL;
+        }
         Py_RETURN_NONE;
     }
 }
