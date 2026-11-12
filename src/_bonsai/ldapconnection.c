@@ -80,9 +80,10 @@ ldapconnection_init(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
     /* Validate that the Python object parameter is type of an LDAPClient. */
     ldapclient_type = load_python_object("bonsai.ldapclient", "LDAPClient");
-    if (ldapclient_type == NULL ||
-        !PyObject_IsInstance(client, ldapclient_type)) {
+    if (ldapclient_type == NULL) return -1;
+    if (!PyObject_IsInstance(client, ldapclient_type)) {
         PyErr_SetString(PyExc_TypeError, "Type of the client parameter must be an LDAPClient.");
+        Py_DECREF(ldapclient_type);
         return -1;
     }
     Py_DECREF(ldapclient_type);
