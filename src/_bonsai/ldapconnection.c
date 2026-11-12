@@ -1310,6 +1310,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
                 /* LDAP add or modify operation is failed,
                    then rollback the changes. */
                 if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0) {
+                    Py_XDECREF(ctrl_obj);
                     return NULL;
                 }
             }
@@ -1317,6 +1318,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             if (ppres == 1 && pperr != 65535) set_ppolicy_err(pperr, ctrl_obj);
             else set_exception(self->ld, err);
 
+            Py_XDECREF(ctrl_obj);
             return NULL;
         }
         /* Remove operations from pending_ops. */
@@ -1324,6 +1326,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             return NULL;
         }
 
+        Py_XDECREF(ctrl_obj);
         Py_RETURN_TRUE;
     }
     Py_RETURN_NONE;

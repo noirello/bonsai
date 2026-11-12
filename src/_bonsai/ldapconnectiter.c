@@ -246,6 +246,7 @@ binding(LDAPConnectIter *self) {
                 ldap_msgfree(res);
                 if (ppres == 1 && pperr != 65535) set_ppolicy_err(pperr, ctrl_obj);
                 else set_exception(self->conn->ld, err);
+                Py_XDECREF(ctrl_obj);
 
                 return NULL;
             }
@@ -259,10 +260,12 @@ binding(LDAPConnectIter *self) {
 
                 if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS) {
                     set_exception(self->conn->ld, rc);
+                    Py_XDECREF(ctrl_obj);
                     return NULL;
                 }
 
                 if (rc == LDAP_SASL_BIND_IN_PROGRESS) {
+                    Py_XDECREF(ctrl_obj);
                     Py_RETURN_NONE;
                 }
             } else {
@@ -286,10 +289,12 @@ binding(LDAPConnectIter *self) {
                     if (value == NULL) return NULL;
                     return value;
                 } else {
+                    Py_XDECREF(ctrl_obj);
                     Py_INCREF(self->conn);
                     return (PyObject *)self->conn;
                 }
             }
+            Py_XDECREF(ctrl_obj);
             Py_RETURN_NONE;
         default:
             /* Invalid return value, it never should happen. */
