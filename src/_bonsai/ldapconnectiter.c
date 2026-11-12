@@ -569,16 +569,25 @@ LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info, SOCKET sock) {
 
         /* Check the TLS state. */
         tmp = PyObject_GetAttrString(self->conn->client, "tls");
-        if (tmp == NULL) return NULL;
+        if (tmp == NULL) {
+            Py_DECREF(self);
+            return NULL;
+        }
         self->tls = PyObject_IsTrue(tmp);
         Py_DECREF(tmp);
 
 
         self->init_thread_data = create_init_thread_data(self->conn->client, sock);
-        if (self->init_thread_data == NULL) return NULL;
+        if (self->init_thread_data == NULL) {
+            Py_DECREF(self);
+            return NULL;
+        }
 
         if (create_init_thread(self->init_thread_data, self->info, &(self->init_thread))
-                != 0) return NULL;
+                != 0) {
+             Py_DECREF(self);
+            return NULL;
+            }
 
         self->timeout = -1;
     }

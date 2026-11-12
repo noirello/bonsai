@@ -82,13 +82,21 @@ LDAPSearchIter_New(LDAPConnection *conn) {
     DEBUG("LDAPSearchIter_New (conn:%p)[self:%p]", conn, self);
     if (conn != NULL && self != NULL) {
         self->params = (ldapsearchparams *)malloc(sizeof(ldapsearchparams));
-        if (self->params == NULL) return NULL;
+        if (self->params == NULL) {
+            Py_DECREF(self);
+            return (LDAPSearchIter *)PyErr_NoMemory();
+        }
         Py_INCREF(conn);
         self->conn = conn;
 
         /* Get client's auto_page_acquire property. */
         tmp = PyObject_GetAttrString(self->conn->client, "auto_page_acquire");
-        if (tmp == NULL) return NULL;
+        if (tmp == NULL) {
+            free(self->params);
+            self->params = NULL;
+            Py_DECREF(self);
+            return NULL;
+        }
 
         self->auto_acquire = (char)PyObject_IsTrue(tmp);
         Py_DECREF(tmp);
@@ -149,6 +157,7 @@ ldapsearchiter_iternext(LDAPSearchIter *self) {
         Py_INCREF(item);
         /* Remove the first element from the buffer list. */
         if (PyList_SetSlice(self->buffer, 0, 1, NULL) != 0) {
+            Py_DECREF(item);
             PyErr_BadInternalCall();
             return NULL;
         }
