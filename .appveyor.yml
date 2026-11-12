@@ -144,7 +144,7 @@ test_script:
   # Set install path for coverage.py.
   - for /f "tokens=*" %%i in ('python -c "import bonsai; print(bonsai.__file__[:-12])"') do set INSTALL_PATH="%%i"
   # Run the tests.
-  - "%CMD_IN_ENV% python -m pytest -v --junitxml=.\\test-results.xml --cov-config .coveragerc --cov-report= --cov=%INSTALL_PATH%"
+  - "%CMD_IN_ENV% python -m pytest -v --junitxml=.\\test-results.xml --cov-config .coveragerc --cov-report= --cov=%INSTALL_PATH% --durations=10"
 
 after_test:
   # Rename the coverage data so that "coverage combine" can remap the
