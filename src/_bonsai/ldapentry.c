@@ -794,6 +794,7 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
     } else {
         if (strcmp(newkey, "dn") == 0) {
             free(newkey);
+            Py_DECREF(cikey);
             PyErr_SetString(PyExc_TypeError, "Cannot delete the DN key");
             return -1;
         }

@@ -650,14 +650,20 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     if (page_size > 0 || offset != 0 || attrvalue_obj != NULL) {
         /* Create a SearchIter for storing the search params and result. */
         search_iter = LDAPSearchIter_New(self);
-        if (search_iter == NULL) return PyErr_NoMemory();
+        if (search_iter == NULL) {
+            free_search_params(&params);
+            return NULL;
+        }
 
         memcpy(search_iter->params, &params, sizeof(ldapsearchparams));
 
         if (page_size > 0) {
             /* Create cookie for the page result. */
             search_iter->cookie = (struct berval *)malloc(sizeof(struct berval));
-            if (search_iter->cookie == NULL) return PyErr_NoMemory();
+            if (search_iter->cookie == NULL) {
+                Py_DECREF(search_iter);
+                return PyErr_NoMemory();
+            }
 
             search_iter->cookie->bv_len = 0;
             search_iter->cookie->bv_val = NULL;
@@ -821,7 +827,8 @@ ldapconnection_modpasswd(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     oid = PyUnicode_FromString("1.3.6.1.4.1.4203.1.11.1");
     if (oid == NULL) return NULL;
     if (add_to_pending_ops(self->pending_ops, msgid, oid) != 0) {
-       return NULL;
+        Py_DECREF(oid);
+        return NULL;
     }
 
     return PyLong_FromLong((long int)msgid);
@@ -1358,12 +1365,12 @@ ldapconnection_result(LDAPConnection *self, PyObject *args, PyObject *kwds) {
         if (tmp == NULL) return NULL;
 
         timeout = (int)(PyFloat_AsDouble(tmp) * 1000);
+        Py_DECREF(tmp);
         if (timeout < 0) {
             PyErr_SetString(PyExc_ValueError, "Wrong timeout parameter. "
                     "Timeout must be non-negative.");
             return NULL;
         }
-        Py_DECREF(tmp);
     } else {
         PyErr_SetString(PyExc_TypeError, "Wrong timeout parameter.");
         return NULL;

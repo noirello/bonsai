@@ -139,6 +139,7 @@ LDAPModList_Pop(LDAPModList *self) {
                 /* Append to the list. */
                 if (PyList_Append(list, berval) != 0) {
                     Py_DECREF(list);
+                    Py_DECREF(berval);
                     return NULL;
                 }
                 Py_DECREF(berval);

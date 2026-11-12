@@ -498,7 +498,7 @@ get_socketpair(PyObject **tup, SOCKET *csock, SOCKET *ssock) {
     }
     return 0;
 error:
-    Py_DECREF(*tup);
+    Py_CLEAR(*tup);
     return -1;
 }
 
