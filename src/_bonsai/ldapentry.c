@@ -485,14 +485,14 @@ LDAPEntry_Rollback(LDAPEntry *self, LDAPModList* mods) {
                             if (set_ldapvaluelist_status(attr, 2) != 0) goto error;
                             break;
                     }
-                    Py_DECREF(item);
+                    Py_CLEAR(item);
                 }
-                Py_DECREF(iter);
+                Py_CLEAR(iter);
             }
-            Py_DECREF(added);
-            Py_DECREF(deleted);
+            Py_CLEAR(added);
+            Py_CLEAR(deleted);
         }
-        Py_DECREF(res_tuple);
+        Py_CLEAR(res_tuple);
     }
     return 0;
 
@@ -501,7 +501,7 @@ error:
     Py_XDECREF(iter);
     Py_XDECREF(added);
     Py_XDECREF(deleted);
-    Py_DECREF(res_tuple);
+    Py_XDECREF(res_tuple);
     return -1;
 }
 
