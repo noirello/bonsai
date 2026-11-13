@@ -406,23 +406,20 @@ end:
 }
 
 /* Add a pending LDAP operations to a dictionary. The key is the
- * corresponding message id, the value depends on the type of operation. */
+ * corresponding message id, the value depends on the type of operation.
+ * It doesn't steal reference, the caller retains ownership. */
 int
 add_to_pending_ops(PyObject *pending_ops, int msgid, PyObject *item) {
+    int rc = -1;
     PyObject *key = NULL;
 
     key = PyLong_FromLong((long int)msgid);
     if (key == NULL) return -1;
 
-    if (PyDict_SetItem(pending_ops, key, item) != 0) {
-        Py_DECREF(key);
-        PyErr_BadInternalCall();
-        return -1;
-    }
-    if (item != Py_None) Py_DECREF(item);
+    rc = PyDict_SetItem(pending_ops, key, item);
     Py_DECREF(key);
 
-    return 0;
+    return rc;
 }
 
 /* Get a pending LDAP operations from a dictionary. The key is the

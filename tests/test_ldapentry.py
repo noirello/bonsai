@@ -589,3 +589,14 @@ def test_invalid_value_fails(client):
             with pytest.raises(AttributeError, match="list"):
                 entry.modify()
         assert (sys.getrefcount(added), sys.getrefcount(deleted)) == before
+
+
+def test_pending_ops_modify_refcount(client, basedn, test_entry):
+    """Successful modifies must not leak the pending_ops item."""
+    with client.connect() as conn:
+        entry = test_entry(conn, "cn=pending-refcount,%s" % basedn)
+        before = sys.getrefcount(entry)
+        for idx in range(5):
+            entry["sn"] = "test_%d" % idx
+            entry.modify()
+        assert sys.getrefcount(entry) == before

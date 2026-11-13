@@ -757,6 +757,18 @@ def test_paged_search_with_auto_acq(cfg, basedn):
     assert res.acquire_next_page() is None
 
 
+def test_paged_search_refcount(cfg, basedn):
+    """Auto page acquisition must not leak the search iterator."""
+    cli = _generate_client(cfg)
+    cli.auto_page_acquire = True
+    with cli.connect() as conn:
+        res = conn.paged_search("ou=nerdherd,%s" % basedn, 1, page_size=2)
+        before = sys.getrefcount(res)
+        list(res)
+        assert res.acquire_next_page() is None
+        assert sys.getrefcount(res) == before
+
+
 @pytest.mark.timeout(15)
 def test_search_timeout(conn, basedn):
     """Test search method's timeout."""

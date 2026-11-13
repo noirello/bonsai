@@ -403,12 +403,9 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
         return NULL;
     }
     /* Add new add or modify operation to the pending_ops with mod_dict. */
-    if (add_to_pending_ops(self->conn->pending_ops, msgid,
-            (PyObject *)mods) != 0) {
-        Py_DECREF(mods);
-        return NULL;
-    }
-
+    rc = add_to_pending_ops(self->conn->pending_ops, msgid, (PyObject *)mods);
+    Py_DECREF(mods);
+    if (rc != 0) return NULL;
 
     return PyLong_FromLong((long int)msgid);
 }
@@ -632,10 +629,9 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     tmp = Py_BuildValue("(O,O)", (PyObject *)self, new_ldapdn);
     Py_DECREF(new_ldapdn);
     if (tmp == NULL) return NULL;
-    if (add_to_pending_ops(self->conn->pending_ops, msgid, tmp) != 0) {
-        Py_DECREF(tmp);
-        return NULL;
-    }
+    rc = add_to_pending_ops(self->conn->pending_ops, msgid, tmp);
+    Py_DECREF(tmp);
+    if (rc != 0) return NULL;
 
     return PyLong_FromLong((long int)msgid);
 }

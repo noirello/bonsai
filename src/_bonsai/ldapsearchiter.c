@@ -118,7 +118,6 @@ ldapsearchiter_acquirenextpage(LDAPSearchIter *self) {
         if (LDAPConnection_IsClosed(self->conn) != 0) return NULL;
         msgid = LDAPConnection_Searching(self->conn, NULL, (PyObject *)self);
         if (msgid < 0) return NULL;
-        Py_INCREF(self);
         return PyLong_FromLong((long int)msgid);
     } else {
         if (self->cookie != NULL) {

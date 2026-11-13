@@ -202,11 +202,9 @@ ldapconnection_open(LDAPConnection *self) {
     if (rc != 0) return NULL;
 
     /* Add binding operation to the pending_ops. */
-    if (add_to_pending_ops(self->pending_ops, (int)(self->csock),
-        (PyObject *)iter) != 0) {
-        Py_DECREF(iter);
-        return NULL;
-    }
+    rc = add_to_pending_ops(self->pending_ops, (int)(self->csock), (PyObject *)iter);
+    Py_DECREF(iter);
+    if (rc != 0) return NULL;
 
     return PyLong_FromLong((long int)(self->csock));
 }
@@ -708,7 +706,7 @@ ldapconnection_search(LDAPConnection *self, PyObject *args, PyObject *kwds) {
 
     msgid = LDAPConnection_Searching(self, &params, (PyObject *)search_iter);
     if (search_iter == NULL) free_search_params(&params);
-    else if (msgid < 0) Py_DECREF(search_iter);
+    else Py_DECREF(search_iter);
     if (msgid < 0) return NULL;
 
     return PyLong_FromLong((long int)msgid);
@@ -734,10 +732,9 @@ ldapconnection_whoami(LDAPConnection *self) {
     /* Add the new operation to the pending_ops with the proper OID. */
     oid = PyUnicode_FromString("1.3.6.1.4.1.4203.1.11.3");
     if (oid == NULL) return NULL;
-    if (add_to_pending_ops(self->pending_ops, msgid, oid) != 0) {
-        Py_DECREF(oid);
-        return NULL;
-    }
+    rc = add_to_pending_ops(self->pending_ops, msgid, oid);
+    Py_DECREF(oid);
+    if (rc != 0) return NULL;
 
     return PyLong_FromLong((long int)msgid);
 }
@@ -826,10 +823,9 @@ ldapconnection_modpasswd(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     /* Add the new operation to the pending_ops with the proper OID. */
     oid = PyUnicode_FromString("1.3.6.1.4.1.4203.1.11.1");
     if (oid == NULL) return NULL;
-    if (add_to_pending_ops(self->pending_ops, msgid, oid) != 0) {
-        Py_DECREF(oid);
-        return NULL;
-    }
+    rc = add_to_pending_ops(self->pending_ops, msgid, oid);
+    Py_DECREF(oid);
+    if (rc != 0) return NULL;
 
     return PyLong_FromLong((long int)msgid);
 }
