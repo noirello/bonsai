@@ -456,9 +456,24 @@ check_tls_result(LDAP *ld, int msgid, int timeout, char async, SOCKET csock) {
 static void
 ldapconnectiter_dealloc(LDAPConnectIter* self) {
     DEBUG("ldapconnectiter_dealloc (self:%p)", self);
-    Py_XDECREF(self->conn);
+    PyObject_GC_UnTrack(self);
+    Py_CLEAR(self->conn);
     if (self->info != NULL) dealloc_conn_info(self->info);
     Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+static int
+ldapconnectiter_traverse(LDAPConnectIter *self, visitproc visit, void *arg) {
+    DEBUG("ldapconnectiter_traverse (self:%p)", self);
+    Py_VISIT(self->conn);
+    return 0;
+}
+
+static int
+ldapconnectiter_clear(LDAPConnectIter *self) {
+    DEBUG("ldapconnectiter_clear (self:%p)", self);
+    Py_CLEAR(self->conn);
+    return 0;
 }
 
 /*  Create a new LDAPConnectIter object. */
@@ -479,6 +494,7 @@ ldapconnectiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
     if (self != NULL) {
         self->conn = NULL;
+        self->info = NULL;
         self->state = 0;
         self->message_id = 0;
         self->init_thread_data = NULL;
@@ -702,10 +718,11 @@ PyTypeObject LDAPConnectIterType = {
     0,                         /* tp_setattro */
     0,                         /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT |
-        Py_TPFLAGS_BASETYPE,   /* tp_flags */
+        Py_TPFLAGS_BASETYPE |
+        Py_TPFLAGS_HAVE_GC,   /* tp_flags */
     "ldapconnectiter object, implemented in C.",       /* tp_doc */
-    0,                         /* tp_traverse */
-    0,                         /* tp_clear */
+    (traverseproc)ldapconnectiter_traverse, /* tp_traverse */
+    (inquiry)ldapconnectiter_clear, /* tp_clear */
     0,                         /* tp_richcompare */
     0,                         /* tp_weaklistoffset */
     0,                         /* tp_iter */

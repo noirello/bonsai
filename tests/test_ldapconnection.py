@@ -1075,3 +1075,21 @@ def test_paged_search_large_result(conn, anonym_conn, basedn, large_org):
         result = anonym_conn.get_result(msgid)
 
     assert entry_num == collected_entry
+
+
+def test_abandoned_connect_gc(client):
+    """Test that abandoned connect is garbage collected."""
+    import gc
+
+    import bonsai._bonsai as _bonsai
+
+    def live_connections():
+        gc.collect()
+        return sum(isinstance(obj, _bonsai.ldapconnection) for obj in gc.get_objects())
+
+    before = live_connections()
+    for _ in range(3):
+        conn = bonsai.LDAPConnection(client)
+        _bonsai.ldapconnection.open(conn)
+        del conn
+    assert live_connections() == before
