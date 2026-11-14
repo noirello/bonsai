@@ -22,14 +22,18 @@ ldapconnection_dealloc(LDAPConnection* self) {
 static int
 ldapconnection_traverse(LDAPConnection *self, visitproc visit, void *arg) {
     DEBUG("ldapconnection_traverse (self:%p)", self);
+    Py_VISIT(self->client);
     Py_VISIT(self->pending_ops);
+    Py_VISIT(self->socketpair);
     return 0;
 }
 
 static int
 ldapconnection_clear(LDAPConnection *self) {
     DEBUG("ldapconnection_clear (self:%p)", self);
+    Py_CLEAR(self->client);
     Py_CLEAR(self->pending_ops);
+    Py_CLEAR(self->socketpair);
     return 0;
 }
 
