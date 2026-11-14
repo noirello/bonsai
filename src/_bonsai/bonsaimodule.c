@@ -135,8 +135,8 @@ bonsai_unique_contains(PyObject *self, PyObject *args) {
 
 static void
 bonsai_free(PyObject *self) {
-    Py_DECREF(LDAPDNObj);
-    Py_DECREF(LDAPValueListObj);
+    Py_XDECREF(LDAPDNObj);
+    Py_XDECREF(LDAPValueListObj);
     Py_XDECREF(LDAPEntryObj);
     //Py_TYPE(self)->tp_free((PyObject*)self); // Causes segfault on 3.8.
 }
@@ -179,7 +179,10 @@ PyInit__bonsai(void) {
 
     /* Import LDAPValueList object. */
     LDAPValueListObj = load_python_object("bonsai.ldapvaluelist", "LDAPValueList");
-    if (LDAPValueListObj == NULL) return NULL;
+    if (LDAPValueListObj == NULL) {
+        Py_CLEAR(LDAPDNObj);
+        return NULL;
+    }
 
     module = PyModule_Create(&bonsai2module);
     if (module == NULL) return NULL;
