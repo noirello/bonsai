@@ -32,7 +32,7 @@ ldapentry_traverse(LDAPEntry *self, visitproc visit, void *arg) {
     Py_VISIT(self->dn);
     Py_VISIT(self->deleted);
     Py_VISIT(self->conn);
-    return 0;
+    return PyDict_Type.tp_traverse((PyObject *)self, visit, arg);
 }
 
 /*  Create a new LDAPEntry object. */
