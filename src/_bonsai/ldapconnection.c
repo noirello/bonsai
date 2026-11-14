@@ -1093,7 +1093,12 @@ parse_extended_result(LDAPConnection *self, LDAPMessage *res, PyObject *oid) {
             set_ppolicy_err(pperr, ctrl_obj);
         } else {
             ldaperror = get_error_by_code(err);
-            if (ldaperror == NULL) return NULL;
+            if (ldaperror == NULL) {
+                if (errstr != NULL) ldap_memfree(errstr);
+                Py_XDECREF(ctrl_obj);
+                if (res != NULL) ldap_msgfree(res);
+                return NULL;
+            }
             if (errstr != NULL) {
                 errmsg = PyUnicode_FromFormat("%s.", errstr);
                 ldap_memfree(errstr);
