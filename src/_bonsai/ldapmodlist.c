@@ -2,6 +2,13 @@
 
 #include "utils.h"
 
+static int
+ldapmodlist_clear(LDAPModList *self) {
+    DEBUG("ldapmodlist_clear (self:%p)", self);
+    Py_CLEAR(self->entry);
+    return 0;
+}
+
 /*  Dealloc the LDAPModList object. */
 static void
 ldapmodlist_dealloc(LDAPModList* self) {
@@ -25,7 +32,7 @@ ldapmodlist_dealloc(LDAPModList* self) {
         }
         free(self->mod_list);
     }
-    Py_CLEAR(self->entry);
+    ldapmodlist_clear(self);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -33,13 +40,6 @@ static int
 ldapmodlist_traverse(LDAPModList *self, visitproc visit, void *arg) {
     DEBUG("ldapmodlist_traverse (self:%p)", self);
     Py_VISIT(self->entry);
-    return 0;
-}
-
-static int
-ldapmodlist_clear(LDAPModList *self) {
-    DEBUG("ldapmodlist_clear (self:%p)", self);
-    Py_CLEAR(self->entry);
     return 0;
 }
 

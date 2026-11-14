@@ -3,6 +3,15 @@
 #include "ldapsearchiter.h"
 #include "ldapconnectiter.h"
 
+static int
+ldapconnection_clear(LDAPConnection *self) {
+    DEBUG("ldapconnection_clear (self:%p)", self);
+    Py_CLEAR(self->client);
+    Py_CLEAR(self->pending_ops);
+    Py_CLEAR(self->socketpair);
+    return 0;
+}
+
 /*  Dealloc the LDAPConnection object. */
 static void
 ldapconnection_dealloc(LDAPConnection* self) {
@@ -12,9 +21,7 @@ ldapconnection_dealloc(LDAPConnection* self) {
         /* Unbind connection and free resources allocated by the LDAP structure. */
         ldap_unbind_ext(self->ld, NULL, NULL);
     }
-    Py_XDECREF(self->client);
-    Py_XDECREF(self->pending_ops);
-    Py_XDECREF(self->socketpair);
+    ldapconnection_clear(self);
 
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -25,15 +32,6 @@ ldapconnection_traverse(LDAPConnection *self, visitproc visit, void *arg) {
     Py_VISIT(self->client);
     Py_VISIT(self->pending_ops);
     Py_VISIT(self->socketpair);
-    return 0;
-}
-
-static int
-ldapconnection_clear(LDAPConnection *self) {
-    DEBUG("ldapconnection_clear (self:%p)", self);
-    Py_CLEAR(self->client);
-    Py_CLEAR(self->pending_ops);
-    Py_CLEAR(self->socketpair);
     return 0;
 }
 

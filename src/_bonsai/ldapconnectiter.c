@@ -452,12 +452,19 @@ check_tls_result(LDAP *ld, int msgid, int timeout, char async, SOCKET csock) {
 
 #endif
 
+static int
+ldapconnectiter_clear(LDAPConnectIter *self) {
+    DEBUG("ldapconnectiter_clear (self:%p)", self);
+    Py_CLEAR(self->conn);
+    return 0;
+}
+
 /*  Dealloc the LDAPConnectIter object. */
 static void
 ldapconnectiter_dealloc(LDAPConnectIter* self) {
     DEBUG("ldapconnectiter_dealloc (self:%p)", self);
     PyObject_GC_UnTrack(self);
-    Py_CLEAR(self->conn);
+    ldapconnectiter_clear(self);
     if (self->info != NULL) dealloc_conn_info(self->info);
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -466,13 +473,6 @@ static int
 ldapconnectiter_traverse(LDAPConnectIter *self, visitproc visit, void *arg) {
     DEBUG("ldapconnectiter_traverse (self:%p)", self);
     Py_VISIT(self->conn);
-    return 0;
-}
-
-static int
-ldapconnectiter_clear(LDAPConnectIter *self) {
-    DEBUG("ldapconnectiter_clear (self:%p)", self);
-    Py_CLEAR(self->conn);
     return 0;
 }
 

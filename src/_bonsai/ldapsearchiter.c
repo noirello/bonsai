@@ -1,6 +1,14 @@
 #include "ldapsearchiter.h"
 #include "ldapconnection.h"
 
+static int
+ldapsearchiter_clear(LDAPSearchIter *self) {
+    DEBUG("ldapsearchiter_clear (self:%p)", self);
+    Py_CLEAR(self->buffer);
+    Py_CLEAR(self->conn);
+    return 0;
+}
+
 /* Dealloc the LDAPSearchIter object. */
 static void
 ldapsearchiter_dealloc(LDAPSearchIter* self) {
@@ -8,8 +16,7 @@ ldapsearchiter_dealloc(LDAPSearchIter* self) {
         (self != NULL) ? self->cookie : NULL
     );
     PyObject_GC_UnTrack(self);
-    Py_XDECREF(self->buffer);
-    Py_XDECREF(self->conn);
+    ldapsearchiter_clear(self);
 
     free_search_params(self->params);
     if (self->params != NULL) free(self->params);
@@ -39,14 +46,6 @@ ldapsearchiter_traverse(LDAPSearchIter *self, visitproc visit, void *arg) {
     DEBUG("ldapsearchiter_traverse (self:%p)", self);
     Py_VISIT(self->buffer);
     Py_VISIT(self->conn);
-    return 0;
-}
-
-static int
-ldapsearchiter_clear(LDAPSearchIter *self) {
-    DEBUG("ldapsearchiter_clear (self:%p)", self);
-    Py_CLEAR(self->buffer);
-    Py_CLEAR(self->conn);
     return 0;
 }
 

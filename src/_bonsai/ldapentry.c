@@ -19,9 +19,7 @@ ldapentry_dealloc(LDAPEntry *self) {
     DEBUG("ldapentry_dealloc (self:%p)", self);
     PyObject_GC_UnTrack(self);
 
-    Py_XDECREF(self->conn);
-    Py_XDECREF(self->deleted);
-    Py_XDECREF(self->dn);
+    ldapentry_clear(self);
 
     PyDict_Type.tp_dealloc((PyObject*)self);
 }
