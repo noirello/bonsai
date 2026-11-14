@@ -600,3 +600,20 @@ def test_pending_ops_modify_refcount(client, basedn, test_entry):
             entry["sn"] = "test_%d" % idx
             entry.modify()
         assert sys.getrefcount(entry) == before
+
+
+def test_failing_entry_creation(client, basedn):
+    """Test failing entry creation during search."""
+    original_init = LDAPEntry.__init__
+
+    def failing_init(self, *args, **kwargs):
+        raise RuntimeError("entry creation failed")
+
+    with client.connect() as conn:
+        LDAPEntry.__init__ = failing_init
+        try:
+            with pytest.raises(RuntimeError):
+                conn.search(basedn, 0)
+        finally:
+            LDAPEntry.__init__ = original_init
+        assert len(conn.search(basedn, 0)) == 1

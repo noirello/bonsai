@@ -908,11 +908,13 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, PyObject *obj) {
         entryobj = LDAPEntry_FromLDAPMessage(entry, self);
         if (entryobj == NULL) {
             Py_DECREF(buffer);
+            ldap_msgfree(res);
             return NULL;
         }
         if (PyList_Append(buffer, (PyObject *)entryobj) != 0) {
             Py_DECREF(entryobj);
             Py_DECREF(buffer);
+            ldap_msgfree(res);
             return PyErr_NoMemory();
         }
         Py_DECREF(entryobj);
@@ -944,6 +946,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, PyObject *obj) {
     /* Check for any error during the searching. */
     rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL,
             &returned_ctrls, 1);
+    res = NULL;
 
     if (rc != LDAP_SUCCESS && rc != LDAP_MORE_RESULTS_TO_RETURN) {
         set_exception(self->ld, rc);
@@ -1055,6 +1058,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, PyObject *obj) {
 
     return retval;
 error:
+    if (res != NULL) ldap_msgfree(res);
     if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
     Py_DECREF(buffer);
     return NULL;
