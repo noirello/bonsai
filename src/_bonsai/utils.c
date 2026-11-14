@@ -102,6 +102,10 @@ PyObject2char_withlength(PyObject *obj, char **output, Py_ssize_t *len) {
     /* If Python object is a None return an empty("") char*. */
     if (obj == Py_None) {
         *output = strdup("");
+        if (*output == NULL) {
+            PyErr_NoMemory();
+            return -1;
+        }
         if (len != NULL) *len = 0;
         return 0;
     }
@@ -112,7 +116,10 @@ PyObject2char_withlength(PyObject *obj, char **output, Py_ssize_t *len) {
         if (rc != 0) return -1;
         /* Copy the content of the buffer to avoid invalid freeing. */
         *output = (char *)malloc(size + 1);
-        if (*output == NULL) return -1;
+        if (*output == NULL) {
+            PyErr_NoMemory();
+            return -1;
+        }
         memcpy(*output, tmp, size + 1);
 
         if (len != NULL) *len = size;
@@ -132,6 +139,10 @@ PyObject2char_withlength(PyObject *obj, char **output, Py_ssize_t *len) {
         } else {
             *output = strdup("FALSE");
             if (len != NULL) *len = 5;
+        }
+        if (*output == NULL) {
+            PyErr_NoMemory();
+            return -1;
         }
     } else {
         tmpobj = PyObject_Str(obj);
