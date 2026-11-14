@@ -103,6 +103,7 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
     PyObject *value = NULL;
     PyObject *added = NULL, *deleted = NULL;
     PyObject *tmp = NULL;
+    PyObject *new_deleted = NULL;
 
     keys = PyMapping_Keys((PyObject *)self);
     if (keys == NULL) return NULL;
@@ -196,7 +197,9 @@ LDAPEntry_CreateLDAPMods(LDAPEntry *self) {
     }
 
     /* Delete the list. */
-    Py_SETREF(self->deleted, PyList_New(0));
+    new_deleted = PyList_New(0);
+    if (new_deleted == NULL) goto error;
+    Py_SETREF(self->deleted, new_deleted);
 
     return mods;
 error:
@@ -762,6 +765,7 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
                 Py_DECREF(tmp);
                 rc = PyDict_SetItem((PyObject *)self, cikey, (PyObject *)list);
                 if (set_ldapvaluelist_status(list, status) != 0) {
+                    Py_DECREF(list);
                     Py_DECREF(cikey);
                     return -1;
                 }
