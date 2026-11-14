@@ -216,15 +216,15 @@ LDAPEntry *
 LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
     int i;
     int contain = -1;
-    char *dn;
-    char *attr;
-    struct berval **values;
+    char *dn = NULL;
+    char *attr = NULL;
+    struct berval **values = NULL;
     BerElement *ber = NULL;
     PyObject *rawval_list = NULL;
     PyObject *val = NULL, *attrobj = NULL;
     PyObject *args = NULL;
     PyObject *lvl = NULL, *tmp = NULL;
-    LDAPEntry *self;
+    LDAPEntry *self = NULL;
 
     /* Create an attribute list for LDAPEntry (which is implemented in Python). */
     dn = ldap_get_dn(conn->ld, entrymsg);
@@ -241,7 +241,10 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
     if (LDAPEntryObj == NULL) {
         /* Load Python-based LDAPEntry, if it's not already loaded. */
         LDAPEntryObj = load_python_object("bonsai.ldapentry", "LDAPEntry");
-        if (LDAPEntryObj == NULL) return NULL;
+        if (LDAPEntryObj == NULL) {
+            Py_DECREF(args);
+            return NULL;
+        }
     }
     /* Create a new LDAPEntry. */
     self = (LDAPEntry *)PyObject_CallObject(LDAPEntryObj, args);
@@ -273,27 +276,23 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
             if (tmp == NULL) goto error;
             contain = PyObject_IsTrue(PyTuple_GET_ITEM(tmp, 0));
             Py_DECREF(tmp);
+            if (contain == -1) goto error;
             for (i = 0; values[i] != NULL; i++) {
                 /* Convert berval to PyObject*, if it's failed skip it. */
                 val = berval2PyObject(values[i], contain);
                 if (val == NULL) continue;
                 /* If the attribute has more value, then append to the list. */
-                if (PyList_Append(lvl, val) != 0) {
-                    Py_DECREF(lvl);
-                    Py_DECREF(val);
-                    ldap_value_free_len(values);
-                    goto error;
-                }
-                Py_DECREF(val);
+                if (PyList_Append(lvl, val) != 0) goto error;
+                Py_CLEAR(val);
             }
         }
         ldap_value_free_len(values);
+        values = NULL;
         if (PyDict_SetItem((PyObject *)self, attrobj, lvl) != 0) {
-            Py_DECREF(lvl);
             goto error;
         }
-        Py_DECREF(attrobj);
-        Py_DECREF(lvl);
+        Py_CLEAR(attrobj);
+        Py_CLEAR(lvl);
     }
     /* Cleaning the mess. */
     Py_DECREF(rawval_list);
@@ -303,16 +302,15 @@ LDAPEntry_FromLDAPMessage(LDAPMessage *entrymsg, LDAPConnection *conn) {
     return self;
 
 error:
+    Py_XDECREF(val);
+    Py_XDECREF(lvl);
     Py_XDECREF(attrobj);
     Py_DECREF(self);
     Py_DECREF(rawval_list);
-    if (attr != NULL) {
-        ldap_memfree(attr);
-    }
-    if (ber != NULL) {
-        ber_free(ber, 0);
-    }
-    return (LDAPEntry *)PyErr_NoMemory();
+    if (values != NULL) ldap_value_free_len(values);
+    if (attr != NULL) ldap_memfree(attr);
+    if (ber != NULL) ber_free(ber, 0);
+    return NULL;
 }
 
 /* Preform a LDAP add or modify operation depend on the `mod` parameter.
