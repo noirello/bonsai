@@ -493,10 +493,17 @@ _ldap_bind(LDAP *ld, ldap_conndata_t *info, char ppolicy, LDAPMessage *result, i
             ld, info, ppolicy, result, *msgid);
     if (ppolicy == 1) {
         rc = ldap_create_passwordpolicy_control(ld, &ppolicy_ctrl);
-        if (rc != LDAP_SUCCESS) return rc;
+        if (rc != LDAP_SUCCESS) {
+            if (result != NULL) ldap_msgfree(result);
+            return rc;
+        }
 
         server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *) * (1 + 1));
-        if (server_ctrls == NULL) return LDAP_NO_MEMORY;
+        if (server_ctrls == NULL) {
+            if (ppolicy_ctrl != NULL) ldap_control_free(ppolicy_ctrl);
+            if (result != NULL) ldap_msgfree(result);
+            return LDAP_NO_MEMORY;
+        }
 
         server_ctrls[0] = ppolicy_ctrl;
         server_ctrls[1] = NULL;
@@ -802,6 +809,8 @@ create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread) {
 
     rc = pthread_mutex_init(data->mux, NULL);
     if (rc != 0) {
+        free(data->mux);
+        data->mux = NULL;
         PyErr_BadInternalCall();
         return -1;
     }
@@ -815,12 +824,24 @@ create_init_thread(void *param, ldap_conndata_t *info, XTHREAD *thread) {
             && data->info->authcid != NULL && strlen(data->info->authcid) != 0) {
         data->info->request_tgt = 1;
         rc = krb5_init_context(&(data->info->ctx));
-        if (rc != 0) return -1;
+        if (rc != 0) {
+            pthread_mutex_unlock(data->mux);
+            pthread_mutex_destroy(data->mux);
+            free(data->mux);
+            data->mux = NULL;
+            return -1;
+        }
     }
 #endif
     pthread_mutex_unlock(data->mux);
 
     rc = pthread_create(thread, NULL, ldap_init_thread_func, data);
+    if (rc != 0) {
+        pthread_mutex_destroy(data->mux);
+        free(data->mux);
+        data->mux = NULL;
+        return -1;
+    }
 #endif
     if (rc != 0) return -1;
 
