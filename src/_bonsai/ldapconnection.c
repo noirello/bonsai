@@ -792,7 +792,7 @@ ldapconnection_modpasswd(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     ber_free(ber, 1);
     if (rc != 0) {
         set_exception(NULL, LDAP_ENCODING_ERROR);
-        return NULL;
+        goto error;
     }
 
     if (self->ppolicy == 1) {
@@ -800,11 +800,14 @@ ldapconnection_modpasswd(LDAPConnection *self, PyObject *args, PyObject *kwds) {
         rc = ldap_create_passwordpolicy_control(self->ld, &ppolicy_ctrl);
         if (rc != LDAP_SUCCESS) {
             PyErr_BadInternalCall();
-            return NULL;
+            goto error;
         }
 
         server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *) * (1 + 1));
-        if (server_ctrls == NULL) return PyErr_NoMemory();
+        if (server_ctrls == NULL) {
+            PyErr_NoMemory();
+            goto error;
+        }
 
         server_ctrls[0] = ppolicy_ctrl;
         server_ctrls[1] = NULL;
@@ -815,7 +818,7 @@ ldapconnection_modpasswd(LDAPConnection *self, PyObject *args, PyObject *kwds) {
             data, server_ctrls, NULL, &msgid);
 
     /* Clear the mess. */
-    ber_bvfree(data);
+    if (data != NULL) ber_bvfree(data);
     if (ppolicy_ctrl != NULL) ldap_control_free(ppolicy_ctrl);
     free(server_ctrls);
 
@@ -832,6 +835,11 @@ ldapconnection_modpasswd(LDAPConnection *self, PyObject *args, PyObject *kwds) {
     if (rc != 0) return NULL;
 
     return PyLong_FromLong((long int)msgid);
+error:
+    if (data != NULL) ber_bvfree(data);
+    if (ppolicy_ctrl != NULL) ldap_control_free(ppolicy_ctrl);
+    free(server_ctrls);
+    return NULL;
 }
 
 static PyObject *

@@ -332,15 +332,12 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
     dnstr = PyObject2char(self->dn);
     if (dnstr == NULL || strlen(dnstr) == 0) {
         PyErr_SetString(PyExc_ValueError, "Missing distinguished name.");
-        free(dnstr);
+        if (dnstr != NULL) free(dnstr);
         return NULL;
     }
 
     mods = LDAPEntry_CreateLDAPMods(self);
-    if (mods == NULL) {
-        free(dnstr);
-        return NULL;
-    }
+    if (mods == NULL) goto error;
 
     if (self->conn->ppolicy == 1) num_of_ctrls++;
     if (self->conn->managedsait == 1) num_of_ctrls++;
@@ -348,9 +345,8 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
         server_ctrls = (LDAPControl **)malloc(sizeof(LDAPControl *) *
                                               (num_of_ctrls + 1));
         if (server_ctrls == NULL) {
-            Py_DECREF(mods);
-            free(dnstr);
-            return PyErr_NoMemory();
+            PyErr_NoMemory();
+            goto error;
         }
         num_of_ctrls = 0;
     }
@@ -360,9 +356,7 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
         rc = ldap_create_passwordpolicy_control(self->conn->ld, &ppolicy_ctrl);
         if (rc != LDAP_SUCCESS) {
             PyErr_BadInternalCall();
-            Py_DECREF(mods);
-            free(dnstr);
-            return NULL;
+            goto error;
         }
         server_ctrls[num_of_ctrls++] = ppolicy_ctrl;
         server_ctrls[num_of_ctrls] = NULL;
@@ -374,9 +368,7 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
                                  1, &mdi_ctrl);
         if (rc != LDAP_SUCCESS) {
             PyErr_BadInternalCall();
-            Py_DECREF(mods);
-            free(dnstr);
-            return NULL;
+            goto error;
         }
         server_ctrls[num_of_ctrls++] = mdi_ctrl;
         server_ctrls[num_of_ctrls] = NULL;
@@ -407,6 +399,13 @@ LDAPEntry_AddOrModify(LDAPEntry *self, int mod) {
     if (rc != 0) return NULL;
 
     return PyLong_FromLong((long int)msgid);
+error:
+    free(dnstr);
+    if (ppolicy_ctrl != NULL) ldap_control_free(ppolicy_ctrl);
+    if (mdi_ctrl != NULL) _ldap_control_free(mdi_ctrl);
+    if (server_ctrls != NULL) free(server_ctrls);
+    Py_XDECREF(mods);
+    return NULL;
 }
 
 /* Rollback the status of an ldapentry after a failed operation. The
