@@ -567,6 +567,7 @@ static PyObject *
 ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     int rc;
     int msgid = -1;
+    int del_old = -1;
     char *newparent_str, *newrdn_str, *olddn_str;
     PyObject *newdn, *newparent, *newrdn, *deleteold;
     PyObject *tmp, *new_ldapdn = NULL;
@@ -610,9 +611,26 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     newparent_str = PyObject2char(newparent);
     Py_DECREF(newrdn);
     Py_DECREF(newparent);
+    if (newrdn_str == NULL) {
+        if (newparent_str != NULL) free(newparent_str);
+        free(olddn_str);
+        return NULL;
+    }
+    if (newparent_str == NULL) {
+        free(newrdn_str);
+        free(olddn_str);
+        return NULL;
+    }
+    del_old = PyObject_IsTrue(deleteold);
+    if (del_old == -1) {
+        free(olddn_str);
+        free(newrdn_str);
+        free(newparent_str);
+        return NULL;
+    }
 
     rc = ldap_rename(self->conn->ld, olddn_str, newrdn_str, newparent_str,
-        PyObject_IsTrue(deleteold), NULL, NULL, &msgid);
+        del_old, NULL, NULL, &msgid);
     /* Clean up strings. */
     free(olddn_str);
     free(newrdn_str);
