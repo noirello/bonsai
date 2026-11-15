@@ -1077,6 +1077,29 @@ def test_paged_search_large_result(conn, anonym_conn, basedn, large_org):
     assert entry_num == collected_entry
 
 
+def test_failed_operations_are_not_kept_pending(conn, basedn):
+    """Test failed operations are removed from the pending dictionary."""
+    import gc
+
+    def pending():
+        return sum(len(obj) for obj in gc.get_referents(conn) if isinstance(obj, dict))
+
+    before = pending()
+    entry = bonsai.LDAPEntry("cn=pending-test,%s" % basedn, conn)
+    entry["objectClass"] = ["top", "wrongObjectClass"]
+    entry["cn"] = ["pending-test"]
+    with pytest.raises(bonsai.LDAPError):
+        conn.add(entry)
+    assert pending() == before
+    with pytest.raises(bonsai.LDAPError):
+        conn.delete("cn=missing-pending-test,%s" % basedn)
+    assert pending() == before
+    base_entry = conn.search(basedn, 0)[0]
+    with pytest.raises(bonsai.LDAPError):
+        base_entry.rename("cn=renamed,ou=no-such-unit,%s" % basedn)
+    assert pending() == before
+
+
 def test_abandoned_connect_gc(client):
     """Test that abandoned connect is garbage collected."""
     import gc

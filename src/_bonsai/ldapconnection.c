@@ -1241,6 +1241,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         /* Error occurred during the operation. */
         /* Call set_exception with 0 param to get error code from session. */
         set_exception(self->ld, 0);
+        discard_from_pending_ops(self->pending_ops, msgid);
         return NULL;
     case 0:
         /* Timeout exceeded.*/
@@ -1258,6 +1259,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
                 /* LDAP add or modify operation is failed,
                    then rollback the changes. */
                 if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0) {
+                    discard_from_pending_ops(self->pending_ops, msgid);
                     return NULL;
                 }
             }
@@ -1292,15 +1294,18 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         rc = ldap_parse_result(self->ld, res, &err, NULL, NULL, NULL, NULL, 1);
         if (rc != LDAP_SUCCESS || err != LDAP_SUCCESS) {
            set_exception(self->ld, err);
+           discard_from_pending_ops(self->pending_ops, msgid);
            return NULL;
         }
 
         if (PyArg_ParseTuple(obj, "OO", &entry, &newdn)) {
             /* Validate and set new LDAP DN. */
             if (LDAPEntry_SetDN(entry, newdn) != 0) {
+                discard_from_pending_ops(self->pending_ops, msgid);
                 return NULL;
             }
         } else {
+            discard_from_pending_ops(self->pending_ops, msgid);
             return NULL;
         }
         /* Remove operations from pending_ops. */
@@ -1316,6 +1321,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
         ppres = create_ppolicy_control(self->ld, returned_ctrls, &ctrl_obj, &pperr);
         if (returned_ctrls != NULL) ldap_controls_free(returned_ctrls);
         if (ppres == -1) {
+            discard_from_pending_ops(self->pending_ops, msgid);
             return NULL;
         }
 
@@ -1326,6 +1332,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
                    then rollback the changes. */
                 if (LDAPEntry_Rollback((LDAPEntry *)mods->entry, mods) != 0) {
                     Py_XDECREF(ctrl_obj);
+                    discard_from_pending_ops(self->pending_ops, msgid);
                     return NULL;
                 }
             }
@@ -1334,6 +1341,7 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             else set_exception(self->ld, err);
 
             Py_XDECREF(ctrl_obj);
+            discard_from_pending_ops(self->pending_ops, msgid);
             return NULL;
         }
         /* Remove operations from pending_ops. */

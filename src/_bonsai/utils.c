@@ -469,6 +469,22 @@ del_from_pending_ops(PyObject *pending_ops, int msgid) {
     return 0;
 }
 
+/* Delete a pending LDAP operations from a dictionary but
+   without raising any new error. It's used on error paths. */
+void
+discard_from_pending_ops(PyObject *pending_ops, int msgid) {
+#if PY_VERSION_HEX >= 0x030C0000
+    PyObject *exc = PyErr_GetRaisedException();
+    if (del_from_pending_ops(pending_ops, msgid) != 0) PyErr_Clear();
+    PyErr_SetRaisedException(exc);
+#else
+    PyObject *type, *value, *traceback;
+    PyErr_Fetch(&type, &value, &traceback);
+    if (del_from_pending_ops(pending_ops, msgid) != 0) PyErr_Clear();
+    PyErr_Restore(type, value, traceback);
+#endif
+}
+
 /* Get a socketpair in `tup` by calling socket.socketpair(). The socket
    descriptors are set to `csock` and `ssock` parameters respectively.
    If the function call is failed, it returns with -1. */
