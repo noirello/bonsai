@@ -1354,12 +1354,13 @@ LDAPConnection_Result(LDAPConnection *self, int msgid, int millisec) {
             discard_from_pending_ops(self->pending_ops, msgid);
             return NULL;
         }
+        Py_XDECREF(ctrl_obj);
+
         /* Remove operations from pending_ops. */
         if (del_from_pending_ops(self->pending_ops, msgid) != 0) {
             return NULL;
         }
 
-        Py_XDECREF(ctrl_obj);
         Py_RETURN_TRUE;
     }
     Py_RETURN_NONE;
