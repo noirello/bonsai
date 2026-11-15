@@ -614,11 +614,13 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
     if (newrdn_str == NULL) {
         if (newparent_str != NULL) free(newparent_str);
         free(olddn_str);
+        Py_DECREF(new_ldapdn);
         return NULL;
     }
     if (newparent_str == NULL) {
         free(newrdn_str);
         free(olddn_str);
+        Py_DECREF(new_ldapdn);
         return NULL;
     }
     del_old = PyObject_IsTrue(deleteold);
@@ -626,6 +628,7 @@ ldapentry_rename(LDAPEntry *self, PyObject *args, PyObject *kwds) {
         free(olddn_str);
         free(newrdn_str);
         free(newparent_str);
+        Py_DECREF(new_ldapdn);
         return NULL;
     }
 
@@ -741,7 +744,10 @@ LDAPEntry_SetItem(LDAPEntry *self, PyObject *key, PyObject *value) {
     /* Search for a match. */
     cikey = searchLowerCaseKeyMatch(self, key, 1);
     if (cikey == NULL) {
-        if (PyErr_Occurred()) return -1;
+        if (PyErr_Occurred()) {
+            free(newkey);
+            return -1;
+        }
         cikey = key;
         status = 1;
         Py_INCREF(cikey);
