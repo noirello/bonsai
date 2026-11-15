@@ -126,3 +126,11 @@ def test_readonly_attrs():
         lvl.deleted = [1, 2, 3]
     with pytest.raises(AttributeError):
         lvl._status_dict = {"status": 2}
+
+
+def test_buffer_values():
+    """Test comparing bytes-like values."""
+    lvl = LDAPValueList([b"hello"])
+    assert bytearray(b"hello") in lvl
+    assert memoryview(b"hello") in lvl
+    assert memoryview(b"hello")[::2] not in lvl

@@ -256,22 +256,34 @@ def test_unicode(client, basedn):
         assert dname in [res.dn for res in result]
 
 
-def test_binary(client, basedn):
-    """Test adding binary data."""
+@pytest.mark.parametrize(
+    "value_factory",
+    [bytes, bytearray, memoryview],
+    ids=["bytes", "bytearray", "memoryview"],
+)
+def test_binary(client, basedn, value_factory):
+    """Test adding and modifying binary data."""
     curdir = os.path.abspath(os.path.dirname(__file__))
     conn = client.connect()
-    dname = "cn=binary,%s" % basedn
+    dname = f"cn=binary-{value_factory.__name__},{basedn}"
     entry = LDAPEntry(dname)
     entry["objectclass"] = ["top", "inetOrgPerson"]
     entry["sn"] = "binary_test"
     with open("%s/testenv/test.jpeg" % curdir, "rb") as image:
-        entry["jpegPhoto"] = image.read()
+        content = image.read()
+    entry["jpegPhoto"] = value_factory(content)
     conn.add(entry)
+    result = conn.search(dname, 0)
+    assert "jpegPhoto" in result[0].keys()
+    assert result[0]["jpegphoto"][0] == content
+
+    new_content = b"\xffnew binary content"
+    entry["jpegPhoto"] = value_factory(new_content)
+    entry.modify()
     result = conn.search(dname, 0)
     entry.delete()
     conn.close()
-    assert "jpegPhoto" in result[0].keys()
-    assert result[0]["jpegphoto"][0] == entry["jpegphoto"][0]
+    assert result[0]["jpegphoto"][0] == new_content
 
 
 def test_connection(client, basedn):

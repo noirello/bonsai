@@ -144,6 +144,13 @@ PyObject2char_withlength(PyObject *obj, char **output, Py_ssize_t *len) {
             PyErr_NoMemory();
             return -1;
         }
+    } else if (PyObject_CheckBuffer(obj)) {
+        /* For any object that supports the buffer interface, get the bytes rep. */
+        tmpobj = PyBytes_FromObject(obj);
+        if (tmpobj == NULL) return -1;
+
+        rc = PyObject2char_withlength(tmpobj, output, len);
+        Py_DECREF(tmpobj);
     } else {
         tmpobj = PyObject_Str(obj);
         if (tmpobj == NULL) {
