@@ -395,6 +395,7 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
     LDAPControl *sort_ctrl = NULL;
     LDAPControl *vlv_ctrl = NULL;
     LDAPControl *edn_ctrl = NULL;
+    LDAPControl *sd_ctrl = NULL;
     LDAPControl *mdi_ctrl = NULL;
     LDAPControl **server_ctrls = NULL;
     LDAPSearchIter *search_iter = (LDAPSearchIter *)iterator;
@@ -504,13 +505,13 @@ LDAPConnection_Searching(LDAPConnection *self, ldapsearchparams *params_in,
 
         if (sd_flags != -1) {
             /* Create sd flags control. */
-            rc = _ldap_create_sd_flags_control(self->ld, sd_flags, &edn_ctrl);
+            rc = _ldap_create_sd_flags_control(self->ld, sd_flags, &sd_ctrl);
             if (rc != LDAP_SUCCESS) {
                 PyErr_BadInternalCall();
                 msgid = -1;
                 goto end;
             }
-            server_ctrls[num_of_ctrls++] = edn_ctrl;
+            server_ctrls[num_of_ctrls++] = sd_ctrl;
             server_ctrls[num_of_ctrls] = NULL;
         }
 
@@ -570,6 +571,7 @@ end:
     if (sort_ctrl != NULL) ldap_control_free(sort_ctrl);
     if (vlv_ctrl != NULL) ldap_control_free(vlv_ctrl);
     if (edn_ctrl != NULL) _ldap_control_free(edn_ctrl);
+    if (sd_ctrl != NULL) _ldap_control_free(sd_ctrl);
     if (mdi_ctrl != NULL) _ldap_control_free(mdi_ctrl);
     free(server_ctrls);
 
