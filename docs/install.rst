@@ -8,28 +8,30 @@ Bonsai can be simply installed with pip::
 
     $ pip install bonsai
 
+.. note::
+    To skip the prebuilt wheels (and the libraries bundled in them) and build
+    against the system libraries instead, pass ``--no-binary`` to pip::
+
+        $ pip install --no-binary bonsai bonsai
+
+    See the source installation sections below for the required headers.
+
 Binary wheels on Linux
 ----------------------
 
-On Linux x86_64, pip installs a binary wheel where one is available for the interpreter,
-built for both `manylinux_2_28` and `musllinux_1_2`, so no compiler and no development
-headers are needed. Anything without a matching wheel installs from source.
+On Linux x86_64, pip installs a binary wheel, built for both `manylinux_2_28` and
+`musllinux_1_2`, so no compiler and no development headers are needed.
+Anything without a matching wheel installs from source.
 
 Because the wheel cannot rely on the host having a suitable OpenLDAP, it carries its own
 copies of OpenLDAP, Cyrus SASL, MIT Kerberos and OpenSSL. They are private to Bonsai, loaded
 under content-hashed names, so they neither replace nor interfere with the system libraries,
 and the standard library's ``ssl`` module keeps using the interpreter's own OpenSSL.
 
-The versions are pinned in one place, and included here from it rather than restated:
-
-.. literalinclude:: ../.ci/deps.env
-    :language: ini
-    :caption: .ci/deps.env
-    :start-at: OPENSSL_VERSION=
-
-The SASL mechanisms are compiled into the bundled library rather than loaded from a plugin
-directory at run time, so PLAIN, ANONYMOUS, EXTERNAL, CRAM-MD5, DIGEST-MD5, SCRAM, NTLM and
-GSSAPI all work without `libsasl2-modules` installed.
+The SASL mechanisms are compiled into the bundled library rather than loaded
+from a plugin directory at run time, so PLAIN, ANONYMOUS, EXTERNAL, CRAM-MD5,
+DIGEST-MD5, SCRAM, NTLM and GSSAPI all work without `libsasl2-modules`
+installed.
 
 Binary wheels on macOS
 ----------------------
@@ -53,11 +55,13 @@ inside the installed package, alongside the upstream licence texts::
 Certificate verification
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-A bundled OpenSSL has a single compiled-in trust store location, and no single value is
-correct on every distribution. The wheel therefore locates the host's CA bundle at run time
-and uses it as the default. An explicit :meth:`bonsai.LDAPClient.set_ca_cert` still wins, and
-the `SSL_CERT_FILE` and `SSL_CERT_DIR` environment variables are honoured ahead of the probe,
-so a private or corporate trust store keeps working. Source builds are unaffected.
+When OpenSSL is bundled, it has a single compiled-in trust store location,
+and no single value is correct on every distribution. The wheel therefore
+locates the host's CA bundle at run time and uses it as the default. An
+explicit :meth:`bonsai.LDAPClient.set_ca_cert` still wins, and the
+`SSL_CERT_FILE` and `SSL_CERT_DIR` environment variables are honoured ahead of
+the probe, so a private or corporate trust store keeps working. Source builds
+are unaffected.
 
 Install from source on Linux
 ----------------------------
@@ -92,12 +96,6 @@ the package::
     $ pip install .
 
 This will link against the system-provided libraries.
-
-.. note::
-    To force a source install and skip the bundled libraries shipped in the
-    distributed wheels, pass ``--no-binary`` to pip::
-
-        $ pip install --no-binary bonsai bonsai
 
 Install from source on Windows
 ------------------------------
