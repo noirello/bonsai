@@ -248,7 +248,7 @@ with the :meth:`LDAPConnection.paged_search` method and the size of the page can
     <_bonsai.ldapsearchiter object at 0x7f006ad455d0>
 
 Please note that the return value of :meth:`LDAPConnection.paged_search` is an :class:`ldapsearchiter`.
-This object can be iterated over the entries of the page. By default the next page of results is
+This object can be iterated over the entries of the page. By default, the next page of results is
 acquired automatically during the iteration. This behaviour can be changed by setting the
 :attr:`LDAPClient.auto_page_acquire` to `False` and using the :meth:`ldapsearchiter.acquire_next_page`
 method which explicitly initiates a new search request to get the next page.
@@ -402,8 +402,8 @@ Use :meth:`LDAPClient.set_sd_flags` method to set the value of the flag.
 Using connection pools
 ======================
 
-When your application requires to use multiple open LDAP connections, Bonsai
-provides you connection pools to help you creating and accessing them. This way
+When your application requires using multiple open LDAP connections, Bonsai
+provides you with connection pools to help you create and access them. This way
 you can acquire an opened connection, do some operations and put it back into
 the pool for other threads/tasks to use.
 
@@ -436,7 +436,7 @@ Connection timeouts
 
 Some LDAP servers, or some firewalls between a program and the LDAP server,
 will cut off connections if they have been idle for too long. Sometimes this is
-done silently and the only sign is that the next request will time out. You
+done silently, and the only sign is that the next request will time out. You
 may therefore want to set a timeout when using connections from a pool so that
 your program doesn't wait for a TCP timeout (which can take a very long time).
 
@@ -449,7 +449,7 @@ One possible pattern for using a connection pool with an LDAP server that may
 silently time out connections is to close connections on failure and retry one
 more time than there are idle connections in the pool. In the worst case where
 all idle connections have been timed out, each of those idle connections will
-fail and be closed and then you'll get a fresh connection that should not have
+fail and be closed, and then you'll get a fresh connection that should not have
 timed out (and if that still fails, there is some deeper problem).
 
 .. code-block:: python3
