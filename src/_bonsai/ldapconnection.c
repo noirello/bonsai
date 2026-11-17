@@ -20,6 +20,7 @@ ldapconnection_dealloc(LDAPConnection* self) {
     if (self->ld != NULL) {
         /* Unbind connection and free resources allocated by the LDAP structure. */
         ldap_unbind_ext(self->ld, NULL, NULL);
+        self->ld = NULL;
     }
     ldapconnection_clear(self);
 

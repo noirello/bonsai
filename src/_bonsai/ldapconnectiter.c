@@ -532,6 +532,11 @@ create_init_thread_data(PyObject *client, SOCKET sock) {
     }
     data->url = NULL;
     data->sasl_sec_props = NULL;
+#ifndef WIN32
+    data->mux = NULL;
+    data->flag = 0;
+    data->info = NULL;
+#endif
 
     /* Get URL policy from LDAPClient. */
     url = PyObject_GetAttrString(client, "url");
@@ -646,6 +651,10 @@ LDAPConnectIter_Next(LDAPConnectIter *self, int timeout) {
     if (self->state == 0) {
         rc = _ldap_finish_init_thread(self->conn->async, self->init_thread, &(self->timeout),
                 self->init_thread_data, &(self->conn->ld));
+        if (rc != 0) {
+            /* The init function consumed the thread data. */
+            self->init_thread_data = NULL;
+        }
         if (rc == -1) return NULL; /* Error is happened. */
         if (rc == 1) {
             /* Initialisation is finished. */
