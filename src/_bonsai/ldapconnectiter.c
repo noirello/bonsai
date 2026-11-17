@@ -17,8 +17,10 @@ binding(LDAPConnectIter *self) {
     DEBUG("binding [state:%d]", self->state);
     if (self->state == 3) {
         /* First call of bind. */
+        Py_BEGIN_ALLOW_THREADS
         rc = _ldap_bind(self->conn->ld, self->info, self->conn->ppolicy,
             NULL, &(self->message_id));
+        Py_END_ALLOW_THREADS
         if (rc != LDAP_SUCCESS) {
             set_exception(self->conn->ld, rc);
             return NULL;
@@ -55,6 +57,7 @@ binding(LDAPConnectIter *self) {
                 /* Dummy sockets are no longer needed. */
                 self->conn->csock = -1;
                 close_socketpair(self->conn->socketpair);
+                Py_CLEAR(self->conn->socketpair);
             }
             /* The binding is successfully finished. */
             self->state = 5;
@@ -162,7 +165,9 @@ binding(LDAPConnectIter *self) {
                 NULL, &(self->message_id));
         Py_END_ALLOW_THREADS
         if (rc != LDAP_SUCCESS && rc != LDAP_SASL_BIND_IN_PROGRESS && rc != LDAP_X_CONNECTING) {
+            self->conn->csock = -1;
             close_socketpair(self->conn->socketpair);
+            Py_CLEAR(self->conn->socketpair);
             set_exception(self->conn->ld, rc);
             return NULL;
         }
@@ -176,6 +181,7 @@ binding(LDAPConnectIter *self) {
             /* Dummy sockets are no longer needed. Dispose. */
             self->conn->csock = -1;
             close_socketpair(self->conn->socketpair);
+            Py_CLEAR(self->conn->socketpair);
         }
         self->state = 4;
         Py_RETURN_NONE;
@@ -184,8 +190,10 @@ binding(LDAPConnectIter *self) {
            Per the LDAP_X_CONNECTING contract, the caller polls for socket
            write-readiness (asyncio's add_writer does this) and retries the
            bind. The retry queues the bind PDU once the connect completes. */
+        Py_BEGIN_ALLOW_THREADS
         rc = _ldap_bind(self->conn->ld, self->info, self->conn->ppolicy,
                 NULL, &(self->message_id));
+        Py_END_ALLOW_THREADS
         if (rc == LDAP_X_CONNECTING) {
             self->message_id = -1;
             Py_RETURN_NONE;
