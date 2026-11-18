@@ -219,6 +219,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
     @gen_test(timeout=20.0)
     def test_paged_search_with_auto_acq(self):
         """Test paged search with auto page acquiring."""
+        self.client.auto_page_acquire = True
         search_dn = "ou=nerdherd,%s" % self.basedn
         with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
             res_iter = yield conn.paged_search(search_dn, 1, page_size=3)
@@ -233,6 +234,22 @@ class TornadoLDAPConnectionTest(TestCaseClass):
                     break
             assert cnt == 6
 
+    @gen_test(timeout=20.0)
+    def test_paged_search_async_for_no_auto_acquire(self):
+        """Test that with auto acquire off, async for stops at the end of the first page."""
+        self.client.auto_page_acquire = False
+        search_dn = "ou=nerdherd,%s" % self.basedn
+        with (yield self.client.connect(True, ioloop=self.io_loop)) as conn:
+            res_iter = yield conn.paged_search(search_dn, 1, page_size=2)
+            res_iter = type(res_iter).__aiter__(res_iter)
+            found = []
+            while True:
+                try:
+                    found.append((yield type(res_iter).__anext__(res_iter)))
+                except StopAsyncIteration:
+                    break
+        assert len(found) == 2
+
     @gen_test(timeout=15.0)
     def test_connect_with_async_connect_option(self):
         """Open must complete when LDAP_OPT_CONNECT_ASYNC is enabled.
@@ -244,9 +261,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         """
         bonsai.set_connect_async(True)
         try:
-            conn = yield self.client.connect(
-                True, ioloop=self.io_loop, timeout=10.0
-            )
+            conn = yield self.client.connect(True, ioloop=self.io_loop, timeout=10.0)
             assert not conn.closed
             conn.close()
         finally:

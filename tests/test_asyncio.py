@@ -79,7 +79,7 @@ async def test_recursive_delete(client, basedn):
         {"objectclass": ["top", "inetorgperson"], "cn": "tester", "sn": "example"}
     )
     try:
-        with (await client.connect(True)) as conn:
+        with await client.connect(True) as conn:
             await conn.add(org1)
             await conn.add(org2)
             await conn.add(entry)
@@ -184,9 +184,7 @@ async def test_connect_with_async_connect_option(client, turn_async_conn):
 
 @pytest.mark.timeout(25)
 @asyncio_test
-async def test_connect_with_async_connect_option_under_delay(
-    client, turn_async_conn
-):
+async def test_connect_with_async_connect_option_under_delay(client, turn_async_conn):
     """The async-connect retry path drives the connect to completion.
 
     With network_delay slowing the TCP handshake, the open should still
@@ -198,9 +196,9 @@ async def test_connect_with_async_connect_option_under_delay(
 
 
 @asyncio_test
-async def test_paged_search(client, basedn):
+async def test_paged_search(client, basedn, set_auto_page_acquire):
     """Test paged results control."""
-    client.auto_page_acquire = False
+    set_auto_page_acquire(client, False)
     search_dn = "ou=nerdherd,%s" % basedn
     async with client.connect(True) as conn:
         res = await conn.paged_search(search_dn, 1, page_size=2)
@@ -219,8 +217,9 @@ async def test_paged_search(client, basedn):
 
 
 @asyncio_test
-async def test_paged_search_with_auto_acq(client, basedn):
+async def test_paged_search_with_auto_acq(client, basedn, set_auto_page_acquire):
     """Test paged search with auto page acquiring."""
+    set_auto_page_acquire(client, True)
     search_dn = "ou=nerdherd,%s" % basedn
     async with client.connect(True) as conn:
         cnt = 0
@@ -229,6 +228,19 @@ async def test_paged_search_with_auto_acq(client, basedn):
             assert isinstance(item, LDAPEntry)
             cnt += 1
         assert cnt == 6
+
+
+@asyncio_test
+async def test_paged_search_async_for_no_auto_acquire(
+    client, basedn, set_auto_page_acquire
+):
+    """Test that with auto acquire off, async for stops at the end of the first page."""
+    set_auto_page_acquire(client, False)
+    search_dn = "ou=nerdherd,%s" % basedn
+    async with client.connect(True) as conn:
+        res = await conn.paged_search(search_dn, 1, page_size=2)
+        found = [ent async for ent in res]
+    assert len(found) == 2
 
 
 @asyncio_test

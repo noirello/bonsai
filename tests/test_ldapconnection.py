@@ -710,10 +710,10 @@ def test_paged_search_list(cfg, basedn):
     assert isinstance(results[1]["cn"][0], str)
 
 
-def test_paged_search_break_early_dealloc(cfg, basedn):
+def test_paged_search_break_early_dealloc(cfg, basedn, set_auto_page_acquire):
     """Test deallocating a paged search iterator that was left unfinished."""
     cli = _generate_client(cfg)
-    cli.auto_page_acquire = True
+    set_auto_page_acquire(cli, True)
     with cli.connect() as conn:
         res = conn.paged_search(
             f"ou=nerdherd,{basedn}", 1, attrlist=["cn"], page_size=10
@@ -757,10 +757,10 @@ def test_paged_search_with_auto_acq(cfg, basedn):
     assert res.acquire_next_page() is None
 
 
-def test_paged_search_refcount(cfg, basedn):
+def test_paged_search_refcount(cfg, basedn, set_auto_page_acquire):
     """Auto page acquisition must not leak the search iterator."""
     cli = _generate_client(cfg)
-    cli.auto_page_acquire = True
+    set_auto_page_acquire(cli, True)
     with cli.connect() as conn:
         res = conn.paged_search("ou=nerdherd,%s" % basedn, 1, page_size=2)
         before = sys.getrefcount(res)

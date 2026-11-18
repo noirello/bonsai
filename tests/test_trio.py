@@ -96,7 +96,7 @@ async def test_recursive_delete(tclient, basedn):
         {"objectclass": ["top", "inetorgperson"], "cn": "tester", "sn": "example"}
     )
     try:
-        with (await tclient.connect(True)) as conn:
+        with await tclient.connect(True) as conn:
             await conn.add(org1)
             await conn.add(org2)
             await conn.add(entry)
@@ -191,9 +191,7 @@ async def test_connect_with_async_connect_option(tclient, turn_async_conn):
 
 @pytest.mark.timeout(25)
 @trio_test
-async def test_connect_with_async_connect_option_under_delay(
-    tclient, turn_async_conn
-):
+async def test_connect_with_async_connect_option_under_delay(tclient, turn_async_conn):
     """The async-connect retry path drives the connect to completion.
 
     With network_delay slowing the TCP handshake, the open should still
@@ -215,9 +213,9 @@ async def test_search_timeout(tclient):
 
 
 @trio_test
-async def test_paged_search(tclient, basedn):
+async def test_paged_search(tclient, basedn, set_auto_page_acquire):
     """Test paged results control."""
-    tclient.auto_page_acquire = False
+    set_auto_page_acquire(tclient, False)
     search_dn = "ou=nerdherd,%s" % basedn
     async with tclient.connect(True) as conn:
         res = await conn.paged_search(search_dn, 1, page_size=2)
@@ -236,8 +234,9 @@ async def test_paged_search(tclient, basedn):
 
 
 @trio_test
-async def test_paged_search_with_auto_acq(tclient, basedn):
+async def test_paged_search_with_auto_acq(tclient, basedn, set_auto_page_acquire):
     """Test paged search with auto page acquiring."""
+    set_auto_page_acquire(tclient, True)
     search_dn = "ou=nerdherd,%s" % basedn
     async with tclient.connect(True) as conn:
         cnt = 0
@@ -246,6 +245,19 @@ async def test_paged_search_with_auto_acq(tclient, basedn):
             assert isinstance(item, LDAPEntry)
             cnt += 1
         assert cnt == 6
+
+
+@trio_test
+async def test_paged_search_async_for_no_auto_acquire(
+    tclient, basedn, set_auto_page_acquire
+):
+    """Test that with auto acquire off, async for stops at the end of the first page."""
+    set_auto_page_acquire(tclient, False)
+    search_dn = "ou=nerdherd,%s" % basedn
+    async with tclient.connect(True) as conn:
+        res = await conn.paged_search(search_dn, 1, page_size=2)
+        found = [ent async for ent in res]
+    assert len(found) == 2
 
 
 @trio_test
