@@ -17,6 +17,7 @@ class TrioLDAPConnection(BaseLDAPConnection):
 
     def __init__(self, client):
         self.__open_coro = None
+        self.__auto_page_acquire = client.auto_page_acquire
         super().__init__(client, is_async=True)
 
     async def __aenter__(self):
@@ -74,14 +75,17 @@ class TrioLDAPConnection(BaseLDAPConnection):
                 raise exc
 
     async def _search_iter_anext(self, search_iter):
-        try:
-            return next(search_iter)
-        except StopIteration:
+        while True:
+            try:
+                return next(search_iter)
+            except StopIteration:
+                pass
+            if not self.__auto_page_acquire:
+                raise StopAsyncIteration from None
             msgid = search_iter.acquire_next_page()
             if msgid is None:
                 raise StopAsyncIteration from None
-            search_iter = await self._evaluate(msgid)
-            return next(search_iter)
+            search_iter = await self._evaluate(msgid, search_iter.timeout)
 
     async def get_result(self, msg_id, timeout=None):
         return await self._evaluate(msg_id, timeout)

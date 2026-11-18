@@ -22,6 +22,7 @@ class TornadoLDAPConnection(BaseLDAPConnection):
         self._ioloop = ioloop or IOLoop.instance()
         self._fileno = None
         self._timeout = None
+        self.__auto_page_acquire = client.auto_page_acquire
 
     def _io_callback(self, fut, msg_id, fd=None, events=None):
         try:
@@ -84,17 +85,19 @@ class TornadoLDAPConnection(BaseLDAPConnection):
 
     @gen.coroutine
     def _search_iter_anext(self, search_iter):
-        try:
-            return next(search_iter)
-        except StopIteration:
+        while True:
+            try:
+                return next(search_iter)
+            except StopIteration:
+                pass
+            if not self.__auto_page_acquire:
+                raise StopAsyncIteration from None
             msgid = search_iter.acquire_next_page()
             if msgid is None:
                 raise StopAsyncIteration from None
-            search_iter = yield self._evaluate(msgid)
-            return next(search_iter)
+            search_iter = yield self._evaluate(msgid, search_iter.timeout)
 
     @gen.coroutine
     def get_result(self, msg_id, timeout=None):
         res = yield self._evaluate(msg_id, timeout)
         return res
-
