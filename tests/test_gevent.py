@@ -17,7 +17,7 @@ gevent = pytest.importorskip("gevent")
 
 @pytest.fixture(scope="module")
 def gclient():
-    """ Get an LDAPClient with GeventLDAPConnection async class. """
+    """Get an LDAPClient with GeventLDAPConnection async class."""
     cfg = get_config()
     url = "ldap://%s:%s/%s?%s?%s" % (
         cfg["SERVER"]["hostip"],
@@ -35,21 +35,34 @@ def gclient():
 
 
 def test_connection(gclient):
-    """ Test opening a connection. """
+    """Test opening a connection."""
     conn = gclient.connect(True)
     assert conn is not None
     assert not conn.closed
 
 
 def test_search(gclient):
-    """ Test search. """
+    """Test search."""
     with gclient.connect(True) as conn:
         res = conn.search()
         assert res is not None
 
 
+def test_paged_search_with_auto_acq(gclient, basedn, set_auto_page_acquire):
+    """Test paged search with auto page acquiring."""
+    set_auto_page_acquire(gclient, True)
+    search_dn = "ou=nerdherd,%s" % basedn
+    with gclient.connect(True) as conn:
+        res = conn.paged_search(search_dn, 1, page_size=3)
+        cnt = 0
+        for item in res:
+            assert isinstance(item, LDAPEntry)
+            cnt += 1
+        assert cnt == 6
+
+
 def test_add_and_delete(gclient, basedn):
-    """ Test adding and deleting an LDAP entry. """
+    """Test adding and deleting an LDAP entry."""
     with gclient.connect(True) as conn:
         entry = LDAPEntry("cn=async_test,%s" % basedn)
         entry["objectclass"] = [
@@ -74,7 +87,7 @@ def test_add_and_delete(gclient, basedn):
 
 
 def test_recursive_delete(gclient, basedn):
-    """ Test removing a subtree recursively. """
+    """Test removing a subtree recursively."""
     org1 = bonsai.LDAPEntry("ou=testusers,%s" % basedn)
     org1.update({"objectclass": ["organizationalUnit", "top"], "ou": "testusers"})
     org2 = bonsai.LDAPEntry("ou=tops,ou=testusers,%s" % basedn)
@@ -98,7 +111,7 @@ def test_recursive_delete(gclient, basedn):
 
 
 def test_modify_and_rename(gclient, basedn):
-    """ Test modifying and renaming LDAP entry. """
+    """Test modifying and renaming LDAP entry."""
     with gclient.connect(True) as conn:
         entry = LDAPEntry("cn=async_test,%s" % basedn)
         entry["objectclass"] = [
@@ -131,7 +144,7 @@ def test_modify_and_rename(gclient, basedn):
 
 
 def test_obj_err(gclient, basedn):
-    """ Test object class violation error. """
+    """Test object class violation error."""
     entry = LDAPEntry("cn=async_test,%s" % basedn)
     entry["cn"] = ["async_test"]
     with pytest.raises(bonsai.errors.ObjectClassViolation):
@@ -140,7 +153,7 @@ def test_obj_err(gclient, basedn):
 
 
 def test_whoami(gclient):
-    """ Test whoami. """
+    """Test whoami."""
     with gclient.connect(True) as conn:
         cfg = get_config()
         obj = conn.whoami()
@@ -157,7 +170,7 @@ def test_whoami(gclient):
 )
 @pytest.mark.timeout(18)
 def test_connection_timeout(gclient, turn_async_conn):
-    """ Test connection timeout. """
+    """Test connection timeout."""
     with network_delay(6.0):
         with pytest.raises(socket.timeout):
             gclient.connect(True, timeout=5.0)

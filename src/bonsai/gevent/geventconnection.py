@@ -10,6 +10,7 @@ MYPY = False
 if MYPY:
     from ..ldapclient import LDAPClient
 
+
 class GeventLDAPConnection(BaseLDAPConnection):
     """
     Asynchronous LDAP connection object that works with Gevent.
@@ -18,7 +19,7 @@ class GeventLDAPConnection(BaseLDAPConnection):
     :param LDAPClient client: a client object.
     """
 
-    def __init__(self, client: 'LDAPClient') -> None:
+    def __init__(self, client: "LDAPClient") -> None:
         super().__init__(client, is_async=True)
 
     def _poll(self, msg_id: int, timeout: Optional[float] = None) -> Any:
@@ -31,14 +32,19 @@ class GeventLDAPConnection(BaseLDAPConnection):
     def _evaluate(self, msg_id: int, timeout: Optional[float] = None) -> Any:
         return self._poll(msg_id, timeout)
 
-    def delete(self, dname: Union[str, LDAPDN], timeout: Optional[float] = None,
-               recursive: bool = False) -> bool:
+    def delete(
+        self,
+        dname: Union[str, LDAPDN],
+        timeout: Optional[float] = None,
+        recursive: bool = False,
+    ) -> bool:
         try:
             return super().delete(dname, timeout, recursive)
         except NotAllowedOnNonleaf as exc:
             if recursive:
-                results = self.search(dname, LDAPSearchScope.ONELEVEL,
-                                      attrlist=['1.1'], timeout=timeout)
+                results = self.search(
+                    dname, LDAPSearchScope.ONELEVEL, attrlist=["1.1"], timeout=timeout
+                )
                 for res in results:
                     self.delete(res.dn, timeout, True)
                 return self.delete(dname, timeout, False)

@@ -82,3 +82,14 @@ def turn_async_conn():
     bonsai.set_connect_async(True)
     yield None
     bonsai.set_connect_async(False)
+
+
+@pytest.fixture
+def set_auto_page_acquire(monkeypatch):
+    """Set automatic page acquisition for the duration of a test."""
+
+    def set_value(client, enabled):
+        monkeypatch.setattr(client, "auto_page_acquire", enabled)
+        return client
+
+    return set_value
