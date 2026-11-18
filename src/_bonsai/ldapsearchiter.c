@@ -64,6 +64,7 @@ ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
         self->params = NULL;
         self->vlv_info = NULL;
         self->auto_acquire = 0;
+        self->has_iter_anext = 0;
         PyObject_GC_Track(self);
     }
 
@@ -99,6 +100,27 @@ LDAPSearchIter_New(LDAPConnection *conn) {
 
         self->auto_acquire = (char)PyObject_IsTrue(tmp);
         Py_DECREF(tmp);
+
+        if (self->conn->async == 1) {
+            tmp = PyObject_GetAttrString((PyObject *)self->conn, "_search_iter_anext");
+            if (tmp == NULL) {
+                if (PyErr_ExceptionMatches(PyExc_AttributeError)) {
+                    /* Attribute doesn't exist */
+                    PyErr_Clear();
+                    self->has_iter_anext = 0;
+                } else {
+                    /* Error happened. */
+                    free(self->params);
+                    self->params = NULL;
+                    Py_DECREF(self);
+                    return NULL;
+                }
+            } else {
+                /* Has the attribute. */
+                self->has_iter_anext = 1;
+                Py_DECREF(tmp);
+            }
+        }
     }
     return self;
 }
@@ -163,9 +185,7 @@ ldapsearchiter_iternext(LDAPSearchIter *self) {
     } else {
         Py_DECREF(self->buffer);
         self->buffer = NULL;
-        if (self->auto_acquire == 1 && self->conn->async == 0) {
-            /* Get next page if the auto acquiring is on
-               and the connection is synchronous. */
+        if (self->auto_acquire == 1 && self->has_iter_anext == 0) {
             msg = ldapsearchiter_acquirenextpage(self);
             if (msg == NULL) return NULL;
             if (msg == Py_None) {

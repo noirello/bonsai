@@ -16,6 +16,7 @@ typedef struct {
     int page_size;
     LDAPVLVInfo *vlv_info;
     char auto_acquire;
+    char has_iter_anext;
 } LDAPSearchIter;
 
 extern PyTypeObject LDAPSearchIterType;
