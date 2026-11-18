@@ -152,11 +152,21 @@ ldapsearchiter_acquirenextpage(LDAPSearchIter *self) {
     }
 }
 
-/* Return with the LDAPSerachIter object. */
+/* Return with the LDAPSearchIter object. */
 static PyObject*
 ldapsearchiter_getiter(LDAPSearchIter *self) {
     Py_INCREF(self);
     return (PyObject*)self;
+}
+
+/* Return with the optional timeout object set for the paged search. */
+static PyObject *
+ldapsearchiter_gettimeout(LDAPSearchIter *self, void *closure) {
+    if (self->params != NULL && self->params->timeout > 0) {
+        return PyFloat_FromDouble(self->params->timeout);
+    } else {
+        Py_RETURN_NONE;
+    }
 }
 
 /* Step the LDAPSearchIter iterator. */
@@ -192,9 +202,15 @@ ldapsearchiter_iternext(LDAPSearchIter *self) {
                 Py_DECREF(msg);
                 return NULL;
             }
+            tmp = ldapsearchiter_gettimeout(self, NULL);
+            if (tmp == NULL) {
+                Py_DECREF(msg);
+                return NULL;
+            }
             self = (LDAPSearchIter *)PyObject_CallMethod((PyObject *)self->conn,
-                "_evaluate", "(O)", msg);
+                "_evaluate", "(OO)", msg, tmp);
             Py_DECREF(msg);
+            Py_DECREF(tmp);
             if (self == NULL) return NULL;
             Py_DECREF(self);
             return PyIter_Next((PyObject *)self);
@@ -245,6 +261,12 @@ static PyMethodDef ldapsearchiter_methods[] = {
     {NULL, NULL, 0, NULL}  /* Sentinel */
 };
 
+static PyGetSetDef ldapsearchiter_getsetters[] = {
+    {"timeout", (getter)ldapsearchiter_gettimeout,
+            NULL, "Read-only attribute of timeout", NULL},
+    {NULL} /* Sentinel */
+};
+
 PyTypeObject LDAPSearchIterType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "_bonsai.ldapsearchiter",  /* tp_name */
@@ -277,7 +299,7 @@ PyTypeObject LDAPSearchIterType = {
     (iternextfunc)ldapsearchiter_iternext,/* tp_iternext */
     ldapsearchiter_methods,    /* tp_methods */
     0,                         /* tp_members */
-    0,                         /* tp_getset */
+    ldapsearchiter_getsetters, /* tp_getset */
     0,                         /* tp_base */
     0,                         /* tp_dict */
     0,                         /* tp_descr_get */
