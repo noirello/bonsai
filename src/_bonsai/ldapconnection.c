@@ -1055,6 +1055,7 @@ parse_search_result(LDAPConnection *self, LDAPMessage *res, PyObject *obj) {
             /* Return LDAPSearchIter for paged search. */
             Py_XDECREF(search_iter->buffer);
             search_iter->buffer = buffer;
+            search_iter->buffer_pos = 0;
             retval = (PyObject *)search_iter;
             Py_INCREF(retval);
         }

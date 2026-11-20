@@ -59,6 +59,7 @@ ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     if (self != NULL) {
         self->conn = NULL;
         self->buffer = NULL;
+        self->buffer_pos = 0;
         self->cookie = NULL;
         self->page_size = 0;
         self->params = NULL;
@@ -76,6 +77,7 @@ ldapsearchiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 LDAPSearchIter *
 LDAPSearchIter_New(LDAPConnection *conn) {
     PyObject *tmp = NULL;
+    int auto_acquire;
     LDAPSearchIter *self =
             (LDAPSearchIter *)LDAPSearchIterType.tp_new(&LDAPSearchIterType,
                     NULL, NULL);
@@ -98,8 +100,15 @@ LDAPSearchIter_New(LDAPConnection *conn) {
             return NULL;
         }
 
-        self->auto_acquire = (char)PyObject_IsTrue(tmp);
+        auto_acquire = PyObject_IsTrue(tmp);
         Py_DECREF(tmp);
+        if (auto_acquire < 0) {
+            free(self->params);
+            self->params = NULL;
+            Py_DECREF(self);
+            return NULL;
+        }
+        self->auto_acquire = (char)auto_acquire;
 
         if (self->conn->async == 1) {
             tmp = PyObject_GetAttrString((PyObject *)self->conn, "_search_iter_anext");
@@ -173,56 +182,58 @@ ldapsearchiter_gettimeout(LDAPSearchIter *self, void *closure) {
 static PyObject *
 ldapsearchiter_iternext(LDAPSearchIter *self) {
     PyObject *item = NULL;
-    PyObject *tmp = NULL, *msg = tmp;
+    PyObject *msgid = NULL, *timeout = NULL, *newself = NULL;
 
     DEBUG("ldapsearchiter_iternext (self:%p)", self);
-    if (self->buffer == NULL) return NULL;
-    if (Py_SIZE(self->buffer) != 0) {
-        /* Get first element from the buffer list. (Borrowed ref.)*/
-        item = PyList_GetItem(self->buffer, 0);
-        if (item == NULL) {
-            PyErr_BadInternalCall();
+
+    for (;;) {
+        if (self->buffer == NULL) return NULL;
+
+        if (self->buffer_pos < PyList_GET_SIZE(self->buffer)) {
+            /* Get the next element from the buffer list. (Borrowed ref.) */
+            item = PyList_GET_ITEM(self->buffer, self->buffer_pos++);
+            Py_INCREF(item);
+            return item;
+        }
+
+        Py_CLEAR(self->buffer);
+        self->buffer_pos = 0;
+
+        if (self->auto_acquire == 0 || self->has_iter_anext != 0) return NULL;
+
+        msgid = ldapsearchiter_acquirenextpage(self);
+        if (msgid == NULL) return NULL;
+        if (msgid == Py_None) {
+            Py_DECREF(msgid);
             return NULL;
         }
-        Py_INCREF(item);
-        /* Remove the first element from the buffer list. */
-        if (PyList_SetSlice(self->buffer, 0, 1, NULL) != 0) {
-            Py_DECREF(item);
-            PyErr_BadInternalCall();
+
+        timeout = ldapsearchiter_gettimeout(self, NULL);
+        if (timeout == NULL) {
+            Py_DECREF(msgid);
             return NULL;
         }
-        return item;
-    } else {
-        Py_DECREF(self->buffer);
-        self->buffer = NULL;
-        if (self->auto_acquire == 1 && self->has_iter_anext == 0) {
-            msg = ldapsearchiter_acquirenextpage(self);
-            if (msg == NULL) return NULL;
-            if (msg == Py_None) {
-                Py_DECREF(msg);
-                return NULL;
-            }
-            tmp = ldapsearchiter_gettimeout(self, NULL);
-            if (tmp == NULL) {
-                Py_DECREF(msg);
-                return NULL;
-            }
-            self = (LDAPSearchIter *)PyObject_CallMethod((PyObject *)self->conn,
-                "_evaluate", "(OO)", msg, tmp);
-            Py_DECREF(msg);
-            Py_DECREF(tmp);
-            if (self == NULL) return NULL;
-            Py_DECREF(self);
-            return PyIter_Next((PyObject *)self);
+
+        newself = PyObject_CallMethod((PyObject *)self->conn, "_evaluate",
+                                     "OO", msgid, timeout);
+        Py_DECREF(msgid);
+        Py_DECREF(timeout);
+        if (newself == NULL) return NULL;
+
+        if (newself != (PyObject *)self) {
+            PyErr_SetString(PyExc_TypeError,
+                            "_evaluate() must return the search iterator itself");
+            Py_DECREF(newself);
+            return NULL;
         }
+        Py_DECREF(newself);
     }
-    return NULL;
 }
 
 static Py_ssize_t
 ldapsearchiter_len(LDAPSearchIter *self) {
     if (self->buffer == NULL) return 0;
-    return PyObject_Size(self->buffer);
+    return PyList_GET_SIZE(self->buffer) - self->buffer_pos;
 }
 
 static PyObject *

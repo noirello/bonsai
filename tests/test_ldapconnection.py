@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sys
 import subprocess
@@ -30,6 +31,18 @@ class SimpleAsyncConn(BaseLDAPConnection):
 
     def _evaluate(self, msg_id, timeout=None):
         return msg_id
+
+
+class AsyncEvaluateConn(BaseLDAPConnection):
+    def __init__(self, client):
+        super().__init__(client, True)
+
+    async def _evaluate(self, msg_id, timeout=None):
+        while True:
+            res = self.get_result(msg_id)
+            if res is not None:
+                return res
+            await asyncio.sleep(0.01)
 
 
 @pytest.fixture(scope="module")
@@ -712,8 +725,7 @@ def test_paged_search_list(cfg, basedn):
 
 def test_paged_search_break_early_dealloc(cfg, basedn, set_auto_page_acquire):
     """Test deallocating a paged search iterator that was left unfinished."""
-    cli = _generate_client(cfg)
-    set_auto_page_acquire(cli, True)
+    cli = set_auto_page_acquire(_generate_client(cfg), True)
     with cli.connect() as conn:
         res = conn.paged_search(
             f"ou=nerdherd,{basedn}", 1, attrlist=["cn"], page_size=10
@@ -759,14 +771,113 @@ def test_paged_search_with_auto_acq(cfg, basedn):
 
 def test_paged_search_refcount(cfg, basedn, set_auto_page_acquire):
     """Auto page acquisition must not leak the search iterator."""
-    cli = _generate_client(cfg)
-    set_auto_page_acquire(cli, True)
+    cli = set_auto_page_acquire(_generate_client(cfg), True)
     with cli.connect() as conn:
         res = conn.paged_search("ou=nerdherd,%s" % basedn, 1, page_size=2)
         before = sys.getrefcount(res)
         list(res)
         assert res.acquire_next_page() is None
         assert sys.getrefcount(res) == before
+
+
+def test_paged_search_iter_len_tracks_position(cfg, basedn, set_auto_page_acquire):
+    """Test that len() reports the entries left in the current page."""
+    cli = set_auto_page_acquire(_generate_client(cfg), True)
+    with cli.connect() as conn:
+        res = conn.paged_search(f"ou=nerdherd,{basedn}", 1, page_size=3)
+        assert len(res) == 3
+        seen = []
+        for remaining in (2, 1, 0):
+            seen.append(next(res))
+            assert len(res) == remaining
+        # The first page is used up: next() acquires the second one.
+        seen.append(next(res))
+        assert len(res) == 2
+        seen.extend(res)
+        assert len(res) == 0
+        assert len(seen) == 6
+        assert len({str(ent.dn) for ent in seen}) == 6
+
+
+def test_paged_search_iter_empty_page(cfg, basedn, set_auto_page_acquire, monkeypatch):
+    """Test that an empty page in the middle does not end the iteration."""
+    cli = set_auto_page_acquire(_generate_client(cfg), True)
+    with cli.connect() as conn:
+        expected = {str(ent.dn) for ent in conn.search(f"ou=nerdherd,{basedn}", 1)}
+        res = conn.paged_search(f"ou=nerdherd,{basedn}", 1, page_size=2)
+
+        real_evaluate = conn._evaluate
+        swallowed = []
+
+        def evaluate(msgid, timeout=None):
+            page = real_evaluate(msgid, timeout)
+            if not swallowed:
+                # Consume exactly the entries of the first auto acquired page, so
+                # the iterator comes back with a fully consumed (empty) buffer.
+                swallowed.extend(next(page) for _ in range(len(page)))
+            return page
+
+        monkeypatch.setattr(conn, "_evaluate", evaluate)
+        seen = [str(ent.dn) for ent in res]
+        assert len(swallowed) == 2
+        # The third page must still be reached after the empty second one.
+        assert len(seen) == 4
+        assert set(seen) | {str(ent.dn) for ent in swallowed} == expected
+        monkeypatch.undo()
+
+
+@pytest.mark.parametrize("fail_on", [1, 2])
+def test_paged_search_iter_evaluate_error(
+    cfg, basedn, set_auto_page_acquire, monkeypatch, fail_on
+):
+    """Test that an error while acquiring a page propagates cleanly.
+    fail_on=1 fails the first auto acquired page, fail_on=2 the second one,
+    after a successful page swap.
+    """
+    cli = set_auto_page_acquire(_generate_client(cfg), True)
+    with cli.connect() as conn:
+        res = conn.paged_search(f"ou=nerdherd,{basedn}", 1, page_size=2)
+
+        real_evaluate = conn._evaluate
+        calls = 0
+
+        def evaluate(msgid, timeout=None):
+            nonlocal calls
+            calls += 1
+            if calls == fail_on:
+                raise RuntimeError("evaluate failed")
+            return real_evaluate(msgid, timeout)
+
+        monkeypatch.setattr(conn, "_evaluate", evaluate)
+        first = [next(res) for _ in range(2 * fail_on)]
+        assert len(first) == 2 * fail_on
+        with pytest.raises(RuntimeError, match="evaluate failed"):
+            next(res)
+        # The iterator is spent: no crash, no stale entries.
+        assert len(res) == 0
+        with pytest.raises(StopIteration):
+            next(res)
+        monkeypatch.undo()
+
+
+@pytest.mark.filterwarnings("ignore:.*never awaited:RuntimeWarning")
+@pytest.mark.timeout(15)
+def test_paged_search_async_evaluate_without_anext(cfg, basedn, set_auto_page_acquire):
+    """An awaitable _evaluate result must not be used as an iterator."""
+    cli = set_auto_page_acquire(_generate_client(cfg), True)
+    conn = AsyncEvaluateConn(cli)
+
+    async def iterate():
+        await conn.open(timeout=3)
+        res = await conn.paged_search(
+            f"ou=nerdherd,{basedn}", 1, page_size=3, timeout=3
+        )
+        with pytest.raises(TypeError, match="must return the search iterator itself"):
+            for _ in res:
+                pass
+        conn.close()
+
+    asyncio.run(iterate())
 
 
 @pytest.mark.timeout(15)

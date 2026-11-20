@@ -10,6 +10,7 @@
 typedef struct {
     PyObject_HEAD
     PyObject *buffer;
+    Py_ssize_t buffer_pos;
     LDAPConnection *conn;
     ldapsearchparams *params;
     struct berval *cookie;
