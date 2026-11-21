@@ -41,5 +41,6 @@ extern PyTypeObject LDAPConnectIterType;
 
 LDAPConnectIter *LDAPConnectIter_New(LDAPConnection *conn, ldap_conndata_t *info, SOCKET sock);
 PyObject *LDAPConnectIter_Next(LDAPConnectIter *self, int timeout);
+int LDAPConnectIter_WantsWrite(LDAPConnectIter *self);
 
 #endif /* LDAPCONNECTITER_H_ */

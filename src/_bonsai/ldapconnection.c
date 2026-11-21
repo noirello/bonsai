@@ -1433,6 +1433,27 @@ ldapconnection_abandon(LDAPConnection *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
+static PyObject *
+ldapconnection_wants_write(LDAPConnection *self, PyObject *args) {
+    int msgid;
+    PyObject *obj = NULL;
+    int wants_write = 0;
+
+    if (!PyArg_ParseTuple(args, "i", &msgid)) return NULL;
+
+    obj = get_from_pending_ops(self->pending_ops, msgid);
+    if (obj == NULL) {
+        PyErr_Clear();
+        Py_RETURN_FALSE;
+    }
+    if (PyObject_TypeCheck(obj, &LDAPConnectIterType)) {
+        wants_write = LDAPConnectIter_WantsWrite((LDAPConnectIter *)obj);
+    }
+
+    if (wants_write) Py_RETURN_TRUE;
+    Py_RETURN_FALSE;
+}
+
 /* Get the underlying socket descriptor of the LDAP connection. */
 static PyObject *
 ldapconnection_fileno(LDAPConnection *self) {
@@ -1480,6 +1501,8 @@ static PyMethodDef ldapconnection_methods[] = {
             "Open connection with the LDAP Server."},
     {"modify_password", (PyCFunction)ldapconnection_modpasswd, METH_VARARGS | METH_KEYWORDS,
             "Modify password for the user."},
+    {"_wants_write", (PyCFunction)ldapconnection_wants_write, METH_VARARGS,
+            "Return True if the operation wants a writable socket."},
     {"search", (PyCFunction)ldapconnection_search, METH_VARARGS | METH_KEYWORDS,
             "Search for LDAP entries."},
     {"whoami", (PyCFunction)ldapconnection_whoami, METH_NOARGS,

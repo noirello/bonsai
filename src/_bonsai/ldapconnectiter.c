@@ -460,6 +460,19 @@ check_tls_result(LDAP *ld, int msgid, int timeout, char async, SOCKET csock) {
 
 #endif
 
+/* Return 1, when the socket during connection wants write-readiness,
+   0 otherwise. */
+int
+LDAPConnectIter_WantsWrite(LDAPConnectIter *self) {
+    if (self == NULL || self->conn == NULL || self->conn->closed == 0) {
+        return 0;
+    }
+    /* Until the bind payload is queued (states 0-3, or state 4
+       while the async connect is still in progress), the loop
+       has to be woken by write-readiness. */
+    return !(self->state == 4 && self->message_id != -1);
+}
+
 static int
 ldapconnectiter_clear(LDAPConnectIter *self) {
     DEBUG("ldapconnectiter_clear (self:%p)", self);
