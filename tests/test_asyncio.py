@@ -4,7 +4,13 @@ import time
 from functools import wraps
 
 import pytest
-from conftest import get_config, network_delay
+from conftest import (
+    get_config,
+    network_delay,
+    new_client_with_simple_auth,
+    pausable_proxy,
+    MAX_IDLE_CPU,
+)
 
 from bonsai import LDAPEntry
 from bonsai.asyncio import AIOConnectionPool
@@ -325,3 +331,94 @@ async def test_pool_spawn(client):
         _ = await conn.whoami()
     assert pool.idle_connection == 1
     assert pool.shared_connection == 0
+
+
+async def _first_page(conn, **kwargs):
+    res = await conn.paged_search(
+        "ou=nerdherd,dc=bonsai,dc=test", 1, page_size=3, **kwargs
+    )
+    for _ in range(3):
+        next(res)
+    return res
+
+
+async def _collect(res):
+    return [entry async for entry in res]
+
+
+@asyncio_test
+async def test_paged_search_waiting_does_not_spin_cpu():
+    """Test that waiting for a page lets the event loop sleep."""
+    with pausable_proxy() as proxy:
+        async with new_client_with_simple_auth(proxy.port).connect(True) as conn:
+            res = await _first_page(conn)
+            proxy.pause()
+            task = asyncio.ensure_future(_collect(res))
+            await asyncio.sleep(0.2)
+            start = time.process_time()
+            await asyncio.sleep(1.0)
+            used = time.process_time() - start
+            proxy.resume()
+            assert len(await task) == 3
+    assert used < MAX_IDLE_CPU
+
+
+@asyncio_test
+async def test_paged_search_timeout_on_next_page():
+    """Test that the timeout applies to the pages after the first one."""
+    with pausable_proxy() as proxy:
+        async with new_client_with_simple_auth(proxy.port).connect(True) as conn:
+            res = await _first_page(conn, timeout=1.0)
+            proxy.pause()
+            start = time.monotonic()
+            with pytest.raises(asyncio.TimeoutError):
+                await res.__anext__()
+            assert 0.8 < time.monotonic() - start < 4.0
+            proxy.resume()
+
+
+@asyncio_test
+async def test_cancelled_page_wait_cleans_up():
+    """Test that cancelling the wait for a page leaves nothing behind in the loop."""
+    errors = []
+    asyncio.get_running_loop().set_exception_handler(
+        lambda loop, ctx: errors.append(ctx)
+    )
+    with pausable_proxy() as proxy:
+        async with new_client_with_simple_auth(proxy.port).connect(True) as conn:
+            res = await _first_page(conn)
+            proxy.pause()
+            task = asyncio.ensure_future(res.__anext__())
+            await asyncio.sleep(0.2)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            start = time.process_time()
+            await asyncio.sleep(1.0)
+            used = time.process_time() - start
+            proxy.resume()
+            await asyncio.sleep(0.5)  # Let the late response arrive.
+            # The connection is still usable.
+            assert len(await conn.search("ou=nerdherd,dc=bonsai,dc=test", 1)) == 6
+    assert used < MAX_IDLE_CPU
+    assert not errors
+
+
+@asyncio_test
+async def test_connect_waiting_for_bind_does_not_spin_cpu():
+    """Test that opening a connection lets the event loop sleep, while the server
+    is slow to answer the bind request."""
+    with pausable_proxy() as proxy:
+        proxy.pause()
+        task = asyncio.ensure_future(
+            new_client_with_simple_auth(proxy.port).connect(True)
+        )
+        await asyncio.sleep(0.4)
+        start = time.process_time()
+        await asyncio.sleep(1.0)
+        used = time.process_time() - start
+        proxy.resume()
+        conn = await asyncio.wait_for(task, 10)
+        assert not conn.closed
+        conn.close()
+    assert used < MAX_IDLE_CPU

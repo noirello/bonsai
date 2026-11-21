@@ -1,11 +1,17 @@
 import sys
+import time
 import bonsai.errors
 from bonsai import get_vendor_info
-from bonsai import LDAPClient
 from bonsai import LDAPEntry
 
 import pytest
-from conftest import get_config, network_delay
+from conftest import (
+    get_config,
+    network_delay,
+    new_client_with_simple_auth,
+    pausable_proxy,
+    MAX_IDLE_CPU,
+)
 
 try:
     from gevent import socket
@@ -18,20 +24,7 @@ gevent = pytest.importorskip("gevent")
 @pytest.fixture(scope="module")
 def gclient():
     """Get an LDAPClient with GeventLDAPConnection async class."""
-    cfg = get_config()
-    url = "ldap://%s:%s/%s?%s?%s" % (
-        cfg["SERVER"]["hostip"],
-        cfg["SERVER"]["port"],
-        cfg["SERVER"]["basedn"],
-        cfg["SERVER"]["search_attr"],
-        cfg["SERVER"]["search_scope"],
-    )
-    cli = LDAPClient(url)
-    cli.set_credentials(
-        "SIMPLE", user=cfg["SIMPLEAUTH"]["user"], password=cfg["SIMPLEAUTH"]["password"]
-    )
-    cli.set_async_connection_class(GeventLDAPConnection)
-    return cli
+    return new_client_with_simple_auth(None, GeventLDAPConnection)
 
 
 def test_connection(gclient):
@@ -201,3 +194,51 @@ def test_connect_with_async_connect_option_under_delay(gclient, turn_async_conn)
         conn = gclient.connect(True, timeout=20)
         assert not conn.closed
         conn.close()
+
+
+def _first_page(conn, **kwargs):
+    res = conn.paged_search("ou=nerdherd,dc=bonsai,dc=test", 1, page_size=3, **kwargs)
+    for _ in range(3):
+        next(res)
+    return res
+
+
+def test_paged_search_iter_all_pages():
+    """Test that a plain for loop goes through every page."""
+    with new_client_with_simple_auth(conn_class=GeventLDAPConnection).connect(
+        True
+    ) as conn:
+        res = conn.paged_search("ou=nerdherd,dc=bonsai,dc=test", 1, page_size=4)
+        assert len(list(res)) == 6
+
+
+def test_paged_search_waiting_does_not_spin_cpu():
+    """Test that waiting for a page lets the other greenlets (and the CPU) sleep."""
+    with pausable_proxy() as proxy:
+        cli = new_client_with_simple_auth(proxy.port, GeventLDAPConnection)
+        with cli.connect(True) as conn:
+            res = _first_page(conn)
+            proxy.pause()
+            greenlet = gevent.spawn(list, res)
+            gevent.sleep(0.2)
+            start = time.process_time()
+            gevent.sleep(1.0)
+            used = time.process_time() - start
+            proxy.resume()
+            assert len(greenlet.get(timeout=5)) == 3
+    assert used < MAX_IDLE_CPU
+
+
+def test_paged_search_timeout_on_next_page():
+    """Test that the timeout applies to the pages after the first one, and that
+    it's a real deadline, not restarted at every wake up."""
+    with pausable_proxy() as proxy:
+        cli = new_client_with_simple_auth(proxy.port, GeventLDAPConnection)
+        with cli.connect(True) as conn:
+            res = _first_page(conn, timeout=1.0)
+            proxy.pause()
+            start = time.monotonic()
+            with pytest.raises(socket.timeout):
+                next(res)
+            assert 0.8 < time.monotonic() - start < 4.0
+            proxy.resume()

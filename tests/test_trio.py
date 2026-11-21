@@ -1,8 +1,15 @@
 import sys
+import time
 from functools import wraps, partial
 
 import pytest
-from conftest import get_config, network_delay
+from conftest import (
+    get_config,
+    network_delay,
+    new_client_with_simple_auth,
+    pausable_proxy,
+    MAX_IDLE_CPU,
+)
 
 from bonsai import LDAPEntry, LDAPClient
 import bonsai.errors
@@ -26,20 +33,7 @@ def trio_test(func):
 @pytest.fixture(scope="module")
 def tclient():
     """Get an LDAPClient with TrioLDAPConnection async class."""
-    cfg = get_config()
-    url = "ldap://%s:%s/%s?%s?%s" % (
-        cfg["SERVER"]["hostip"],
-        cfg["SERVER"]["port"],
-        cfg["SERVER"]["basedn"],
-        cfg["SERVER"]["search_attr"],
-        cfg["SERVER"]["search_scope"],
-    )
-    cli = LDAPClient(url)
-    cli.set_credentials(
-        "SIMPLE", user=cfg["SIMPLEAUTH"]["user"], password=cfg["SIMPLEAUTH"]["password"]
-    )
-    cli.set_async_connection_class(TrioLDAPConnection)
-    return cli
+    return new_client_with_simple_auth(conn_class=TrioLDAPConnection)
 
 
 @trio_test
@@ -277,3 +271,74 @@ async def test_async_with(tclient):
     else:
         await aexit(mgr, None, None, None)
     assert conn.closed
+
+
+async def _first_page(conn, **kwargs):
+    res = await conn.paged_search(
+        "ou=nerdherd,dc=bonsai,dc=test", 1, page_size=3, **kwargs
+    )
+    for _ in range(3):
+        next(res)
+    return res
+
+
+@trio_test
+async def test_paged_search_waiting_does_not_spin_cpu():
+    """Test that waiting for a page lets the event loop sleep."""
+    entries = []
+
+    async def collect(res):
+        entries.extend([entry async for entry in res])
+
+    with pausable_proxy() as proxy:
+        async with new_client_with_simple_auth(proxy.port, TrioLDAPConnection).connect(
+            True
+        ) as conn:
+            res = await _first_page(conn)
+            proxy.pause()
+            async with trio.open_nursery() as nursery:
+                nursery.start_soon(collect, res)
+                await trio.sleep(0.2)
+                start = time.process_time()
+                await trio.sleep(1.0)
+                used = time.process_time() - start
+                proxy.resume()
+    assert len(entries) == 3
+    assert used < MAX_IDLE_CPU
+
+
+@trio_test
+async def test_paged_search_timeout_on_next_page():
+    """Test that the timeout applies to the pages after the first one."""
+    with pausable_proxy() as proxy:
+        async with new_client_with_simple_auth(proxy.port, TrioLDAPConnection).connect(
+            True
+        ) as conn:
+            res = await _first_page(conn, timeout=1.0)
+            proxy.pause()
+            start = time.monotonic()
+            with pytest.raises(bonsai.errors.TimeoutError):
+                await res.__anext__()
+            assert 0.8 < time.monotonic() - start < 4.0
+            proxy.resume()
+
+
+@trio_test
+async def test_cancelled_page_wait_cleans_up():
+    """Test that cancelling the wait for a page leaves the connection usable."""
+    with pausable_proxy() as proxy:
+        async with new_client_with_simple_auth(proxy.port, TrioLDAPConnection).connect(
+            True
+        ) as conn:
+            res = await _first_page(conn)
+            proxy.pause()
+            with trio.move_on_after(0.3) as scope:
+                await res.__anext__()
+            assert scope.cancelled_caught
+            start = time.process_time()
+            await trio.sleep(1.0)
+            used = time.process_time() - start
+            proxy.resume()
+            await trio.sleep(0.5)  # Let the late response arrive.
+            assert len(await conn.search("ou=nerdherd,dc=bonsai,dc=test", 1)) == 6
+    assert used < MAX_IDLE_CPU

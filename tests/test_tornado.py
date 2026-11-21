@@ -1,8 +1,15 @@
+import time
 import unittest
 import sys
 
 import pytest
-from conftest import get_config, network_delay
+from conftest import (
+    get_config,
+    network_delay,
+    new_client_with_simple_auth,
+    pausable_proxy,
+    MAX_IDLE_CPU,
+)
 
 from bonsai import LDAPClient
 from bonsai import LDAPEntry
@@ -44,22 +51,8 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         """Set LDAP URL and open connection."""
         super().setUp()
         self.cfg = get_config()
-        self.url = "ldap://%s:%s/%s?%s?%s" % (
-            self.cfg["SERVER"]["hostip"],
-            self.cfg["SERVER"]["port"],
-            self.cfg["SERVER"]["basedn"],
-            self.cfg["SERVER"]["search_attr"],
-            self.cfg["SERVER"]["search_scope"],
-        )
         self.basedn = self.cfg["SERVER"]["basedn"]
-        self.ipaddr = self.cfg["SERVER"]["hostip"]
-        self.client = LDAPClient(self.url)
-        self.client.set_credentials(
-            "SIMPLE",
-            user=self.cfg["SIMPLEAUTH"]["user"],
-            password=self.cfg["SIMPLEAUTH"]["password"],
-        )
-        self.client.set_async_connection_class(TornadoLDAPConnection)
+        self.client = new_client_with_simple_auth(conn_class=TornadoLDAPConnection)
         self.io_loop = self.get_new_ioloop()
 
     @gen_test(timeout=20.0)
@@ -284,3 +277,46 @@ class TornadoLDAPConnectionTest(TestCaseClass):
                 conn.close()
         finally:
             bonsai.set_connect_async(False)
+
+    @gen.coroutine
+    def first_page(self, conn, **kwargs):
+        res = yield conn.paged_search(
+            "ou=nerdherd,dc=bonsai,dc=test", 1, page_size=3, **kwargs
+        )
+        for _ in range(3):
+            next(res)
+        return type(res).__aiter__(res)
+
+    @gen_test(timeout=30)
+    def test_paged_search_waiting_does_not_spin_cpu(self):
+        """Test that waiting for a page lets the event loop sleep."""
+        with pausable_proxy() as proxy:
+            cli = new_client_with_simple_auth(proxy.port, TornadoLDAPConnection)
+            conn = yield cli.connect(True)
+            res = yield self.first_page(conn)
+            proxy.pause()
+            fut = type(res).__anext__(res)
+            yield gen.sleep(0.2)
+            start = time.process_time()
+            yield gen.sleep(1.0)
+            used = time.process_time() - start
+            proxy.resume()
+            entry = yield fut
+            conn.close()
+        assert isinstance(entry, LDAPEntry)
+        assert used < MAX_IDLE_CPU
+
+    @gen_test(timeout=30)
+    def test_paged_search_timeout_on_next_page(self):
+        """Test that the timeout applies to the pages after the first one."""
+        with pausable_proxy() as proxy:
+            cli = new_client_with_simple_auth(proxy.port, TornadoLDAPConnection)
+            conn = yield cli.connect(True)
+            res = yield self.first_page(conn, timeout=1.0)
+            proxy.pause()
+            start = time.monotonic()
+            with pytest.raises(gen.TimeoutError):
+                yield type(res).__anext__(res)
+            assert 0.8 < time.monotonic() - start < 4.0
+            proxy.resume()
+            conn.close()
