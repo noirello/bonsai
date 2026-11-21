@@ -291,9 +291,9 @@ async def test_paged_search_waiting_does_not_spin_cpu():
         entries.extend([entry async for entry in res])
 
     with pausable_proxy() as proxy:
-        async with new_client_with_simple_auth(proxy.port, TrioLDAPConnection).connect(
-            True
-        ) as conn:
+        async with new_client_with_simple_auth(
+            "127.0.0.1", proxy.port, TrioLDAPConnection
+        ).connect(True) as conn:
             res = await _first_page(conn)
             proxy.pause()
             async with trio.open_nursery() as nursery:
@@ -311,9 +311,9 @@ async def test_paged_search_waiting_does_not_spin_cpu():
 async def test_paged_search_timeout_on_next_page():
     """Test that the timeout applies to the pages after the first one."""
     with pausable_proxy() as proxy:
-        async with new_client_with_simple_auth(proxy.port, TrioLDAPConnection).connect(
-            True
-        ) as conn:
+        async with new_client_with_simple_auth(
+            "127.0.0.1", proxy.port, TrioLDAPConnection
+        ).connect(True) as conn:
             res = await _first_page(conn, timeout=1.0)
             proxy.pause()
             start = time.monotonic()
@@ -327,9 +327,9 @@ async def test_paged_search_timeout_on_next_page():
 async def test_cancelled_page_wait_cleans_up():
     """Test that cancelling the wait for a page leaves the connection usable."""
     with pausable_proxy() as proxy:
-        async with new_client_with_simple_auth(proxy.port, TrioLDAPConnection).connect(
-            True
-        ) as conn:
+        async with new_client_with_simple_auth(
+            "127.0.0.1", proxy.port, TrioLDAPConnection
+        ).connect(True) as conn:
             res = await _first_page(conn)
             proxy.pause()
             with trio.move_on_after(0.3) as scope:

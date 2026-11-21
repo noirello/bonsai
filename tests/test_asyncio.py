@@ -350,7 +350,9 @@ async def _collect(res):
 async def test_paged_search_waiting_does_not_spin_cpu():
     """Test that waiting for a page lets the event loop sleep."""
     with pausable_proxy() as proxy:
-        async with new_client_with_simple_auth(proxy.port).connect(True) as conn:
+        async with new_client_with_simple_auth("127.0.0.1", proxy.port).connect(
+            True
+        ) as conn:
             res = await _first_page(conn)
             proxy.pause()
             task = asyncio.ensure_future(_collect(res))
@@ -367,7 +369,9 @@ async def test_paged_search_waiting_does_not_spin_cpu():
 async def test_paged_search_timeout_on_next_page():
     """Test that the timeout applies to the pages after the first one."""
     with pausable_proxy() as proxy:
-        async with new_client_with_simple_auth(proxy.port).connect(True) as conn:
+        async with new_client_with_simple_auth("127.0.0.1", proxy.port).connect(
+            True
+        ) as conn:
             res = await _first_page(conn, timeout=1.0)
             proxy.pause()
             start = time.monotonic()
@@ -385,7 +389,9 @@ async def test_cancelled_page_wait_cleans_up():
         lambda loop, ctx: errors.append(ctx)
     )
     with pausable_proxy() as proxy:
-        async with new_client_with_simple_auth(proxy.port).connect(True) as conn:
+        async with new_client_with_simple_auth("127.0.0.1", proxy.port).connect(
+            True
+        ) as conn:
             res = await _first_page(conn)
             proxy.pause()
             task = asyncio.ensure_future(res.__anext__())
@@ -411,7 +417,7 @@ async def test_connect_waiting_for_bind_does_not_spin_cpu():
     with pausable_proxy() as proxy:
         proxy.pause()
         task = asyncio.ensure_future(
-            new_client_with_simple_auth(proxy.port).connect(True)
+            new_client_with_simple_auth("127.0.0.1", proxy.port).connect(True)
         )
         await asyncio.sleep(0.4)
         start = time.process_time()

@@ -24,7 +24,7 @@ gevent = pytest.importorskip("gevent")
 @pytest.fixture(scope="module")
 def gclient():
     """Get an LDAPClient with GeventLDAPConnection async class."""
-    return new_client_with_simple_auth(None, GeventLDAPConnection)
+    return new_client_with_simple_auth(conn_class=GeventLDAPConnection)
 
 
 def test_connection(gclient):
@@ -215,7 +215,7 @@ def test_paged_search_iter_all_pages():
 def test_paged_search_waiting_does_not_spin_cpu():
     """Test that waiting for a page lets the other greenlets (and the CPU) sleep."""
     with pausable_proxy() as proxy:
-        cli = new_client_with_simple_auth(proxy.port, GeventLDAPConnection)
+        cli = new_client_with_simple_auth("127.0.0.1", proxy.port, GeventLDAPConnection)
         with cli.connect(True) as conn:
             res = _first_page(conn)
             proxy.pause()
@@ -233,7 +233,7 @@ def test_paged_search_timeout_on_next_page():
     """Test that the timeout applies to the pages after the first one, and that
     it's a real deadline, not restarted at every wake up."""
     with pausable_proxy() as proxy:
-        cli = new_client_with_simple_auth(proxy.port, GeventLDAPConnection)
+        cli = new_client_with_simple_auth("127.0.0.1", proxy.port, GeventLDAPConnection)
         with cli.connect(True) as conn:
             res = _first_page(conn, timeout=1.0)
             proxy.pause()

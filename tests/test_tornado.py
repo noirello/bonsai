@@ -291,7 +291,9 @@ class TornadoLDAPConnectionTest(TestCaseClass):
     def test_paged_search_waiting_does_not_spin_cpu(self):
         """Test that waiting for a page lets the event loop sleep."""
         with pausable_proxy() as proxy:
-            cli = new_client_with_simple_auth(proxy.port, TornadoLDAPConnection)
+            cli = new_client_with_simple_auth(
+                "127.0.0.1", proxy.port, TornadoLDAPConnection
+            )
             conn = yield cli.connect(True)
             res = yield self.first_page(conn)
             proxy.pause()
@@ -310,7 +312,9 @@ class TornadoLDAPConnectionTest(TestCaseClass):
     def test_paged_search_timeout_on_next_page(self):
         """Test that the timeout applies to the pages after the first one."""
         with pausable_proxy() as proxy:
-            cli = new_client_with_simple_auth(proxy.port, TornadoLDAPConnection)
+            cli = new_client_with_simple_auth(
+                "127.0.0.1", proxy.port, TornadoLDAPConnection
+            )
             conn = yield cli.connect(True)
             res = yield self.first_page(conn, timeout=1.0)
             proxy.pause()

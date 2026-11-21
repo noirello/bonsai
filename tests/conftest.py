@@ -53,11 +53,13 @@ def pausable_proxy():
 
 
 def new_client_with_simple_auth(
-    port: int | None = None, conn_class: type[BaseLDAPConnection] | None = None
+    host: str | None = None,
+    port: int | None = None,
+    conn_class: type[BaseLDAPConnection] | None = None,
 ):
     cfg = get_config()
     url = "ldap://%s:%s/%s??%s" % (
-        cfg["SERVER"]["hostip"],
+        host or cfg["SERVER"]["hostip"],
         port or cfg["SERVER"]["port"],
         cfg["SERVER"]["basedn"],
         cfg["SERVER"]["search_scope"],
