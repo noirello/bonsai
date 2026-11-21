@@ -13,7 +13,7 @@ from bonsai.active_directory.sid import SID
 
 
 from bonsai.ldapconnection import BaseLDAPConnection
-from tests.helpers import PausableTCPProxy
+from helpers import PausableTCPProxy
 
 # Waiting for a response must not use the CPU. A busy loop would use ~1.0 s here.
 MAX_IDLE_CPU = 0.4
