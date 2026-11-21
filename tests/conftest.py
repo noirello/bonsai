@@ -12,7 +12,14 @@ from bonsai.active_directory.acl import ACE, ACEFlag, ACEType
 from bonsai.active_directory.sid import SID
 
 
-def get_config():
+from bonsai.ldapconnection import BaseLDAPConnection
+from tests.helpers import PausableTCPProxy
+
+# Waiting for a response must not use the CPU. A busy loop would use ~1.0 s here.
+MAX_IDLE_CPU = 0.4
+
+
+def get_config() -> configparser.ConfigParser:
     """Load config parameters."""
     curdir = os.path.abspath(os.path.dirname(__file__))
     cfg = configparser.ConfigParser()
@@ -34,13 +41,24 @@ def network_delay(delay):
         proxy.remove_delay()
 
 
-@pytest.fixture(scope="module")
-def client():
-    """Get an LDAPClient with simple authentication."""
+@contextmanager
+def pausable_proxy():
+    """Start a PausableProxy in front of the LDAP server of the test config."""
+    cfg = get_config()
+
+    with PausableTCPProxy(
+        cfg["SERVER"]["hostip"], cfg.getint("SERVER", "port")
+    ) as proxy:
+        yield proxy
+
+
+def new_client_with_simple_auth(
+    port: int | None = None, conn_class: type[BaseLDAPConnection] | None = None
+):
     cfg = get_config()
     url = "ldap://%s:%s/%s??%s" % (
         cfg["SERVER"]["hostip"],
-        cfg["SERVER"]["port"],
+        port or cfg["SERVER"]["port"],
         cfg["SERVER"]["basedn"],
         cfg["SERVER"]["search_scope"],
     )
@@ -48,7 +66,15 @@ def client():
     cli.set_credentials(
         "SIMPLE", user=cfg["SIMPLEAUTH"]["user"], password=cfg["SIMPLEAUTH"]["password"]
     )
+    if conn_class is not None:
+        cli.set_async_connection_class(conn_class)
     return cli
+
+
+@pytest.fixture(scope="module")
+def client():
+    """Get an LDAPClient with simple authentication."""
+    return new_client_with_simple_auth()
 
 
 @pytest.fixture(scope="module")
@@ -76,6 +102,7 @@ def test_ace() -> ACE:
         uuid.UUID("c975c901-6cea-4b6f-8319-d67f45449506"),
         b"",
     )
+
 
 @pytest.fixture
 def turn_async_conn():
