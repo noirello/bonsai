@@ -11,7 +11,6 @@ from conftest import (
     MAX_IDLE_CPU,
 )
 
-from bonsai import LDAPClient
 from bonsai import LDAPEntry
 import bonsai.errors
 
@@ -36,10 +35,12 @@ try:
     from bonsai.tornado import TornadoLDAPConnection
 
     TestCaseClass = AsyncTestCase
+    gen_coroutine = gen.coroutine
     MOD_INSTALLED = True
 except ImportError:
     TestCaseClass = unittest.TestCase
     gen_test = dummy
+    gen_coroutine = dummy
     MOD_INSTALLED = False
 
 
@@ -278,7 +279,7 @@ class TornadoLDAPConnectionTest(TestCaseClass):
         finally:
             bonsai.set_connect_async(False)
 
-    @gen.coroutine
+    @gen_coroutine
     def first_page(self, conn, **kwargs):
         res = yield conn.paged_search(
             "ou=nerdherd,dc=bonsai,dc=test", 1, page_size=3, **kwargs
