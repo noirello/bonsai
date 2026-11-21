@@ -24,28 +24,42 @@ class TornadoLDAPConnection(BaseLDAPConnection):
         self._timeout = None
         self.__auto_page_acquire = client.auto_page_acquire
 
+    def _events(self, msg_id):
+        if self._wants_write(msg_id):
+            return IOLoop.WRITE | IOLoop.READ
+        return IOLoop.READ
+
+    def _clear_timeout(self):
+        if self._timeout is not None:
+            self._ioloop.remove_timeout(self._timeout)
+            self._timeout = None
+
     def _io_callback(self, fut, msg_id, fd=None, events=None):
         try:
             self._ioloop.remove_handler(self._fileno)
+            if fut.done():
+                # Timed out already, nothing to deliver.
+                return
             res = super().get_result(msg_id)
             if res is not None:
+                self._clear_timeout()
                 fut.set_result(res)
-                if self._timeout is not None:
-                    self._ioloop.remove_timeout(self._timeout)
             else:
                 self._fileno = self.fileno()
                 callback = partial(self._io_callback, fut, msg_id)
                 try:
-                    self._ioloop.add_handler(
-                        self._fileno, callback, IOLoop.WRITE | IOLoop.READ
-                    )
+                    self._ioloop.add_handler(self._fileno, callback, self._events(msg_id))
                 except FileExistsError as exc:
                     if exc.errno != 17:
                         raise exc
         except LDAPError as exc:
+            self._clear_timeout()
             fut.set_exception(exc)
 
-    def _timeout_callback(self, fut):
+    def _timeout_callback(self, fut, msg_id):
+        if fut.done():
+            return
+        self._timeout = None
         self._ioloop.remove_handler(self._fileno)
         fut.set_exception(gen.TimeoutError())
 
@@ -54,10 +68,10 @@ class TornadoLDAPConnection(BaseLDAPConnection):
         callback = partial(self._io_callback, fut, msg_id)
         self._fileno = self.fileno()
         try:
-            self._ioloop.add_handler(self._fileno, callback, IOLoop.WRITE | IOLoop.READ)
+            self._ioloop.add_handler(self._fileno, callback, self._events(msg_id))
             if timeout is not None:
                 self._timeout = self._ioloop.call_later(
-                    timeout, self._timeout_callback, fut
+                    timeout, self._timeout_callback, fut, msg_id
                 )
         except FileExistsError as exc:
             # Avoid concurrency problems by registering with

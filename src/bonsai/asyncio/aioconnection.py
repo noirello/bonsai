@@ -1,7 +1,7 @@
 import asyncio
 
 from ..ldapconnection import BaseLDAPConnection, LDAPSearchScope
-from ..errors import LDAPError, NotAllowedOnNonleaf
+from ..errors import NotAllowedOnNonleaf
 
 
 class AIOLDAPConnection(BaseLDAPConnection):
@@ -19,6 +19,7 @@ class AIOLDAPConnection(BaseLDAPConnection):
         self._loop = loop or asyncio.get_running_loop()
         self.__open_coro = None
         self.__auto_page_acquire = client.auto_page_acquire
+        self.__watched_fd = None
         super().__init__(client, is_async=True)
 
     async def __aenter__(self):
@@ -34,30 +35,43 @@ class AIOLDAPConnection(BaseLDAPConnection):
 
     __iter__ = __await__
 
+    def _watch(self, msg_id, fut) -> None:
+        fd = self.fileno()
+        self._loop.add_reader(fd, self._ready, msg_id, fut)
+        if self._wants_write(msg_id):
+            self._loop.add_writer(fd, self._ready, msg_id, fut)
+        self.__watched_fd = fd
+
+    def _unwatch(self):
+        fd, self.__watched_fd = self.__watched_fd, None
+        if fd is not None and fd > -1:
+            self._loop.remove_reader(fd)
+            self._loop.remove_writer(fd)
+
     def _ready(self, msg_id, fut):
-        self._loop.remove_reader(self.fileno())
-        self._loop.remove_writer(self.fileno())
+        self._unwatch()
+        if fut.done():
+            # The waiter is gone (timeout or cancellation), nothing to deliver.
+            return
         try:
             res = super().get_result(msg_id)
-            if res is not None:
-                fut.set_result(res)
+            if res is None:
+                self._watch(msg_id, fut)
             else:
-                self._loop.add_reader(self.fileno(), self._ready, msg_id, fut)
-                self._loop.add_writer(self.fileno(), self._ready, msg_id, fut)
-        except LDAPError as exc:
+                fut.set_result(res)
+        except Exception as exc:
             fut.set_exception(exc)
 
     async def _poll(self, msg_id, timeout=None):
-        fut = asyncio.Future()
-        self._loop.add_reader(self.fileno(), self._ready, msg_id, fut)
-        self._loop.add_writer(self.fileno(), self._ready, msg_id, fut)
+        fut = self._loop.create_future()
+        self._watch(msg_id, fut)
         try:
             return await asyncio.wait_for(fut, timeout)
-        except Exception as exc:
-            if self.fileno() > -1:
-                self._loop.remove_reader(self.fileno())
-                self._loop.remove_writer(self.fileno())
-            raise exc
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            # CancelledError is a BaseException, it has to be handled explicitly.
+            raise
+        finally:
+            self._unwatch()
 
     def _evaluate(self, msg_id, timeout=None):
         return self._poll(msg_id, timeout)

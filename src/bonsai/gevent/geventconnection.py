@@ -1,5 +1,7 @@
+import time
 from typing import Any, Optional, Union
-from gevent.socket import wait_readwrite
+from gevent.socket import wait_read, wait_readwrite
+from gevent.socket import timeout as SocketTimeout
 
 from ..ldapconnection import BaseLDAPConnection, LDAPSearchScope
 from ..ldapdn import LDAPDN
@@ -23,11 +25,19 @@ class GeventLDAPConnection(BaseLDAPConnection):
         super().__init__(client, is_async=True)
 
     def _poll(self, msg_id: int, timeout: Optional[float] = None) -> Any:
+        # Total-operation deadline, because partial server response can reset the original.
+        deadline = None if timeout is None else time.monotonic() + timeout
         while True:
             res = self.get_result(msg_id)
             if res is not None:
                 return res
-            wait_readwrite(self.fileno(), timeout=timeout)
+            remaining = None
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise SocketTimeout("timed out")
+            wait = wait_readwrite if self._wants_write(msg_id) else wait_read
+            wait(self.fileno(), timeout=remaining)
 
     def _evaluate(self, msg_id: int, timeout: Optional[float] = None) -> Any:
         return self._poll(msg_id, timeout)
