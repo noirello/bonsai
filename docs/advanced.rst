@@ -205,7 +205,7 @@ text format.
 .. rubric:: Microsoft Schannel
 
 Unfortunately, none of the listed TLS modules are effective on Microsoft Windows. The WinLDAP
-library automatically searches for the corresponding certificates in the cert store. All of the
+library automatically searches for the corresponding certificates in the cert store. All the
 necessary certificates have to be loaded manually before the client tries to use them.
 
 .. _ldap-controls:
@@ -577,7 +577,7 @@ different one with :meth:`LDAPClient.set_async_connection_class`.
     The default asyncio event loop is changed with Python 3.8 on Windows to
     `ProactorEventLoop`. Unfortunately, bonsai's asyncio connection requires
     the old `SelectorEventLoop`. Make sure to change it like in the example
-    before using the module. Otherwise the ``add_reader`` method will raise
+    before using the module. Otherwise, the ``add_reader`` method will raise
     ``NotImplementedError``.
 
 For example changing it to `GeventLDAPConnection` makes it possible to use the module with
@@ -625,8 +625,8 @@ implementations of the supported libraries can also help.
 
 The C API's asynchronous functions are designed to return a message ID immediately after calling
 them, and then polling the state of the executed operations. The `BaseLDAPConnection` class exposes
-the same functionality of the C API. Therefore it makes possible to start an operation then poll
-the result with :meth:`LDAPConnection.get_result()` periodically in the `_evaluate` method which
+the same functionality of the C API. Therefore, it makes possible to start an operation then poll
+the result with :meth:`LDAPConnection.get_result()` periodically in the ``_evaluate`` method which
 happens to be called in every other method that evaluates an LDAP operation.
 
 .. code-block:: python3
@@ -652,17 +652,30 @@ happens to be called in every other method that evaluates an LDAP operation.
 The constant polling can be avoided with voluntarily sleep, but it's more efficient to register to an
 I/O event that will notify when the data is available. The :meth:`LDAPConnection.fileno()` method
 returns the socket's file descriptor that can be used with the OS's default I/O monitoring function
-(e.g select or epoll) for this purpose. In Curio you can wait until a socket becomes writable with
-`curio.traps._write_wait`:
+(e.g select or epoll) for this purpose, and the :meth:`LDAPConnection._wants_write()` internal
+method can help decide which I/O event needs to be watched. In Curio you can wait until a socket becomes
+readable with ``curio.traps._read_wait`` and writeable with ``curio.traps._write_wait``:
 
 .. code-block:: python3
 
         async def _evaluate(self, msg_id: int, timeout: Optional[float] = None):
             while True:
-                await curio.traps._write_wait(self.fileno())
+                if self._wants_write(msg_id):
+                    # The connection is still being opened (connecting, TLS, bind).
+                    await curio.traps._write_wait(self.fileno())
+                else:
+                    await curio.traps._read_wait(self.fileno())
                 res = self.get_result(msg_id)
                 if res is not None:
                     return res
+
+
+An async connection class that is also meant to iterate over the results of a paged search (see
+:meth:`LDAPConnection.paged_search`) with ``async for`` has to implement the ``__anext__`` support
+by adding a ``_search_iter_anext(self, search_iter)`` coroutine. The built-in classes (e.g.
+:class:`bonsai.asyncio.AIOLDAPConnection`) are the best examples for it. Without it, iterating over
+a paged search result with a plain ``for`` loop raises a ``TypeError`` after the first page, when the
+next page would have to be acquired automatically.
 
 
 The following code is a simple litmus test for proving that the created class plays nice with other

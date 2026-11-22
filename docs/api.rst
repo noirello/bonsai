@@ -289,6 +289,15 @@ bonsai
 
 .. _RFC4532: https://tools.ietf.org/html/rfc4532
 
+.. method:: LDAPConnection._wants_write(msg_id)
+
+    Checks if the ongoing LDAP operation wants write-readiness. Internal method that is
+    useful for async connection and polling.
+
+    :param int msg_id: the ID of an ongoing LDAP operation.
+    :return: True if the underlying socket wants write-readiness.
+    :rtype: bool
+
 .. attribute:: LDAPConnection.closed
 
     A readonly attribute about the connection's state.
