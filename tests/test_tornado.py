@@ -30,6 +30,7 @@ if sys.platform == "win32" and sys.version_info.minor >= 8:
 
 try:
     from tornado import gen
+    from tornado.ioloop import IOLoop
     from tornado.testing import gen_test
     from tornado.testing import AsyncTestCase
     from bonsai.tornado import TornadoLDAPConnection
@@ -325,3 +326,25 @@ class TornadoLDAPConnectionTest(TestCaseClass):
             assert 0.8 < time.monotonic() - start < 4.0
             proxy.resume()
             conn.close()
+
+    def test_connection_used_on_another_loop(self):
+        """Test that using a connection on a different loop than the one that
+        created it is okay, and doesn't fail."""
+        owner_loop = self.get_new_ioloop()
+
+        try:
+            conn = owner_loop.run_sync(lambda: self.client.connect(True), timeout=10)
+
+            @gen_coroutine
+            def search():
+                assert IOLoop.current() is not owner_loop
+                res = yield conn.search(timeout=5)
+                return res
+
+            start = time.monotonic()
+            res = self.io_loop.run_sync(search, timeout=5)
+            assert res
+            assert time.monotonic() - start < 2.0
+            conn.close()
+        finally:
+            owner_loop.close()

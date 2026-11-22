@@ -12,11 +12,13 @@ class AIOLDAPConnection(BaseLDAPConnection):
     :meth:`bonsai.LDAPConnection.fileno` all of them are awaitable.
 
     :param LDAPClient client: a client object.
-    :param loop: an asyncio IO loop.
+    :param loop: an asyncio IO loop. By default (None) every operation runs on
+        the loop it is awaited on, setting it ties the connection to that single
+        loop for every operation.
     """
 
     def __init__(self, client, loop=None):
-        self._loop = loop or asyncio.get_running_loop()
+        self._loop = loop
         self.__open_coro = None
         self.__auto_page_acquire = client.auto_page_acquire
         self.__watched_fd = None
@@ -35,43 +37,44 @@ class AIOLDAPConnection(BaseLDAPConnection):
 
     __iter__ = __await__
 
-    def _watch(self, msg_id, fut) -> None:
+    def _watch(self, msg_id, loop, fut) -> None:
         fd = self.fileno()
-        self._loop.add_reader(fd, self._ready, msg_id, fut)
+        loop.add_reader(fd, self._ready, msg_id, loop, fut)
         if self._wants_write(msg_id):
-            self._loop.add_writer(fd, self._ready, msg_id, fut)
+            loop.add_writer(fd, self._ready, msg_id, loop, fut)
         self.__watched_fd = fd
 
-    def _unwatch(self):
+    def _unwatch(self, loop):
         fd, self.__watched_fd = self.__watched_fd, None
         if fd is not None and fd > -1:
-            self._loop.remove_reader(fd)
-            self._loop.remove_writer(fd)
+            loop.remove_reader(fd)
+            loop.remove_writer(fd)
 
-    def _ready(self, msg_id, fut):
-        self._unwatch()
+    def _ready(self, msg_id, loop, fut):
+        self._unwatch(loop)
         if fut.done():
             # The waiter is gone (timeout or cancellation), nothing to deliver.
             return
         try:
             res = super().get_result(msg_id)
             if res is None:
-                self._watch(msg_id, fut)
+                self._watch(msg_id, loop, fut)
             else:
                 fut.set_result(res)
         except Exception as exc:
             fut.set_exception(exc)
 
     async def _poll(self, msg_id, timeout=None):
-        fut = self._loop.create_future()
-        self._watch(msg_id, fut)
+        loop = self._loop or asyncio.get_running_loop()
+        fut = loop.create_future()
+        self._watch(msg_id, loop, fut)
         try:
             return await asyncio.wait_for(fut, timeout)
         except (asyncio.TimeoutError, asyncio.CancelledError):
             # CancelledError is a BaseException, it has to be handled explicitly.
             raise
         finally:
-            self._unwatch()
+            self._unwatch(loop)
 
     def _evaluate(self, msg_id, timeout=None):
         return self._poll(msg_id, timeout)

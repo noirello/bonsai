@@ -14,12 +14,14 @@ class TornadoLDAPConnection(BaseLDAPConnection):
     It has the same methods and properties as :class:`bonsai.LDAPConnection`.
 
     :param LDAPClient client: a client object.
-    :param ioloop: a Tornado IO loop.
+    :param ioloop: a Tornado IO loop. By default (None) every operation runs on
+        the loop it is awaited on, setting it ties the connection to that single
+        loop for every operation.
     """
 
     def __init__(self, client, ioloop=None):
         super().__init__(client, is_async=True)
-        self._ioloop = ioloop or IOLoop.instance()
+        self._ioloop = ioloop
         self._fileno = None
         self._timeout = None
         self.__auto_page_acquire = client.auto_page_acquire
@@ -29,49 +31,50 @@ class TornadoLDAPConnection(BaseLDAPConnection):
             return IOLoop.WRITE | IOLoop.READ
         return IOLoop.READ
 
-    def _clear_timeout(self):
+    def _clear_timeout(self, ioloop):
         if self._timeout is not None:
-            self._ioloop.remove_timeout(self._timeout)
+            ioloop.remove_timeout(self._timeout)
             self._timeout = None
 
-    def _io_callback(self, fut, msg_id, fd=None, events=None):
+    def _io_callback(self, msg_id, ioloop, fut, fd=None, events=None):
         try:
-            self._ioloop.remove_handler(self._fileno)
+            ioloop.remove_handler(self._fileno)
             if fut.done():
                 # Timed out already, nothing to deliver.
                 return
             res = super().get_result(msg_id)
             if res is not None:
-                self._clear_timeout()
+                self._clear_timeout(ioloop)
                 fut.set_result(res)
             else:
                 self._fileno = self.fileno()
-                callback = partial(self._io_callback, fut, msg_id)
+                callback = partial(self._io_callback, msg_id, ioloop, fut)
                 try:
-                    self._ioloop.add_handler(self._fileno, callback, self._events(msg_id))
+                    ioloop.add_handler(self._fileno, callback, self._events(msg_id))
                 except FileExistsError as exc:
                     if exc.errno != 17:
                         raise exc
         except LDAPError as exc:
-            self._clear_timeout()
+            self._clear_timeout(ioloop)
             fut.set_exception(exc)
 
-    def _timeout_callback(self, fut, msg_id):
+    def _timeout_callback(self, msg_id, ioloop, fut):
         if fut.done():
             return
         self._timeout = None
-        self._ioloop.remove_handler(self._fileno)
+        ioloop.remove_handler(self._fileno)
         fut.set_exception(gen.TimeoutError())
 
     def _evaluate(self, msg_id, timeout=None):
+        ioloop = self._ioloop or IOLoop.current()
         fut = Future()
-        callback = partial(self._io_callback, fut, msg_id)
+        callback = partial(self._io_callback, msg_id, ioloop, fut)
         self._fileno = self.fileno()
         try:
-            self._ioloop.add_handler(self._fileno, callback, self._events(msg_id))
+            ioloop.add_handler(self._fileno, callback, self._events(msg_id))
             if timeout is not None:
-                self._timeout = self._ioloop.call_later(
-                    timeout, self._timeout_callback, fut, msg_id
+                self._timeout = ioloop.call_later(
+                    timeout, self._timeout_callback, msg_id, ioloop, fut
                 )
         except FileExistsError as exc:
             # Avoid concurrency problems by registering with

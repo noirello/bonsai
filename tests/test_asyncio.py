@@ -428,3 +428,26 @@ async def test_connect_waiting_for_bind_does_not_spin_cpu():
         assert not conn.closed
         conn.close()
     assert used < MAX_IDLE_CPU
+
+
+def test_connection_used_on_another_loop(client):
+    """Test that using a connection on a different loop than the one that
+    created it is okay, and doesn't fail."""
+    owner_loop = asyncio.new_event_loop()
+
+    async def open_conn():
+        return await client.connect(True)
+
+    try:
+        conn = owner_loop.run_until_complete(open_conn())
+
+        async def search():
+            assert owner_loop != asyncio.get_event_loop()
+            return await conn.search(timeout=5)
+
+        start = time.monotonic()
+        asyncio.run(search())
+        assert time.monotonic() - start < 2.0
+        conn.close()
+    finally:
+        owner_loop.close()
