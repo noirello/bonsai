@@ -1,6 +1,3 @@
-from typing import Optional, Type
-
-
 __all__ = [
     "AccountLocked",
     "AffectsMultipleDSA",
@@ -41,7 +38,7 @@ class LDAPError(Exception):
     code = 0
 
     @classmethod
-    def create(cls, code: int) -> Type["LDAPError"]:
+    def create(cls, code: int) -> type["LDAPError"]:
         """Create a new LDAPError type with `code` error code."""
         cls.code = code
         return cls
@@ -188,7 +185,7 @@ class PasswordPolicyError(LDAPError):
 
     _dflt_args = ("Password policy error.",)
 
-    def __init__(self, msg: Optional[str] = None) -> None:
+    def __init__(self, msg: str | None = None) -> None:
         super().__init__(msg)
         self.args = self._dflt_args if msg is None else (msg,)
 

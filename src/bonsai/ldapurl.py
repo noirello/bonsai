@@ -1,5 +1,4 @@
 from ipaddress import IPv6Address
-from typing import Any, List, Union, Tuple, Optional
 
 import re
 import urllib.parse
@@ -21,17 +20,17 @@ class LDAPURL:
 
     __slots__ = ("__hostinfo", "__searchinfo", "__extensions", "__ipv6")
 
-    def __init__(self, strurl: Optional[str] = None) -> None:
+    def __init__(self, strurl: str | None = None) -> None:
         """Init method."""
-        self.__hostinfo = ("ldap", "localhost", 389)  # type: Tuple[str, str, int]
+        self.__hostinfo: tuple[str, str, int] = ("ldap", "localhost", 389)
         # Default values to the search parameters.
-        self.__searchinfo = (
+        self.__searchinfo: tuple[LDAPDN, list[str], str, str] = (
             LDAPDN(""),
             [],
             "",
             "",
-        )  # type: Tuple[LDAPDN, List[str], str, str]
-        self.__extensions = []  # type: List[str]
+        )
+        self.__extensions: list[str] = []
         self.__ipv6 = False
         if strurl:
             self.__str2url(strurl)
@@ -82,7 +81,7 @@ class LDAPURL:
         self.__searchinfo = (binddn, attrlist, scope, filter_exp)
 
     @staticmethod
-    def is_valid_hostname(hostname: str) -> Tuple[bool, bool]:
+    def is_valid_hostname(hostname: str) -> tuple[bool, bool]:
         """Validate a hostname."""
         hostname_regex = re.compile(
             r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]"
@@ -148,7 +147,7 @@ class LDAPURL:
         return self.__searchinfo[0]
 
     @basedn.setter
-    def basedn(self, value: Union[LDAPDN, str]) -> None:
+    def basedn(self, value: LDAPDN | str) -> None:
         """Setter for LDAP distinguished name for binding."""
         self.__searchinfo = (
             LDAPDN(str(value)),
@@ -158,7 +157,7 @@ class LDAPURL:
         )
 
     @property
-    def attributes(self) -> List[str]:
+    def attributes(self) -> list[str]:
         """The searching attributes."""
         return self.__searchinfo[1]
 

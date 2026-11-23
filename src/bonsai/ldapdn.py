@@ -1,5 +1,5 @@
 import re
-from typing import Union, Tuple, Any
+from typing import Any
 
 from .errors import InvalidDN
 
@@ -30,7 +30,7 @@ class LDAPDN:
             raise InvalidDN(strdn)
         self.__strdn = self.__sanitize(strdn, True)
 
-    def __str_rdn_to_tuple(self, str_rdn: str) -> Tuple[Tuple[str, str], ...]:
+    def __str_rdn_to_tuple(self, str_rdn: str) -> tuple[tuple[str, str], ...]:
         """
         Generate attribute type and value tuple from relative
         distinguished name.
@@ -66,7 +66,7 @@ class LDAPDN:
                     strdn = strdn.replace(pair[0], pair[1])
         return strdn
 
-    def __getitem__(self, idx: Union[int, slice]) -> str:
+    def __getitem__(self, idx: int | slice) -> str:
         """
         Return the string format of the relative distinguished names
         in the LDAPDN.
@@ -85,7 +85,7 @@ class LDAPDN:
             raise TypeError("Indices must be integers or slices.")
         return ",".join(rdns[idx])
 
-    def __setitem__(self, idx: Union[int, slice], value: str) -> None:
+    def __setitem__(self, idx: int | slice, value: str) -> None:
         """
         Set the string format of the relative distinguished names
         in the LDAPDN.
@@ -128,7 +128,7 @@ class LDAPDN:
         return "<LDAPDN %s>" % str(self)
 
     @property
-    def rdns(self) -> Tuple[Tuple[Tuple[str, str], ...], ...]:
+    def rdns(self) -> tuple[tuple[tuple[str, str], ...], ...]:
         """The tuple of relative distinguished name."""
         return tuple(
             self.__str_rdn_to_tuple(rdn)

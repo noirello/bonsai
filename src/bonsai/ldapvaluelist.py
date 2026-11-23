@@ -1,4 +1,5 @@
-from typing import Any, List, Union, Iterable, Optional
+from typing import Any
+from collections.abc import Iterable
 
 try:
     from typing import SupportsIndex
@@ -8,7 +9,7 @@ except ImportError:
 import bonsai
 
 
-class LDAPValueList(list):
+class LDAPValueList(list[Any]):
     """
     Modified list that tracks added and deleted values. It also contains
     only unique elements. The elements are compared to their lower-cased
@@ -23,17 +24,17 @@ class LDAPValueList(list):
 
     __slots__ = ("__deleted", "__added", "__status")
 
-    def __init__(self, items: Optional[Iterable[Any]] = None) -> None:
+    def __init__(self, items: Iterable[Any] | None = None) -> None:
         super().__init__()
-        self.__added = []  # type: List[str]
-        self.__deleted = []  # type: List[str]
+        self.__added: list[str] = []
+        self.__deleted: list[str] = []
         self.__status = 0
         if items:
             for item in items:
                 self.append(item)
 
     @staticmethod
-    def __balance(lst1: List[str], lst2: List[str], value: Any) -> None:
+    def __balance(lst1: list[str], lst2: list[str], value: Any) -> None:
         """
         Balancing between the two list (__added, __deleted),
         make sure the same element is not in both lists.
@@ -53,7 +54,7 @@ class LDAPValueList(list):
             pass
 
     @property
-    def _status_dict(self) -> dict:
+    def _status_dict(self) -> dict[str, int | list[str]]:
         return {
             "@status": self.__status,
             "@added": self.__added.copy(),
@@ -63,7 +64,7 @@ class LDAPValueList(list):
     def __contains__(self, item: Any) -> bool:
         return bonsai.utils._unique_contains(self, item)[0]
 
-    def __delitem__(self, idx: Union[SupportsIndex, slice]) -> None:
+    def __delitem__(self, idx: SupportsIndex | slice) -> None:
         old_value = super().__getitem__(idx)
         if isinstance(idx, slice):
             for item in old_value:
@@ -75,20 +76,20 @@ class LDAPValueList(list):
     def __mul__(self, value: Any) -> "LDAPValueList":
         raise TypeError("Cannot multiple LDAPValueList.")
 
-    def __add__(self, other: Iterable) -> "LDAPValueList":
+    def __add__(self, other: Iterable[Any]) -> "LDAPValueList":
         if not isinstance(other, (list, LDAPValueList)):
             raise TypeError("Can only concatenate list and LDAPValueList.")
         new_list = self.copy()
         new_list.extend(other)
         return new_list
 
-    def __iadd__(self, other: Iterable) -> "LDAPValueList":
+    def __iadd__(self, other: Iterable[Any]) -> "LDAPValueList":
         if not isinstance(other, (list, LDAPValueList)):
             raise TypeError("Can only concatenate list and LDAPValueList.")
         self.extend(other)
         return self
 
-    def __setitem__(self, idx: Union[SupportsIndex, slice], value: Any) -> None:
+    def __setitem__(self, idx: SupportsIndex | slice, value: Any) -> None:
         old_value = self[idx]
         if isinstance(idx, slice):
             for item in value:
@@ -198,12 +199,12 @@ class LDAPValueList(list):
         return new_list
 
     @property
-    def added(self) -> List[str]:
+    def added(self) -> list[str]:
         """List of the added values."""
         return self.__added
 
     @property
-    def deleted(self) -> List[str]:
+    def deleted(self) -> list[str]:
         """List of the deleted values."""
         return self.__deleted
 
