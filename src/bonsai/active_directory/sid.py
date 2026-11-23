@@ -1,7 +1,5 @@
 import struct
 
-from typing import Any, Optional, Tuple
-
 
 class SID:
     """
@@ -18,7 +16,7 @@ class SID:
     """
 
     def __init__(
-        self, str_rep: Optional[str] = None, bytes_le: Optional[bytes] = None
+        self, str_rep: str | None = None, bytes_le: bytes | None = None
     ) -> None:
         if str_rep is not None and bytes_le is not None:
             raise TypeError(
@@ -106,7 +104,7 @@ class SID:
         return self.__identifier_authority
 
     @property
-    def subauthorities(self) -> Tuple[int, ...]:
+    def subauthorities(self) -> tuple[int, ...]:
         """
         A tuple of subauthorities that uniquely identifies a principal
         relative to the identifier authority.
@@ -129,7 +127,7 @@ class SID:
         )
 
     @property
-    def sddl_alias(self) -> Optional[str]:
+    def sddl_alias(self) -> str | None:
         """
         The string SDDL alias of the SID if it exists, otherwise it's None.
         """

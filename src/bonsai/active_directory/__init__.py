@@ -1,6 +1,6 @@
 import struct
 
-from typing import Dict, Optional, Union
+from typing import Literal, cast, overload
 
 from .sid import SID
 from .acl import ACL, ACLRevision, ACE, ACEFlag, ACERight, ACEType
@@ -38,11 +38,11 @@ class SecurityDescriptor:
 
     def __init__(
         self,
-        control: Dict[str, bool],
-        owner_sid: Optional[SID],
-        group_sid: Optional[SID],
-        sacl: Optional[ACL],
-        dacl: Optional[ACL],
+        control: dict[str, bool],
+        owner_sid: SID | None,
+        group_sid: SID | None,
+        sacl: ACL | None,
+        dacl: ACL | None,
         revision: int = 1,
         sbz1: int = 0,
     ) -> None:
@@ -54,8 +54,20 @@ class SecurityDescriptor:
         self.__sacl = sacl
         self.__dacl = dacl
 
+    @overload
     @staticmethod
-    def __convert_ctrl(ctrl, to_int=False):
+    def __convert_ctrl(
+        ctrl: int, to_int: Literal[False] = False
+    ) -> dict[str, bool]: ...
+
+    @overload
+    @staticmethod
+    def __convert_ctrl(ctrl: dict[str, bool], to_int: Literal[True]) -> int: ...
+
+    @staticmethod
+    def __convert_ctrl(
+        ctrl: int | dict[str, bool], to_int: bool = False
+    ) -> dict[str, bool] | int:
         values = {
             "self_relative": 0x8000,
             "rm_control_valid": 0x4000,
@@ -75,9 +87,10 @@ class SecurityDescriptor:
             "owner_defaulted": 0x1,
         }
         if to_int:
-            return sum(values[key] for key, val in ctrl.items() if val)
-        else:
-            return {key: bool(ctrl & val) for key, val in values.items()}
+            return sum(
+                values[key] for key, val in cast(dict[str, bool], ctrl).items() if val
+            )
+        return {key: bool(cast(int, ctrl) & val) for key, val in values.items()}
 
     @classmethod
     def from_binary(cls, data: bytes) -> "SecurityDescriptor":
@@ -163,7 +176,7 @@ class SecurityDescriptor:
         data.extend(dacl)
         return bytes(data)
 
-    def set_control(self, control: Union[Dict[str, bool], int]) -> None:
+    def set_control(self, control: dict[str, bool] | int) -> None:
         """
         Set the control access bit flags for the SecurityDescriptor object.
 
@@ -208,7 +221,7 @@ class SecurityDescriptor:
             raise TypeError("The group_sid must be a SID object.")
         self.__group_sid = group_sid
 
-    def set_dacl(self, dacl: Optional[ACL]) -> None:
+    def set_dacl(self, dacl: ACL | None) -> None:
         """
         Set the discretionary ACL for the the SecurityDescriptor object.
         It also sets the `dacl_present` in the control access bit flags
@@ -225,7 +238,7 @@ class SecurityDescriptor:
         else:
             self.__control["dacl_present"] = False
 
-    def set_sacl(self, sacl: Optional[ACL]) -> None:
+    def set_sacl(self, sacl: ACL | None) -> None:
         """
         Set the system ACL for the the SecurityDescriptor object.
         It also sets the `sacl_present` in the control access bit flags
@@ -253,16 +266,16 @@ class SecurityDescriptor:
         return self.__revision
 
     @property
-    def control(self) -> Dict[str, bool]:
+    def control(self) -> dict[str, bool]:
         """The dict of the control access bit flags."""
         return self.__control
 
     @control.setter
-    def control(self, value: Union[Dict[str, bool], int]) -> None:
+    def control(self, value: dict[str, bool] | int) -> None:
         self.set_control(value)
 
     @property
-    def owner_sid(self) -> Optional[SID]:
+    def owner_sid(self) -> SID | None:
         """The :class:`SID` of the owner."""
         return self.__owner_sid
 
@@ -271,7 +284,7 @@ class SecurityDescriptor:
         self.set_owner_sid(value)
 
     @property
-    def group_sid(self) -> Optional[SID]:
+    def group_sid(self) -> SID | None:
         """The :class:`SID` of the group."""
         return self.__group_sid
 
@@ -280,21 +293,21 @@ class SecurityDescriptor:
         self.set_group_sid(value)
 
     @property
-    def sacl(self) -> Optional[ACL]:
+    def sacl(self) -> ACL | None:
         """The system :class:`ACL`."""
         return self.__sacl
 
     @sacl.setter
-    def sacl(self, value: Optional[ACL]) -> None:
+    def sacl(self, value: ACL | None) -> None:
         self.set_sacl(value)
 
     @property
-    def dacl(self) -> Optional[ACL]:
+    def dacl(self) -> ACL | None:
         """The discretionary :class:`ACL`."""
         return self.__dacl
 
     @dacl.setter
-    def dacl(self, value: Optional[ACL]) -> None:
+    def dacl(self, value: ACL | None) -> None:
         self.set_dacl(value)
 
 
@@ -338,7 +351,7 @@ class UserAccountControl:
         }
 
     @property
-    def properties(self) -> Dict[str, bool]:
+    def properties(self) -> dict[str, bool]:
         """Dictionary of the UserAccountControl properties."""
         return self.__properties
 

@@ -2,7 +2,6 @@ import struct
 import uuid
 
 from enum import IntEnum
-from typing import List, Optional, Set, Union
 
 from .sid import SID
 
@@ -198,11 +197,11 @@ class ACE:
     def __init__(
         self,
         ace_type: ACEType,
-        flags: Set[ACEFlag],
+        flags: set[ACEFlag],
         mask: int,
         trustee_sid: SID,
-        object_type: Optional[uuid.UUID],
-        inherited_object_type: Optional[uuid.UUID],
+        object_type: uuid.UUID | None,
+        inherited_object_type: uuid.UUID | None,
         application_data: bytes,
     ) -> None:
         self.__type = ace_type
@@ -322,12 +321,12 @@ class ACE:
         data[pos : pos + size] = self.application_data
         return bytes(data)
 
-    def set_access_rights(self, rights: Union[int, Set[ACERight]]) -> None:
+    def set_access_rights(self, rights: int | set[ACERight]) -> None:
         """
         Set the access rights for the ACE object. The `rights`
         parameter can be a set of ACERight objects or an integer.
 
-        :param int|Set[ACERight] rights: the access rights
+        :param int|set[ACERight] rights: the access rights
         :raises TypeError: if the parameter not an int or not \
         every item of the set is an ACERight object.
         :raises ValueError: if the provided number is not a valid \
@@ -357,11 +356,11 @@ class ACE:
             raise TypeError("Application data must be bytes.")
         self.__application_data = data
 
-    def set_flags(self, flags: Set[ACEFlag]) -> None:
+    def set_flags(self, flags: set[ACEFlag]) -> None:
         """
         Set flags for the ACE object.
 
-        :param Set[ACEFlag] flags: a set of ACEFlag objects.
+        :param set[ACEFlag] flags: a set of ACEFlag objects.
         :raises TypeError: if any of the elements in the set \
         is not an ACEFlag object.
         """
@@ -369,7 +368,7 @@ class ACE:
             raise TypeError("All elements in the set must be an ACEFlag.")
         self.__flags = flags
 
-    def set_object_type(self, object_type: Optional[uuid.UUID]) -> None:
+    def set_object_type(self, object_type: uuid.UUID | None) -> None:
         """
         Set the object type for the ACE object.
 
@@ -380,7 +379,7 @@ class ACE:
             raise TypeError("Object type must be UUID or None.")
         self.__object_type = object_type
 
-    def set_inherited_object_type(self, object_type: Optional[uuid.UUID]) -> None:
+    def set_inherited_object_type(self, object_type: uuid.UUID | None) -> None:
         """
         Set the inherited object type for the ACE object.
 
@@ -429,12 +428,12 @@ class ACE:
         self.set_type(value)
 
     @property
-    def flags(self) -> Set[ACEFlag]:
+    def flags(self) -> set[ACEFlag]:
         """The flags of the ACE."""
         return self.__flags
 
     @flags.setter
-    def flags(self, value: Set[ACEFlag]) -> None:
+    def flags(self, value: set[ACEFlag]) -> None:
         self.set_flags(value)
 
     @property
@@ -461,30 +460,30 @@ class ACE:
         self.set_access_rights(value)
 
     @property
-    def rights(self) -> Set[ACERight]:
+    def rights(self) -> set[ACERight]:
         """The set of ACERights based on the access mask."""
         return {rgt for rgt in ACERight if self.mask & rgt}
 
     @rights.setter
-    def rights(self, value: Set[ACERight]) -> None:
+    def rights(self, value: set[ACERight]) -> None:
         self.set_access_rights(value)
 
     @property
-    def object_type(self) -> Optional[uuid.UUID]:
+    def object_type(self) -> uuid.UUID | None:
         """The uuid of the object type."""
         return self.__object_type
 
     @object_type.setter
-    def object_type(self, value: Optional[uuid.UUID]) -> None:
+    def object_type(self, value: uuid.UUID | None) -> None:
         self.set_object_type(value)
 
     @property
-    def inherited_object_type(self) -> Optional[uuid.UUID]:
+    def inherited_object_type(self) -> uuid.UUID | None:
         """The uuid of the inherited object type."""
         return self.__inherited_object_type
 
     @inherited_object_type.setter
-    def inherited_object_type(self, value: Optional[uuid.UUID]) -> None:
+    def inherited_object_type(self, value: uuid.UUID | None) -> None:
         self.set_inherited_object_type(value)
 
     @property
@@ -516,7 +515,7 @@ class ACL:
     :param List[ACE] aces: list of :class:`ACE`.
     """
 
-    def __init__(self, revision: ACLRevision, aces: List[ACE]) -> None:
+    def __init__(self, revision: ACLRevision, aces: list[ACE]) -> None:
         self.__revision = revision
         self.__aces = aces
 
@@ -562,7 +561,7 @@ class ACL:
             data.extend(ace.to_binary())
         return bytes(data)
 
-    def set_aces(self, aces: List[ACE]) -> None:
+    def set_aces(self, aces: list[ACE]) -> None:
         """
         Set a list of ACE object to the ACL.
 
@@ -585,10 +584,10 @@ class ACL:
         return 8 + sum(ace.size for ace in self.aces)
 
     @property
-    def aces(self) -> List[ACE]:
+    def aces(self) -> list[ACE]:
         """The list of :class:`ACE` objects."""
         return self.__aces
 
     @aces.setter
-    def aces(self, value: List[ACE]) -> None:
+    def aces(self, value: list[ACE]) -> None:
         self.set_aces(value)
