@@ -2,20 +2,9 @@ import base64
 import io
 import os
 from collections import defaultdict
+from collections.abc import Iterable, Iterator, Mapping, KeysView
 from itertools import groupby
-from typing import (
-    Dict,
-    TextIO,
-    Iterable,
-    Iterator,
-    Any,
-    Optional,
-    List,
-    Union,
-    Mapping,
-    Callable,
-    KeysView
-)
+from typing import TextIO, Any, Callable, cast
 
 from .ldapentry import LDAPEntry, LDAPModOp
 from .ldapvaluelist import LDAPValueList
@@ -49,16 +38,17 @@ class LDIFReader:
         if not isinstance(max_length, int):
             raise TypeError("The max_length must be int.")
         self.__file: TextIO
+        self.__autoload: bool
         self.input_file = input_file
         self.autoload = autoload
-        self.max_length = max_length
-        self.version: Optional[int] = None
+        self.max_length: int = max_length
+        self.version: int | None = None
         self.__entries = self.__read_attributes()
         self.__num_of_entries = 0
         self.__resource_handlers = {"file": self.__load_file}
 
-    def __read_attributes(self) -> Iterator[List[str]]:
-        buffer: List[str] = []
+    def __read_attributes(self) -> Iterator[list[str]]:
+        buffer: list[str] = []
         comment = False
         for num, line in enumerate(self.__file):
             try:
@@ -88,18 +78,19 @@ class LDIFReader:
             yield buffer
 
     @staticmethod
-    def __convert(val: Union[str, bytes]) -> Union[str, bytes, int]:
+    def __convert(val: str | bytes) -> str | bytes | int:
         try:
             return int(val)
         except ValueError:
-            try:
-                return val.decode("UTF-8")
-            except (ValueError, AttributeError):
-                pass
+            if isinstance(val, bytes):
+                try:
+                    return val.decode("UTF-8")
+                except ValueError:
+                    pass
         return val
 
     @staticmethod
-    def __find_key(searched_key: str, keylist: KeysView[str]) -> Optional[str]:
+    def __find_key(searched_key: str, keylist: KeysView[str]) -> str:
         for key in keylist:
             if key.lower() == searched_key.lower():
                 return key
@@ -125,6 +116,7 @@ class LDIFReader:
         return self
 
     def __next__(self) -> LDAPEntry:
+        val: str | bytes
         entry = LDAPEntry("")
         change_type = "add"
         attr_blocks = [
@@ -134,7 +126,7 @@ class LDIFReader:
         ]
         self.__num_of_entries += 1
         for block in attr_blocks:
-            attr_dict: Dict[str, LDAPValueList] = defaultdict(LDAPValueList)
+            attr_dict: dict[str, LDAPValueList] = defaultdict(LDAPValueList)
             for attrval in block:
                 try:
                     if ":: " in attrval:
@@ -159,15 +151,14 @@ class LDIFReader:
                         raise ValueError("Missing valid attribute value separator.")
                 except ValueError as err:
                     raise LDIFError(
-                        f"Invalid attribute value pair: '{attrval}'"
-                        f" for entry #{self.__num_of_entries}."
+                        f"Invalid attribute value pair: '{attrval}' for entry #{self.__num_of_entries}."
                     ) from err
                 if attr.lower() == "changetype":
-                    change_type = val.lower()
+                    change_type = cast(str, val.lower())
                 elif attr.lower() == "dn":
-                    entry.dn = self.__convert(val)
+                    entry.dn = cast(str, self.__convert(val))
                 elif attr.lower() == "version":
-                    self.version = self.__convert(val)
+                    self.version = cast(int, self.__convert(val))
                 else:
                     attr_dict[attr].append(self.__convert(val))
             if change_type == "modify":
@@ -246,7 +237,7 @@ class LDIFWriter:
             raise TypeError("The max_length must be int.")
         self.__file: TextIO
         self.output_file = output_file
-        self.max_length = max_length
+        self.max_length: int = max_length
 
     def _get_attr_lines(self, attrname: str, attrvalue: Iterable[Any]) -> Iterator[str]:
         for val in attrvalue:
