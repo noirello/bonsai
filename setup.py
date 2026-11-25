@@ -264,7 +264,7 @@ setup(
     ext_modules=[BONSAI_MODULE],
     cmdclass={"build_ext": BuildExt},
     package_dir={"bonsai": "src/bonsai"},
-    package_data={"bonsai": ["py.typed"]},
+    package_data={"bonsai": ["py.typed", "*.pyi"]},
     packages=[
         "bonsai",
         "bonsai.active_directory",
