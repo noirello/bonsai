@@ -8,7 +8,6 @@ Linux wheel ships its own instead, so it does not depend on the system libraries
 """
 
 import os
-from typing import Optional, Tuple
 
 from . import _bonsai
 
@@ -17,7 +16,7 @@ from . import _bonsai
 # compiled-in location, and no value is right everywhere: Debian and Alpine use
 # /etc/ssl/certs, while RHEL uses /etc/pki/tls and ships an empty /etc/ssl that would
 # otherwise look like a valid answer.
-CA_BUNDLE_FILES: Tuple[str, ...] = (
+CA_BUNDLE_FILES: tuple[str, ...] = (
     "/etc/ssl/certs/ca-certificates.crt",  # Debian, Ubuntu, Alpine, Arch, Gentoo
     "/etc/pki/tls/certs/ca-bundle.crt",  # RHEL, Fedora, Rocky, Alma, Amazon
     # RHEL, where ca-trust extracts to
@@ -27,7 +26,7 @@ CA_BUNDLE_FILES: Tuple[str, ...] = (
     "/etc/ssl/cert.pem",  # Alpine, some minimal images
 )
 
-CA_BUNDLE_DIRS: Tuple[str, ...] = (
+CA_BUNDLE_DIRS: tuple[str, ...] = (
     "/etc/ssl/certs",
     "/etc/pki/tls/certs",
 )
@@ -59,7 +58,7 @@ def _is_populated_dir(path: str) -> bool:
         return False
 
 
-def find_ca_bundle() -> Tuple[Optional[str], Optional[str]]:
+def find_ca_bundle() -> tuple[str | None, str | None]:
     """
     Locate the host's CA bundle, as a (file, directory) pair of which either may
     be None.
