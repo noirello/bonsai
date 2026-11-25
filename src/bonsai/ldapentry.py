@@ -1,25 +1,13 @@
 from enum import IntEnum
-from typing import (
-    Union,
-    TypeVar,
-    Any,
-    Tuple,
-    Dict,
-    Optional,
-    KeysView,
-    ItemsView,
-    ValuesView,
-    Iterator,
-)
+from typing import TypeVar, Any, Literal, TYPE_CHECKING, overload, cast
+from collections.abc import ItemsView, Iterator, KeysView, ValuesView
 
 from bonsai._bonsai import ldapentry
 from .errors import InvalidDN
 from .ldapdn import LDAPDN
 from .ldapvaluelist import LDAPValueList
 
-MYPY = False
-
-if MYPY:
+if TYPE_CHECKING:
     from .ldapconnection import BaseLDAPConnection
 
 CT = TypeVar("CT", bound="BaseLDAPConnection")
@@ -34,10 +22,10 @@ class LDAPModOp(IntEnum):
 
 
 class LDAPEntry(ldapentry):
-    def __init__(self, dn: Union[LDAPDN, str], conn: Optional[CT] = None) -> None:
+    def __init__(self, dn: LDAPDN | str, conn: CT | None = None) -> None:
         try:
             super().__init__(dn, conn)
-            self.__extended_dn = None  # type: Optional[str]
+            self.__extended_dn: str | None = None
         except InvalidDN as exc:
             # InvalidDN error caused by extended DN control.
             splitted_dn = str(dn).split(";")
@@ -47,7 +35,7 @@ class LDAPEntry(ldapentry):
                 raise exc from None
             self.__extended_dn = str(dn)
 
-    def delete(self, timeout: Optional[float] = None, recursive: bool = False) -> Any:
+    def delete(self, timeout: float | None = None, recursive: bool = False) -> Any:
         """
         Remove LDAP entry from the dictionary server.
 
@@ -58,14 +46,11 @@ class LDAPEntry(ldapentry):
         :rtype: bool
         """
         res = self.connection.delete(self.dn, timeout, recursive)
-        for value in self.values():
-            try:
-                value.status = 2
-            except AttributeError:
-                continue  # Skip DN.
+        for value in self.values(exclude_dn=True):
+            value.status = 2
         return res
 
-    def modify(self, timeout: Optional[float] = None) -> Any:
+    def modify(self, timeout: float | None = None) -> Any:
         """
         Send entry's modifications to the dictionary server.
 
@@ -75,10 +60,10 @@ class LDAPEntry(ldapentry):
         """
         return self.connection._evaluate(super().modify(), timeout)
 
-    def rename(
+    def rename(  # type: ignore[override]
         self,
-        newdn: Union[str, LDAPDN],
-        timeout: Optional[float] = None,
+        newdn: str | LDAPDN,
+        timeout: float | None = None,
         delete_old_rdn: bool = True,
     ) -> Any:
         """
@@ -94,7 +79,7 @@ class LDAPEntry(ldapentry):
             newdn = str(newdn)
         return self.connection._evaluate(super().rename(newdn, delete_old_rdn), timeout)
 
-    def update(self, *args: Tuple, **kwds: Dict[str, Any]) -> None:
+    def update(self, *args: Any, **kwds: Any) -> None:
         """
         Update the LDAPEntry with the key/value pairs from other, overwriting existing keys.
         (Same as dict's update method.)
@@ -117,14 +102,11 @@ class LDAPEntry(ldapentry):
 
     def clear(self) -> None:
         """Remove all items from the dictionary."""
-        keys = list(self.keys())
+        keys = list(self.keys(exclude_dn=True))
         for key in keys:
-            try:
-                del self[key]
-            except TypeError:
-                continue  # Skip DN.
+            del self[key]
 
-    def get(self, key: str, default: Any = None) -> Any:
+    def get(self, key: object, default: Any = None) -> Any:
         """
         Return the value for `key` if `key` is in the LDAPEntry,
         else `default`. (Same as dict's get method.)
@@ -134,7 +116,7 @@ class LDAPEntry(ldapentry):
         except KeyError:
             return default
 
-    def pop(self, *args: Tuple) -> Any:
+    def pop(self, *args: Any) -> Any:
         """
         LDAPEntry.pop(k[,d]) -> v, remove specified key and return the
         corresponding value. If key is not found, d is returned if given,
@@ -160,7 +142,7 @@ class LDAPEntry(ldapentry):
             except IndexError:
                 raise err
 
-    def popitem(self) -> Tuple[str, Any]:
+    def popitem(self) -> tuple[str, Any]:
         """
         LDAPEntry.popitem() -> (k, v), remove and return some (key, value)
         pair as a 2-tuple; but raise KeyError if LDAPEntry is empty.
@@ -188,25 +170,22 @@ class LDAPEntry(ldapentry):
         else:
             return super().__eq__(other)
 
-    def _status(self) -> Dict:
-        status = {}
-        for key, value in self.items():
-            try:
-                status[key] = value._status_dict
-            except AttributeError:
-                continue  # Skip DN
+    def _status(self) -> dict[str, Any]:
+        status: dict[str, Any] = {}
+        for key, value in self.items(exclude_dn=True):
+            status[key] = value._status_dict
         status["@deleted_keys"] = self.deleted_keys
         return status
 
     @property
-    def extended_dn(self) -> Optional[str]:
+    def extended_dn(self) -> str | None:
         """
         The extended DN of the entry. It is None, if the extended DN control
         is not set or not supported. The attribute is read-only.
         """
         return self.__extended_dn
 
-    def change_attribute(self, name: str, optype: int, *values: Tuple) -> None:
+    def change_attribute(self, name: str, optype: int, *values: Any) -> None:
         """
         Change an attribute of the entry with explicit LDAP modification type
         by listing the values as parameters.
@@ -253,7 +232,23 @@ class LDAPEntry(ldapentry):
         self[name] = lvl
         lvl.status = 0
 
-    def items(self, *, exclude_dn: bool = False) -> Union[ItemsView, Iterator]:
+    @overload  # type: ignore[override]
+    def items(
+        self, *, exclude_dn: Literal[False] = ...
+    ) -> ItemsView[str, LDAPDN | LDAPValueList]: ...
+    @overload
+    def items(
+        self, *, exclude_dn: Literal[True]
+    ) -> Iterator[tuple[str, LDAPValueList]]: ...
+    @overload
+    def items(
+        self, *, exclude_dn: bool
+    ) -> (
+        ItemsView[str, LDAPDN | LDAPValueList] | Iterator[tuple[str, LDAPValueList]]
+    ): ...
+    def items(
+        self, *, exclude_dn: bool = False
+    ) -> ItemsView[str, LDAPDN | LDAPValueList] | Iterator[tuple[str, LDAPValueList]]:
         """
         Same functionality as dict.items() but with an optional `exclude_dn`
         keyword-only argument. When `exclude_dn` is True it returns a
@@ -264,11 +259,21 @@ class LDAPEntry(ldapentry):
         :rtype: dict_items, generator
         """
         if exclude_dn:
-            return (item for item in super().items() if item[0] != "dn")
+            # Without the "dn" key every value is an LDAPValueList.
+            return cast(
+                Iterator[tuple[str, LDAPValueList]],
+                (item for item in super().items() if item[0] != "dn"),
+            )
         else:
             return super().items()
 
-    def keys(self, *, exclude_dn: bool = False) -> Union[KeysView, Iterator]:
+    @overload  # type: ignore[override]
+    def keys(self, *, exclude_dn: Literal[False] = ...) -> KeysView[str]: ...
+    @overload
+    def keys(self, *, exclude_dn: Literal[True]) -> Iterator[str]: ...
+    @overload
+    def keys(self, *, exclude_dn: bool) -> KeysView[str] | Iterator[str]: ...
+    def keys(self, *, exclude_dn: bool = False) -> KeysView[str] | Iterator[str]:
         """
         Same functionality as dict.keys() but with an optional `exclude_dn`
         keyword-only argument. When `exclude_dn` is True it returns a
@@ -283,7 +288,19 @@ class LDAPEntry(ldapentry):
         else:
             return super().keys()
 
-    def values(self, *, exclude_dn: bool = False) -> Union[ValuesView, Iterator]:
+    @overload  # type: ignore[override]
+    def values(
+        self, *, exclude_dn: Literal[False] = ...
+    ) -> ValuesView[LDAPDN | LDAPValueList]: ...
+    @overload
+    def values(self, *, exclude_dn: Literal[True]) -> Iterator[LDAPValueList]: ...
+    @overload
+    def values(
+        self, *, exclude_dn: bool
+    ) -> ValuesView[LDAPDN | LDAPValueList] | Iterator[LDAPValueList]: ...
+    def values(
+        self, *, exclude_dn: bool = False
+    ) -> ValuesView[LDAPDN | LDAPValueList] | Iterator[LDAPValueList]:
         """
         Same functionality as dict.values() but with an optional `exclude_dn`
         keyword-only argument. When `exclude_dn` is True it returns a
@@ -294,6 +311,9 @@ class LDAPEntry(ldapentry):
         :rtype: dict_values, generator
         """
         if exclude_dn:
-            return (item for item in super().values() if item is not self.dn)
+            return cast(
+                Iterator[LDAPValueList],
+                (item for item in super().values() if item is not self.dn),
+            )
         else:
             return super().values()
