@@ -1,7 +1,14 @@
+from asyncio.events import AbstractEventLoop
 import asyncio
+from types import TracebackType
+from typing import Any, Coroutine, Generator, TYPE_CHECKING, Awaitable
 
 from ..ldapconnection import BaseLDAPConnection, LDAPSearchScope
 from ..errors import NotAllowedOnNonleaf
+
+if TYPE_CHECKING:
+    from ..ldapclient import LDAPClient
+    from ..ldapdn import LDAPDN
 
 
 class AIOLDAPConnection(BaseLDAPConnection):
@@ -17,40 +24,51 @@ class AIOLDAPConnection(BaseLDAPConnection):
         loop for every operation.
     """
 
-    def __init__(self, client, loop=None):
-        self._loop = loop
-        self.__open_coro = None
+    def __init__(
+        self, client: "LDAPClient", loop: asyncio.AbstractEventLoop | None = None
+    ):
+        self._loop: AbstractEventLoop | None = loop
+        self.__open_coro: Awaitable[AIOLDAPConnection] | None = None
         self.__auto_page_acquire = client.auto_page_acquire
-        self.__watched_fd = None
+        self.__watched_fd: int | None = None
         super().__init__(client, is_async=True)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "AIOLDAPConnection":
         """Async context manager entry point."""
         return await self.__open_coro
 
-    async def __aexit__(self, type, value, traceback):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         """Async context manager exit point."""
         self.close()
 
-    def __await__(self):
+    def __await__(self) -> Generator[Any, None, "AIOLDAPConnection"]:
         return self.__open_coro.__await__()  # Hack to avoid returning a coroutine.
 
     __iter__ = __await__
 
-    def _watch(self, msg_id, loop, fut) -> None:
+    def _watch(
+        self, msg_id: int, loop: asyncio.AbstractEventLoop, fut: asyncio.Future
+    ) -> None:
         fd = self.fileno()
         loop.add_reader(fd, self._ready, msg_id, loop, fut)
         if self._wants_write(msg_id):
             loop.add_writer(fd, self._ready, msg_id, loop, fut)
         self.__watched_fd = fd
 
-    def _unwatch(self, loop):
+    def _unwatch(self, loop: asyncio.AbstractEventLoop) -> None:
         fd, self.__watched_fd = self.__watched_fd, None
         if fd is not None and fd > -1:
             loop.remove_reader(fd)
             loop.remove_writer(fd)
 
-    def _ready(self, msg_id, loop, fut):
+    def _ready(
+        self, msg_id: int, loop: asyncio.AbstractEventLoop, fut: asyncio.Future
+    ) -> None:
         self._unwatch(loop)
         if fut.done():
             # The waiter is gone (timeout or cancellation), nothing to deliver.
@@ -64,7 +82,7 @@ class AIOLDAPConnection(BaseLDAPConnection):
         except Exception as exc:
             fut.set_exception(exc)
 
-    async def _poll(self, msg_id, timeout=None):
+    async def _poll(self, msg_id: int, timeout: float | None = None) -> Awaitable[Any]:
         loop = self._loop or asyncio.get_running_loop()
         fut = loop.create_future()
         self._watch(msg_id, loop, fut)
@@ -76,14 +94,16 @@ class AIOLDAPConnection(BaseLDAPConnection):
         finally:
             self._unwatch(loop)
 
-    def _evaluate(self, msg_id, timeout=None):
+    def _evaluate(self, msg_id, timeout=None) -> Awaitable[Any]:
         return self._poll(msg_id, timeout)
 
-    def open(self, timeout=None):
+    def open(self, timeout=None) -> "AIOLDAPConnection":  # type: ignore[override]
         self.__open_coro = super().open(timeout)
         return self
 
-    async def delete(self, dname, timeout=None, recursive=False):
+    async def delete(  # type: ignore[override]
+        self, dname: str | LDAPDN, timeout: float | None = None, recursive: bool = False
+    ) -> bool:
         try:
             return await super().delete(dname, timeout, recursive)
         except NotAllowedOnNonleaf as exc:
@@ -110,5 +130,5 @@ class AIOLDAPConnection(BaseLDAPConnection):
                 raise StopAsyncIteration from None
             search_iter = await self._evaluate(msgid, search_iter.timeout)
 
-    async def get_result(self, msg_id, timeout=None):
+    async def get_result(self, msg_id: int, timeout: float | None = None) -> Any:
         return await self._evaluate(msg_id, timeout)

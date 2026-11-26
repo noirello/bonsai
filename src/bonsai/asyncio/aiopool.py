@@ -1,14 +1,14 @@
 import asyncio
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Optional
+from typing import Any, TYPE_CHECKING
 
 from ..pool import ConnectionPool, ClosedPool, EmptyPool
 
 from .aioconnection import AIOLDAPConnection
 
-MYPY = False
 
-if MYPY:
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
     from ..ldapclient import LDAPClient
 
 
@@ -33,14 +33,14 @@ class AIOConnectionPool(ConnectionPool[AIOLDAPConnection]):
         client: "LDAPClient",
         minconn: int = 1,
         maxconn: int = 10,
-        loop: Optional[asyncio.AbstractEventLoop] = None,
-        **kwargs: Any
+        loop: asyncio.AbstractEventLoop | None = None,
+        **kwargs: Any,
     ):
         super().__init__(client, minconn, maxconn, **kwargs)
         self._loop = loop
         self._lock = asyncio.Condition()
 
-    async def open(self) -> None:
+    async def open(self) -> None:   # type: ignore[override]
         async with self._lock:
             for _ in range(
                 self._minconn - self.idle_connection - self.shared_connection
@@ -51,7 +51,7 @@ class AIOConnectionPool(ConnectionPool[AIOLDAPConnection]):
                 self._idles.add(conn)
             self._closed = False
 
-    async def get(self) -> AIOLDAPConnection:
+    async def get(self) -> AIOLDAPConnection:  # type: ignore[override]
         async with self._lock:
             if self._closed:
                 raise ClosedPool("The pool is closed.")
@@ -69,12 +69,12 @@ class AIOConnectionPool(ConnectionPool[AIOLDAPConnection]):
             self._lock.notify()
             return conn
 
-    async def put(self, conn: AIOLDAPConnection) -> None:
+    async def put(self, conn: AIOLDAPConnection) -> None:  # type: ignore[override]
         async with self._lock:
             super().put(conn)
             self._lock.notify()
 
-    async def close(self) -> None:
+    async def close(self) -> None:  # type: ignore[override]
         async with self._lock:
             super().close()
             self._lock.notify_all()
