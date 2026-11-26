@@ -1,5 +1,5 @@
 import time
-from typing import Any, Optional, Union
+from typing import Any, cast, TYPE_CHECKING
 from gevent.socket import wait_read, wait_readwrite
 from gevent.socket import timeout as SocketTimeout
 
@@ -7,9 +7,7 @@ from ..ldapconnection import BaseLDAPConnection, LDAPSearchScope
 from ..ldapdn import LDAPDN
 from ..errors import NotAllowedOnNonleaf
 
-MYPY = False
-
-if MYPY:
+if TYPE_CHECKING:
     from ..ldapclient import LDAPClient
 
 
@@ -24,7 +22,7 @@ class GeventLDAPConnection(BaseLDAPConnection):
     def __init__(self, client: "LDAPClient") -> None:
         super().__init__(client, is_async=True)
 
-    def _poll(self, msg_id: int, timeout: Optional[float] = None) -> Any:
+    def _poll(self, msg_id: int, timeout: float | None = None) -> Any:
         # Total-operation deadline, because partial server response can reset the original.
         deadline = None if timeout is None else time.monotonic() + timeout
         while True:
@@ -39,17 +37,17 @@ class GeventLDAPConnection(BaseLDAPConnection):
             wait = wait_readwrite if self._wants_write(msg_id) else wait_read
             wait(self.fileno(), timeout=remaining)
 
-    def _evaluate(self, msg_id: int, timeout: Optional[float] = None) -> Any:
+    def _evaluate(self, msg_id: int, timeout: float | None = None) -> Any:
         return self._poll(msg_id, timeout)
 
     def delete(
         self,
-        dname: Union[str, LDAPDN],
-        timeout: Optional[float] = None,
+        dname: str | LDAPDN,
+        timeout: float | None = None,
         recursive: bool = False,
     ) -> bool:
         try:
-            return super().delete(dname, timeout, recursive)
+            return cast(bool, super().delete(dname, timeout, recursive))
         except NotAllowedOnNonleaf as exc:
             if recursive:
                 results = self.search(
