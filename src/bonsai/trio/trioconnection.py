@@ -1,8 +1,17 @@
 import math
+from collections.abc import Awaitable, Callable
+from types import TracebackType
+from typing import TYPE_CHECKING, Any, cast
+
 import trio
 
 from ..ldapconnection import BaseLDAPConnection, LDAPSearchScope
 from ..errors import NotAllowedOnNonleaf, TimeoutError
+from ..ldapclient import LDAPClient
+from ..ldapdn import LDAPDN
+
+if TYPE_CHECKING:
+    from bonsai._bonsai import ldapsearchiter
 
 
 class TrioLDAPConnection(BaseLDAPConnection):
@@ -15,41 +24,48 @@ class TrioLDAPConnection(BaseLDAPConnection):
     :param LDAPClient client: a client object.
     """
 
-    def __init__(self, client):
-        self.__open_coro = None
+    def __init__(self, client: LDAPClient) -> None:
+        self.__open_coro: Any = None
         self.__auto_page_acquire = client.auto_page_acquire
         super().__init__(client, is_async=True)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Any:
         """Async context manager entry point."""
         return await self.__open_coro
 
-    async def __aexit__(self, type, value, traceback):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         """Async context manager exit point."""
         self.close()
 
-    def __await__(self):
+    def __await__(self) -> Any:
         return self.__open_coro.__await__()  # Hack to avoid returning a coroutine.
 
-    def open(self, timeout=None):
+    def open(  # type: ignore[override]
+        self, timeout: float | None = None
+    ) -> "TrioLDAPConnection":
         self.__open_coro = super().open(timeout)
         return self
 
-    async def _wait_io(self, msg_id) -> None:
+    async def _wait_io(self, msg_id: int) -> None:
         if not self._wants_write(msg_id):
             await trio.lowlevel.wait_readable(self)
             return
 
         async with trio.open_nursery() as nursery:
 
-            async def wait_one(wait_fn) -> None:
+            async def wait_one(wait_fn: Callable[[Any], Awaitable[Any]]) -> None:
                 await wait_fn(self)
                 nursery.cancel_scope.cancel()
 
             nursery.start_soon(wait_one, trio.lowlevel.wait_readable)
             nursery.start_soon(wait_one, trio.lowlevel.wait_writable)
 
-    async def _poll(self, msg_id, timeout=None):
+    async def _poll(self, msg_id: int, timeout: float | None = None) -> Any:
         tout_sec = timeout if timeout is not None else math.inf
         with trio.move_on_after(tout_sec):
             while True:
@@ -59,12 +75,14 @@ class TrioLDAPConnection(BaseLDAPConnection):
                     return res
         raise TimeoutError("Timeout is exceeded")
 
-    def _evaluate(self, msg_id, timeout=None):
+    def _evaluate(self, msg_id: int, timeout: float | None = None) -> Any:
         return self._poll(msg_id, timeout)
 
-    async def delete(self, dname, timeout=None, recursive=False):
+    async def delete(  # type: ignore[override]
+        self, dname: str | LDAPDN, timeout: float | None = None, recursive: bool = False
+    ) -> bool:
         try:
-            return await super().delete(dname, timeout, recursive)
+            return cast(bool, await super().delete(dname, timeout, recursive))
         except NotAllowedOnNonleaf as exc:
             if recursive:
                 results = await self.search(
@@ -76,7 +94,7 @@ class TrioLDAPConnection(BaseLDAPConnection):
             else:
                 raise exc
 
-    async def _search_iter_anext(self, search_iter):
+    async def _search_iter_anext(self, search_iter: "ldapsearchiter") -> Any:
         while True:
             try:
                 return next(search_iter)
@@ -89,5 +107,5 @@ class TrioLDAPConnection(BaseLDAPConnection):
                 raise StopAsyncIteration from None
             search_iter = await self._evaluate(msgid, search_iter.timeout)
 
-    async def get_result(self, msg_id, timeout=None):
+    async def get_result(self, msg_id: int, timeout: float | None = None) -> Any:
         return await self._evaluate(msg_id, timeout)
