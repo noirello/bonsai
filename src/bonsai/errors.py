@@ -35,7 +35,7 @@ __all__ = [
 class LDAPError(Exception):
     """General LDAP error."""
 
-    code = 0
+    code: int = 0
 
     @classmethod
     def create(cls, code: int) -> type["LDAPError"]:
