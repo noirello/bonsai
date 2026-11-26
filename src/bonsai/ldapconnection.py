@@ -1,20 +1,21 @@
 from abc import ABCMeta, abstractmethod
 from enum import IntEnum
-from typing import Union, Any, List, Tuple, Optional
+from typing import Any, TYPE_CHECKING, TypeVar, cast
 
 from bonsai._bonsai import ldapconnection, ldapsearchiter
 from .ldapdn import LDAPDN
-from .ldapentry import LDAPEntry
 from .errors import UnwillingToPerform, NotAllowedOnNonleaf
 
-MYPY = False
-
-if MYPY:
+if TYPE_CHECKING:
+    from types import TracebackType
     from .ldapclient import LDAPClient
+    from .ldapentry import LDAPEntry
+
+CT = TypeVar("CT", bound="BaseLDAPConnection")
 
 
 class LDAPSearchScope(IntEnum):
-    """ Enumeration for LDAP search scopes. """
+    """Enumeration for LDAP search scopes."""
 
     BASE = 0  #: For searching only the base DN.
     ONELEVEL = 1  #: For searching one tree level under the base DN.
@@ -28,36 +29,38 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         self.__client = client
         super().__init__(client, is_async)
 
-    def __enter__(self) -> "BaseLDAPConnection":
-        """ Context manager entry point. """
+    def __enter__(self: CT) -> CT:
+        """Context manager entry point."""
         return self
 
-    def __exit__(self, type, value, traceback) -> None:
-        """ Context manager exit point. """
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        """Context manager exit point."""
         self.close()
 
-    def add(self, entry: LDAPEntry, timeout: Optional[float] = None) -> Any:
-        return self._evaluate(super().add(entry), timeout)
+    def add(self, entry: LDAPEntry, timeout: float | None = None) -> Any:
+         return self._evaluate(super().add(entry), timeout)
 
     def delete(
-        self,
-        dname: Union[str, LDAPDN],
-        timeout: Optional[float] = None,
-        recursive: bool = False,
+        self, dname: str | LDAPDN, timeout: float | None = None, recursive: bool = False
     ) -> Any:
         if isinstance(dname, LDAPDN):
             dname = str(dname)
         return self._evaluate(super().delete(dname, recursive), timeout)
 
-    def open(self, timeout: Optional[float] = None) -> "BaseLDAPConnection":
-        return self._evaluate(super().open(), timeout)
+    def open(self: CT, timeout: float | None = None) -> CT:  # type: ignore[override]
+         return self._evaluate(super().open(), timeout)
 
-    def modify_password(
+    def modify_password(  # type: ignore[override]
         self,
-        user: Optional[Union[str, LDAPDN]] = None,
-        new_password: Optional[str] = None,
-        old_password: Optional[str] = None,
-        timeout: Optional[float] = None,
+        user: str | LDAPDN | None = None,
+        new_password: str | None = None,
+        old_password: str | None = None,
+        timeout: float | None = None,
     ) -> Any:
         if isinstance(user, LDAPDN):
             user = str(user)
@@ -67,20 +70,20 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
 
     def __base_search(
         self,
-        base: Optional[Union[str, LDAPDN]] = None,
-        scope: Optional[Union[LDAPSearchScope, int]] = None,
-        filter_exp: Optional[str] = None,
-        attrlist: Optional[List[str]] = None,
-        timeout: Optional[float] = None,
+        base: str | LDAPDN | None = None,
+        scope: LDAPSearchScope | int | None = None,
+        filter_exp: str | None = None,
+        attrlist: list[str] | None = None,
+        timeout: float | None = None,
         sizelimit: int = 0,
         attrsonly: bool = False,
-        sort_order: Optional[List[str]] = None,
+        sort_order: list[str] | None = None,
         page_size: int = 0,
         offset: int = 0,
         before_count: int = 0,
         after_count: int = 0,
         est_list_count: int = 0,
-        attrvalue: Optional[str] = None,
+        attrvalue: str | None = None,
     ) -> Any:
 
         _base = str(base) if base is not None else str(self.__client.url.basedn)
@@ -111,7 +114,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         return self._evaluate(msg_id, timeout)
 
     @staticmethod
-    def __create_sort_list(sort_list: List[str]) -> List[Tuple[str, bool]]:
+    def __create_sort_list(sort_list: list[str]) -> list[tuple[str, bool]]:
         """
         Set a list of attribute names to sort entries in a search result. For
         reverse order set '-' before to the attribute name.
@@ -136,16 +139,16 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
             raise ValueError("Attribute names must be different" " from each other.")
         return sort_attrs
 
-    def search(
+    def search(  # type: ignore[override]
         self,
-        base: Optional[Union[str, LDAPDN]] = None,
-        scope: Optional[Union[LDAPSearchScope, int]] = None,
-        filter_exp: Optional[str] = None,
-        attrlist: Optional[List[str]] = None,
-        timeout: Optional[float] = None,
+        base: str | LDAPDN | None = None,
+        scope: LDAPSearchScope | int | None = None,
+        filter_exp: str | None = None,
+        attrlist: list[str] | None = None,
+        timeout: float | None = None,
         sizelimit: int = 0,
         attrsonly: bool = False,
-        sort_order: Optional[List[str]] = None,
+        sort_order: list[str] | None = None,
     ) -> Any:
         return self.__base_search(
             base, scope, filter_exp, attrlist, timeout, sizelimit, attrsonly, sort_order
@@ -153,14 +156,14 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
 
     def paged_search(
         self,
-        base: Optional[Union[str, LDAPDN]] = None,
-        scope: Optional[Union[LDAPSearchScope, int]] = None,
-        filter_exp: Optional[str] = None,
-        attrlist: Optional[List[str]] = None,
-        timeout: Optional[float] = None,
+        base: str | LDAPDN | None = None,
+        scope: LDAPSearchScope | int | None = None,
+        filter_exp: str | None = None,
+        attrlist: list[str] | None = None,
+        timeout: float | None = None,
         sizelimit: int = 0,
         attrsonly: bool = False,
-        sort_order: Optional[List[str]] = None,
+        sort_order: list[str] | None = None,
         page_size: int = 1,
     ) -> Any:
         chase_referrals = self.__client.server_chase_referrals
@@ -182,19 +185,19 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
 
     def virtual_list_search(
         self,
-        base: Optional[Union[str, LDAPDN]] = None,
-        scope: Optional[Union[LDAPSearchScope, int]] = None,
-        filter_exp: Optional[str] = None,
-        attrlist: Optional[List[str]] = None,
-        timeout: Optional[float] = None,
+        base: str | LDAPDN | None = None,
+        scope: LDAPSearchScope | int | None = None,
+        filter_exp: str | None = None,
+        attrlist: list[str] | None = None,
+        timeout: float | None = None,
         sizelimit: int = 0,
         attrsonly: bool = False,
-        sort_order: Optional[List[str]] = None,
+        sort_order: list[str] | None = None,
         offset: int = 1,
         before_count: int = 0,
         after_count: int = 0,
         est_list_count: int = 0,
-        attrvalue: Optional[str] = None,
+        attrvalue: str | None = None,
     ) -> Any:
         if sort_order is None and (offset != 0 or attrvalue is not None):
             raise UnwillingToPerform(
@@ -217,11 +220,11 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
             attrvalue,
         )
 
-    def whoami(self, timeout: Optional[float] = None) -> Any:
+    def whoami(self, timeout: float | None = None) -> Any:
         return self._evaluate(super().whoami(), timeout)
 
     @abstractmethod
-    def _evaluate(self, msg_id: int, timeout: Optional[float] = None) -> Any:
+    def _evaluate(self, msg_id: int, timeout: float | None = None) -> Any:
         pass
 
 
@@ -235,7 +238,7 @@ class LDAPConnection(BaseLDAPConnection):
     def __init__(self, client: "LDAPClient") -> None:
         super().__init__(client, False)
 
-    def _evaluate(self, msg_id: int, timeout: Optional[float] = None) -> Any:
+    def _evaluate(self, msg_id: int, timeout: float | None = None) -> Any:
         """
         It returns the result of the LDAP operation.
 
@@ -245,7 +248,7 @@ class LDAPConnection(BaseLDAPConnection):
         """
         return self.get_result(msg_id, timeout)
 
-    def add(self, entry: LDAPEntry, timeout: Optional[float] = None) -> bool:
+    def add(self, entry: LDAPEntry, timeout: float | None = None) -> bool:
         """
         Add new entry to the directory server.
 
@@ -257,10 +260,7 @@ class LDAPConnection(BaseLDAPConnection):
         return super().add(entry, timeout)
 
     def delete(
-        self,
-        dname: Union[str, LDAPDN],
-        timeout: Optional[float] = None,
-        recursive: bool = False,
+        self, dname: str | LDAPDN, timeout: float | None = None, recursive: bool = False
     ) -> bool:
         """
         Remove entry from the directory server.
@@ -286,7 +286,9 @@ class LDAPConnection(BaseLDAPConnection):
             else:
                 raise exc
 
-    def open(self, timeout: Optional[float] = None) -> "LDAPConnection":
+    def open(  # type: ignore[override]
+        self, timeout: float | None = None
+    ) -> "LDAPConnection":
         """
         Open the LDAP connection.
 
@@ -296,17 +298,17 @@ class LDAPConnection(BaseLDAPConnection):
         """
         return super().open(timeout)
 
-    def search(
+    def search(  # type: ignore[override]
         self,
-        base: Optional[Union[str, LDAPDN]] = None,
-        scope: Optional[Union[LDAPSearchScope, int]] = None,
-        filter_exp: Optional[str] = None,
-        attrlist: Optional[List[str]] = None,
-        timeout: Optional[float] = None,
+        base: str | LDAPDN | None = None,
+        scope: LDAPSearchScope | int | None = None,
+        filter_exp: str | None = None,
+        attrlist: list[str] | None = None,
+        timeout: float | None = None,
         sizelimit: int = 0,
         attrsonly: bool = False,
-        sort_order: Optional[List[str]] = None,
-    ) -> List[LDAPEntry]:
+        sort_order: list[str] | None = None,
+    ) -> list[LDAPEntry]:
         # Documentation in the docs/api.rst with detailed examples.
         # Load values from the LDAPURL, if it is not presented on the
         # parameter list.
@@ -316,14 +318,14 @@ class LDAPConnection(BaseLDAPConnection):
 
     def paged_search(
         self,
-        base: Optional[Union[str, LDAPDN]] = None,
-        scope: Optional[Union[LDAPSearchScope, int]] = None,
-        filter_exp: Optional[str] = None,
-        attrlist: Optional[List[str]] = None,
-        timeout: Optional[float] = None,
+        base: str | LDAPDN | None = None,
+        scope: LDAPSearchScope | int | None = None,
+        filter_exp: str | None = None,
+        attrlist: list[str] | None = None,
+        timeout: float | None = None,
         sizelimit: int = 0,
         attrsonly: bool = False,
-        sort_order: Optional[List[str]] = None,
+        sort_order: list[str] | None = None,
         page_size: int = 1,
     ) -> ldapsearchiter:
         return super().paged_search(
@@ -340,20 +342,20 @@ class LDAPConnection(BaseLDAPConnection):
 
     def virtual_list_search(
         self,
-        base: Optional[Union[str, LDAPDN]] = None,
-        scope: Optional[Union[LDAPSearchScope, int]] = None,
-        filter_exp: Optional[str] = None,
-        attrlist: Optional[List[str]] = None,
-        timeout: Optional[float] = None,
+        base: str | LDAPDN | None = None,
+        scope: LDAPSearchScope | int | None = None,
+        filter_exp: str | None = None,
+        attrlist: list[str] | None = None,
+        timeout: float | None = None,
         sizelimit: int = 0,
         attrsonly: bool = False,
-        sort_order: Optional[List[str]] = None,
+        sort_order: list[str] | None = None,
         offset: int = 1,
         before_count: int = 0,
         after_count: int = 0,
         est_list_count: int = 0,
-        attrvalue: Optional[str] = None,
-    ) -> Tuple[List[LDAPEntry], dict]:
+        attrvalue: str | None = None,
+    ) -> tuple[list[LDAPEntry], dict[str, str | int]]:
         return super().virtual_list_search(
             base,
             scope,
@@ -370,13 +372,13 @@ class LDAPConnection(BaseLDAPConnection):
             attrvalue,
         )
 
-    def modify_password(
+    def modify_password(  # type: ignore[override]
         self,
-        user: Optional[Union[str, LDAPDN]] = None,
-        new_password: Optional[str] = None,
-        old_password: Optional[str] = None,
-        timeout: Optional[float] = None,
-    ) -> Optional[str]:
+        user: str | LDAPDN | None = None,
+        new_password: str | None = None,
+        old_password: str | None = None,
+        timeout: float | None = None,
+    ) -> str | None:
         """
         Set a new password for the given user.
 
@@ -393,7 +395,7 @@ class LDAPConnection(BaseLDAPConnection):
         """
         return super().modify_password(user, new_password, old_password, timeout)
 
-    def whoami(self, timeout: Optional[float] = None) -> str:
+    def whoami(self, timeout: float | None = None) -> str:  # type: ignore[override]
         """
         This method can be used to obtain authorization identity.
 
