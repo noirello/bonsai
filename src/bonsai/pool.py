@@ -1,13 +1,13 @@
 import logging
 import threading
 from contextlib import contextmanager
-from typing import Optional, Any, Set, Generic, TypeVar, Generator
+from typing import Any, Generic, TypeVar, TYPE_CHECKING
 
 from .ldapconnection import BaseLDAPConnection, LDAPConnection
 
-MYPY = False
 
-if MYPY:
+if TYPE_CHECKING:
+    from collections.abc import Generator
     from .ldapclient import LDAPClient
 
 
@@ -58,13 +58,13 @@ class ConnectionPool(Generic[T]):
             raise ValueError("The minconn must be positive.")
         if minconn > maxconn:
             raise ValueError("The maxconn must be greater than minconn.")
-        self._minconn = minconn
-        self._maxconn = maxconn
-        self._client = client
-        self._kwargs = kwargs
-        self._closed = True
-        self._idles: Set[T] = set()
-        self._used: Set[T] = set()
+        self._minconn: int = minconn
+        self._maxconn: int = maxconn
+        self._client: LDAPClient = client
+        self._kwargs: dict[str, Any] = kwargs
+        self._closed: bool = True
+        self._idles: set[T] = set()
+        self._used: set[T] = set()
 
     def open(self) -> None:
         """
@@ -225,10 +225,10 @@ class ThreadedConnectionPool(ConnectionPool[LDAPConnection]):
     ) -> None:
         """Init method."""
         super().__init__(client, minconn, maxconn, **kwargs)
-        self._block = block
-        self._lock = threading.Condition()
+        self._block: bool = block
+        self._lock: threading.Condition = threading.Condition()
 
-    def get(self, timeout: Optional[float] = None) -> LDAPConnection:
+    def get(self, timeout: float | None = None) -> LDAPConnection:
         """
         Get a connection from the connection pool.
 
