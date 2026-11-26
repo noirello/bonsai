@@ -26,15 +26,15 @@ class LDAPValueList(list[Any]):
 
     def __init__(self, items: Iterable[Any] | None = None) -> None:
         super().__init__()
-        self.__added: list[str] = []
-        self.__deleted: list[str] = []
+        self.__added: list[Any] = []
+        self.__deleted: list[Any] = []
         self.__status = 0
         if items:
             for item in items:
                 self.append(item)
 
     @staticmethod
-    def __balance(lst1: list[str], lst2: list[str], value: Any) -> None:
+    def __balance(lst1: list[Any], lst2: list[Any], value: Any) -> None:
         """
         Balancing between the two list (__added, __deleted),
         make sure the same element is not in both lists.
@@ -54,7 +54,7 @@ class LDAPValueList(list[Any]):
             pass
 
     @property
-    def _status_dict(self) -> dict[str, int | list[str]]:
+    def _status_dict(self) -> dict[str, int | list[Any]]:
         return {
             "@status": self.__status,
             "@added": self.__added.copy(),
@@ -199,12 +199,12 @@ class LDAPValueList(list[Any]):
         return new_list
 
     @property
-    def added(self) -> list[str]:
+    def added(self) -> list[Any]:
         """List of the added values."""
         return self.__added
 
     @property
-    def deleted(self) -> list[str]:
+    def deleted(self) -> list[Any]:
         """List of the deleted values."""
         return self.__deleted
 
