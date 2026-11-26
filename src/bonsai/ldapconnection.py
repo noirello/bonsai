@@ -378,7 +378,7 @@ class LDAPConnection(BaseLDAPConnection):
         new_password: str | None = None,
         old_password: str | None = None,
         timeout: float | None = None,
-    ) -> str | None:
+    ) -> str | bool:
         """
         Set a new password for the given user.
 
