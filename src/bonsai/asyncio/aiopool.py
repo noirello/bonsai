@@ -82,7 +82,7 @@ class AIOConnectionPool(ConnectionPool[AIOLDAPConnection]):
     @asynccontextmanager
     async def spawn(
         self, *args: Any, **kwargs: Any
-    ) -> AsyncGenerator[AIOLDAPConnection, None]:
+    ) -> "AsyncGenerator[AIOLDAPConnection, None]":
         conn = None
         try:
             if self._closed:

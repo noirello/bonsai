@@ -102,7 +102,7 @@ class AIOLDAPConnection(BaseLDAPConnection):
         return self
 
     async def delete(  # type: ignore[override]
-        self, dname: str | LDAPDN, timeout: float | None = None, recursive: bool = False
+        self, dname: "str | LDAPDN", timeout: float | None = None, recursive: bool = False
     ) -> bool:
         try:
             return await super().delete(dname, timeout, recursive)

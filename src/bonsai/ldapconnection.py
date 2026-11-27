@@ -42,7 +42,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         """Context manager exit point."""
         self.close()
 
-    def add(self, entry: LDAPEntry, timeout: float | None = None) -> Any:
+    def add(self, entry: "LDAPEntry", timeout: float | None = None) -> Any:
          return self._evaluate(super().add(entry), timeout)
 
     def delete(
@@ -248,7 +248,7 @@ class LDAPConnection(BaseLDAPConnection):
         """
         return self.get_result(msg_id, timeout)
 
-    def add(self, entry: LDAPEntry, timeout: float | None = None) -> bool:
+    def add(self, entry: "LDAPEntry", timeout: float | None = None) -> bool:
         """
         Add new entry to the directory server.
 
@@ -308,7 +308,7 @@ class LDAPConnection(BaseLDAPConnection):
         sizelimit: int = 0,
         attrsonly: bool = False,
         sort_order: list[str] | None = None,
-    ) -> list[LDAPEntry]:
+    ) -> list["LDAPEntry"]:
         # Documentation in the docs/api.rst with detailed examples.
         # Load values from the LDAPURL, if it is not presented on the
         # parameter list.
@@ -327,7 +327,7 @@ class LDAPConnection(BaseLDAPConnection):
         attrsonly: bool = False,
         sort_order: list[str] | None = None,
         page_size: int = 1,
-    ) -> ldapsearchiter:
+    ) -> "ldapsearchiter":
         return super().paged_search(
             base,
             scope,
@@ -355,7 +355,7 @@ class LDAPConnection(BaseLDAPConnection):
         after_count: int = 0,
         est_list_count: int = 0,
         attrvalue: str | None = None,
-    ) -> tuple[list[LDAPEntry], dict[str, str | int]]:
+    ) -> tuple[list["LDAPEntry"], dict[str, str | int]]:
         return super().virtual_list_search(
             base,
             scope,

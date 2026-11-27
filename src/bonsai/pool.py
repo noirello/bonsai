@@ -60,7 +60,7 @@ class ConnectionPool(Generic[T]):
             raise ValueError("The maxconn must be greater than minconn.")
         self._minconn: int = minconn
         self._maxconn: int = maxconn
-        self._client: LDAPClient = client
+        self._client: "LDAPClient" = client
         self._kwargs: dict[str, Any] = kwargs
         self._closed: bool = True
         self._idles: set[T] = set()
@@ -137,7 +137,7 @@ class ConnectionPool(Generic[T]):
         self._used = set()
 
     @contextmanager
-    def spawn(self, *args: Any, **kwargs: Any) -> Generator[T, None, None]:
+    def spawn(self, *args: Any, **kwargs: Any) -> "Generator[T, None, None]":
         """
         Context manager method that acquires a connection from the pool
         and returns it on exit. It also opens the pool if it hasn't been
