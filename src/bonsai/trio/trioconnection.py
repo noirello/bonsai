@@ -1,6 +1,5 @@
 import math
 from collections.abc import Awaitable, Callable
-from types import TracebackType
 from typing import TYPE_CHECKING, Any, cast
 
 import trio
@@ -11,6 +10,7 @@ from ..ldapclient import LDAPClient
 from ..ldapdn import LDAPDN
 
 if TYPE_CHECKING:
+    from types import TracebackType
     from bonsai._bonsai import ldapsearchiter
 
 
@@ -37,7 +37,7 @@ class TrioLDAPConnection(BaseLDAPConnection):
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        tb: TracebackType | None,
+        tb:"TracebackType | None",
     ) -> None:
         """Async context manager exit point."""
         self.close()

@@ -37,7 +37,7 @@ class BaseLDAPConnection(ldapconnection, metaclass=ABCMeta):
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        tb: TracebackType | None,
+        tb: "TracebackType | None",
     ) -> None:
         """Context manager exit point."""
         self.close()

@@ -1,12 +1,12 @@
 from asyncio.events import AbstractEventLoop
 import asyncio
-from types import TracebackType
 from typing import Any, Coroutine, Generator, TYPE_CHECKING, Awaitable
 
 from ..ldapconnection import BaseLDAPConnection, LDAPSearchScope
 from ..errors import NotAllowedOnNonleaf
 
 if TYPE_CHECKING:
+    from types import TracebackType
     from ..ldapclient import LDAPClient
     from ..ldapdn import LDAPDN
 
@@ -41,7 +41,7 @@ class AIOLDAPConnection(BaseLDAPConnection):
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        tb: TracebackType | None,
+        tb: "TracebackType | None",
     ) -> None:
         """Async context manager exit point."""
         self.close()
