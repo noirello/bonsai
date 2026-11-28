@@ -5,7 +5,6 @@ from typing import Any, Generic, TypeVar, TYPE_CHECKING
 
 from .ldapconnection import BaseLDAPConnection, LDAPConnection
 
-
 if TYPE_CHECKING:
     from collections.abc import Generator
     from .ldapclient import LDAPClient
@@ -32,7 +31,12 @@ class EmptyPool(PoolError):
     pass
 
 
-T = TypeVar("T", bound=BaseLDAPConnection)
+if TYPE_CHECKING:
+    from typing_extensions import TypeVar as _TypeVar
+
+    T = _TypeVar("T", bound=BaseLDAPConnection, default=LDAPConnection)
+else:
+    T = TypeVar("T", bound=BaseLDAPConnection)
 
 
 class ConnectionPool(Generic[T]):
