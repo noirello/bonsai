@@ -60,6 +60,13 @@ def test_extend():
         lvl.extend(("test4", "test1"))
 
 
+def test_extend_generator():
+    """Test extending with a one-shot iterable."""
+    lvl = LDAPValueList(("test1",))
+    lvl.extend(item for item in ("test2", "test3"))
+    assert lvl == ["test1", "test2", "test3"]
+
+
 def test_pop():
     """ Test LDAPValueList's pop method. """
     lvl = LDAPValueList(("test1", "test2"))

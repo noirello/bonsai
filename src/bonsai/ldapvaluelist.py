@@ -129,6 +129,7 @@ class LDAPValueList(list[Any]):
         :param items: List of new items.
         :raises ValueError: if any of the items is already in the list.
         """
+        items = list(items)
         for item in items:
             if item in self:
                 raise ValueError("%r is already in the list." % item)
