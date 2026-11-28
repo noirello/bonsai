@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal, NoReturn
 from collections.abc import Iterable
 
 try:
@@ -28,7 +28,7 @@ class LDAPValueList(list[Any]):
         super().__init__()
         self.__added: list[Any] = []
         self.__deleted: list[Any] = []
-        self.__status = 0
+        self.__status: Literal[0, 1, 2] = 0
         if items:
             for item in items:
                 self.append(item)
@@ -73,7 +73,7 @@ class LDAPValueList(list[Any]):
             self.__balance(self.__added, self.__deleted, old_value)
         super().__delitem__(idx)
 
-    def __mul__(self, value: Any) -> "LDAPValueList":
+    def __mul__(self, value: Any) -> NoReturn:
         raise TypeError("Cannot multiple LDAPValueList.")
 
     def __add__(self, other: Iterable[Any]) -> "LDAPValueList":
@@ -209,7 +209,7 @@ class LDAPValueList(list[Any]):
         return self.__deleted
 
     @property
-    def status(self) -> int:
+    def status(self) -> Literal[0, 1, 2]:
         """
         The status of the LDAPValueList. The status can be:
             - 0: unchanged.
@@ -219,7 +219,7 @@ class LDAPValueList(list[Any]):
         return self.__status
 
     @status.setter
-    def status(self, value: int) -> None:
+    def status(self, value: Literal[0, 1, 2]) -> None:
         if not isinstance(value, int):
             raise TypeError("Status must be int.")
         if value > -1 and value < 3:
