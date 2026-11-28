@@ -2,7 +2,7 @@ import base64
 import io
 import os
 from collections import defaultdict
-from collections.abc import Iterable, Iterator, Mapping, KeysView
+from collections.abc import Iterable, Iterator, KeysView
 from itertools import groupby
 from typing import TextIO, Any, Callable, cast
 
@@ -45,7 +45,9 @@ class LDIFReader:
         self.version: int | None = None
         self.__entries = self.__read_attributes()
         self.__num_of_entries = 0
-        self.__resource_handlers = {"file": self.__load_file}
+        self.__resource_handlers: dict[str, Callable[[str], bytes]] = {
+            "file": self.__load_file
+        }
 
     def __read_attributes(self) -> Iterator[list[str]]:
         buffer: list[str] = []
@@ -211,7 +213,7 @@ class LDIFReader:
         self.__autoload = value
 
     @property
-    def resource_handlers(self) -> Mapping[str, Callable[[str], bytes]]:
+    def resource_handlers(self) -> dict[str, Callable[[str], bytes]]:
         """
         A dictionary of supported resource types. The keys are the schemes,
         while the values are functions that expect the full URL parameters
